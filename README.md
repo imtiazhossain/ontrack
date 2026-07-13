@@ -1,56 +1,64 @@
-# Welcome to your Expo app 👋
+# onTrack
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+iOS-first daily life-tracking app built with Expo. Schedule your day, track meals, workouts, and work — with mock AI-assisted insights.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick start
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Scripts
 
-### Other setup steps
+| Command | Description |
+|---------|-------------|
+| `npm run ios` | Start Expo and open iOS Simulator |
+| `npm run typecheck` | TypeScript validation |
+| `npm test` | Run unit tests |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Project structure
 
-## Learn more
+```text
+src/
+  app/              Expo Router screens
+  components/       Reusable UI primitives and shared widgets
+  design-system/    Tokens, themes, typography
+  features/         Feature-specific UI (calendar, daily tracking)
+  services/         AI and storage adapters
+  store/            Zustand persisted state
+  types/            Shared TypeScript models
+  utils/            Date, completion, haptics helpers
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Current milestone
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Onboarding, Today, Calendar, Insights, Profile tabs
+- Daily timeline with completion ring and mock AI summaries
+- Activity add/edit, long-press actions (skip, duplicate, move, delete)
+- Food detail with photo picker and mock AI meal analysis
+- Gym active workout mode with persisted set completion
+- Work task checklist
+- Local persistence via Zustand + AsyncStorage
+- One week of seed data on first launch
 
-## Join the community
+## Mock AI
 
-Join our community of developers creating universal apps.
+All AI features use `src/services/ai/mock-provider.ts` behind the `AIProvider` interface. Replace `aiProvider` in `src/services/ai/index.ts` with a real backend client when ready.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## iOS notes
+
+- Portrait iPhone only for this milestone
+- Camera unavailable in Simulator; meal flow uses photo library picker
+- Long-press an activity card for the action menu
+
+## Movie search setup
+
+Movie events use TMDB through server-side Expo Router API routes. Copy `.env.example` to
+`.env.local` and set `TMDB_READ_ACCESS_TOKEN`. Local native development automatically uses the
+current Expo CLI host. Set `EXPO_PUBLIC_API_BASE_URL` to the deployed API origin for production
+native builds. Keep the TMDB token server-only.
+
+Run API routes locally with `npx expo serve`. Deploy the web bundle and API routes together with
+`npx expo export -p web` followed by `npx eas-cli@latest deploy`; configure the same environment
+variables for preview and production in EAS.
