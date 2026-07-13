@@ -8,7 +8,15 @@
     "scheme": "ontrack",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.imtihoss.ontracknow",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "onTrack uses the camera to capture meal and progress photos for your daily tracking.",
+        "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal and progress photos to activities.",
+        "NSMicrophoneUsageDescription": "The microphone may be used when recording videos for activity notes.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,14 +25,24 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "onTrack accesses your photos so you can attach meal and progress photos to activities.",
+          "cameraPermission": "onTrack uses the camera to capture meal and progress photos."
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -35,8 +53,14 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bd232bf6-7397-4463-b25a-9b67d78e5695"
+      }
+    },
+    "owner": "imtihoss"
   }
 }
