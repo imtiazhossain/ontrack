@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Screen, SectionHeader } from '@/components/primitives';
@@ -15,6 +16,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ];
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const theme = useTheme();
   const name = usePreferences((s) => s.name);
   const goal = usePreferences((s) => s.goal);
@@ -78,6 +80,14 @@ export default function ProfileScreen() {
         value={hapticsEnabled}
         onToggle={() => setHapticsEnabled(!hapticsEnabled)}
       />
+
+      <SectionHeader title="Nutrition" />
+      <Button variant="secondary" icon="heart.text.clipboard" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+        Profiles, dependents & targets
+      </Button>
+      <AppText variant="caption" color="secondary" style={styles.clinicalNote}>
+        Youth and infant guidance remains disabled until its release gates are complete.
+      </AppText>
 
       <SectionHeader title="Data" />
       <Button variant="danger" onPress={handleReset} accessibilityLabel="Reset all data">
@@ -164,4 +174,5 @@ const styles = StyleSheet.create({
   },
   attribution: { gap: spacing.sm, marginBottom: spacing.xl },
   tmdbLogo: { width: 96, height: 40 },
+  clinicalNote: { marginTop: spacing.sm, marginBottom: spacing.lg },
 });

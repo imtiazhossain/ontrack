@@ -30,7 +30,11 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
     if (error instanceof MovieServiceError) throw error;
-    throw new MovieServiceError('Unable to connect. Check your internet connection and try again.');
+    throw new MovieServiceError(
+      __DEV__
+        ? 'Movie search needs the Expo server. Run npm run ios and leave that terminal open, then try again.'
+        : 'Unable to connect. Check your internet connection and try again.',
+    );
   }
   if (!response.ok) {
     const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;

@@ -21,6 +21,7 @@ const MEAL_LIBRARY: Omit<MealAnalysis, 'disclaimer'>[] = [
       { id: 'ai-4', name: 'Olive oil dressing', portion: '~1 tbsp', calories: 119, proteinG: 0, carbsG: 0, fatG: 14, confidence: 0.51 },
     ],
     totalCalories: 563, proteinG: 54, carbsG: 34, fatG: 22, fiberG: 6,
+    nutrients: [], sources: [], recommendations: [], reviewRequired: true,
     observations: [
       'Good source of protein.',
       'This meal appears balanced.',
@@ -34,6 +35,7 @@ const MEAL_LIBRARY: Omit<MealAnalysis, 'disclaimer'>[] = [
       { id: 'ai-7', name: 'Brown rice', portion: '~3/4 cup', calories: 165, proteinG: 4, carbsG: 34, fatG: 1, confidence: 0.79 },
     ],
     totalCalories: 652, proteinG: 46, carbsG: 52, fatG: 28, fiberG: 8,
+    nutrients: [], sources: [], recommendations: [], reviewRequired: true,
     observations: [
       'Rich in omega-3 fats.',
       'This meal appears balanced.',
@@ -47,6 +49,7 @@ const MEAL_LIBRARY: Omit<MealAnalysis, 'disclaimer'>[] = [
       { id: 'ai-10', name: 'Granola', portion: '~1/4 cup', calories: 140, proteinG: 3, carbsG: 18, fatG: 6, confidence: 0.68 },
     ],
     totalCalories: 332, proteinG: 24, carbsG: 37, fatG: 10, fiberG: 4,
+    nutrients: [], sources: [], recommendations: [], reviewRequired: true,
     observations: [
       'Good source of protein.',
       'Consider adding a source of healthy fats such as nuts.',

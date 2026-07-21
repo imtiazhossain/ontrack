@@ -1,249 +1,224 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActionSheetIOS, ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, EmptyState, Screen, SectionHeader } from '@/components/primitives';
-import { MetricDisplay } from '@/components/shared';
+import { AppText, BackButton, Button, EmptyState, Input, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
+import { MealAnalysisReview } from '@/features/nutrition/analysis-review';
+import {
+  analyzeMealLink,
+  analyzeMealPhoto,
+  confirmMealAnalysis,
+  resolveMealLink,
+  type MealLinkCandidate,
+  NutritionServiceError,
+} from '@/services/nutrition';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import type { Meal, MealAnalysis } from '@/types/models';
-import { aiProvider } from '@/services/ai';
 
 export default function FoodDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
-  const activityId = params.id;
-  const aiEnabled = usePreferences((s) => s.aiEnabled);
-
-  const activity = useSchedule((s) => s.activities.find((a) => a.id === activityId));
-  const meal = useSchedule((s) => s.meals.find((m) => m.activityId === activityId));
-  const categories = useSchedule((s) => s.categories);
-  const upsertMeal = useSchedule((s) => s.upsertMeal);
-  const updateActivity = useSchedule((s) => s.updateActivity);
+  const { id: activityId } = useLocalSearchParams<{ id: string }>();
+  const aiEnabled = usePreferences((state) => state.aiEnabled);
+  const activity = useSchedule((state) => state.activities.find((item) => item.id === activityId));
+  const meal = useSchedule((state) => state.meals.find((item) => item.activityId === activityId));
+  const categories = useSchedule((state) => state.categories);
+  const upsertMeal = useSchedule((state) => state.upsertMeal);
+  const updateActivity = useSchedule((state) => state.updateActivity);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<MealAnalysis | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string>();
+  const [linkInput, setLinkInput] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [candidates, setCandidates] = useState<MealLinkCandidate[]>([]);
+  const [pendingSourceUrl, setPendingSourceUrl] = useState<string>();
   const [error, setError] = useState<string | null>(null);
 
-  const totals = useMemo(() => {
-    const items = pendingAnalysis?.items ?? meal?.items ?? [];
-    return {
-      calories: items.reduce((sum, i) => sum + i.calories, 0),
-      protein: items.reduce((sum, i) => sum + i.proteinG, 0),
-      carbs: items.reduce((sum, i) => sum + i.carbsG, 0),
-      fat: items.reduce((sum, i) => sum + i.fatG, 0),
-    };
-  }, [meal?.items, pendingAnalysis?.items]);
-
-  const displayItems = pendingAnalysis?.items ?? meal?.items ?? [];
+  const displayAnalysis = pendingAnalysis ?? meal?.aiAnalysis;
   const displayPhoto = pendingPhoto ?? meal?.photo;
 
-  const pickAndAnalyze = async () => {
-    setError(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Photo library access is required to analyze meals.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-
-    if (result.canceled || !result.assets[0]?.uri) return;
-
-    const photoUri = result.assets[0].uri;
+  const analyzeAsset = async (photoUri: string) => {
     setPendingPhoto(photoUri);
     setAnalyzing(true);
     setPendingAnalysis(null);
-
+    setCandidates([]);
     try {
-      const analysis = await aiProvider.analyzeMealPhoto({
-        photoUri,
-        mealName: activity?.title,
-      });
-      setPendingAnalysis(analysis);
-    } catch {
-      setError('Analysis failed. You can try again or add items manually later.');
+      const response = await analyzeMealPhoto(photoUri, activity?.title);
+      setPendingAnalysis(response.analysis);
+      setDraftId(response.draftId);
+      setPendingSourceUrl(undefined);
+    } catch (caught) {
+      setError(caught instanceof NutritionServiceError ? caught.message : 'Meal analysis failed.');
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const saveAnalysis = () => {
-    if (!activity || !pendingAnalysis) return;
-
-    const savedMeal: Meal = {
-      activityId: activity.id,
-      mealType: meal?.mealType ?? 'lunch',
-      name: activity.title,
-      photo: pendingPhoto ?? meal?.photo,
-      aiAnalysis: pendingAnalysis,
-      items: pendingAnalysis.items,
-      notes: meal?.notes,
-    };
-
-    upsertMeal(savedMeal);
-    updateActivity(activity.id, {
-      summary: `${totals.calories} kcal · balanced`,
-      photo: pendingPhoto ?? meal?.photo,
-    });
-    setPendingAnalysis(null);
-    setPendingPhoto(null);
+  const takePhoto = async () => {
+    setError(null);
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) return setError('Camera access is required to photograph a meal.');
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
+    if (!result.canceled && result.assets[0]?.uri) await analyzeAsset(result.assets[0].uri);
   };
 
-  if (!activity) {
-    return (
-      <Screen>
-        <BackButton />
-        <AppText variant="title">Meal not found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go back">
-          Go back
-        </Button>
-      </Screen>
-    );
-  }
+  const choosePhoto = async () => {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return setError('Photo library access is required to choose a meal photo.');
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
+    if (!result.canceled && result.assets[0]?.uri) await analyzeAsset(result.assets[0].uri);
+  };
 
+  const showMealSources = () => {
+    const select = (index: number) => {
+      if (index === 0) void takePhoto();
+      if (index === 1) void choosePhoto();
+      if (index === 2) setShowLinkInput(true);
+      if (index === 3 && activity) router.push({ pathname: '/activity-form', params: { id: activity.id } });
+    };
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions({
+        options: ['Take photo', 'Choose photo', 'Paste meal link', 'Enter manually', 'Cancel'],
+        cancelButtonIndex: 4,
+        title: 'Add meal nutrition',
+      }, select);
+    } else {
+      Alert.alert('Add meal nutrition', undefined, [
+        { text: 'Take photo', onPress: takePhoto },
+        { text: 'Choose photo', onPress: choosePhoto },
+        { text: 'Paste meal link', onPress: () => setShowLinkInput(true) },
+        { text: 'Enter manually', onPress: () => activity && router.push({ pathname: '/activity-form', params: { id: activity.id } }) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
+  const resolveLink = async () => {
+    setError(null);
+    setAnalyzing(true);
+    try {
+      const resolution = await resolveMealLink(linkInput);
+      setPendingSourceUrl(resolution.sanitizedUrl);
+      setCandidates(resolution.candidates);
+      if (!resolution.candidates.length) setError(resolution.fallbackMessage ?? 'No meal was found at that link.');
+    } catch (caught) {
+      setError(caught instanceof NutritionServiceError ? caught.message : 'That link could not be analyzed.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const chooseCandidate = async (candidate: MealLinkCandidate) => {
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const response = await analyzeMealLink(candidate);
+      setPendingAnalysis(response.analysis);
+      setDraftId(response.draftId);
+      setCandidates([]);
+      setShowLinkInput(false);
+    } catch (caught) {
+      setError(caught instanceof NutritionServiceError ? caught.message : 'That meal could not be analyzed.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const saveAnalysis = async () => {
+    if (!activity || !pendingAnalysis || !draftId) return;
+    setAnalyzing(true);
+    try {
+      const confirmed = await confirmMealAnalysis(draftId, pendingAnalysis);
+      const savedMeal: Meal = {
+        activityId: activity.id,
+        mealType: meal?.mealType ?? 'lunch',
+        name: activity.title,
+        photo: pendingPhoto ?? meal?.photo,
+        sourceKind: pendingSourceUrl ? 'link' : 'photo',
+        sourceUrl: pendingSourceUrl,
+        aiAnalysis: confirmed.analysis,
+        items: confirmed.analysis.items,
+        notes: meal?.notes,
+      };
+      upsertMeal(savedMeal);
+      updateActivity(activity.id, { summary: `${confirmed.analysis.totalCalories} kcal · ${confirmed.analysis.proteinG}g protein`, photo: savedMeal.photo });
+      setPendingAnalysis(null);
+      setPendingPhoto(null);
+      setDraftId(undefined);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The analysis could not be saved.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  if (!activity) return <Screen><BackButton /><AppText variant="title">Meal not found</AppText></Screen>;
   const category = findCategory(categories, activity.categoryId);
-  const hasMeal = displayItems.length > 0;
 
   return (
     <Screen>
       <BackButton />
-      {displayPhoto ? (
-        <Image source={displayPhoto} style={styles.photo} contentFit="cover" />
-      ) : null}
-
-      <AppText variant="overline" color="tertiary">
-        {category.name}
-      </AppText>
+      {displayPhoto ? <Image source={displayPhoto} style={styles.photo} contentFit="cover" /> : null}
+      <AppText variant="overline" color="tertiary">{category.name}</AppText>
       <AppText variant="title">{meal?.name ?? activity.title}</AppText>
-      <Button
-        variant="secondary"
-        icon="pencil"
-        style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
-        onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}
-        accessibilityLabel="Edit meal">
-        Edit meal
-      </Button>
 
-      {!hasMeal && !analyzing ? (
+      {!displayAnalysis && !analyzing ? (
         <EmptyState
           icon="camera.fill"
-          title="Capture your meal"
-          message="Add a photo to get an AI-assisted nutrition estimate. Values are approximate and editable."
-          actionLabel={aiEnabled ? 'Choose photo' : 'AI disabled in settings'}
-          onAction={aiEnabled ? pickAndAnalyze : undefined}
+          title="Analyze this meal"
+          message="Take a photo, choose one, paste a restaurant link, or enter nutrition manually."
+          actionLabel={aiEnabled ? 'Add meal nutrition' : 'AI disabled in settings'}
+          onAction={aiEnabled ? showMealSources : undefined}
         />
       ) : null}
 
-      {analyzing ? (
-        <View style={styles.loading}>
-          <ActivityIndicator />
-          <AppText variant="callout" color="secondary">
-            Analyzing your meal…
-          </AppText>
+      {showLinkInput ? (
+        <View style={styles.linkCard}>
+          <SectionHeader title="Restaurant or delivery link" />
+          <Input label="Meal link" autoCapitalize="none" keyboardType="url" value={linkInput} onChangeText={setLinkInput} placeholder="https://…" />
+          <Button onPress={resolveLink} disabled={!linkInput.trim() || analyzing}>Find meal</Button>
+          <AppText variant="caption" color="secondary">Blocked or ambiguous links will ask you to confirm the item or provide menu text/photo.</AppText>
         </View>
       ) : null}
 
-      {error ? (
-        <AppText variant="callout" color="danger" style={styles.error}>
-          {error}
-        </AppText>
-      ) : null}
+      {candidates.length ? <SectionHeader title="Confirm the meal" /> : null}
+      {candidates.map((candidate) => (
+        <Button key={candidate.id} variant="secondary" onPress={() => chooseCandidate(candidate)} accessibilityLabel={`Choose ${candidate.itemName}`}>
+          {[candidate.restaurant, candidate.itemName, candidate.size].filter(Boolean).join(' · ')}
+        </Button>
+      ))}
 
-      {hasMeal ? (
-        <>
-          <SectionHeader title="Nutrition estimate" />
-          <View style={styles.metrics}>
-            <MetricDisplay label="Calories" value={`${totals.calories}`} />
-            <MetricDisplay label="Protein" value={`${totals.protein}g`} />
-          </View>
-          <View style={styles.metrics}>
-            <MetricDisplay label="Carbs" value={`${totals.carbs}g`} />
-            <MetricDisplay label="Fat" value={`${totals.fat}g`} />
-          </View>
-
-          <SectionHeader title="Items" />
-          {displayItems.map((item) => (
-            <View key={item.id} style={styles.itemRow}>
-              <AppText variant="callout">{item.name}</AppText>
-              <AppText variant="caption" color="secondary">
-                {item.portion} · {item.calories} kcal
-                {item.confidence !== undefined && item.confidence < 0.7 ? ' · review' : ''}
-              </AppText>
-            </View>
-          ))}
-
-          {(pendingAnalysis?.observations ?? meal?.aiAnalysis?.observations ?? []).map((note) => (
-            <AppText key={note} variant="caption" color="secondary" style={styles.observation}>
-              {note}
-            </AppText>
-          ))}
-
-          <AppText variant="caption" color="tertiary" style={styles.disclaimer}>
-            {pendingAnalysis?.disclaimer ??
-              meal?.aiAnalysis?.disclaimer ??
-              'Nutrition values are estimates and not medical advice.'}
-          </AppText>
-        </>
+      {analyzing ? <View style={styles.loading}><ActivityIndicator /><AppText variant="callout" color="secondary">Analyzing your meal…</AppText></View> : null}
+      {error ? <AppText variant="callout" color="danger" style={styles.error}>{error}</AppText> : null}
+      {displayAnalysis ? (
+        <MealAnalysisReview
+          analysis={displayAnalysis}
+          editable={Boolean(pendingAnalysis)}
+          onChange={pendingAnalysis ? setPendingAnalysis : () => undefined}
+        />
       ) : null}
 
       <View style={styles.actions}>
-        {pendingAnalysis ? (
-          <Button onPress={saveAnalysis} accessibilityLabel="Save meal analysis">
-            Save analysis
-          </Button>
-        ) : null}
-        {aiEnabled && hasMeal ? (
-          <Button variant="secondary" onPress={pickAndAnalyze} accessibilityLabel="Analyze new photo">
-            {analyzing ? 'Analyzing…' : 'Analyze new photo'}
-          </Button>
-        ) : null}
-        <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Close">
-          Close
-        </Button>
+        {pendingAnalysis ? <Button onPress={saveAnalysis} disabled={analyzing}>Confirm and save</Button> : null}
+        {aiEnabled && displayAnalysis ? <Button variant="secondary" onPress={showMealSources}>Analyze another source</Button> : null}
+        <Button variant="secondary" icon="pencil" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit meal manually</Button>
+        <Button variant="ghost" onPress={() => router.back()}>Close</Button>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  photo: {
-    width: '100%',
-    height: 220,
-    borderRadius: radii.lg,
-    marginBottom: spacing.lg,
-  },
-  loading: {
-    alignItems: 'center',
-    gap: spacing.md,
-    marginVertical: spacing.xl,
-  },
-  error: { marginBottom: spacing.md },
-  metrics: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  itemRow: {
-    marginBottom: spacing.md,
-    gap: spacing.xxs,
-  },
-  observation: {
-    marginBottom: spacing.xs,
-  },
-  disclaimer: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  actions: { gap: spacing.sm },
+  photo: { width: '100%', height: 220, borderRadius: radii.lg, marginBottom: spacing.lg },
+  loading: { alignItems: 'center', gap: spacing.md, marginVertical: spacing.xl },
+  error: { marginVertical: spacing.md },
+  actions: { gap: spacing.sm, marginTop: spacing.lg },
+  linkCard: { gap: spacing.sm, marginVertical: spacing.md },
 });

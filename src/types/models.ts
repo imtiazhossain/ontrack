@@ -60,8 +60,47 @@ export interface FoodItem {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  fiberG?: number;
+  sugarG?: number;
+  saturatedFatG?: number;
+  sodiumMg?: number;
+  /** All available source nutrients, including vitamins and minerals. */
+  nutrients?: NutrientValue[];
+  sourceRefs?: string[];
   /** 0–1 detection confidence from AI, undefined for manual entries */
   confidence?: number;
+}
+
+export type NutritionSourceKind =
+  | 'official-restaurant'
+  | 'verified-menu'
+  | 'usda'
+  | 'ai-estimate'
+  | 'manual';
+
+export interface NutritionSource {
+  id: string;
+  kind: NutritionSourceKind;
+  title: string;
+  url?: string;
+  accessedAt?: string;
+}
+
+export interface NutrientValue {
+  id: string;
+  name: string;
+  amount?: number;
+  unit: string;
+  confidence?: number;
+  estimated: boolean;
+  sourceRef?: string;
+}
+
+export interface MealRecommendation {
+  id: string;
+  title: string;
+  body: string;
+  kind: 'balance' | 'target' | 'variety' | 'clinician';
 }
 
 export interface MealAnalysis {
@@ -71,6 +110,14 @@ export interface MealAnalysis {
   carbsG: number;
   fatG: number;
   fiberG: number;
+  sugarG?: number;
+  saturatedFatG?: number;
+  sodiumMg?: number;
+  nutrients: NutrientValue[];
+  sources: NutritionSource[];
+  recommendations: MealRecommendation[];
+  overallConfidence?: number;
+  reviewRequired: boolean;
   /** Supportive, non-judgmental observations */
   observations: string[];
   disclaimer: string;
@@ -81,6 +128,8 @@ export interface Meal {
   mealType: MealType;
   name: string;
   photo?: string | number;
+  sourceKind?: 'photo' | 'link' | 'manual';
+  sourceUrl?: string;
   /** Original AI output, never mutated after analysis */
   aiAnalysis?: MealAnalysis;
   /** User-corrected items; source of truth for display */
@@ -88,6 +137,50 @@ export interface Meal {
   hungerBefore?: number;
   fullnessAfter?: number;
   notes?: string;
+}
+
+export type EquationSex = 'female' | 'male';
+export type ActivityLevel = 'inactive' | 'low-active' | 'active' | 'very-active';
+export type NutritionGoal = 'maintain' | 'lose' | 'gain';
+export type UnitSystem = 'imperial' | 'metric';
+
+export interface NutritionProfile {
+  id: string;
+  displayName: string;
+  dateOfBirth: string;
+  equationSex: EquationSex;
+  heightCm?: number;
+  weightKg?: number;
+  activityLevel: ActivityLevel;
+  goal: NutritionGoal;
+  unitSystem: UnitSystem;
+  dietaryPreferences: string[];
+  allergies: string[];
+  guardianAcknowledgedAt?: string;
+  gestationalAgeWeeks?: number;
+  feedingPattern?: 'breast-milk' | 'formula' | 'mixed' | 'solids';
+  clinicianNotes?: string;
+}
+
+export interface NutritionTargets {
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  nutrients: NutrientValue[];
+}
+
+export interface NutritionTargetVersion {
+  id: string;
+  profileId: string;
+  version: number;
+  status: 'draft' | 'approved' | 'superseded';
+  targets: NutritionTargets;
+  calculatedTargets: NutritionTargets;
+  authorRole: 'user' | 'guardian' | 'clinician';
+  effectiveAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
 }
 
 // ── Workouts ────────────────────────────────────────────────────────────
