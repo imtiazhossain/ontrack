@@ -82,7 +82,7 @@ export default function ProfileScreen() {
       />
 
       <SectionHeader title="Nutrition" />
-      <Button variant="secondary" icon="heart.text.clipboard" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+      <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>

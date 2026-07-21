@@ -170,7 +170,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
         <View style={styles.timeline}>
           {activities.length === 0 ? (
             <EmptyState
-              icon="calendar.badge.plus"
+              icon="calendar-add"
               title="A blank page"
               message="Nothing planned for this day yet. Add your first activity to begin shaping it."
               actionLabel="Add activity"
@@ -210,7 +210,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
           { bottom: insets.bottom + layout.tabBarInset + spacing.lg },
         ]}>
         <IconButton
-          icon="plus"
+          icon="add"
           size={56}
           background={theme.accentPrimary}
           color={theme.textOnAccent}

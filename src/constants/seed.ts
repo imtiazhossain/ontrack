@@ -76,7 +76,7 @@ const STRENGTH_WORKOUT: Omit<Workout, 'activityId'> = {
   name: 'Upper body strength',
   exercises: [
     {
-      id: 'e1', name: 'Bench press', icon: 'figure.strengthtraining.traditional', restSeconds: 120,
+      id: 'e1', name: 'Bench press', icon: 'exercise-strength', restSeconds: 120,
       previousBest: '62.5 kg × 8',
       sets: [
         { id: 's1', reps: 10, weightKg: 50, done: false },
@@ -85,7 +85,7 @@ const STRENGTH_WORKOUT: Omit<Workout, 'activityId'> = {
       ],
     },
     {
-      id: 'e2', name: 'Seated row', icon: 'figure.rower', restSeconds: 90,
+      id: 'e2', name: 'Seated row', icon: 'exercise-row', restSeconds: 90,
       previousBest: '55 kg × 10',
       sets: [
         { id: 's4', reps: 12, weightKg: 45, done: false },
@@ -94,7 +94,7 @@ const STRENGTH_WORKOUT: Omit<Workout, 'activityId'> = {
       ],
     },
     {
-      id: 'e3', name: 'Overhead press', icon: 'figure.arms.open', restSeconds: 90,
+      id: 'e3', name: 'Overhead press', icon: 'exercise-press', restSeconds: 90,
       previousBest: '32.5 kg × 8',
       sets: [
         { id: 's7', reps: 10, weightKg: 25, done: false },
@@ -103,7 +103,7 @@ const STRENGTH_WORKOUT: Omit<Workout, 'activityId'> = {
       ],
     },
     {
-      id: 'e4', name: 'Lat pulldown', icon: 'figure.play', restSeconds: 90,
+      id: 'e4', name: 'Lat pulldown', icon: 'exercise-pulldown', restSeconds: 90,
       previousBest: '50 kg × 10',
       sets: [
         { id: 's10', reps: 12, weightKg: 40, done: false },

@@ -62,20 +62,20 @@ const WORKOUT_LIBRARY: Omit<WorkoutRecommendation, 'disclaimer'>[] = [
     name: 'Lower body strength',
     reason: 'Your recent sessions focused on upper body, so training legs balances the week and gives pressing muscles time to recover.',
     exercises: [
-      { name: 'Goblet squat', icon: 'figure.strengthtraining.functional', sets: 3, reps: 10, weightKg: 24, restSeconds: 120 },
-      { name: 'Romanian deadlift', icon: 'figure.strengthtraining.traditional', sets: 3, reps: 10, weightKg: 50, restSeconds: 120 },
-      { name: 'Walking lunge', icon: 'figure.walk', sets: 3, reps: 12, weightKg: 12, restSeconds: 90 },
-      { name: 'Calf raise', icon: 'figure.stand', sets: 3, reps: 15, weightKg: 30, restSeconds: 60 },
+      { name: 'Goblet squat', icon: 'exercise-functional', sets: 3, reps: 10, weightKg: 24, restSeconds: 120 },
+      { name: 'Romanian deadlift', icon: 'exercise-strength', sets: 3, reps: 10, weightKg: 50, restSeconds: 120 },
+      { name: 'Walking lunge', icon: 'exercise-walk', sets: 3, reps: 12, weightKg: 12, restSeconds: 90 },
+      { name: 'Calf raise', icon: 'exercise-stand', sets: 3, reps: 15, weightKg: 30, restSeconds: 60 },
     ],
   },
   {
     name: 'Full body reset',
     reason: 'A moderate full-body session keeps momentum without overloading any single muscle group after your recent training.',
     exercises: [
-      { name: 'Dumbbell bench press', icon: 'figure.strengthtraining.traditional', sets: 3, reps: 10, weightKg: 22, restSeconds: 90 },
-      { name: 'Goblet squat', icon: 'figure.strengthtraining.functional', sets: 3, reps: 12, weightKg: 20, restSeconds: 90 },
-      { name: 'One-arm row', icon: 'figure.rower', sets: 3, reps: 10, weightKg: 24, restSeconds: 90 },
-      { name: 'Plank', icon: 'figure.core.training', sets: 3, reps: 45, weightKg: 0, restSeconds: 60 },
+      { name: 'Dumbbell bench press', icon: 'exercise-strength', sets: 3, reps: 10, weightKg: 22, restSeconds: 90 },
+      { name: 'Goblet squat', icon: 'exercise-functional', sets: 3, reps: 12, weightKg: 20, restSeconds: 90 },
+      { name: 'One-arm row', icon: 'exercise-row', sets: 3, reps: 10, weightKg: 24, restSeconds: 90 },
+      { name: 'Plank', icon: 'exercise-core', sets: 3, reps: 45, weightKg: 0, restSeconds: 60 },
     ],
   },
 ];

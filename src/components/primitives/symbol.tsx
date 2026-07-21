@@ -1,21 +1,22 @@
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 
-import { iconSizes } from '@/design-system';
+import { iconSizes, resolveAppIcon, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 
 interface SymbolProps {
-  name: SymbolViewProps['name'];
+  /** Semantic app icon name. Legacy persisted SF Symbol strings also resolve. */
+  name: AppIconName | (string & {});
   size?: keyof typeof iconSizes | number;
   color?: string;
 }
 
-/** SF Symbol with theme-aware default tint. */
+/** Cross-platform symbol (SF Symbol on iOS, Material Symbol on Android/web) with theme-aware default tint. */
 export function Symbol({ name, size = 'md', color }: SymbolProps) {
   const theme = useTheme();
   const resolved = typeof size === 'number' ? size : iconSizes[size];
   return (
     <SymbolView
-      name={name}
+      name={resolveAppIcon(name)}
       size={resolved}
       tintColor={color ?? theme.textPrimary}
       style={{ width: resolved, height: resolved }}

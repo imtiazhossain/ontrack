@@ -31,7 +31,7 @@ export function DayHeader({
     <LinearGradient colors={gradient} style={[styles.container, { paddingTop: topInset + spacing.md }]}>
       <View style={styles.topRow}>
         <IconButton
-          icon="chevron.left"
+          icon="chevron-left"
           accessibilityLabel="Previous day"
           onPress={() => onChangeDate(addDays(date, -1))}
           background="transparent"
@@ -45,7 +45,7 @@ export function DayHeader({
           </AppText>
         </View>
         <IconButton
-          icon="chevron.right"
+          icon="chevron-right"
           accessibilityLabel="Next day"
           onPress={() => onChangeDate(addDays(date, 1))}
           background="transparent"

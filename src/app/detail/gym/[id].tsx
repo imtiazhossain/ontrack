@@ -66,7 +66,7 @@ export default function GymDetailScreen() {
       </AppText>
       <Button
         variant="secondary"
-        icon="pencil"
+        icon="edit"
         style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
         onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}
         accessibilityLabel="Edit workout">

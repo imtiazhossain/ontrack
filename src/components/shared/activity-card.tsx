@@ -72,7 +72,7 @@ export function ActivityCard({
             <Image source={activity.photo} style={styles.thumb} contentFit="cover" />
           ) : null}
           <IconButton
-            icon={completed ? 'checkmark.circle.fill' : skipped ? 'arrow.uturn.left.circle' : 'circle'}
+            icon={completed ? 'status-completed' : skipped ? 'status-skipped' : 'status-upcoming'}
             color={completed ? colors.main : skipped ? theme.warning : theme.textTertiary}
             background="transparent"
             accessibilityLabel={

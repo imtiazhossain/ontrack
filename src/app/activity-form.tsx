@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 
 import { AppText, Button, IconButton, Input, Screen, SectionHeader } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
+import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { analyzeMealPhoto, NutritionServiceError } from '@/services/nutrition';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
@@ -189,6 +190,13 @@ export default function ActivityFormScreen() {
     return value;
   }, [startMinutes]);
 
+  // Android may destroy this screen while the system picker is open;
+  // recover the selection when the screen is recreated.
+  usePendingImagePickerResult((uri) => {
+    setPhoto(uri);
+    setMeal((current) => ({ ...current, photo: uri, aiAnalysis: undefined }));
+  });
+
   const pickPhoto = async (analyzeAfterPick = false) => {
     setError(undefined);
     setAnalysisError(undefined);
@@ -251,7 +259,7 @@ export default function ActivityFormScreen() {
       ...current,
       exercises: [
         ...current.exercises,
-        { id: newId('exercise'), name: '', icon: 'figure.strengthtraining.traditional', sets: [], restSeconds: 60 },
+        { id: newId('exercise'), name: '', icon: 'exercise-strength', sets: [], restSeconds: 60 },
       ],
     }));
 
@@ -404,7 +412,7 @@ export default function ActivityFormScreen() {
   if (missingActivity) {
     return (
       <Screen>
-        <IconButton icon="chevron.left" accessibilityLabel="Go back" background="transparent" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" accessibilityLabel="Go back" background="transparent" onPress={() => router.back()} />
         <AppText variant="title">Event not found</AppText>
         <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
       </Screen>
@@ -414,7 +422,7 @@ export default function ActivityFormScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <IconButton icon="xmark" accessibilityLabel="Cancel editing" background="transparent" onPress={() => router.back()} />
+        <IconButton icon="close" accessibilityLabel="Cancel editing" background="transparent" onPress={() => router.back()} />
         <AppText variant="title">{isEditing ? editorTitle : 'Add event'}</AppText>
       </View>
 
@@ -683,7 +691,7 @@ function WorkoutEditor({ workout, setWorkout, updateExercise, addExercise, addSe
               <AppText variant="caption">Set {index + 1}</AppText>
               <View style={styles.setInput}><Input label="Reps" value={String(set.reps)} onChangeText={(value) => updateSet(exercise.id, set.id, { reps: numberValue(value) })} keyboardType="number-pad" /></View>
               <View style={styles.setInput}><Input label="Weight kg" value={String(set.weightKg)} onChangeText={(value) => updateSet(exercise.id, set.id, { weightKg: numberValue(value) })} keyboardType="decimal-pad" /></View>
-              <IconButton icon="trash" accessibilityLabel={`Remove set ${index + 1}`} onPress={() => removeSet(exercise.id, set.id)} />
+              <IconButton icon="delete" accessibilityLabel={`Remove set ${index + 1}`} onPress={() => removeSet(exercise.id, set.id)} />
             </View>
           ))}
           <Button variant="secondary" onPress={() => addSet(exercise.id)} accessibilityLabel={`Add set to ${exercise.name || 'exercise'}`}>Add set</Button>

@@ -1,4 +1,5 @@
 export { palette, categoryPalette, type CategoryColorKey } from './colors';
+export { appIcons, resolveAppIcon, type AppIconName, type PlatformIconNames } from './icons';
 export { typography, fontFamilies, type TypeVariant } from './typography';
 export { spacing, layout, iconSizes } from './spacing';
 export { radii, borders } from './radii';

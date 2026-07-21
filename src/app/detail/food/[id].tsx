@@ -8,6 +8,7 @@ import { AppText, BackButton, Button, EmptyState, Input, Screen, SectionHeader }
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { MealAnalysisReview } from '@/features/nutrition/analysis-review';
+import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import {
   analyzeMealLink,
   analyzeMealPhoto,
@@ -59,6 +60,12 @@ export default function FoodDetailScreen() {
       setAnalyzing(false);
     }
   };
+
+  // Android may destroy this screen while the system camera/picker is open;
+  // recover the photo and resume analysis when the screen is recreated.
+  usePendingImagePickerResult((uri) => {
+    void analyzeAsset(uri);
+  });
 
   const takePhoto = async () => {
     setError(null);
@@ -171,7 +178,7 @@ export default function FoodDetailScreen() {
 
       {!displayAnalysis && !analyzing ? (
         <EmptyState
-          icon="camera.fill"
+          icon="camera"
           title="Analyze this meal"
           message="Take a photo, choose one, paste a restaurant link, or enter nutrition manually."
           actionLabel={aiEnabled ? 'Add meal nutrition' : 'AI disabled in settings'}
@@ -208,7 +215,7 @@ export default function FoodDetailScreen() {
       <View style={styles.actions}>
         {pendingAnalysis ? <Button onPress={saveAnalysis} disabled={analyzing}>Confirm and save</Button> : null}
         {aiEnabled && displayAnalysis ? <Button variant="secondary" onPress={showMealSources}>Analyze another source</Button> : null}
-        <Button variant="secondary" icon="pencil" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit meal manually</Button>
+        <Button variant="secondary" icon="edit" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit meal manually</Button>
         <Button variant="ghost" onPress={() => router.back()}>Close</Button>
       </View>
     </Screen>
