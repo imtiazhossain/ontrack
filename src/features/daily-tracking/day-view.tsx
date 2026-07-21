@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { aiProvider } from '@/services/ai';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
+import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import type { Activity } from '@/types/models';
 import { addDays, isToday, nowMinutes } from '@/utils/date';
 import { confirmDeleteActivity, showActivityActions, type ActivityAction } from '@/utils/activity-actions';
@@ -129,7 +130,12 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
     }
   };
 
-  const toggleComplete = (activity: Activity) => {
+  const toggleComplete = async (activity: Activity) => {
+    if (activity.plantId && activity.careKind === 'watering') {
+      if (activity.status === 'completed') await undoPlantWatering(activity.id);
+      else await logPlantWatering(activity.plantId);
+      return;
+    }
     if (activity.status === 'completed') setStatus(activity.id, 'upcoming');
     else if (activity.status === 'skipped') setStatus(activity.id, 'upcoming');
     else setStatus(activity.id, 'completed');
@@ -152,6 +158,10 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
         break;
       case 'sleep':
         router.push({ pathname: '/detail/sleep/[id]', params: { id: activity.id } });
+        break;
+      case 'plant':
+        if (activity.plantId) router.push({ pathname: '/plants/[id]', params: { id: activity.plantId } });
+        else router.push({ pathname: '/detail/generic/[id]', params: { id: activity.id } });
         break;
       default:
         router.push({ pathname: '/detail/generic/[id]', params: { id: activity.id } });
@@ -189,13 +199,13 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
                   isCurrent={activity.id === currentId}
                   index={index}
                   onPress={() => openActivity(activity)}
-                  onLongPress={() =>
+                  onLongPress={activity.plantId ? undefined : () =>
                     showActivityActions({
                       activity,
                       onAction: (action) => handleActivityAction(activity, action),
                     })
                   }
-                  onToggleComplete={() => toggleComplete(activity)}
+                  onToggleComplete={() => void toggleComplete(activity)}
                 />
               ))}
             </>

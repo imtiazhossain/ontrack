@@ -34,6 +34,8 @@ export interface EventSavePayload {
     status: ActivityStatus;
     photo?: string | number;
     summary?: string;
+    plantId?: string;
+    careKind?: Activity['careKind'];
   };
   detailKind: ActivityCategory['detailKind'];
   meal?: Meal;

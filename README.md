@@ -43,6 +43,7 @@ src/
 - Gym active workout mode with persisted set completion
 - Work task checklist
 - Local persistence via Zustand + AsyncStorage
+- Plant identification, health check-ins, room-aware care plans, and local watering reminders
 - One week of seed data on first launch
 
 ## Meal analysis
@@ -68,6 +69,22 @@ the normalized image only to the loopback Ollama service; USDA grounding remains
 - Portrait iPhone only for this milestone
 - Camera unavailable in Simulator; meal flow uses photo library picker
 - Long-press an activity card for the action menu
+
+## Plant analysis
+
+Plants use guarded Expo Router API routes and the same free local Ollama vision model as meal photos
+for confidence-gated identification, visible-health assessment, room-aware care guidance, and
+follow-up check-ins. With the existing `MEAL_AI_PROVIDER=ollama` and `LOCAL_MEAL_AI_ENABLED=true`
+setup, plants work without additional provider configuration. Alternatively set
+`PLANT_AI_PROVIDER=ollama`, `LOCAL_PLANT_AI_ENABLED=true`, and optionally
+`OLLAMA_PLANT_MODEL=qwen3-vl:2b`. Plant and check-in photos are normalized into the app documents directory; analysis
+copies are resized and re-encoded to remove EXIF metadata. Optional room photos are sent only for
+the loopback Ollama care-plan request and are not persisted by the app. General horticultural
+reference links are attached by the server rather than invented by the local model.
+
+Watering reminders are one-off local notifications. Each logged watering advances the next check
+from the actual watering date and creates the next Today/Calendar activity. Guidance is an editable
+starting range and soil check, not an exact requirement or plant-disease diagnosis.
 
 ## Movie search setup
 

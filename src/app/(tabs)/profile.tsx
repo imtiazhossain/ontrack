@@ -8,6 +8,8 @@ import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
+import { usePlants } from '@/store/plants';
+import { deletePlant } from '@/services/plants/schedule';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -29,8 +31,12 @@ export default function ProfileScreen() {
   const resetPreferences = usePreferences((s) => s.resetAll);
   const resetSchedule = useSchedule((s) => s.resetAll);
   const seedIfNeeded = useSchedule((s) => s.seedIfNeeded);
+  const plants = usePlants((s) => s.plants);
+  const resetPlants = usePlants((s) => s.reset);
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    await Promise.all(plants.map((plant) => deletePlant(plant.id)));
+    resetPlants();
     resetPreferences();
     resetSchedule();
     seedIfNeeded();
@@ -70,7 +76,7 @@ export default function ProfileScreen() {
       <SectionHeader title="Preferences" />
       <ToggleRow
         label="AI summaries"
-        detail="Daily insights and meal analysis"
+        detail="Daily insights, meal analysis, and plant analysis"
         value={aiEnabled}
         onToggle={() => setAiEnabled(!aiEnabled)}
       />
@@ -90,7 +96,7 @@ export default function ProfileScreen() {
       </AppText>
 
       <SectionHeader title="Data" />
-      <Button variant="danger" onPress={handleReset} accessibilityLabel="Reset all data">
+      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset all data">
         Reset all data
       </Button>
 
