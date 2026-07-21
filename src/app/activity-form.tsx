@@ -9,7 +9,7 @@ import { AppText, Button, IconButton, Input, Screen, SectionHeader } from '@/com
 import { CategoryBadge } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import { aiProvider } from '@/services/ai';
+import { analyzeMealPhoto, NutritionServiceError } from '@/services/nutrition';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
@@ -133,6 +133,7 @@ export default function ActivityFormScreen() {
   const [workSession, setWorkSession] = useState(() => cloneWorkSession(storedWorkSession, initialId));
   const [movie, setMovie] = useState(() => cloneMovie(storedMovie, initialId));
   const [error, setError] = useState<string>();
+  const [analysisError, setAnalysisError] = useState<string>();
   const [analyzing, setAnalyzing] = useState(false);
 
   const category = categories.find((item) => item.id === categoryId) ?? (editId ? categories[0] : undefined);
@@ -188,11 +189,12 @@ export default function ActivityFormScreen() {
     return value;
   }, [startMinutes]);
 
-  const pickPhoto = async () => {
+  const pickPhoto = async (analyzeAfterPick = false) => {
     setError(undefined);
+    setAnalysisError(undefined);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError('Photo library access is required to attach a photo.');
+      setAnalysisError('Photo library access is required to upload a meal image.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -201,24 +203,29 @@ export default function ActivityFormScreen() {
       allowsEditing: true,
       aspect: [4, 3],
     });
-    if (!result.canceled && result.assets[0]?.uri) setPhoto(result.assets[0].uri);
+    const selectedUri = result.canceled ? undefined : result.assets[0]?.uri;
+    if (!selectedUri) return;
+    setPhoto(selectedUri);
+    setMeal((current) => ({ ...current, photo: selectedUri, aiAnalysis: undefined }));
+    if (analyzeAfterPick) await analyzePhoto(selectedUri);
   };
 
-  const analyzePhoto = async () => {
-    if (typeof photo !== 'string') return;
+  const analyzePhoto = async (selectedPhoto?: string) => {
+    const photoUri = selectedPhoto ?? (typeof photo === 'string' ? photo : undefined);
+    if (!photoUri) return;
     setAnalyzing(true);
-    setError(undefined);
+    setAnalysisError(undefined);
     try {
-      const analysis = await aiProvider.analyzeMealPhoto({ photoUri: photo, mealName: title });
+      const { analysis } = await analyzeMealPhoto(photoUri, title);
       setMeal((current) => ({
         ...current,
         name: current.name || title,
-        photo,
+        photo: photoUri,
         aiAnalysis: analysis,
         items: analysis.items,
       }));
-    } catch {
-      setError('Meal analysis failed. You can try again or edit items manually.');
+    } catch (caught) {
+      setAnalysisError(caught instanceof NutritionServiceError ? caught.message : 'Meal analysis failed. You can try again or enter the foods manually.');
     } finally {
       setAnalyzing(false);
     }
@@ -508,12 +515,65 @@ export default function ActivityFormScreen() {
 
       <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional context" multiline style={styles.multiline} />
 
-      {category?.supportsPhotos ? (
+      {category?.supportsPhotos && category.detailKind === 'food' ? (
+        <>
+          <SectionHeader title="Meal photo analysis" />
+          <AppText variant="body" color="secondary">
+            Upload a clear photo to identify foods and estimate portions and nutrients. You can edit every result before saving.
+          </AppText>
+          {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
+          <View style={styles.twoColumns}>
+            <Button
+              onPress={() => void pickPhoto(aiEnabled)}
+              disabled={analyzing}
+              style={styles.flex}
+              accessibilityLabel={photo ? 'Replace and analyze meal photo' : 'Upload and analyze meal photo'}>
+              {analyzing ? 'Analyzing meal…' : photo ? 'Replace & analyze' : 'Upload & analyze'}
+            </Button>
+            {photo ? (
+              <Button
+                variant="secondary"
+                onPress={() => void analyzePhoto()}
+                disabled={analyzing || !aiEnabled}
+                style={styles.flex}
+                accessibilityLabel="Analyze meal photo again">
+                Analyze again
+              </Button>
+            ) : null}
+          </View>
+          {analyzing ? <ActivityIndicator style={styles.loader} /> : null}
+          {!aiEnabled ? (
+            <AppText variant="caption" color="secondary">AI summaries are disabled in Profile. The image will be attached without analysis.</AppText>
+          ) : null}
+          {analysisError ? <AppText variant="callout" color="danger">{analysisError}</AppText> : null}
+          {meal.aiAnalysis ? (
+            <View style={[styles.analysisReady, { backgroundColor: theme.accentFaint, borderColor: theme.accentPrimary }]}>
+              <AppText variant="bodyMedium">Analysis ready</AppText>
+              <AppText variant="caption" color="secondary">
+                {meal.items.length} food item{meal.items.length === 1 ? '' : 's'} identified
+                {meal.aiAnalysis.overallConfidence === undefined ? '' : ` · ${Math.round(meal.aiAnalysis.overallConfidence * 100)}% confidence`}. Review the values below before saving.
+              </AppText>
+            </View>
+          ) : null}
+          {photo ? (
+            <Button
+              variant="ghost"
+              onPress={() => {
+                setPhoto(undefined);
+                setAnalysisError(undefined);
+                setMeal((current) => ({ ...current, photo: undefined, aiAnalysis: undefined }));
+              }}
+              accessibilityLabel="Remove meal photo">
+              Remove photo
+            </Button>
+          ) : null}
+        </>
+      ) : category?.supportsPhotos ? (
         <>
           <SectionHeader title="Photo" />
           {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
           <View style={styles.twoColumns}>
-            <Button variant="secondary" onPress={pickPhoto} style={styles.flex} accessibilityLabel="Choose photo">{photo ? 'Replace photo' : 'Choose photo'}</Button>
+            <Button variant="secondary" onPress={() => void pickPhoto()} style={styles.flex} accessibilityLabel="Choose photo">{photo ? 'Replace photo' : 'Choose photo'}</Button>
             {photo ? <Button variant="ghost" onPress={() => setPhoto(undefined)} style={styles.flex} accessibilityLabel="Remove photo">Remove</Button> : null}
           </View>
         </>
@@ -526,9 +586,6 @@ export default function ActivityFormScreen() {
           updateItem={updateFoodItem}
           addItem={addFoodItem}
           removeItem={(id) => setMeal((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }))}
-          canAnalyze={aiEnabled && typeof photo === 'string'}
-          analyzing={analyzing}
-          onAnalyze={analyzePhoto}
         />
       ) : null}
       {category?.detailKind === 'gym' ? (
@@ -584,7 +641,7 @@ function ChoiceRow<T extends string>({ label, options, value, onChange }: { labe
   );
 }
 
-function FoodEditor({ meal, setMeal, updateItem, addItem, removeItem, canAnalyze, analyzing, onAnalyze }: { meal: Meal; setMeal: React.Dispatch<React.SetStateAction<Meal>>; updateItem: (id: string, patch: Partial<FoodItem>) => void; addItem: () => void; removeItem: (id: string) => void; canAnalyze: boolean; analyzing: boolean; onAnalyze: () => void }) {
+function FoodEditor({ meal, setMeal, updateItem, addItem, removeItem }: { meal: Meal; setMeal: React.Dispatch<React.SetStateAction<Meal>>; updateItem: (id: string, patch: Partial<FoodItem>) => void; addItem: () => void; removeItem: (id: string) => void }) {
   return (
     <View>
       <SectionHeader title="Meal details" />
@@ -593,8 +650,6 @@ function FoodEditor({ meal, setMeal, updateItem, addItem, removeItem, canAnalyze
         <View style={styles.flex}><Input label="Hunger before (1–5)" value={meal.hungerBefore === undefined ? '' : String(meal.hungerBefore)} onChangeText={(value) => setMeal((current) => ({ ...current, hungerBefore: value ? Math.min(5, numberValue(value)) : undefined }))} keyboardType="number-pad" /></View>
         <View style={styles.flex}><Input label="Fullness after (1–5)" value={meal.fullnessAfter === undefined ? '' : String(meal.fullnessAfter)} onChangeText={(value) => setMeal((current) => ({ ...current, fullnessAfter: value ? Math.min(5, numberValue(value)) : undefined }))} keyboardType="number-pad" /></View>
       </View>
-      {canAnalyze ? <Button variant="secondary" onPress={onAnalyze} disabled={analyzing} accessibilityLabel="Analyze meal photo">{analyzing ? 'Analyzing…' : 'Analyze photo with AI'}</Button> : null}
-      {analyzing ? <ActivityIndicator style={styles.loader} /> : null}
       <SectionHeader title="Food items" actionLabel="Add item" onAction={addItem} />
       {meal.items.map((item) => (
         <View key={item.id} style={styles.nestedCard}>
@@ -785,6 +840,7 @@ const styles = StyleSheet.create({
   timePicker: { width: '100%', height: 180 },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   photo: { width: '100%', height: 220, borderRadius: radii.lg },
+  analysisReady: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
   nestedCard: { gap: spacing.md, padding: spacing.md, borderRadius: radii.lg },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   metricInput: { width: '47%' },

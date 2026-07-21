@@ -21,6 +21,10 @@ const validMeal = {
   carbsG: 0,
   fatG: 5,
   fiberG: 0,
+  nutrients: [],
+  sources: [],
+  recommendations: [],
+  reviewRequired: true,
   observations: ['Good source of protein.'],
   disclaimer: 'Estimate only.',
 };

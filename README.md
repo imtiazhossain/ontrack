@@ -6,14 +6,17 @@ iOS-first daily life-tracking app built with Expo. Schedule your day, track meal
 
 ```bash
 npm install
-npx expo start --ios
+npm run ios
 ```
+
+Keep that terminal running while using the app. Local movie and TV search uses an API route served
+by Expo; if the server stops, the app will show a message telling you to run `npm run ios`.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run ios` | Start Expo and open iOS Simulator |
+| `npm run ios` | Clear Metro's cache, start Expo, and open iOS Simulator |
 | `npm run typecheck` | TypeScript validation |
 | `npm test` | Run unit tests |
 
@@ -42,9 +45,23 @@ src/
 - Local persistence via Zustand + AsyncStorage
 - One week of seed data on first launch
 
-## Mock AI
+## Meal analysis
 
-All AI features use `src/services/ai/mock-provider.ts` behind the `AIProvider` interface. Replace `aiProvider` in `src/services/ai/index.ts` with a real backend client when ready.
+Meals support direct camera capture, photo-library input, restaurant/delivery links, manual correction,
+full source nutrients, and target-aware Insights. Image and link analysis use guarded server routes with
+OpenAI vision/web search and USDA FoodData Central grounding. Copy the nutrition variables from
+`.env.example`; secrets must remain server-only. `CLINICAL_AI_ENABLED` defaults to `false` so no meal
+photo is transmitted until the intended privacy configuration is explicitly enabled.
+
+Youth, infant, and cloud-clinical flags default off. The Supabase migration in `supabase/migrations`
+creates the private nutrition schema, RLS policies, clinician approval rules, audit immutability, and
+private meal-photo bucket. Do not enable PHI processing until the required BAAs, high-compliance project
+configuration, legal review, clinical review, and security review are complete.
+
+For free local photo analysis during development, install Ollama and pull `qwen3-vl:2b`, then set
+`MEAL_AI_PROVIDER=ollama` and `LOCAL_MEAL_AI_ENABLED=true` in `.env.local`. The Expo API route sends
+the normalized image only to the loopback Ollama service; USDA grounding remains optional through
+`USDA_FDC_API_KEY`. Restaurant-link analysis continues to require the guarded cloud provider.
 
 ## iOS notes
 
@@ -59,6 +76,7 @@ Movie events use TMDB through server-side Expo Router API routes. Copy `.env.exa
 current Expo CLI host. Set `EXPO_PUBLIC_API_BASE_URL` to the deployed API origin for production
 native builds. Keep the TMDB token server-only.
 
-Run API routes locally with `npx expo serve`. Deploy the web bundle and API routes together with
+The `npm run ios` development server handles local API routes while it remains running. For a
+production-like local server, use `npx expo serve`. Deploy the web bundle and API routes together with
 `npx expo export -p web` followed by `npx eas-cli@latest deploy`; configure the same environment
 variables for preview and production in EAS.

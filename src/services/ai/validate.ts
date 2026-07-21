@@ -23,6 +23,24 @@ function isFoodItem(v: unknown): v is FoodItem {
   );
 }
 
+function isNutrientValue(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    isNonEmptyString(o.id) &&
+    isNonEmptyString(o.name) &&
+    isNonEmptyString(o.unit) &&
+    typeof o.estimated === 'boolean' &&
+    (o.amount === undefined || (isFiniteNumber(o.amount) && o.amount >= 0))
+  );
+}
+
+function isSource(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return isNonEmptyString(o.id) && isNonEmptyString(o.kind) && isNonEmptyString(o.title);
+}
+
 /**
  * Validates a structured AI response before it is stored or rendered.
  * Returns null for anything malformed so callers can fall back safely.
@@ -34,6 +52,10 @@ export function validateMealAnalysis(v: unknown): MealAnalysis | null {
   if (!isFiniteNumber(o.totalCalories) || o.totalCalories < 0) return null;
   if (!isFiniteNumber(o.proteinG) || !isFiniteNumber(o.carbsG) || !isFiniteNumber(o.fatG)) return null;
   if (!isFiniteNumber(o.fiberG)) return null;
+  if (!Array.isArray(o.nutrients) || !o.nutrients.every(isNutrientValue)) return null;
+  if (!Array.isArray(o.sources) || !o.sources.every(isSource)) return null;
+  if (!Array.isArray(o.recommendations)) return null;
+  if (typeof o.reviewRequired !== 'boolean') return null;
   if (!Array.isArray(o.observations) || !o.observations.every(isNonEmptyString)) return null;
   if (!isNonEmptyString(o.disclaimer)) return null;
   return o as unknown as MealAnalysis;
