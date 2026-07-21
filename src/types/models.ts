@@ -11,7 +11,7 @@ export interface ActivityCategory {
   supportsPhotos: boolean;
   supportsTimer: boolean;
   /** Which detail experience opens when tapped */
-  detailKind: 'food' | 'gym' | 'work' | 'movie' | 'sleep' | 'generic';
+  detailKind: 'food' | 'gym' | 'work' | 'movie' | 'sleep' | 'plant' | 'generic';
   isCustom?: boolean;
 }
 
@@ -38,6 +38,9 @@ export interface Activity {
   summary?: string;
   photo?: string | number;
   recurrence?: RecurrenceRule;
+  /** Links generated plant-care activities back to their plant profile. */
+  plantId?: string;
+  careKind?: 'watering' | 'pruning';
   createdAt: string;
   updatedAt: string;
 }
@@ -262,4 +265,111 @@ export interface DailySummary {
   headline: string;
   body: string;
   suggestion: string;
+}
+
+// ── Plants ─────────────────────────────────────────────────────────────
+
+export type PlantHealthStatus = 'healthy' | 'watch' | 'urgent';
+export type PruningUrgency = 'not-needed' | 'soon' | 'now';
+
+export interface PlantIdentity {
+  commonName: string;
+  scientificName: string;
+  confidence: number;
+  /** AI suggestions must be explicitly confirmed or corrected before care planning. */
+  identificationSource?: 'ai' | 'user-confirmed' | 'user-corrected';
+}
+
+export interface PlantHealthAssessment {
+  status: PlantHealthStatus;
+  summary: string;
+  /** Features visible in the submitted image. */
+  visibleSigns: string[];
+  /** Possibilities only; never presented as a diagnosis. */
+  possibleCauses: string[];
+  actions: string[];
+  confidence: number;
+  assessedAt: string;
+}
+
+export interface PlantCareSource {
+  title: string;
+  url: string;
+}
+
+export interface WateringRecommendation {
+  minMl: number;
+  maxMl: number;
+  intervalDays: number;
+  soilCheck: string;
+  notes: string;
+}
+
+export interface PruningRecommendation {
+  urgency: PruningUrgency;
+  reason: string;
+  steps: string[];
+}
+
+export interface PlacementRecommendation {
+  light: string;
+  location: string;
+  windowDistance: string;
+  avoid: string[];
+}
+
+export interface PlantCarePlan {
+  watering: WateringRecommendation;
+  pruning: PruningRecommendation;
+  placement: PlacementRecommendation;
+  sources: PlantCareSource[];
+  disclaimer: string;
+  generatedAt: string;
+}
+
+export type WindowDirection = 'north' | 'east' | 'south' | 'west' | 'unknown';
+
+export interface RoomProfile {
+  potDiameterCm: number;
+  drainage: 'yes' | 'no' | 'unknown';
+  windowDirection: WindowDirection;
+  windowDistanceM: number;
+  directSunHours: number;
+}
+
+export interface WateringLog {
+  id: string;
+  wateredAt: string;
+  amountMl?: number;
+  activityId?: string;
+  priorNextWateringAt: string;
+}
+
+export interface PlantCheckIn {
+  id: string;
+  photoUri: string;
+  createdAt: string;
+  assessment: PlantHealthAssessment;
+  proposedCarePlan?: PlantCarePlan;
+  carePlanAcceptedAt?: string;
+}
+
+export interface Plant {
+  id: string;
+  nickname: string;
+  photoUri: string;
+  identity: PlantIdentity;
+  health: PlantHealthAssessment;
+  carePlan: PlantCarePlan;
+  room: RoomProfile;
+  lastWateredAt?: string;
+  nextWateringAt: string;
+  /** Minutes from midnight in the device's local time. */
+  reminderMinutes: number;
+  notificationId?: string;
+  wateringActivityId?: string;
+  wateringLogs: WateringLog[];
+  checkIns: PlantCheckIn[];
+  createdAt: string;
+  updatedAt: string;
 }
