@@ -3,7 +3,9 @@ import {
   createInstalledTravelInviteUrl,
   decodeTravelInvite,
   encodeTravelInvite,
+  findMatchingTravelPlan,
   isShortTravelInvite,
+  travelPlanIdentityKey,
   travelInviteKey,
 } from '../share';
 import type { TravelPlan } from '../types';
@@ -88,5 +90,36 @@ describe('travel invites', () => {
     const payload = encodeTravelInvite(plan);
     expect(travelInviteKey(payload)).toBe(travelInviteKey(payload));
     expect(travelInviteKey(`${payload}x`)).not.toBe(travelInviteKey(payload));
+  });
+
+  it('matches an existing trip by normalized title, destination, and dates', () => {
+    expect(
+      findMatchingTravelPlan([plan], {
+        ...plan,
+        title: '  AMÉLIE’S   50% FUN TRIP ',
+        destination: ' montréal ',
+      }),
+    ).toBe(plan);
+  });
+
+  it('does not match a trip with different dates', () => {
+    expect(
+      findMatchingTravelPlan([plan], {
+        ...plan,
+        startDate: '2026-09-13',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('uses the same imported id for different links containing the same trip', () => {
+    const sameTripWithUpdatedDetails: TravelPlan = {
+      ...plan,
+      id: 'another-local-id',
+      notes: 'Updated packing notes',
+      itinerary: [],
+    };
+    expect(travelPlanIdentityKey(sameTripWithUpdatedDetails)).toBe(
+      travelPlanIdentityKey(plan),
+    );
   });
 });

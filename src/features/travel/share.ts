@@ -211,6 +211,36 @@ export function travelInviteKey(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+type TravelPlanIdentity = Pick<
+  TravelPlan,
+  'title' | 'destination' | 'startDate' | 'endDate'
+>;
+
+function normalizeTravelIdentityText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function travelPlanIdentity(plan: TravelPlanIdentity): string {
+  return JSON.stringify([
+    normalizeTravelIdentityText(plan.title),
+    normalizeTravelIdentityText(plan.destination),
+    plan.startDate,
+    plan.endDate,
+  ]);
+}
+
+export function travelPlanIdentityKey(plan: TravelPlanIdentity): string {
+  return travelInviteKey(travelPlanIdentity(plan));
+}
+
+export function findMatchingTravelPlan(
+  plans: TravelPlan[],
+  candidate: TravelPlanIdentity,
+): TravelPlan | undefined {
+  const identity = travelPlanIdentity(candidate);
+  return plans.find((plan) => travelPlanIdentity(plan) === identity);
+}
+
 export class TravelInviteError extends Error {
   constructor(message: string) {
     super(message);

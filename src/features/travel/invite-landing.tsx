@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/components/primitives';
@@ -9,10 +9,11 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
   createInstalledTravelInviteUrl,
   decodeTravelInvite,
+  findMatchingTravelPlan,
   isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
   resolveTravelInvite,
-  travelInviteKey,
+  travelPlanIdentityKey,
 } from '@/features/travel/share';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
@@ -31,9 +32,11 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
 function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const router = useRouter();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
+  const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const setAddonEnabled = useAddons((state) => state.setEnabled);
+  const handledInvite = useRef<string | undefined>(undefined);
   const isShortInvite = Boolean(invite && isShortTravelInvite(invite));
   const embeddedDecoded = useMemo(
     () => (invite && !isShortInvite ? decodeTravelInvite(invite) : undefined),
@@ -48,6 +51,10 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const remoteDecoded = currentRemoteResult?.plan;
   const inviteError = currentRemoteResult?.error;
   const decoded = isShortInvite ? remoteDecoded : embeddedDecoded;
+  const existingPlan = useMemo(
+    () => (decoded ? findMatchingTravelPlan(plans, decoded) : undefined),
+    [decoded, plans],
+  );
   const resolving = isShortInvite && !decoded && !inviteError;
   const isWeb = process.env.EXPO_OS === 'web';
   const nativeError =
@@ -84,10 +91,23 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   useEffect(() => {
     if (isWeb) return;
     if (!invite || !decoded) return;
+    if (handledInvite.current === invite) return;
+    handledInvite.current = invite;
+
+    if (existingPlan) {
+      setAddonEnabled('travel', true);
+      router.replace(
+        hasOnboarded
+          ? (`/travel/${existingPlan.id}` as never)
+          : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
+      );
+      return;
+    }
+
     const now = new Date().toISOString();
     const plan = {
       ...decoded,
-      id: `trip-invite-${travelInviteKey(invite)}`,
+      id: `trip-invite-${travelPlanIdentityKey(decoded)}`,
       createdAt: now,
       updatedAt: now,
     };
@@ -96,11 +116,12 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     setAddonEnabled('travel', true);
     router.replace(
       hasOnboarded
-        ? ('/travel' as never)
+        ? (`/travel/${plan.id}` as never)
         : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
     );
   }, [
     decoded,
+    existingPlan,
     hasOnboarded,
     invite,
     isWeb,
