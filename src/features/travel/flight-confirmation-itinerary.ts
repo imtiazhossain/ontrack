@@ -9,6 +9,25 @@ interface MergeImportedFlightsOptions {
   targetItemId?: string;
 }
 
+export function expandedTripRangeForFlights(
+  tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
+  segments: ParsedFlightSegment[],
+): Pick<TravelPlan, 'startDate' | 'endDate'> {
+  const dates = segments
+    .map((segment) => segment.date)
+    .filter((date): date is string => Boolean(date));
+  return {
+    startDate: dates.reduce(
+      (earliest, date) => (date < earliest ? date : earliest),
+      tripRange.startDate,
+    ),
+    endDate: dates.reduce(
+      (latest, date) => (date > latest ? date : latest),
+      tripRange.endDate,
+    ),
+  };
+}
+
 function sameFlight(
   item: TravelItineraryItem,
   segment: ParsedFlightSegment,
@@ -48,6 +67,9 @@ function importedItemValues(
       (index === 0 ? 'Departure flight' : 'Return flight'),
     date,
     startMinutes: segment.startMinutes ?? 12 * 60,
+    ...(segment.durationMinutes !== undefined
+      ? { durationMinutes: segment.durationMinutes }
+      : {}),
     flight: {
       airline: segment.flight.airline || undefined,
       flightNumber: segment.flight.flightNumber || undefined,

@@ -5,7 +5,7 @@ export type ActivityStatus = 'upcoming' | 'completed' | 'partial' | 'skipped';
 export interface ActivityCategory {
   id: string;
   name: string;
-  /** SF Symbol name */
+  /** Semantic app icon name (see `design-system/icons`). Legacy records may hold raw SF Symbol names. */
   icon: string;
   colorKey: CategoryColorKey;
   supportsPhotos: boolean;
@@ -207,7 +207,7 @@ export interface WorkoutSet {
 export interface WorkoutExercise {
   id: string;
   name: string;
-  /** SF Symbol name */
+  /** Semantic app icon name (see `design-system/icons`). Legacy records may hold raw SF Symbol names. */
   icon: string;
   sets: WorkoutSet[];
   restSeconds: number;

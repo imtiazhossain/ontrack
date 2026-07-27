@@ -16,6 +16,7 @@ describe('travel plan normalization', () => {
       ...legacyPlan,
       notes: undefined,
       itinerary: [],
+      participants: [],
     });
   });
 
@@ -47,6 +48,95 @@ describe('travel plan normalization', () => {
         details: undefined,
         bookingUrl: undefined,
         flight: undefined,
+      },
+    ]);
+  });
+
+  it('repairs the previously persisted Icelandair return flight import', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      startDate: '2026-09-08',
+      endDate: '2026-09-13',
+      itinerary: [
+        {
+          id: 'outbound',
+          kind: 'flight',
+          title: 'Flight EWR → KEF',
+          date: '2026-09-08',
+          startMinutes: 20 * 60 + 25,
+          durationMinutes: 5 * 60 + 50,
+          flight: {
+            airline: 'Icelandair',
+            flightNumber: 'FI 622',
+            confirmationCode: 'AB2ZQV',
+            departureAirport: 'EWR',
+            arrivalAirport: 'KEF',
+          },
+        },
+        {
+          id: 'return',
+          kind: 'flight',
+          title: 'Flight EWR → KEF',
+          date: '2026-09-13',
+          startMinutes: 17 * 60,
+          durationMinutes: 6 * 60 + 15,
+          flight: {
+            airline: 'Icelandair',
+            flightNumber: 'FI 623',
+            confirmationCode: 'AB2ZQV',
+            departureAirport: 'EWR',
+            arrivalAirport: 'KEF',
+          },
+        },
+      ],
+    });
+
+    expect(normalized).toMatchObject({
+      endDate: '2026-09-14',
+      itinerary: [
+        {
+          id: 'outbound',
+          title: 'Flight EWR → KEF',
+          date: '2026-09-08',
+        },
+        {
+          id: 'return',
+          title: 'Flight KEF → EWR',
+          date: '2026-09-14',
+          flight: {
+            flightNumber: 'FI 623',
+            departureAirport: 'KEF',
+            arrivalAirport: 'EWR',
+          },
+        },
+      ],
+    });
+  });
+
+  it('keeps valid trip participants and drops malformed invite records', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        participants: [
+          { id: 'broken', name: '' },
+          {
+            id: 'person-1',
+            name: '  Sam Rivera  ',
+            email: 'sam@example.com',
+            inviteCode: '0123456789abcdefabcd',
+            invitedAt: '2026-07-27T12:00:00.000Z',
+            acceptedAt: '2026-07-27T13:00:00.000Z',
+          },
+        ],
+      })?.participants,
+    ).toEqual([
+      {
+        id: 'person-1',
+        name: 'Sam Rivera',
+        email: 'sam@example.com',
+        inviteCode: '0123456789abcdefabcd',
+        invitedAt: '2026-07-27T12:00:00.000Z',
+        acceptedAt: '2026-07-27T13:00:00.000Z',
       },
     ]);
   });

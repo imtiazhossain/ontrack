@@ -30,7 +30,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export default function ProfileScreen() {
+export default function ProfileSettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const name = usePreferences((s) => s.name);
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
             ? `${installedAgentCount} installed · permissions and access`
             : 'Agent-ready · none installed'
         }
-        icon="person.2.badge.gearshape"
+        icon="agents"
         onPress={() => router.push('/agents' as never)}
         accessibilityLabel="Manage agents"
       />
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
       <CloudAccountCard />
 
       <SectionHeader title="Nutrition" />
-      <Button variant="secondary" icon="heart.text.clipboard" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+      <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>

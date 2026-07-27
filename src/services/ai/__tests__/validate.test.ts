@@ -48,7 +48,7 @@ describe('validateWorkoutRecommendation', () => {
     name: 'Leg day',
     reason: 'Balance upper body work.',
     disclaimer: 'Not medical advice.',
-    exercises: [{ name: 'Squat', icon: 'figure.walk', sets: 3, reps: 10, weightKg: 40, restSeconds: 90 }],
+    exercises: [{ name: 'Squat', icon: 'exercise-walk', sets: 3, reps: 10, weightKg: 40, restSeconds: 90 }],
   };
 
   it('accepts valid workout recommendation', () => {
@@ -59,7 +59,7 @@ describe('validateWorkoutRecommendation', () => {
     expect(
       validateWorkoutRecommendation({
         ...validWorkout,
-        exercises: [{ name: 'Squat', icon: 'figure.walk', sets: 0, reps: 10, weightKg: 40, restSeconds: 90 }],
+        exercises: [{ name: 'Squat', icon: 'exercise-walk', sets: 0, reps: 10, weightKg: 40, restSeconds: 90 }],
       }),
     ).toBeNull();
   });

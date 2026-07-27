@@ -30,7 +30,7 @@ export default function PlantDetailScreen() {
 
   const remove = () => Alert.alert('Delete plant', `Remove ${plant.nickname}, its care tasks, and locally saved photos?`, [
     { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/(tabs)/plants')) },
+    { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/plants')) },
   ]);
 
   return (
@@ -67,7 +67,7 @@ export default function PlantDetailScreen() {
         <AppText>{plant.health.summary}</AppText>
         {plant.health.visibleSigns.map((item) => <AppText key={item} color="secondary">Observed: {item}</AppText>)}
         {plant.health.possibleCauses.map((item) => <AppText key={item} variant="caption" color="tertiary">Possible, not diagnosed: {item}</AppText>)}
-        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })} icon="camera.fill">Add health check-in</Button>
+        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })} icon="camera">Add health check-in</Button>
       </Card>
 
       <SectionHeader title="Placement" />

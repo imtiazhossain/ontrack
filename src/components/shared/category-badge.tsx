@@ -1,5 +1,4 @@
 import { StyleSheet, View } from 'react-native';
-import type { SymbolViewProps } from 'expo-symbols';
 
 import { categoryColors, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -25,7 +24,7 @@ export function CategoryIcon({ category, size = 40 }: CategoryIconProps) {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      <Symbol name={category.icon as SymbolViewProps['name']} size={size * 0.45} color={colors.main} />
+      <Symbol name={category.icon} size={size * 0.45} color={colors.main} />
     </View>
   );
 }

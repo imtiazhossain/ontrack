@@ -7,7 +7,25 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "testflight": {
+      "developmentClient": false,
+      "distribution": "store",
+      "environment": "preview",
+      "channel": "testflight",
+      "autoIncrement": true,
+      "env": {
+        "EAS_USE_CACHE": "1",
+        "EXPO_PUBLIC_APP_ENV": "testflight",
+        "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     },
     "testflight": {
       "developmentClient": false,

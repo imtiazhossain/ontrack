@@ -32,7 +32,7 @@ export default function DayScreen() {
       />
       <View style={[styles.back, { top: spacing.xs }]}>
         <IconButton
-          icon="chevron.down"
+          icon="chevron-down"
           accessibilityLabel="Back to calendar"
           background="transparent"
           onPress={() => router.back()}

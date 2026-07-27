@@ -162,7 +162,7 @@ describe('flight confirmation parser', () => {
   it('imports both correct legs from the provided Chase PDFKit text', () => {
     const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
       startDate: '2026-09-08',
-      endDate: '2026-09-14',
+      endDate: '2026-09-13',
     });
 
     expect(parsed.segments).toHaveLength(2);
@@ -170,6 +170,7 @@ describe('flight confirmation parser', () => {
       title: 'Flight EWR → KEF',
       date: '2026-09-08',
       startMinutes: 20 * 60 + 25,
+      durationMinutes: 5 * 60 + 50,
       flight: {
         airline: 'Icelandair',
         flightNumber: 'FI 622',
@@ -183,6 +184,7 @@ describe('flight confirmation parser', () => {
       title: 'Flight KEF → EWR',
       date: '2026-09-14',
       startMinutes: 17 * 60,
+      durationMinutes: 6 * 60 + 15,
       flight: {
         airline: 'Icelandair',
         flightNumber: 'FI 623',
@@ -197,13 +199,13 @@ describe('flight confirmation parser', () => {
     const imported = mergeImportedFlights({
       itinerary: [],
       segments: parsed.segments,
-      tripRange: { startDate: '2026-09-08', endDate: '2026-09-14' },
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
       createId: () => `flight-${++nextId}`,
     });
     const reimported = mergeImportedFlights({
       itinerary: imported,
       segments: parsed.segments,
-      tripRange: { startDate: '2026-09-08', endDate: '2026-09-14' },
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
       createId: () => 'duplicate',
     });
 
@@ -213,11 +215,13 @@ describe('flight confirmation parser', () => {
         title: 'Flight EWR → KEF',
         date: '2026-09-08',
         startMinutes: 20 * 60 + 25,
+        durationMinutes: 5 * 60 + 50,
       }),
       expect.objectContaining({
         title: 'Flight KEF → EWR',
         date: '2026-09-14',
         startMinutes: 17 * 60,
+        durationMinutes: 6 * 60 + 15,
       }),
     ]);
     expect(reimported).toHaveLength(2);

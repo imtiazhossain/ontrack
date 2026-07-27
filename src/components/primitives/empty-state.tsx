@@ -1,14 +1,13 @@
 import { StyleSheet, View } from 'react-native';
-import type { SymbolViewProps } from 'expo-symbols';
 
-import { spacing } from '@/design-system';
+import { spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AppText } from './app-text';
 import { Button } from './button';
 import { Symbol } from './symbol';
 
 interface EmptyStateProps {
-  icon: SymbolViewProps['name'];
+  icon: AppIconName;
   title: string;
   message: string;
   actionLabel?: string;

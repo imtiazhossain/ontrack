@@ -1,15 +1,19 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
-  decodeTravelInvite,
+  acceptTravelInvite,
+  createInstalledTravelInviteUrl,
+  findMatchingTravelPlan,
+  isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
-  travelInviteKey,
+  resolveTravelInvite,
+  travelPlanIdentityKey,
 } from '@/features/travel/share';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
@@ -28,21 +32,94 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
 function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const router = useRouter();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
+  const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const setAddonEnabled = useAddons((state) => state.setEnabled);
-  const decoded = useMemo(() => (invite ? decodeTravelInvite(invite) : undefined), [invite]);
+  const handledInvite = useRef<string | undefined>(undefined);
+  const isShortInvite = Boolean(invite && isShortTravelInvite(invite));
+  const [remoteResult, setRemoteResult] = useState<{
+    invite: string;
+    plan?: Awaited<ReturnType<typeof resolveTravelInvite>>;
+    error?: string;
+  }>();
+  const currentRemoteResult = remoteResult?.invite === invite ? remoteResult : undefined;
+  const remoteDecoded = currentRemoteResult?.plan;
+  const inviteError = currentRemoteResult?.error;
+  const decoded = remoteDecoded;
+  const existingPlan = useMemo(
+    () => (decoded ? findMatchingTravelPlan(plans, decoded) : undefined),
+    [decoded, plans],
+  );
+  const resolving = isShortInvite && !decoded && !inviteError;
   const isWeb = process.env.EXPO_OS === 'web';
   const nativeError =
-    !invite || !decoded ? 'This travel invitation is invalid or incomplete.' : undefined;
+    !invite
+      ? 'This travel invitation is invalid or incomplete.'
+      : inviteError ??
+        (!resolving && !decoded ? 'This travel invitation is invalid or expired.' : undefined);
+
+  useEffect(() => {
+    if (!invite || !isShortInvite) return;
+
+    let active = true;
+    void resolveTravelInvite(invite)
+      .then((plan) => {
+        if (!active) return;
+        setRemoteResult(
+          plan
+            ? { invite, plan }
+            : {
+                invite,
+                error:
+                  'This invitation is unavailable for the signed-in account, or it has expired.',
+              },
+        );
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setRemoteResult({
+          invite,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'This invitation could not be opened.',
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [invite, isShortInvite]);
 
   useEffect(() => {
     if (isWeb) return;
     if (!invite || !decoded) return;
+    if (handledInvite.current === invite) return;
+    handledInvite.current = invite;
+    void acceptTravelInvite(invite).catch(() => undefined);
+
+    if (existingPlan) {
+      if (isShortInvite) {
+        savePlan({
+          ...existingPlan,
+          chatAccessCode: invite.slice(2),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      setAddonEnabled('travel', true);
+      router.replace(
+        hasOnboarded
+          ? (`/travel/${existingPlan.id}` as never)
+          : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
+      );
+      return;
+    }
+
     const now = new Date().toISOString();
     const plan = {
       ...decoded,
-      id: `trip-invite-${travelInviteKey(invite)}`,
+      id: `trip-invite-${travelPlanIdentityKey(decoded)}`,
+      chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -51,14 +128,16 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     setAddonEnabled('travel', true);
     router.replace(
       hasOnboarded
-        ? ('/travel' as never)
+        ? (`/travel/${plan.id}` as never)
         : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
     );
   }, [
     decoded,
+    existingPlan,
     hasOnboarded,
     invite,
     isWeb,
+    isShortInvite,
     replaceTravelActivities,
     router,
     savePlan,
@@ -81,9 +160,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     );
   }
 
-  const customSchemeUrl = invite
-    ? `ontrack:///invite/travel?invite=${invite}`
-    : 'ontrack:///travel';
+  const customSchemeUrl = createInstalledTravelInviteUrl(invite);
 
   return (
     <Screen contentStyle={styles.webPage} bottomInset={false}>
@@ -98,7 +175,11 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
       </View>
 
       <Card style={styles.inviteCard}>
-        {decoded ? (
+        {resolving ? (
+          <AppText variant="body" color="secondary">
+            Loading your invitation…
+          </AppText>
+        ) : decoded ? (
           <>
             <AppText variant="heading">{decoded.title}</AppText>
             <AppText variant="subheading" color="accent">
@@ -113,7 +194,10 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
             </AppText>
           </>
         ) : (
-          <ErrorMessage message="This invitation is invalid or incomplete." variant="body" />
+          <ErrorMessage
+            message={inviteError ?? 'This invitation is invalid or incomplete.'}
+            variant="body"
+          />
         )}
       </Card>
 
@@ -121,14 +205,14 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
         <View style={styles.buttons}>
           <Button
             size="lg"
-            icon="arrow.up.forward.app"
+            icon="open-external"
             onPress={() => void Linking.openURL(customSchemeUrl)}>
             Open in onTrack
           </Button>
           <Button
             size="lg"
             variant="secondary"
-            icon="square.and.arrow.down"
+            icon="download"
             onPress={() => void Linking.openURL(ONTRACK_APP_STORE_URL)}>
             Download from the App Store
           </Button>

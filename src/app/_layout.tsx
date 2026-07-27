@@ -12,6 +12,7 @@ import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
 import { useTheme } from '@/hooks/use-theme';
 import { useSchedule } from '@/store/schedule';
 import { usePreferences } from '@/store/preferences';
+import { useTravel } from '@/store/travel';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { AppSafeArea } from '@/components/primitives';
@@ -36,7 +37,19 @@ export default function RootLayout() {
     if (Platform.OS === 'web') return;
     const redirect = (response: Notifications.NotificationResponse | null) => {
       const url = response?.notification.request.content.data?.url;
-      if (typeof url === 'string' && url.startsWith('/plants/')) router.push(url as never);
+      if (typeof url === 'string' && url.startsWith('/plants/')) {
+        router.push(url as never);
+        return;
+      }
+      const chatCode = response?.notification.request.content.data?.chatCode;
+      if (url === '/travel-chat' && typeof chatCode === 'string') {
+        const plan = useTravel.getState().plans.find(
+          (item) =>
+            item.chatAccessCode === chatCode ||
+            item.participants.some((person) => person.inviteCode === chatCode),
+        );
+        if (plan) router.push(`/travel/${plan.id}/chat` as never);
+      }
     };
     void Notifications.getLastNotificationResponseAsync().then(redirect);
     const subscription = Notifications.addNotificationResponseReceivedListener(redirect);
@@ -56,9 +69,15 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="day/[date]" />
+            <Stack.Screen name="profile" />
+            <Stack.Screen name="plants" />
+            <Stack.Screen name="travel" />
             <Stack.Screen name="agents" />
             <Stack.Screen name="invite/travel" />
+            <Stack.Screen name="i/[code]" />
             <Stack.Screen name="travel/[id]" />
+            <Stack.Screen name="travel/[id]/stays" />
+            <Stack.Screen name="travel/[id]/chat" />
             <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
             <Stack.Screen name="detail/food/[id]" />
             <Stack.Screen name="detail/gym/[id]" />

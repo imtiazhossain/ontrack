@@ -146,7 +146,7 @@ export function TravelWeatherCard({
 
       <Button
         variant="ghost"
-        icon="arrow.up.forward.app"
+        icon="open-external"
         style={styles.googleButton}
         onPress={() =>
           void WebBrowser.openBrowserAsync(

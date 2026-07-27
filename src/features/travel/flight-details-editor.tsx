@@ -33,7 +33,7 @@ export function FlightDetailsEditor({
         {onImport ? (
           <Button
             variant="secondary"
-            icon="doc.text.viewfinder"
+            icon="scan-document"
             disabled={importing}
             onPress={onImport}
             accessibilityLabel="Import flight confirmation document or screenshots">
@@ -104,7 +104,7 @@ export function FlightDetailsEditor({
             label="Seat"
             value={value.seat}
             onChangeText={(nextValue) => update('seat', nextValue)}
-            placeholder="14A"
+            placeholder="Seat"
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={8}

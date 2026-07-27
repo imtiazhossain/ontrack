@@ -23,4 +23,16 @@ describe('keyboard scrolling invariant', () => {
     expect(screen).toContain('contentInsetAdjustmentBehavior="never"');
     expect(screen).not.toMatch(/paddingTop\s*:\s*.*insets\.top/);
   });
+
+  it('keeps the travel chat composer above the iOS keyboard', () => {
+    const chatScreen = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-chat-screen.tsx'),
+      'utf8',
+    );
+
+    expect(chatScreen).toContain("'keyboardWillChangeFrame'");
+    expect(chatScreen).toContain('Keyboard.scheduleLayoutAnimation(event)');
+    expect(chatScreen).toContain('marginBottom: keyboardInset');
+    expect(chatScreen).not.toContain('<KeyboardAvoidingView');
+  });
 });

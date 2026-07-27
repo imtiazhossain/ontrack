@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { applyPlantCarePlan, wateringDueAt } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
@@ -24,16 +24,14 @@ export default function EditPlantScreen() {
   const [location, setLocation] = useState(plant?.carePlan.placement.location ?? '');
   const [windowDistance, setWindowDistance] = useState(plant?.carePlan.placement.windowDistance ?? '');
   const [light, setLight] = useState(plant?.carePlan.placement.light ?? '');
-  const [reminder, setReminder] = useState(plant ? `${String(Math.floor(plant.reminderMinutes / 60)).padStart(2, '0')}:${String(plant.reminderMinutes % 60).padStart(2, '0')}` : '09:00');
+  const [reminderMinutes, setReminderMinutes] = useState(plant?.reminderMinutes ?? 9 * 60);
   const [error, setError] = useState<string>();
 
   if (!plant) return <Screen><BackButton /><AppText variant="title">Plant not found</AppText></Screen>;
 
   const save = async () => {
-    const match = /^(\d{1,2}):(\d{2})$/.exec(reminder);
-    const reminderMinutes = match ? Number(match[1]) * 60 + Number(match[2]) : -1;
     if (!nickname.trim() || value(minMl) <= 0 || value(maxMl) < value(minMl) || value(interval) < 1 || reminderMinutes < 0 || reminderMinutes >= 1440) {
-      setError('Review the name, watering range, interval, and HH:MM reminder.');
+      setError('Review the name, watering range, interval, and reminder time.');
       return;
     }
     const carePlan: PlantCarePlan = {
@@ -60,7 +58,7 @@ export default function EditPlantScreen() {
       <Input label="Check every (days)" keyboardType="number-pad" value={interval} onChangeText={setInterval} />
       <Input label="Soil check" value={soilCheck} onChangeText={setSoilCheck} multiline />
       <Input label="Notes" value={notes} onChangeText={setNotes} multiline />
-      <Input label="Reminder (HH:MM)" value={reminder} onChangeText={setReminder} />
+      <TimeField label="Reminder time" value={reminderMinutes} onChange={setReminderMinutes} />
       <SectionHeader title="Placement" />
       <Input label="Location" value={location} onChangeText={setLocation} multiline />
       <Input label="Distance guidance" value={windowDistance} onChangeText={setWindowDistance} />

@@ -1,7 +1,13 @@
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from 'react-native-reanimated';
 
 import {
   AppText,
@@ -15,16 +21,21 @@ import {
   Screen,
   SectionHeader,
   Symbol,
+  TimeField,
 } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
+import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import {
   importFlightConfirmation,
   type FlightConfirmationImportSource,
 } from '@/features/travel/flight-confirmation-import';
-import { mergeImportedFlights } from '@/features/travel/flight-confirmation-itinerary';
+import {
+  expandedTripRangeForFlights,
+  mergeImportedFlights,
+} from '@/features/travel/flight-confirmation-itinerary';
 import {
   emptyFlightDetailsDraft,
   flightDetailsDraft,
@@ -33,18 +44,29 @@ import {
 } from '@/features/travel/flight-details';
 import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
 import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
-import { webTravelSearchProvider } from '@/features/travel/provider';
-import { shareTravelPlan } from '@/features/travel/share';
+import { googleFlightStatusUrl } from '@/features/travel/flight-status-link';
+import { normalizeTravelPlan } from '@/features/travel/normalize';
+import {
+  loadTravelInviteStatuses,
+  resendTravelInvite,
+  revokeTravelInvite,
+  shareTravelPlan,
+} from '@/features/travel/share';
+import { TripPeople } from '@/features/travel/trip-people';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
-import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
+import type {
+  TravelItemKind,
+  TravelParticipant,
+  TravelPlan,
+} from '@/features/travel/types';
 import { googleWeatherUrl } from '@/features/travel/weather';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { formatDateKey } from '@/utils/date';
+import { formatDateKey, formatDuration } from '@/utils/date';
 
 const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'flight', label: 'Flight' },
@@ -52,24 +74,12 @@ const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'activity', label: 'Activity' },
 ];
 
-function parseTime(value: string): number | undefined {
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
-  if (!match) return undefined;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
-
 function formatTime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const minute = minutes % 60;
   const suffix = hours >= 12 ? 'PM' : 'AM';
   const displayHour = hours % 12 || 12;
   return `${displayHour}:${minute.toString().padStart(2, '0')} ${suffix}`;
-}
-
-function formatTimeInput(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 }
 
 function validBookingUrl(value: string): boolean {
@@ -96,6 +106,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const savePlan = useTravel((state) => state.savePlan);
   const activities = useSchedule((state) => state.activities);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
+  const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [editingDates, setEditingDates] = useState(false);
   const [editStartDate, setEditStartDate] = useState(plan?.startDate ?? '');
@@ -107,7 +118,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [kind, setKind] = useState<TravelItemKind>('activity');
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(plan?.startDate ?? '');
-  const [time, setTime] = useState('09:00');
+  const [startMinutes, setStartMinutes] = useState(9 * 60);
   const [duration, setDuration] = useState('60');
   const [details, setDetails] = useState('');
   const [bookingUrl, setBookingUrl] = useState('');
@@ -126,13 +137,82 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [error, setError] = useState<string>();
   const [dateError, setDateError] = useState<string>();
   const [detailsError, setDetailsError] = useState<string>();
+  const [sharingInvite, setSharingInvite] = useState(false);
+  const [editingInvite, setEditingInvite] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteError, setInviteError] = useState<string>();
+  const [managingParticipantId, setManagingParticipantId] = useState<string>();
+  const [minimizedItemIds, setMinimizedItemIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      let current = useTravel.getState().plans.find((item) => item.id === planId);
+      const normalized = normalizeTravelPlan(current);
+      if (
+        current &&
+        normalized &&
+        JSON.stringify(normalized) !== JSON.stringify(current)
+      ) {
+        current = {
+          ...normalized,
+          updatedAt: new Date().toISOString(),
+        };
+        useTravel.getState().savePlan(current);
+        const schedule = useSchedule.getState();
+        if (
+          schedule.activities.some(
+            (activity) => activity.travelPlanId === current?.id,
+          )
+        ) {
+          schedule.replaceTravelActivities(
+            current.id,
+            travelCalendarDrafts(current),
+          );
+        }
+      }
+      const inviteCodes = current?.participants.map((person) => person.inviteCode) ?? [];
+      if (inviteCodes.length === 0) return () => {
+        active = false;
+      };
+
+      void loadTravelInviteStatuses(inviteCodes)
+        .then((statuses) => {
+          if (!active || Object.keys(statuses).length === 0) return;
+          const latest = useTravel.getState().plans.find((item) => item.id === planId);
+          if (!latest) return;
+          let changed = false;
+          const participants = latest.participants.map((person) => {
+            const acceptedAt = statuses[person.inviteCode];
+            if (!acceptedAt || person.acceptedAt === acceptedAt) return person;
+            changed = true;
+            return { ...person, acceptedAt };
+          });
+          if (changed) {
+            useTravel.getState().savePlan({
+              ...latest,
+              participants,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        })
+        .catch(() => undefined);
+
+      return () => {
+        active = false;
+      };
+    }, [planId]),
+  );
 
   if (!plan) {
     return (
       <Screen>
         <BackButton />
         <EmptyState
-          icon="airplane"
+          icon="flight"
           title="Trip not found"
           message="This trip may have been removed on another device."
         />
@@ -152,13 +232,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const addItem = () => {
     setError(undefined);
     setFlightDetailsError(undefined);
-    const startMinutes = parseTime(time);
     const durationMinutes = Number(duration);
     if (!title.trim()) return setError('Add a name for this itinerary item.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
       return setError(`Choose a date between ${plan.startDate} and ${plan.endDate}.`);
     }
-    if (startMinutes === undefined) return setError('Use a 24-hour time such as 09:30.');
+    if (startMinutes < 0 || startMinutes >= 24 * 60) {
+      return setError('Choose a valid start time.');
+    }
     if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 1440) {
       return setError('Duration must be between 1 and 1,440 minutes.');
     }
@@ -277,8 +358,10 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       );
       if (!imported) return;
       if (imported.segments.length > 1) {
+        const importedRange = expandedTripRangeForFlights(plan, imported.segments);
         updatePlan({
           ...plan,
+          ...importedRange,
           itinerary: mergeImportedFlights({
             itinerary,
             segments: imported.segments,
@@ -314,7 +397,10 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         if (imported.title) setTitle(imported.title);
         if (imported.date) setDate(imported.date);
         if (imported.startMinutes !== undefined) {
-          setTime(formatTimeInput(imported.startMinutes));
+          setStartMinutes(imported.startMinutes);
+        }
+        if (imported.durationMinutes !== undefined) {
+          setDuration(String(imported.durationMinutes));
         }
       } else {
         setEditedFlightDetails((current) => mergeImportedDetails(current));
@@ -389,6 +475,117 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       left.date.localeCompare(right.date) || left.startMinutes - right.startMinutes,
   );
 
+  const toggleItineraryItem = (itemId: string) => {
+    setMinimizedItemIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const inviteFriend = async () => {
+    setInviteError(undefined);
+    const name = inviteName.trim();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!name) return setInviteError('Add your friend’s name.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return setInviteError(
+        'Enter the email address your friend uses to sign in to onTrack.',
+      );
+    }
+    setSharingInvite(true);
+    try {
+      const code = await shareTravelPlan(plan, { name, email });
+      if (!code) return;
+      const now = new Date().toISOString();
+      updatePlan({
+        ...plan,
+        participants: [
+          ...plan.participants,
+          {
+            id: newId('trip-person'),
+            name,
+            email,
+            inviteCode: code,
+            invitedAt: now,
+          },
+        ],
+        updatedAt: now,
+      });
+      setInviteName('');
+      setInviteEmail('');
+      setEditingInvite(false);
+    } catch (shareError) {
+      setInviteError(
+        shareError instanceof Error
+          ? shareError.message
+          : 'The invitation could not be created. Please try again.',
+      );
+    } finally {
+      setSharingInvite(false);
+    }
+  };
+
+  const resendInvite = async (participant: TravelParticipant) => {
+    setManagingParticipantId(participant.id);
+    try {
+      await resendTravelInvite(
+        plan,
+        { name: participant.name, email: participant.email ?? '' },
+        participant.inviteCode,
+      );
+    } catch (reason) {
+      Alert.alert(
+        'Couldn’t resend invitation',
+        reason instanceof Error
+          ? reason.message
+          : 'The invitation could not be shared. Please try again.',
+      );
+    } finally {
+      setManagingParticipantId(undefined);
+    }
+  };
+
+  const removeParticipant = async (participant: TravelParticipant) => {
+    setManagingParticipantId(participant.id);
+    try {
+      await revokeTravelInvite(participant.inviteCode);
+      updatePlan({
+        ...plan,
+        participants: plan.participants.filter((person) => person.id !== participant.id),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (reason) {
+      Alert.alert(
+        participant.acceptedAt ? 'Couldn’t remove friend' : 'Couldn’t remove invitation',
+        reason instanceof Error
+          ? reason.message
+          : 'This person could not be removed. Please try again.',
+      );
+    } finally {
+      setManagingParticipantId(undefined);
+    }
+  };
+
+  const confirmRemoveParticipant = (participant: TravelParticipant) => {
+    const accepted = Boolean(participant.acceptedAt);
+    Alert.alert(
+      accepted ? 'Remove friend?' : 'Remove invitation?',
+      accepted
+        ? `${participant.name} will be removed from this trip and their invite link will stop working.`
+        : `${participant.name}’s invite link will stop working.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: accepted ? 'Remove friend' : 'Remove invite',
+          style: 'destructive',
+          onPress: () => void removeParticipant(participant),
+        },
+      ],
+    );
+  };
+
   return (
     <Screen contentStyle={styles.screen}>
       <BackButton accessibilityLabel="Back to travel" />
@@ -443,7 +640,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
             onEndDateChange={setEditEndDate}
           />
           {dateError ? <ErrorMessage message={dateError} /> : null}
-          <View style={styles.actions}>
+          <View style={styles.dateEditorActions}>
             <Button onPress={saveEditedDates}>Save dates</Button>
             <Button variant="ghost" onPress={() => setEditingDates(false)}>Cancel</Button>
           </View>
@@ -453,6 +650,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       <View style={styles.actions}>
         <Button
           variant="secondary"
+          icon="chat"
+          onPress={() =>
+            router.push({ pathname: '/travel/[id]/chat', params: { id: plan.id } } as never)
+          }>
+          Group chat
+        </Button>
+        <Button
+          variant="secondary"
           onPress={() =>
             router.push({ pathname: '/travel/[id]/flights', params: { id: plan.id } } as never)
           }>
@@ -460,12 +665,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         </Button>
         <Button
           variant="secondary"
-          onPress={() => void webTravelSearchProvider.searchStays(plan)}>
+          onPress={() =>
+            router.push({ pathname: '/travel/[id]/stays', params: { id: plan.id } } as never)
+          }>
           Find stays
         </Button>
         <Button
           variant="secondary"
-          icon="cloud.sun.fill"
+          icon="weather"
           onPress={() =>
             void WebBrowser.openBrowserAsync(
               googleWeatherUrl(plan.destination, plan.startDate, plan.endDate),
@@ -473,8 +680,41 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           }>
           Weather
         </Button>
-        <Button onPress={() => void shareTravelPlan(plan)}>Invite friends</Button>
+        <Button
+          variant="secondary"
+          icon="currency"
+          onPress={() =>
+            void WebBrowser.openBrowserAsync(
+              googleCurrencyConversionUrl(plan.destination, dateLocale),
+            )
+          }
+          accessibilityLabel={`Convert your home currency for ${plan.destination} with Google`}>
+          Currency
+        </Button>
       </View>
+
+      <TripPeople
+        participants={plan.participants}
+        editing={editingInvite}
+        name={inviteName}
+        email={inviteEmail}
+        error={inviteError}
+        inviting={sharingInvite}
+        onNameChange={setInviteName}
+        onEmailChange={setInviteEmail}
+        onBeginInvite={() => {
+          setInviteError(undefined);
+          setEditingInvite(true);
+        }}
+        onCancelInvite={() => {
+          setInviteError(undefined);
+          setEditingInvite(false);
+        }}
+        onInvite={() => void inviteFriend()}
+        managingParticipantId={managingParticipantId}
+        onResend={(participant) => void resendInvite(participant)}
+        onRemove={confirmRemoveParticipant}
+      />
 
       <SectionHeader title="Itinerary" detail={`${sortedItinerary.length} planned`} />
       {sortedItinerary.length === 0 ? (
@@ -482,100 +722,167 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           Add flights, stays, and things to do. Each item is also added to the onTrack calendar.
         </AppText>
       ) : null}
-      {sortedItinerary.map((item) => (
-        <Card key={item.id} variant="sunken" style={styles.itemCard}>
-          <View style={styles.itemHeader}>
-            <View style={styles.flex}>
-              <AppText variant="subheading">{item.title}</AppText>
-              <AppText variant="caption" color="accent">
-                {formatDateKey(item.date, dateDisplayFormat)} · {formatTime(item.startMinutes)} · {item.durationMinutes} min
-              </AppText>
-            </View>
-            <AppText variant="overline" color="tertiary">
-              {item.kind}
-            </AppText>
-          </View>
-          {item.details ? (
-            <AppText variant="body" color="secondary">
-              {item.details}
-            </AppText>
-          ) : null}
-          {item.kind === 'flight' && item.flight && editingFlightItemId !== item.id ? (
-            <FlightDetailsSummary details={item.flight} />
-          ) : null}
-          {item.kind === 'flight' && editingFlightItemId === item.id ? (
-            <View style={styles.flightEditor}>
-              <FlightDetailsEditor
-                value={editedFlightDetails}
-                onChange={setEditedFlightDetails}
-                error={editedFlightDetailsError}
-                importedFileName={editedFlightFileName}
-                importing={importingFlightTarget === item.id}
-                onImport={() => chooseConfirmationImport(item.id)}
-              />
-              <View style={styles.flightEditorActions}>
-                <Button
-                  size="lg"
-                  icon="checkmark"
-                  style={styles.fullWidthAction}
-                  onPress={() => saveEditedFlightDetails(item.id)}>
-                  Save flight details
-                </Button>
-                <View
-                  style={[
-                    styles.flightEditorSecondaryActions,
-                    { borderTopColor: theme.separator },
-                  ]}>
-                  <Button
-                    variant="ghost"
-                    style={styles.flex}
-                    onPress={() => setEditingFlightItemId(undefined)}>
-                    Cancel
-                  </Button>
+      {sortedItinerary.map((item) => {
+        const isExpanded = !minimizedItemIds.has(item.id);
+        return (
+          <Animated.View
+            key={item.id}
+            layout={LinearTransition.duration(180)}>
+            <Card variant="sunken" style={styles.itemCard}>
+              <View style={styles.itemHeader}>
+                <View style={styles.flex}>
+                  <AppText variant="subheading">{item.title}</AppText>
+                  <AppText variant="caption" color="accent">
+                    {formatDateKey(item.date, dateDisplayFormat)} ·{' '}
+                    {formatTime(item.startMinutes)} ·{' '}
+                    {item.kind === 'flight'
+                      ? formatDuration(item.durationMinutes)
+                      : `${item.durationMinutes} min`}
+                  </AppText>
+                </View>
+                <View style={styles.itemHeaderActions}>
+                  <AppText variant="overline" color="tertiary">
+                    {item.kind}
+                  </AppText>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Remove ${item.title}`}
+                    accessibilityLabel={`${isExpanded ? 'Minimize' : 'Maximize'} ${item.title}`}
+                    accessibilityHint={
+                      isExpanded
+                        ? 'Hides the event details and actions'
+                        : 'Shows the event details and actions'
+                    }
+                    accessibilityState={{ expanded: isExpanded }}
                     hitSlop={8}
-                    onPress={() => confirmRemoveItem(item)}
+                    onPress={() => toggleItineraryItem(item.id)}
                     style={({ pressed }) => [
-                      styles.removeFlightAction,
+                      styles.itemSizeAction,
                       pressed ? styles.pressed : undefined,
                     ]}>
-                    <Symbol name="trash" size="sm" color={theme.danger} />
-                    <AppText variant="callout" color="danger">
-                      Remove flight
-                    </AppText>
+                    <Symbol
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size="sm"
+                      color={theme.textTertiary}
+                    />
                   </Pressable>
                 </View>
               </View>
-            </View>
-          ) : null}
-          {editingFlightItemId !== item.id ? (
-            <View style={styles.actions}>
-              {item.kind === 'flight' ? (
-                <Button
-                  variant="secondary"
-                  icon="airplane"
-                  onPress={() => beginEditingFlightDetails(item.id, item.flight)}>
-                  {item.flight ? 'Edit flight' : 'Add flight details'}
-                </Button>
+              {isExpanded ? (
+                <Animated.View
+                  entering={FadeIn.duration(150)}
+                  exiting={FadeOut.duration(120)}
+                  style={styles.itemDetails}>
+                  {item.details ? (
+                    <AppText variant="body" color="secondary">
+                      {item.details}
+                    </AppText>
+                  ) : null}
+                  {item.kind === 'flight' &&
+                  item.flight &&
+                  editingFlightItemId !== item.id ? (
+                    <FlightDetailsSummary details={item.flight} />
+                  ) : null}
+                  {item.kind === 'flight' && editingFlightItemId === item.id ? (
+                    <View style={styles.flightEditor}>
+                      <FlightDetailsEditor
+                        value={editedFlightDetails}
+                        onChange={setEditedFlightDetails}
+                        error={editedFlightDetailsError}
+                        importedFileName={editedFlightFileName}
+                        importing={importingFlightTarget === item.id}
+                        onImport={() => chooseConfirmationImport(item.id)}
+                      />
+                      <View style={styles.flightEditorActions}>
+                        <Button
+                          size="lg"
+                          icon="check"
+                          style={styles.fullWidthAction}
+                          onPress={() => saveEditedFlightDetails(item.id)}>
+                          Save flight details
+                        </Button>
+                        <View
+                          style={[
+                            styles.flightEditorSecondaryActions,
+                            { borderTopColor: theme.separator },
+                          ]}>
+                          <Button
+                            variant="ghost"
+                            style={styles.flex}
+                            onPress={() => setEditingFlightItemId(undefined)}>
+                            Cancel
+                          </Button>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Remove ${item.title}`}
+                            hitSlop={8}
+                            onPress={() => confirmRemoveItem(item)}
+                            style={({ pressed }) => [
+                              styles.removeFlightAction,
+                              pressed ? styles.pressed : undefined,
+                            ]}>
+                            <Symbol name="trash" size="sm" color={theme.danger} />
+                            <AppText variant="callout" color="danger">
+                              Remove
+                            </AppText>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
+                  {editingFlightItemId !== item.id ? (
+                    <View style={styles.itineraryActions}>
+                      {item.kind === 'flight' &&
+                      googleFlightStatusUrl(item.flight, item.date) ? (
+                        <Button
+                          variant="secondary"
+                          icon="clock"
+                          style={styles.itineraryAction}
+                          accessibilityLabel={`Check live status for ${item.flight?.flightNumber}`}
+                          onPress={() =>
+                            void Linking.openURL(
+                              googleFlightStatusUrl(item.flight, item.date)!,
+                            )
+                          }>
+                          Check live status
+                        </Button>
+                      ) : null}
+                      {item.kind === 'flight' ? (
+                        <Button
+                          variant="secondary"
+                          icon="flight"
+                          style={styles.itineraryAction}
+                          onPress={() =>
+                            beginEditingFlightDetails(item.id, item.flight)
+                          }>
+                          {item.flight ? 'Edit flight' : 'Add flight details'}
+                        </Button>
+                      ) : null}
+                      {item.bookingUrl && validBookingUrl(item.bookingUrl) ? (
+                        <Button
+                          variant="secondary"
+                          style={styles.itineraryAction}
+                          onPress={() =>
+                            void WebBrowser.openBrowserAsync(item.bookingUrl!)
+                          }>
+                          Booking
+                        </Button>
+                      ) : null}
+                      {item.kind !== 'flight' ? (
+                        <Button
+                          variant="ghost"
+                          style={styles.itineraryAction}
+                          onPress={() => confirmRemoveItem(item)}>
+                          Remove
+                        </Button>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </Animated.View>
               ) : null}
-              {item.bookingUrl && validBookingUrl(item.bookingUrl) ? (
-                <Button
-                  variant="secondary"
-                  onPress={() => void WebBrowser.openBrowserAsync(item.bookingUrl!)}>
-                  Booking
-                </Button>
-              ) : null}
-              <Button
-                variant="ghost"
-                onPress={() => confirmRemoveItem(item)}>
-                Remove
-              </Button>
-            </View>
-          ) : null}
-        </Card>
-      ))}
+            </Card>
+          </Animated.View>
+        );
+      })}
 
       <SectionHeader title="Add to the plan" />
       <ChipRow options={ITEM_KINDS} selected={kind} onSelect={setKind} />
@@ -596,7 +903,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           />
         </View>
         <View style={styles.flex}>
-          <Input label="Time" value={time} onChangeText={setTime} placeholder="09:00" />
+          <TimeField label="Time" value={startMinutes} onChange={setStartMinutes} />
         </View>
       </View>
       <Input
@@ -644,6 +951,13 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 const styles = StyleSheet.create({
   screen: { gap: spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  itineraryActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  itineraryAction: {
+    flexBasis: 0,
+    flexGrow: 1,
+    minWidth: '45%',
+    paddingHorizontal: spacing.sm,
+  },
   detailsLink: {
     minHeight: 56,
     flexDirection: 'row',
@@ -651,6 +965,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   itemCard: { gap: spacing.md },
+  itemDetails: { gap: spacing.md },
+  itemHeaderActions: { alignItems: 'flex-end', gap: spacing.xs },
+  itemSizeAction: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   flightEditor: { gap: spacing.md },
   flightEditorActions: { gap: spacing.sm },
   fullWidthAction: { width: '100%' },
@@ -671,6 +993,11 @@ const styles = StyleSheet.create({
   },
   itemHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   dateEditor: { gap: spacing.md },
+  dateEditorActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+  },
   dateLink: { alignSelf: 'flex-start' },
   pressed: { opacity: 0.6 },
   twoColumns: { flexDirection: 'row', gap: spacing.sm },

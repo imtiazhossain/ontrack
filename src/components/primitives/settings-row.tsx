@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import type { SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { layout, radii, spacing } from '@/design-system';
+import { layout, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 
@@ -12,7 +11,7 @@ import { Symbol } from './symbol';
 interface SettingsRowProps {
   label: string;
   detail: string;
-  icon?: SymbolViewProps['name'];
+  icon?: AppIconName;
   trailing?: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
@@ -74,7 +73,7 @@ export function SettingsToggleRow({
 }: {
   label: string;
   detail: string;
-  icon?: SymbolViewProps['name'];
+  icon?: AppIconName;
   value: boolean;
   disabled?: boolean;
   onValueChange: (value: boolean) => void;
@@ -114,7 +113,7 @@ export function SettingsActionRow({
       icon={icon}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
-      trailing={<Symbol name="chevron.right" size="sm" color={theme.textTertiary} />}
+      trailing={<Symbol name="chevron-right" size="sm" color={theme.textTertiary} />}
     />
   );
 }

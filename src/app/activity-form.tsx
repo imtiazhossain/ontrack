@@ -1,14 +1,14 @@
-import ExpoDateTimePicker from '@expo/ui/community/datetime-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, DateField, ErrorMessage, IconButton, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, DateField, ErrorMessage, IconButton, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { isCategoryEnabled } from '@/addons/registry';
 import { radii, spacing } from '@/design-system';
+import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { analyzeMealPhoto, NutritionServiceError } from '@/services/nutrition';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
@@ -108,8 +108,7 @@ export default function ActivityFormScreen() {
   const requestedCategory = typeof params.category === 'string' ? params.category : '';
   const [categoryId, setCategoryId] = useState(existing?.categoryId ?? requestedCategory);
   const [date, setDate] = useState(initialDate);
-  const [startHour, setStartHour] = useState(String(Math.floor(initialStartMinutes / 60)));
-  const [startMinute, setStartMinute] = useState(String(initialStartMinutes % 60));
+  const [startMinutes, setStartMinutes] = useState(initialStartMinutes);
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 60));
   const status: ActivityStatus = existing?.status ?? 'upcoming';
   const [notes, setNotes] = useState(existing?.notes ?? '');
@@ -133,8 +132,7 @@ export default function ActivityFormScreen() {
     title,
     categoryId,
     date,
-    startHour,
-    startMinute,
+    startMinutes,
     duration,
     notes,
     photo,
@@ -165,17 +163,12 @@ export default function ActivityFormScreen() {
     return unsubscribe;
   }, [dirty, navigation]);
 
-  const startMinutes = useMemo(() => {
-    const hours = Math.min(23, Math.max(0, numberValue(startHour)));
-    const minutes = Math.min(59, Math.max(0, numberValue(startMinute)));
-    return hours * 60 + minutes;
-  }, [startHour, startMinute]);
-
-  const startTimeValue = useMemo(() => {
-    const value = new Date(2000, 0, 1);
-    value.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-    return value;
-  }, [startMinutes]);
+  // Android may destroy this screen while the system picker is open;
+  // recover the selection when the screen is recreated.
+  usePendingImagePickerResult((uri) => {
+    setPhoto(uri);
+    setMeal((current) => ({ ...current, photo: uri, aiAnalysis: undefined }));
+  });
 
   const pickPhoto = async (analyzeAfterPick = false) => {
     setError(undefined);
@@ -249,7 +242,7 @@ export default function ActivityFormScreen() {
       ...current,
       exercises: [
         ...current.exercises,
-        { id: newId('exercise'), name: '', icon: 'figure.strengthtraining.traditional', sets: [], restSeconds: 60 },
+        { id: newId('exercise'), name: '', icon: 'exercise-strength', sets: [], restSeconds: 60 },
       ],
     }));
 
@@ -403,7 +396,7 @@ export default function ActivityFormScreen() {
   if (missingActivity) {
     return (
       <Screen>
-        <IconButton icon="chevron.left" accessibilityLabel="Go back" background="transparent" onPress={close} />
+        <IconButton icon="chevron-left" accessibilityLabel="Go back" background="transparent" onPress={close} />
         <AppText variant="title">Event not found</AppText>
         <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
       </Screen>
@@ -413,7 +406,7 @@ export default function ActivityFormScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <IconButton icon="xmark" accessibilityLabel="Cancel editing" background="transparent" onPress={close} />
+        <IconButton icon="close" accessibilityLabel="Cancel editing" background="transparent" onPress={close} />
         <AppText variant="title">{isEditing ? editorTitle : 'Add event'}</AppText>
       </View>
 
@@ -489,29 +482,7 @@ export default function ActivityFormScreen() {
         <View style={styles.flex}><DateField label="Date" value={date} onChange={setDate} /></View>
         <View style={styles.flex}><Input label="Duration (min)" value={duration} onChangeText={setDuration} keyboardType="number-pad" /></View>
       </View>
-      <View style={styles.timeSection}>
-        <AppText variant="overline" color="tertiary">Start time</AppText>
-        {Platform.OS === 'web' ? (
-          <View style={styles.twoColumns}>
-            <View style={styles.flex}><Input label="Hour" value={startHour} onChangeText={setStartHour} keyboardType="number-pad" /></View>
-            <View style={styles.flex}><Input label="Minute" value={startMinute} onChangeText={setStartMinute} keyboardType="number-pad" /></View>
-          </View>
-        ) : (
-          <ExpoDateTimePicker
-            value={startTimeValue}
-            mode="time"
-            display="spinner"
-            locale="en_US"
-            accentColor={theme.accentPrimary}
-            themeVariant={theme.name}
-            style={styles.timePicker}
-            onValueChange={(_event, value) => {
-              setStartHour(String(value.getHours()));
-              setStartMinute(String(value.getMinutes()));
-            }}
-          />
-        )}
-      </View>
+      <TimeField label="Start time" value={startMinutes} onChange={setStartMinutes} />
 
       <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional context" multiline style={styles.multiline} />
 
@@ -689,7 +660,7 @@ function WorkoutEditor({ workout, setWorkout, updateExercise, addExercise, addSe
               <AppText variant="caption">Set {index + 1}</AppText>
               <View style={styles.setInput}><Input label="Reps" value={String(set.reps)} onChangeText={(value) => updateSet(exercise.id, set.id, { reps: numberValue(value) })} keyboardType="number-pad" /></View>
               <View style={styles.setInput}><Input label="Weight kg" value={String(set.weightKg)} onChangeText={(value) => updateSet(exercise.id, set.id, { weightKg: numberValue(value) })} keyboardType="decimal-pad" /></View>
-              <IconButton icon="trash" accessibilityLabel={`Remove set ${index + 1}`} onPress={() => removeSet(exercise.id, set.id)} />
+              <IconButton icon="delete" accessibilityLabel={`Remove set ${index + 1}`} onPress={() => removeSet(exercise.id, set.id)} />
             </View>
           ))}
           <Button variant="secondary" onPress={() => addSet(exercise.id)} accessibilityLabel={`Add set to ${exercise.name || 'exercise'}`}>Add set</Button>
@@ -842,8 +813,6 @@ const styles = StyleSheet.create({
   choiceSection: { gap: spacing.sm },
   choice: { borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   twoColumns: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  timeSection: { gap: spacing.sm },
-  timePicker: { width: '100%', height: 180 },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   photo: { width: '100%', height: 220, borderRadius: radii.lg },
   analysisReady: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
