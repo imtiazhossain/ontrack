@@ -32,7 +32,7 @@ export default function TabsLayout() {
       {enabledAddons.fitness ? (
         <NativeTabs.Trigger name="workouts">
           <NativeTabs.Trigger.Label>Workout</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }} />
+          <NativeTabs.Trigger.Icon sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }} md="fitness_center" />
         </NativeTabs.Trigger>
       ) : null}
       <NativeTabs.Trigger name="insights">

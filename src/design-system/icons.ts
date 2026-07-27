@@ -56,9 +56,18 @@ export const appIcons = {
   edit: { ios: 'pencil', android: 'edit', web: 'edit' },
   delete: { ios: 'trash', android: 'delete', web: 'delete' },
   camera: { ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' },
+  calendar: { ios: 'calendar', android: 'calendar_month', web: 'calendar_month' },
   'calendar-add': { ios: 'calendar.badge.plus', android: 'calendar_add_on', web: 'calendar_add_on' },
   health: { ios: 'heart.text.square.fill', android: 'monitor_heart', web: 'monitor_heart' },
   'nutrition-profiles': { ios: 'heart.text.clipboard', android: 'clinical_notes', web: 'clinical_notes' },
+  play: { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' },
+  pause: { ios: 'pause.fill', android: 'pause', web: 'pause' },
+  tip: { ios: 'lightbulb.max.fill', android: 'lightbulb', web: 'lightbulb' },
+  target: { ios: 'scope', android: 'center_focus_strong', web: 'center_focus_strong' },
+  layers: { ios: 'square.stack.3d.up', android: 'layers', web: 'layers' },
+  repeat: { ios: 'repeat', android: 'repeat', web: 'repeat' },
+  timer: { ios: 'timer', android: 'timer', web: 'timer' },
+  'arrow-up': { ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' },
 
   // Activity status
   'status-completed': { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },

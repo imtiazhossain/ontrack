@@ -2,6 +2,8 @@ export { AppText } from './app-text';
 export { AppSafeArea } from './app-safe-area';
 export { Screen } from './screen';
 export { DateField } from './date-field';
+export { TimeField } from './time-field';
+export type { TimeFieldProps } from './time-field.types';
 export { Symbol } from './symbol';
 export { Button, IconButton } from './button';
 export { Card } from './card';
