@@ -1,5 +1,6 @@
 import {
   createTravelInviteUrl,
+  createInstalledTravelInviteUrl,
   decodeTravelInvite,
   encodeTravelInvite,
   isShortTravelInvite,
@@ -60,6 +61,12 @@ describe('travel invites', () => {
     expect(url.length).toBeLessThan(70);
     expect(isShortTravelInvite(`s.${code}`)).toBe(true);
     expect(isShortTravelInvite(`s.${code}x`)).toBe(false);
+  });
+
+  it('creates an explicit installed-app URL without resolving back to the website', () => {
+    const code = '0123456789abcdefabcd';
+    expect(createInstalledTravelInviteUrl(`s.${code}`)).toBe(`ontrack:///i/${code}`);
+    expect(createInstalledTravelInviteUrl()).toBe('ontrack:///travel');
   });
 
   it('keeps links from the original invite format working', () => {

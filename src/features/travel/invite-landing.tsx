@@ -7,6 +7,7 @@ import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/component
 import { spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
+  createInstalledTravelInviteUrl,
   decodeTravelInvite,
   isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
@@ -125,19 +126,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     );
   }
 
-  const customSchemeUrl =
-    invite && isShortInvite
-      ? Linking.createURL(`/i/${invite.slice(2)}`, {
-          scheme: 'ontrack',
-          isTripleSlashed: true,
-        })
-      : invite
-        ? Linking.createURL('/invite/travel', {
-            scheme: 'ontrack',
-            isTripleSlashed: true,
-            queryParams: { invite },
-          })
-        : Linking.createURL('/travel', { scheme: 'ontrack', isTripleSlashed: true });
+  const customSchemeUrl = createInstalledTravelInviteUrl(invite);
 
   return (
     <Screen contentStyle={styles.webPage} bottomInset={false}>

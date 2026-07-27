@@ -238,6 +238,14 @@ export function createTravelInviteUrl(code: string, configuredBase?: string): st
   return `${normalizedBase}${path}`;
 }
 
+export function createInstalledTravelInviteUrl(invite?: string): string {
+  if (!invite) return 'ontrack:///travel';
+  if (isShortTravelInvite(invite)) {
+    return `ontrack:///i/${invite.slice(SHORT_INVITE_PREFIX.length)}`;
+  }
+  return `ontrack:///invite/travel?invite=${encodeURIComponent(invite)}`;
+}
+
 export async function publishTravelInvite(plan: TravelPlan): Promise<string> {
   const { data, error } = await requireInviteClient().rpc('create_travel_invite', {
     invite_payload: { invite: encodeTravelInvite(plan) },
