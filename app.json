@@ -72,7 +72,12 @@
           "locationWhenInUsePermission": "onTrack uses your approximate location to suggest a departure city for travel searches."
         }
       ],
-      "./plugins/with-local-notifications"
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "event-chat"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -6,9 +6,9 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ErrorMessage, Input, Screen, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
+import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { validateTravelDateRange } from '@/features/travel/date-range';
-import { webTravelSearchProvider } from '@/features/travel/provider';
-import { decodeTravelInvite, shareTravelPlan, travelInviteKey } from '@/features/travel/share';
+import { decodeTravelInvite, travelInviteKey } from '@/features/travel/share';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
@@ -37,6 +37,7 @@ function TravelScreenContent() {
   const removePlan = useTravel((state) => state.removePlan);
   const activities = useSchedule((state) => state.activities);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
+  const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [showForm, setShowForm] = useState(plans.length === 0);
   const [title, setTitle] = useState('');
@@ -99,6 +100,7 @@ function TravelScreenContent() {
       startDate,
       endDate,
       itinerary: [],
+      participants: [],
       createdAt: now,
       updatedAt: now,
     });
@@ -313,7 +315,9 @@ function TravelScreenContent() {
               variant="secondary"
               icon="lodging"
               style={styles.actionButton}
-              onPress={() => void webTravelSearchProvider.searchStays(plan)}
+              onPress={() =>
+                router.push({ pathname: '/travel/[id]/stays', params: { id: plan.id } } as never)
+              }
               accessibilityLabel={`Search stays for ${plan.title}`}>
               Stays
             </Button>
@@ -347,13 +351,27 @@ function TravelScreenContent() {
               accessibilityLabel={`View Google weather for ${plan.destination} during ${plan.title}`}>
               Weather
             </Button>
+            <Button
+              variant="secondary"
+              icon="dollarsign.circle"
+              style={styles.actionButton}
+              onPress={() =>
+                void WebBrowser.openBrowserAsync(
+                  googleCurrencyConversionUrl(plan.destination, dateLocale),
+                )
+              }
+              accessibilityLabel={`Convert your home currency for ${plan.destination} with Google`}>
+              Currency
+            </Button>
           </View>
           <Button
             icon="people"
             style={styles.inviteButton}
-            onPress={() => void shareTravelPlan(plan)}
-            accessibilityLabel={`Share ${plan.title}`}>
-            Invite friends
+            onPress={() =>
+              router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)
+            }
+            accessibilityLabel={`View friends on ${plan.title}`}>
+            Friends
           </Button>
           <View style={[styles.cardFooter, { borderTopColor: theme.separator }]}>
             <Pressable

@@ -104,6 +104,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
   const [result, setResult] = useState<FlightSearchResponse>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const [comparing, setComparing] = useState(false);
   const [locatingDeparture, setLocatingDeparture] = useState(false);
 
   const fillDepartureFromLocation = useCallback(async () => {
@@ -186,6 +187,26 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
 
   const cancelSearch = () => {
     controllerRef.current?.abort();
+  };
+
+  const compareFlights = async () => {
+    setError(undefined);
+    setComparing(true);
+    try {
+      await compareOnGoogleFlights({
+        origin,
+        destination,
+        departureDate,
+        returnDate,
+        adults: Math.max(1, Number(adults) || 1),
+      });
+    } catch {
+      setError(
+        'We could not find airports for one of those cities. Check the city names and try again.',
+      );
+    } finally {
+      setComparing(false);
+    }
   };
 
   return (
@@ -288,17 +309,13 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
         ) : null}
         <Button
           icon="open-external"
-          disabled={origin.trim().length < 3 || destination.trim().length < 3}
-          onPress={() =>
-            void compareOnGoogleFlights({
-              origin,
-              destination,
-              departureDate,
-              returnDate,
-              adults: Math.max(1, Number(adults) || 1),
-            })
-          }>
-          Compare on Google Flights
+          disabled={
+            comparing ||
+            origin.trim().length < 3 ||
+            destination.trim().length < 3
+          }
+          onPress={() => void compareFlights()}>
+          {comparing ? 'Finding nearby airports…' : 'Compare on Google Flights'}
         </Button>
       </Card>
 

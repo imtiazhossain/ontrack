@@ -162,7 +162,7 @@ describe('flight confirmation parser', () => {
   it('imports both correct legs from the provided Chase PDFKit text', () => {
     const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
       startDate: '2026-09-08',
-      endDate: '2026-09-14',
+      endDate: '2026-09-13',
     });
 
     expect(parsed.segments).toHaveLength(2);
@@ -199,13 +199,13 @@ describe('flight confirmation parser', () => {
     const imported = mergeImportedFlights({
       itinerary: [],
       segments: parsed.segments,
-      tripRange: { startDate: '2026-09-08', endDate: '2026-09-14' },
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
       createId: () => `flight-${++nextId}`,
     });
     const reimported = mergeImportedFlights({
       itinerary: imported,
       segments: parsed.segments,
-      tripRange: { startDate: '2026-09-08', endDate: '2026-09-14' },
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
       createId: () => 'duplicate',
     });
 
