@@ -1,4 +1,10 @@
-import { decodeTravelInvite, encodeTravelInvite, travelInviteKey } from '../share';
+import {
+  createTravelInviteUrl,
+  decodeTravelInvite,
+  encodeTravelInvite,
+  isShortTravelInvite,
+  travelInviteKey,
+} from '../share';
 import type { TravelPlan } from '../types';
 
 const plan: TravelPlan = {
@@ -42,9 +48,29 @@ describe('travel invites', () => {
     });
   });
 
-  it('accepts the decoded value supplied by a router', () => {
-    const decodedByRouter = decodeURIComponent(encodeTravelInvite(plan));
-    expect(decodeTravelInvite(decodedByRouter)?.destination).toBe('Montréal');
+  it('creates one compact, URL-safe payload instead of double-encoded JSON', () => {
+    const payload = encodeTravelInvite(plan);
+    expect(payload).toMatch(/^2\.[A-Za-z0-9_-]+$/);
+  });
+
+  it('creates a genuinely short hosted link from an invite code', () => {
+    const code = '0123456789abcdefabcd';
+    const url = createTravelInviteUrl(code, 'https://ontrack--links.expo.app/');
+    expect(url).toBe(`https://ontrack--links.expo.app/i/${code}`);
+    expect(url.length).toBeLessThan(70);
+    expect(isShortTravelInvite(`s.${code}`)).toBe(true);
+    expect(isShortTravelInvite(`s.${code}x`)).toBe(false);
+  });
+
+  it('keeps links from the original invite format working', () => {
+    const legacyPayload = encodeURIComponent(
+      JSON.stringify({
+        version: 1,
+        plan: { ...plan, id: undefined, createdAt: undefined, updatedAt: undefined },
+      }),
+    );
+    expect(decodeTravelInvite(legacyPayload)?.destination).toBe('Montréal');
+    expect(decodeTravelInvite(decodeURIComponent(legacyPayload))?.destination).toBe('Montréal');
   });
 
   it('rejects malformed invites', () => {

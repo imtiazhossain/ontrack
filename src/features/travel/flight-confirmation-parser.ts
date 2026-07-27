@@ -8,6 +8,7 @@ export interface ParsedFlightSegment {
   title?: string;
   date?: string;
   startMinutes?: number;
+  durationMinutes?: number;
   detectedFieldCount: number;
 }
 
@@ -147,6 +148,35 @@ function findDepartureTime(text: string): number | undefined {
   if (labeled) return parseMinutes(labeled[1], labeled[2], labeled[3]);
   const generic = /\b(\d{1,2}):(\d{2})\s*(AM|PM)\b/i.exec(text);
   return generic ? parseMinutes(generic[1], generic[2], generic[3]) : undefined;
+}
+
+function findDurationMinutes(text: string): number | undefined {
+  const iso = /\bPT(?:(\d{1,2})H)?(?:(\d{1,2})M)?\b/i.exec(text);
+  if (iso) {
+    const duration = Number(iso[1] ?? 0) * 60 + Number(iso[2] ?? 0);
+    if (duration > 0 && duration <= 1440) return duration;
+  }
+
+  const hoursAndMinutes =
+    /\b(\d{1,2})\s*(?:h|hr|hrs|hour|hours)\s*(?:(\d{1,2})\s*(?:m|min|mins|minute|minutes))?\b/i.exec(
+      text,
+    );
+  if (hoursAndMinutes) {
+    const duration =
+      Number(hoursAndMinutes[1]) * 60 + Number(hoursAndMinutes[2] ?? 0);
+    if (duration > 0 && duration <= 1440) return duration;
+  }
+
+  const labeledMinutes =
+    /\bduration\s*[:\-]?\s*(\d{1,4})\s*(?:m|min|mins|minute|minutes)\b/i.exec(
+      text,
+    );
+  if (labeledMinutes) {
+    const duration = Number(labeledMinutes[1]);
+    if (duration > 0 && duration <= 1440) return duration;
+  }
+
+  return undefined;
 }
 
 function validAirportCode(value: string | undefined): value is string {
@@ -291,6 +321,7 @@ function parseSegment(
 
   const date = findDate(text, tripRange?.startDate, tripRange?.endDate);
   const startMinutes = findDepartureTime(text);
+  const durationMinutes = findDurationMinutes(text);
   const routeTitle = [flight.departureAirport, flight.arrivalAirport]
     .filter(Boolean)
     .join(' → ');
@@ -302,8 +333,16 @@ function parseSegment(
   const detectedFieldCount =
     Object.values(flight).filter(Boolean).length +
     (date ? 1 : 0) +
-    (startMinutes !== undefined ? 1 : 0);
-  return { flight, title, date, startMinutes, detectedFieldCount };
+    (startMinutes !== undefined ? 1 : 0) +
+    (durationMinutes !== undefined ? 1 : 0);
+  return {
+    flight,
+    title,
+    date,
+    startMinutes,
+    durationMinutes,
+    detectedFieldCount,
+  };
 }
 
 export function parseFlightConfirmation(

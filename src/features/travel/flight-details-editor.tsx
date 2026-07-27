@@ -104,7 +104,7 @@ export function FlightDetailsEditor({
             label="Seat"
             value={value.seat}
             onChangeText={(nextValue) => update('seat', nextValue)}
-            placeholder="14A"
+            placeholder="Seat"
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={8}

@@ -39,21 +39,9 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Insights</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.line.uptrend.xyaxis" />
       </NativeTabs.Trigger>
-      {enabledAddons.plants ? (
-        <NativeTabs.Trigger name="plants">
-          <NativeTabs.Trigger.Label>Plants</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf={{ default: 'leaf', selected: 'leaf.fill' }} />
-        </NativeTabs.Trigger>
-      ) : null}
-      {enabledAddons.travel ? (
-        <NativeTabs.Trigger name="travel">
-          <NativeTabs.Trigger.Label>Travel</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf={{ default: 'airplane', selected: 'airplane' }} />
-        </NativeTabs.Trigger>
-      ) : null}
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
+      <NativeTabs.Trigger name="more" role="more">
+        <NativeTabs.Trigger.Label>More</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="ellipsis" md="more_horiz" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

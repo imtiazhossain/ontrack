@@ -30,7 +30,7 @@ export default function PlantDetailScreen() {
 
   const remove = () => Alert.alert('Delete plant', `Remove ${plant.nickname}, its care tasks, and locally saved photos?`, [
     { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/(tabs)/plants')) },
+    { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/plants')) },
   ]);
 
   return (

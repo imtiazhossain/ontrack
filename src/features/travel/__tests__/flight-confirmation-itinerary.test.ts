@@ -15,6 +15,7 @@ const SEGMENTS: ParsedFlightSegment[] = [
     title: 'Flight IAD → KEF',
     date: '2026-09-08',
     startMinutes: 633,
+    durationMinutes: 350,
     detectedFieldCount: 7,
   },
   {
@@ -29,6 +30,7 @@ const SEGMENTS: ParsedFlightSegment[] = [
     title: 'Flight KEF → IAD',
     date: '2026-09-13',
     startMinutes: 1020,
+    durationMinutes: 375,
     detectedFieldCount: 7,
   },
 ];
@@ -57,11 +59,13 @@ describe('flight confirmation itinerary merge', () => {
     expect(result[0]).toMatchObject({
       id: 'outbound',
       title: 'Flight IAD → KEF',
+      durationMinutes: 350,
       flight: { departureAirport: 'IAD', arrivalAirport: 'KEF' },
     });
     expect(result[1]).toMatchObject({
       title: 'Flight KEF → IAD',
       date: '2026-09-13',
+      durationMinutes: 375,
       flight: { flightNumber: 'FI 623', departureAirport: 'KEF', arrivalAirport: 'IAD' },
     });
   });

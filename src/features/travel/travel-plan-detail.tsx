@@ -44,7 +44,7 @@ import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { formatDateKey } from '@/utils/date';
+import { formatDateKey, formatDuration } from '@/utils/date';
 
 const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'flight', label: 'Flight' },
@@ -126,6 +126,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [error, setError] = useState<string>();
   const [dateError, setDateError] = useState<string>();
   const [detailsError, setDetailsError] = useState<string>();
+  const [sharingInvite, setSharingInvite] = useState(false);
 
   if (!plan) {
     return (
@@ -316,6 +317,9 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         if (imported.startMinutes !== undefined) {
           setTime(formatTimeInput(imported.startMinutes));
         }
+        if (imported.durationMinutes !== undefined) {
+          setDuration(String(imported.durationMinutes));
+        }
       } else {
         setEditedFlightDetails((current) => mergeImportedDetails(current));
         setEditedFlightFileName(imported.fileName);
@@ -388,6 +392,22 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     (left, right) =>
       left.date.localeCompare(right.date) || left.startMinutes - right.startMinutes,
   );
+
+  const inviteFriends = async () => {
+    setSharingInvite(true);
+    try {
+      await shareTravelPlan(plan);
+    } catch (shareError) {
+      Alert.alert(
+        'Couldn’t create invitation',
+        shareError instanceof Error
+          ? shareError.message
+          : 'The invitation could not be created. Please try again.',
+      );
+    } finally {
+      setSharingInvite(false);
+    }
+  };
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -473,7 +493,9 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           }>
           Weather
         </Button>
-        <Button onPress={() => void shareTravelPlan(plan)}>Invite friends</Button>
+        <Button disabled={sharingInvite} onPress={() => void inviteFriends()}>
+          {sharingInvite ? 'Creating link…' : 'Invite friends'}
+        </Button>
       </View>
 
       <SectionHeader title="Itinerary" detail={`${sortedItinerary.length} planned`} />
@@ -488,7 +510,10 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
             <View style={styles.flex}>
               <AppText variant="subheading">{item.title}</AppText>
               <AppText variant="caption" color="accent">
-                {formatDateKey(item.date, dateDisplayFormat)} · {formatTime(item.startMinutes)} · {item.durationMinutes} min
+                {formatDateKey(item.date, dateDisplayFormat)} · {formatTime(item.startMinutes)} ·{' '}
+                {item.kind === 'flight'
+                  ? formatDuration(item.durationMinutes)
+                  : `${item.durationMinutes} min`}
               </AppText>
             </View>
             <AppText variant="overline" color="tertiary">

@@ -48,6 +48,9 @@ function importedItemValues(
       (index === 0 ? 'Departure flight' : 'Return flight'),
     date,
     startMinutes: segment.startMinutes ?? 12 * 60,
+    ...(segment.durationMinutes !== undefined
+      ? { durationMinutes: segment.durationMinutes }
+      : {}),
     flight: {
       airline: segment.flight.airline || undefined,
       flightNumber: segment.flight.flightNumber || undefined,

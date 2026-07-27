@@ -30,7 +30,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export default function ProfileScreen() {
+export default function ProfileSettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const name = usePreferences((s) => s.name);

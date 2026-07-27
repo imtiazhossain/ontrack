@@ -56,8 +56,12 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="day/[date]" />
+            <Stack.Screen name="profile" />
+            <Stack.Screen name="plants" />
+            <Stack.Screen name="travel" />
             <Stack.Screen name="agents" />
             <Stack.Screen name="invite/travel" />
+            <Stack.Screen name="i/[code]" />
             <Stack.Screen name="travel/[id]" />
             <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
             <Stack.Screen name="detail/food/[id]" />
