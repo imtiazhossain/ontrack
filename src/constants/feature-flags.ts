@@ -3,4 +3,5 @@ export const featureFlags = {
   youthNutrition: process.env.EXPO_PUBLIC_YOUTH_NUTRITION_ENABLED === 'true',
   infantClinical: process.env.EXPO_PUBLIC_INFANT_CLINICAL_ENABLED === 'true',
   clinicalCloud: process.env.EXPO_PUBLIC_CLINICAL_CLOUD_ENABLED === 'true',
+  liveFlightSearch: process.env.EXPO_PUBLIC_LIVE_FLIGHT_SEARCH_ENABLED === 'true',
 } as const;

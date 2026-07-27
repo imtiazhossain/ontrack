@@ -1,0 +1,87 @@
+import type { Activity } from '@/types/models';
+
+import type {
+  AddonDefinition,
+  AddonEnabledState,
+  AddonEntitlementState,
+  AddonId,
+} from './types';
+
+/**
+ * The only catalog the app shell knows about.
+ *
+ * Add-on UI, state, and services stay in their feature folders. The shell uses
+ * this small manifest for discovery and visibility, so adding a module does not
+ * require duplicating entitlement or navigation rules.
+ */
+export const ADDONS = [
+  {
+    id: 'food',
+    name: 'Food tracker',
+    description: 'Meals, nutrition, photos, and food insights.',
+    categoryIds: ['food'],
+  },
+  {
+    id: 'fitness',
+    name: 'Fitness',
+    description: 'Workout planning, exercise tracking, and progress.',
+    categoryIds: ['gym'],
+    tabRoute: 'workouts',
+  },
+  {
+    id: 'plants',
+    name: 'Plant care',
+    description: 'Plant profiles, reminders, and care check-ins.',
+    categoryIds: ['plant'],
+    tabRoute: 'plants',
+  },
+  {
+    id: 'travel',
+    name: 'Travel planner',
+    description: 'Shared trips, itineraries, flight search, and stays.',
+    categoryIds: [],
+    tabRoute: 'travel',
+  },
+] as const satisfies readonly AddonDefinition[];
+
+export const DEFAULT_ADDON_STATE: AddonEnabledState = {
+  food: true,
+  fitness: true,
+  plants: true,
+  travel: true,
+};
+
+/** Beta default. Paid access can later replace this from server-owned rows. */
+export const DEFAULT_ADDON_ENTITLEMENTS: AddonEntitlementState = {
+  food: { active: true, source: 'included' },
+  fitness: { active: true, source: 'included' },
+  plants: { active: true, source: 'included' },
+  travel: { active: true, source: 'included' },
+};
+
+const ADDON_BY_ID = new Map<AddonId, AddonDefinition>(ADDONS.map((addon) => [addon.id, addon]));
+const ADDON_BY_CATEGORY = new Map<string, AddonId>(
+  ADDONS.flatMap((addon) => addon.categoryIds.map((categoryId) => [categoryId, addon.id] as const)),
+);
+
+export function getAddon(id: AddonId): AddonDefinition {
+  const addon = ADDON_BY_ID.get(id);
+  if (!addon) throw new Error(`Unknown add-on: ${id}`);
+  return addon;
+}
+
+export function addonForCategory(categoryId: string): AddonId | undefined {
+  return ADDON_BY_CATEGORY.get(categoryId);
+}
+
+export function isCategoryEnabled(categoryId: string, enabled: AddonEnabledState): boolean {
+  const addonId = addonForCategory(categoryId);
+  return addonId ? enabled[addonId] : true;
+}
+
+export function isActivityEnabled(
+  activity: Pick<Activity, 'categoryId'>,
+  enabled: AddonEnabledState,
+): boolean {
+  return isCategoryEnabled(activity.categoryId, enabled);
+}

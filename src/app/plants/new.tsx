@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, Card, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import {
@@ -343,7 +343,7 @@ export default function NewPlantScreen() {
               ))}
             </Card>
           ) : null}
-          {searchError ? <AppText variant="caption" color="danger" selectable>{searchError}</AppText> : null}
+          {searchError ? <ErrorMessage message={searchError} variant="caption" selectable /> : null}
           <Input label="Botanical name" value={identity.scientificName} onChangeText={(scientificName) => updateIdentity({ scientificName })} />
           <Button variant="secondary" onPress={confirmIdentity}>
             {identityConfirmed ? 'Identification confirmed' : 'Confirm identification'}
@@ -400,7 +400,7 @@ export default function NewPlantScreen() {
       ) : null}
 
       {busy ? <ActivityIndicator /> : null}
-      {error ? <AppText variant="callout" color="danger" selectable>{error}</AppText> : null}
+      {error ? <ErrorMessage message={error} selectable /> : null}
     </Screen>
   );
 }

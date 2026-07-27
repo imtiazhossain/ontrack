@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
+import { Directory, EncodingType, File, Paths } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
@@ -7,11 +8,14 @@ import type { MealAnalysis } from '@/types/models';
 import type {
   ApiErrorBody,
   MealLinkResolution,
+  MealImageEnhancementResponse,
   NutritionErrorCode,
   PhotoAnalysisRequest,
   PhotoAnalysisResponse,
   MealLinkCandidate,
 } from './types';
+
+export const CURRENT_MEAL_PHOTO_PROCESSING_VERSION = 1;
 
 export class NutritionServiceError extends Error {
   constructor(
@@ -87,7 +91,49 @@ export async function analyzeMealPhoto(
     imageDataUrl: await prepareMealImage(photoUri),
     mealName: mealName?.trim() || undefined,
   };
-  return post('/meal-analysis/photo', request, signal);
+  const [analysis, enhancement] = await Promise.all([
+    post<PhotoAnalysisResponse>('/meal-analysis/photo', request, signal),
+    requestMealImageEnhancement(request, signal).catch(() => undefined),
+  ]);
+  if (!enhancement) return analysis;
+  const processedPhotoUri = await persistEnhancedMealImage(
+    enhancement.imageDataUrl,
+    `meal-${analysis.draftId}`,
+  );
+  return { ...analysis, processedPhotoUri, photoProcessingVersion: enhancement.version };
+}
+
+async function requestMealImageEnhancement(request: PhotoAnalysisRequest, signal?: AbortSignal) {
+  return post<MealImageEnhancementResponse>('/meal-images/enhance', request, signal);
+}
+
+async function persistEnhancedMealImage(imageDataUrl: string, key: string): Promise<string> {
+  if (Platform.OS === 'web') return imageDataUrl;
+  const match = /^data:image\/png;base64,(.+)$/.exec(imageDataUrl);
+  if (!match) throw new NutritionServiceError('The cleaned meal image is invalid.', 'INVALID_IMAGE');
+  const directory = new Directory(Paths.document, 'meal-images');
+  directory.create({ idempotent: true, intermediates: true });
+  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const file = new File(directory, `${safeKey}.png`);
+  file.create({ overwrite: true, intermediates: true });
+  file.write(match[1], { encoding: EncodingType.Base64 });
+  return file.uri;
+}
+
+export async function enhanceMealPhoto(
+  photoUri: string,
+  mealName: string,
+  fileKey: string,
+  signal?: AbortSignal,
+): Promise<{ photoUri: string; version: number }> {
+  const enhancement = await requestMealImageEnhancement({
+    imageDataUrl: await prepareMealImage(photoUri),
+    mealName: mealName.trim() || undefined,
+  }, signal);
+  return {
+    photoUri: await persistEnhancedMealImage(enhancement.imageDataUrl, fileKey),
+    version: enhancement.version,
+  };
 }
 
 export function resolveMealLink(url: string, signal?: AbortSignal) {

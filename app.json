@@ -7,10 +7,19 @@
     "icon": "./assets/images/icon.png",
     "scheme": "ontrack",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bd232bf6-7397-4463-b25a-9b67d78e5695"
+    },
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.imtihoss.ontracknow",
       "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:ontrack--links.expo.app"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "onTrack uses the camera to capture meal, activity, and plant-care photos.",
         "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal, activity, and plant-care photos.",
@@ -25,7 +34,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": []
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.imtihoss.ontracknow"
     },
     "web": {
       "output": "server",
@@ -54,12 +67,12 @@
       "expo-web-browser",
       "expo-secure-store",
       [
-        "expo-notifications",
+        "expo-location",
         {
-          "defaultChannel": "plant-care",
-          "color": "#4E7A54"
+          "locationWhenInUsePermission": "onTrack uses your approximate location to suggest a departure city for travel searches."
         }
-      ]
+      ],
+      "./plugins/with-local-notifications"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
 import { typography, type TypeVariant } from '@/design-system';
@@ -9,13 +10,16 @@ export interface AppTextProps extends TextProps {
   align?: TextStyle['textAlign'];
 }
 
-export function AppText({
-  variant = 'body',
-  color = 'primary',
-  align,
-  style,
-  ...rest
-}: AppTextProps) {
+export const AppText = forwardRef<Text, AppTextProps>(function AppText(
+  {
+    variant = 'body',
+    color = 'primary',
+    align,
+    style,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme();
   const colorValue = {
     primary: theme.textPrimary,
@@ -29,10 +33,11 @@ export function AppText({
 
   return (
     <Text
+      ref={ref}
       allowFontScaling
       maxFontSizeMultiplier={1.4}
       style={[typography[variant] as TextStyle, { color: colorValue }, align && { textAlign: align }, style]}
       {...rest}
     />
   );
-}
+});

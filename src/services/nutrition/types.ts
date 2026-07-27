@@ -38,6 +38,13 @@ export interface PhotoAnalysisRequest {
 export interface PhotoAnalysisResponse {
   draftId: string;
   analysis: MealAnalysis;
+  processedPhotoUri?: string;
+  photoProcessingVersion?: number;
+}
+
+export interface MealImageEnhancementResponse {
+  imageDataUrl: string;
+  version: number;
 }
 
 export interface ApiErrorBody {

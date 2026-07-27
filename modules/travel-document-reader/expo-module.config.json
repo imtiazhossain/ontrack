@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["TravelDocumentReaderModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.traveldocumentreader.TravelDocumentReaderModule"]
+  }
+}

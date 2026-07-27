@@ -5,11 +5,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AppText, EmptyState, IconButton } from '@/components/primitives';
 import { ActivityCard } from '@/components/shared';
+import { isActivityEnabled } from '@/addons/registry';
 import { findCategory } from '@/constants/categories';
 import { layout, shadows, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { aiProvider } from '@/services/ai';
 import { usePreferences } from '@/store/preferences';
+import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
 import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import type { Activity } from '@/types/models';
@@ -45,14 +47,15 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const aiEnabled = usePreferences((s) => s.aiEnabled);
+  const enabledAddons = useAddons((s) => s.enabled);
 
   const allActivities = useSchedule((s) => s.activities);
   const activities = useMemo(
     () =>
       allActivities
-        .filter((activity) => activity.date === date)
+        .filter((activity) => activity.date === date && isActivityEnabled(activity, enabledAddons))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [allActivities, date],
+    [allActivities, date, enabledAddons],
   );
   const categories = useSchedule((s) => s.categories);
   const setStatus = useSchedule((s) => s.setStatus);
@@ -170,7 +173,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
 
   return (
     <SafeAreaView
-      edges={['top', 'left', 'right']}
+      edges={['left', 'right']}
       style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}

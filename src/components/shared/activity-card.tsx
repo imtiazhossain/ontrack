@@ -69,7 +69,12 @@ export function ActivityCard({
             ) : null}
           </View>
           {activity.photo ? (
-            <Image source={activity.photo} style={styles.thumb} contentFit="cover" />
+            <Image
+              source={activity.photo}
+              style={styles.thumb}
+              contentFit={activity.photoProcessingVersion ? 'contain' : 'cover'}
+              transition={160}
+            />
           ) : null}
           <IconButton
             icon={completed ? 'checkmark.circle.fill' : skipped ? 'arrow.uturn.left.circle' : 'circle'}

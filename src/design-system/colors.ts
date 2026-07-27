@@ -29,6 +29,14 @@ export const palette = {
   copperFaint: '#F0DFD2',
   copperDeep: '#8F4A22',
 
+  // Travel — open-sky blues, scoped to the Travel feature
+  travelBlue: '#2474A8',
+  travelBlueSoft: '#4D96C5',
+  travelBlueFaint: '#DCECF6',
+  travelBlueDark: '#78BCE8',
+  travelBlueSoftDark: '#3C85B6',
+  travelBlueFaintDark: '#183247',
+
   // Status
   green: '#4E7A54',
   greenBright: '#6FA276',
