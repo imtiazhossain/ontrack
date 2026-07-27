@@ -8,6 +8,8 @@ export { durations, easings, springs } from './motion';
 export {
   lightTheme,
   darkTheme,
+  lightTravelTheme,
+  darkTravelTheme,
   categoryColors,
   timeOfDayGradient,
   type Theme,

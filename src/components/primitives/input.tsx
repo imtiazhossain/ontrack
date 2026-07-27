@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { radii, spacing, typography } from '@/design-system';
@@ -6,9 +7,10 @@ import { AppText } from './app-text';
 
 interface InputProps extends TextInputProps {
   label?: string;
+  trailing?: ReactNode;
 }
 
-export function Input({ label, style, ...rest }: InputProps) {
+export function Input({ label, style, trailing, ...rest }: InputProps) {
   const theme = useTheme();
   return (
     <View style={styles.wrapper}>
@@ -17,19 +19,23 @@ export function Input({ label, style, ...rest }: InputProps) {
           {label}
         </AppText>
       ) : null}
-      <TextInput
-        placeholderTextColor={theme.textTertiary}
-        style={[
-          styles.input,
-          typography.body,
-          {
-            backgroundColor: theme.backgroundSunken,
-            color: theme.textPrimary,
-          },
-          style,
-        ]}
-        {...rest}
-      />
+      <View style={styles.field}>
+        <TextInput
+          placeholderTextColor={theme.textTertiary}
+          style={[
+            styles.input,
+            trailing ? styles.inputWithTrailing : null,
+            typography.body,
+            {
+              backgroundColor: theme.backgroundSunken,
+              color: theme.textPrimary,
+            },
+            style,
+          ]}
+          {...rest}
+        />
+        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+      </View>
     </View>
   );
 }
@@ -38,10 +44,23 @@ const styles = StyleSheet.create({
   wrapper: {
     gap: spacing.sm,
   },
+  field: {
+    position: 'relative',
+  },
   input: {
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     minHeight: 48,
+  },
+  inputWithTrailing: {
+    paddingRight: 56,
+  },
+  trailing: {
+    position: 'absolute',
+    right: spacing.xs,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
 });

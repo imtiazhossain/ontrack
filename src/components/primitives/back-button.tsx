@@ -1,11 +1,18 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/design-system';
+import { goBackOrReplace } from '@/utils/navigation';
 
 import { IconButton } from './button';
 
-export function BackButton({ accessibilityLabel = 'Go back' }: { accessibilityLabel?: string }) {
+export function BackButton({
+  accessibilityLabel = 'Go back',
+  fallback = '/(tabs)',
+}: {
+  accessibilityLabel?: string;
+  fallback?: Href;
+}) {
   const router = useRouter();
 
   return (
@@ -14,7 +21,7 @@ export function BackButton({ accessibilityLabel = 'Go back' }: { accessibilityLa
         icon="chevron-left"
         accessibilityLabel={accessibilityLabel}
         background="transparent"
-        onPress={() => router.back()}
+        onPress={() => goBackOrReplace(router, fallback)}
       />
     </View>
   );

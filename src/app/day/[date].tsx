@@ -1,6 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton } from '@/components/primitives';
 import { spacing } from '@/design-system';
@@ -12,7 +11,6 @@ export default function DayScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date: string }>();
   const date = typeof params.date === 'string' ? params.date : todayKey();
-  const insets = useSafeAreaInsets();
 
   const changeDate = (next: string) => router.setParams({ date: next });
 
@@ -32,7 +30,7 @@ export default function DayScreen() {
           />
         )}
       />
-      <View style={[styles.back, { top: insets.top + spacing.xs }]}>
+      <View style={[styles.back, { top: spacing.xs }]}>
         <IconButton
           icon="chevron-down"
           accessibilityLabel="Back to calendar"

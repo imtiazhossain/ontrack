@@ -101,7 +101,7 @@ export default function ActiveWorkoutScreen() {
 
   if (!activity || !storedWorkout || !current || !currentSet) {
     return (
-      <SafeAreaView style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}> 
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
         <BackButton />
         <AppText variant="title">Workout not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
@@ -112,7 +112,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}> 
+    <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <View style={styles.header}>
         <BackButton accessibilityLabel="Exit active workout" />
         <AppText variant="overline" color="tertiary">

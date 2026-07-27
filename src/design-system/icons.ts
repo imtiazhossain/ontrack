@@ -23,8 +23,27 @@ export const appIcons = {
   learning: { ios: 'book.fill', android: 'menu_book', web: 'menu_book' },
   appointment: { ios: 'calendar.badge.clock', android: 'calendar_clock', web: 'calendar_clock' },
   habit: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+  plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
+
+  // Travel
+  flight: { ios: 'airplane', android: 'flight', web: 'flight' },
+  lodging: { ios: 'bed.double.fill', android: 'hotel', web: 'hotel' },
+  weather: { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' },
+  people: { ios: 'person.2.fill', android: 'group', web: 'group' },
+  agents: { ios: 'person.2.badge.gearshape', android: 'manage_accounts', web: 'manage_accounts' },
+  'scan-document': { ios: 'doc.text.viewfinder', android: 'document_scanner', web: 'document_scanner' },
 
   // Navigation and actions
+  list: { ios: 'list.bullet', android: 'list', web: 'list' },
+  filter: { ios: 'slider.horizontal.3', android: 'tune', web: 'tune' },
+  photo: { ios: 'photo', android: 'image', web: 'image' },
+  location: { ios: 'location.fill', android: 'my_location', web: 'my_location' },
+  search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
+  'open-external': { ios: 'arrow.up.forward.app', android: 'open_in_new', web: 'open_in_new' },
+  download: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
+  check: { ios: 'checkmark', android: 'check', web: 'check' },
+  'minus-circle': { ios: 'minus.circle.fill', android: 'do_not_disturb_on', web: 'remove_circle' },
+  'plus-circle': { ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' },
   'chevron-left': { ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' },
   'chevron-right': { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
   'chevron-down': { ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' },

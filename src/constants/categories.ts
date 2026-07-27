@@ -12,6 +12,7 @@ export const DEFAULT_CATEGORIES: ActivityCategory[] = [
   { id: 'learning', name: 'Learning', icon: 'learning', colorKey: 'learning', supportsPhotos: false, supportsTimer: true, detailKind: 'generic' },
   { id: 'appointment', name: 'Appointment', icon: 'appointment', colorKey: 'appointment', supportsPhotos: false, supportsTimer: false, detailKind: 'generic' },
   { id: 'habit', name: 'Habit', icon: 'habit', colorKey: 'habit', supportsPhotos: false, supportsTimer: false, detailKind: 'generic' },
+  { id: 'plant', name: 'Plant care', icon: 'plant', colorKey: 'plant', supportsPhotos: true, supportsTimer: false, detailKind: 'plant' },
 ];
 
 export function findCategory(categories: ActivityCategory[], id: string): ActivityCategory {

@@ -29,6 +29,14 @@ export const palette = {
   copperFaint: '#F0DFD2',
   copperDeep: '#8F4A22',
 
+  // Travel — open-sky blues, scoped to the Travel feature
+  travelBlue: '#2474A8',
+  travelBlueSoft: '#4D96C5',
+  travelBlueFaint: '#DCECF6',
+  travelBlueDark: '#78BCE8',
+  travelBlueSoftDark: '#3C85B6',
+  travelBlueFaintDark: '#183247',
+
   // Status
   green: '#4E7A54',
   greenBright: '#6FA276',
@@ -50,6 +58,7 @@ export const categoryPalette = {
   appointment: { light: '#8A4F6D', dark: '#B87E9C', tintLight: '#EEDDE6', tintDark: '#301E28' },
   habit: { light: '#4E7A54', dark: '#7EA884', tintLight: '#DCE9DE', tintDark: '#1E2F21' },
   movie: { light: '#8B4A63', dark: '#C17C97', tintLight: '#F0DDE5', tintDark: '#321E26' },
+  plant: { light: '#3F7650', dark: '#79AC88', tintLight: '#DCEADF', tintDark: '#1B3021' },
   custom: { light: '#6E675E', dark: '#A69E92', tintLight: '#E8E4DD', tintDark: '#2A2622' },
 } as const;
 

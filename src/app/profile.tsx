@@ -3,11 +3,26 @@ import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Screen, SectionHeader } from '@/components/primitives';
+import {
+  AppText,
+  Button,
+  Screen,
+  SectionHeader,
+  SettingsActionRow,
+  SettingsToggleRow,
+} from '@/components/primitives';
+import { ADDONS } from '@/addons/registry';
+import type { AddonId } from '@/addons/types';
+import { CloudAccountCard } from '@/features/account/cloud-account-card';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
+import { useAddons } from '@/store/addons';
+import { useAgents } from '@/store/agents';
 import { useSchedule } from '@/store/schedule';
+import { usePlants } from '@/store/plants';
+import { useTravel } from '@/store/travel';
+import { deletePlant } from '@/services/plants/schedule';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -15,7 +30,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export default function ProfileScreen() {
+export default function ProfileSettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const name = usePreferences((s) => s.name);
@@ -27,12 +42,25 @@ export default function ProfileScreen() {
   const setAiEnabled = usePreferences((s) => s.setAiEnabled);
   const setHapticsEnabled = usePreferences((s) => s.setHapticsEnabled);
   const resetPreferences = usePreferences((s) => s.resetAll);
+  const enabledAddons = useAddons((s) => s.enabled);
+  const setAddonEnabled = useAddons((s) => s.setEnabled);
+  const resetAddons = useAddons((s) => s.reset);
+  const installedAgentCount = useAgents((s) => Object.keys(s.installations).length);
+  const resetAgents = useAgents((s) => s.reset);
   const resetSchedule = useSchedule((s) => s.resetAll);
   const seedIfNeeded = useSchedule((s) => s.seedIfNeeded);
+  const plants = usePlants((s) => s.plants);
+  const resetPlants = usePlants((s) => s.reset);
+  const resetTravel = useTravel((s) => s.reset);
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    await Promise.all(plants.map((plant) => deletePlant(plant.id)));
+    resetPlants();
     resetPreferences();
+    resetAddons();
+    resetAgents();
     resetSchedule();
+    resetTravel();
     seedIfNeeded();
   };
 
@@ -68,18 +96,48 @@ export default function ProfileScreen() {
       </View>
 
       <SectionHeader title="Preferences" />
-      <ToggleRow
+      <SettingsToggleRow
         label="AI summaries"
-        detail="Daily insights and meal analysis"
+        detail="Daily insights, meal analysis, and plant analysis"
         value={aiEnabled}
-        onToggle={() => setAiEnabled(!aiEnabled)}
+        onValueChange={setAiEnabled}
       />
-      <ToggleRow
+      <SettingsToggleRow
         label="Haptic feedback"
         detail="Subtle taps on key actions"
         value={hapticsEnabled}
-        onToggle={() => setHapticsEnabled(!hapticsEnabled)}
+        onValueChange={setHapticsEnabled}
       />
+
+      <SectionHeader title="Add-ons" />
+      <AppText variant="body" color="secondary" style={styles.sectionIntro}>
+        Testers have access to every add-on. Turn one off to hide it on this account; its data is kept.
+      </AppText>
+      {ADDONS.map((addon) => (
+        <SettingsToggleRow
+          key={addon.id}
+          label={addon.name}
+          detail={addon.description}
+          value={enabledAddons[addon.id]}
+          onValueChange={(value) => setAddonEnabled(addon.id as AddonId, value)}
+        />
+      ))}
+
+      <SectionHeader title="Agents" />
+      <SettingsActionRow
+        label="Manage agents"
+        detail={
+          installedAgentCount > 0
+            ? `${installedAgentCount} installed · permissions and access`
+            : 'Agent-ready · none installed'
+        }
+        icon="agents"
+        onPress={() => router.push('/agents' as never)}
+        accessibilityLabel="Manage agents"
+      />
+
+      <SectionHeader title="Account & sync" />
+      <CloudAccountCard />
 
       <SectionHeader title="Nutrition" />
       <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
@@ -90,7 +148,7 @@ export default function ProfileScreen() {
       </AppText>
 
       <SectionHeader title="Data" />
-      <Button variant="danger" onPress={handleReset} accessibilityLabel="Reset all data">
+      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset all data">
         Reset all data
       </Button>
 
@@ -113,38 +171,6 @@ export default function ProfileScreen() {
   );
 }
 
-function ToggleRow({
-  label,
-  detail,
-  value,
-  onToggle,
-}: {
-  label: string;
-  detail: string;
-  value: boolean;
-  onToggle: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
-      accessibilityLabel={label}
-      onPress={onToggle}
-      style={[styles.toggleRow, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
-      <View style={styles.toggleText}>
-        <AppText variant="callout">{label}</AppText>
-        <AppText variant="caption" color="secondary">
-          {detail}
-        </AppText>
-      </View>
-      <AppText variant="callout" color={value ? 'accent' : 'tertiary'}>
-        {value ? 'On' : 'Off'}
-      </AppText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   title: { marginBottom: spacing.xs },
   segment: {
@@ -159,20 +185,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-  },
-  toggleText: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
   attribution: { gap: spacing.sm, marginBottom: spacing.xl },
   tmdbLogo: { width: 96, height: 40 },
   clinicalNote: { marginTop: spacing.sm, marginBottom: spacing.lg },
+  sectionIntro: { marginBottom: spacing.md },
 });

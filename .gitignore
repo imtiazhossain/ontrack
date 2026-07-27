@@ -25,6 +25,9 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+.playwright-cli/
+/output/
+/tmp/
 
 # macOS
 .DS_Store
@@ -41,3 +44,4 @@ example
 # generated native folders
 /ios
 /android
+modules/*/android/build/

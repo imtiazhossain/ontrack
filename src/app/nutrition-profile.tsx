@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, DateField, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { featureFlags } from '@/constants/feature-flags';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useNutrition } from '@/store/nutrition';
 import type { ActivityLevel, EquationSex, NutritionGoal, NutritionProfile, NutritionTargets } from '@/types/models';
+import { todayKey } from '@/utils/date';
 import { ageInYears, calculateNutritionTargets, createTargetVersion, NutritionTargetError } from '@/utils/nutrition';
 
 const ACTIVITIES: ActivityLevel[] = ['inactive', 'low-active', 'active', 'very-active'];
@@ -102,7 +103,13 @@ export default function NutritionProfileScreen() {
 
       <SectionHeader title="Profile details" />
       <Input label="Name" value={displayName} onChangeText={setDisplayName} />
-      <Input label="Date of birth (YYYY-MM-DD)" value={dateOfBirth} onChangeText={setDateOfBirth} autoCapitalize="none" />
+      <DateField
+        label="Date of birth"
+        value={dateOfBirth}
+        minimumDate="1900-01-01"
+        maximumDate={todayKey()}
+        onChange={setDateOfBirth}
+      />
       <ChoiceRow label="Sex used by equation" values={['female', 'male']} value={equationSex} onChange={(value) => setEquationSex(value as EquationSex)} />
       <View style={styles.twoColumns}>
         <View style={styles.flex}><Input label="Height (cm)" value={heightCm} onChangeText={setHeightCm} keyboardType="decimal-pad" /></View>
@@ -132,7 +139,13 @@ export default function NutritionProfileScreen() {
         </>
       ) : null}
       {latest ? <AppText variant="caption" color="secondary">Latest version: v{latest.version} · {latest.status}</AppText> : null}
-      {error ? <AppText variant="callout" color={error.includes('saved') ? 'secondary' : 'danger'}>{error}</AppText> : null}
+      {error ? (
+        error.includes('saved') ? (
+          <AppText variant="callout" color="secondary">{error}</AppText>
+        ) : (
+          <ErrorMessage message={error} />
+        )
+      ) : null}
     </Screen>
   );
 }

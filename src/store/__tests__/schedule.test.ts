@@ -96,6 +96,31 @@ describe('schedule event saves', () => {
     expect(state.workSessions).toHaveLength(1);
     expect(state.activities[0].categoryId).toBe('work');
   });
+
+  it('keeps processed meal photos in sync with their activity thumbnails', () => {
+    useSchedule.setState({
+      activities: [{ ...activity, photo: 'file:///original.jpg' }],
+      meals: [{ ...meal, photo: 'file:///original.jpg' }],
+    });
+
+    useSchedule.getState().setProcessedMealPhoto(
+      activity.id,
+      'file:///meal-images/meal-event-1-v1.png',
+      'file:///original.jpg',
+      1,
+    );
+
+    const state = useSchedule.getState();
+    expect(state.activities[0]).toMatchObject({
+      photo: 'file:///meal-images/meal-event-1-v1.png',
+      photoProcessingVersion: 1,
+    });
+    expect(state.meals[0]).toMatchObject({
+      photo: 'file:///meal-images/meal-event-1-v1.png',
+      originalPhoto: 'file:///original.jpg',
+      photoProcessingVersion: 1,
+    });
+  });
 });
 
 describe('movie event details', () => {

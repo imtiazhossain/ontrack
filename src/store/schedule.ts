@@ -26,6 +26,8 @@ export interface ActivityDraft {
   startMinutes: number;
   durationMinutes: number;
   notes?: string;
+  travelPlanId?: string;
+  travelItemId?: string;
 }
 
 export interface EventSavePayload {
@@ -33,7 +35,10 @@ export interface EventSavePayload {
   activity: ActivityDraft & {
     status: ActivityStatus;
     photo?: string | number;
+    photoProcessingVersion?: number;
     summary?: string;
+    plantId?: string;
+    careKind?: Activity['careKind'];
   };
   detailKind: ActivityCategory['detailKind'];
   meal?: Meal;
@@ -53,6 +58,7 @@ interface ScheduleState {
 
   seedIfNeeded: () => void;
   addActivity: (draft: ActivityDraft) => Activity;
+  replaceTravelActivities: (travelPlanId: string, drafts: ActivityDraft[]) => Activity[];
   saveEvent: (payload: EventSavePayload) => Activity;
   updateActivity: (id: string, patch: Partial<Omit<Activity, 'id' | 'createdAt'>>) => void;
   deleteActivity: (id: string) => void;
@@ -60,6 +66,7 @@ interface ScheduleState {
   duplicateActivity: (id: string) => void;
   moveActivityToDate: (id: string, date: string) => void;
   upsertMeal: (meal: Meal) => void;
+  setProcessedMealPhoto: (activityId: string, photo: string, originalPhoto: string, version: number) => void;
   upsertWorkout: (workout: Workout) => void;
   upsertWorkSession: (session: WorkSession) => void;
   addCategory: (category: ActivityCategory) => void;
@@ -101,6 +108,25 @@ export const useSchedule = create<ScheduleState>()(
         };
         set((s) => ({ activities: [...s.activities, activity] }));
         return activity;
+      },
+
+      replaceTravelActivities: (travelPlanId, drafts) => {
+        const now = new Date().toISOString();
+        const activities = drafts.map((draft) => ({
+          id: newId('trip-event'),
+          status: 'upcoming' as const,
+          createdAt: now,
+          updatedAt: now,
+          ...draft,
+          travelPlanId,
+        }));
+        set((state) => ({
+          activities: [
+            ...state.activities.filter((activity) => activity.travelPlanId !== travelPlanId),
+            ...activities,
+          ],
+        }));
+        return activities;
       },
 
       saveEvent: (payload) => {
@@ -185,6 +211,25 @@ export const useSchedule = create<ScheduleState>()(
       upsertMeal: (meal) =>
         set((s) => ({
           meals: [...s.meals.filter((m) => m.activityId !== meal.activityId), meal],
+        })),
+
+      setProcessedMealPhoto: (activityId, photo, originalPhoto, version) =>
+        set((state) => ({
+          activities: state.activities.map((activity) =>
+            activity.id === activityId
+              ? { ...activity, photo, photoProcessingVersion: version, updatedAt: new Date().toISOString() }
+              : activity,
+          ),
+          meals: state.meals.map((meal) =>
+            meal.activityId === activityId
+              ? {
+                  ...meal,
+                  photo,
+                  originalPhoto: meal.originalPhoto ?? originalPhoto,
+                  photoProcessingVersion: version,
+                }
+              : meal,
+          ),
         })),
 
       upsertWorkout: (workout) =>

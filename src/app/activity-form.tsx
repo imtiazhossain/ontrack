@@ -1,18 +1,20 @@
-import { DateTimePicker } from '@expo/ui/community/datetime-picker';
+import ExpoDateTimePicker from '@expo/ui/community/datetime-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, IconButton, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, DateField, ErrorMessage, IconButton, Input, Screen, SectionHeader } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
+import { isCategoryEnabled } from '@/addons/registry';
 import { radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { analyzeMealPhoto, NutritionServiceError } from '@/services/nutrition';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
 import { usePreferences } from '@/store/preferences';
+import { useAddons } from '@/store/addons';
 import { newId, useSchedule } from '@/store/schedule';
 import type {
   ActivityStatus,
@@ -27,31 +29,12 @@ import type {
   WorkSession,
   WorkTask,
 } from '@/types/models';
-import { todayKey } from '@/utils/date';
+import { isDateKey, nowMinutes, todayKey } from '@/utils/date';
+import { goBackOrReplace } from '@/utils/navigation';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack', 'pre-workout', 'post-workout'];
 const WORKOUT_TYPES: WorkoutType[] = ['strength', 'cardio', 'mobility', 'custom'];
 const PRIORITIES: WorkTask['priority'][] = ['low', 'medium', 'high'];
-
-function formatDateForInput(dateKey: string): string {
-  const [year, month, day] = dateKey.split('-');
-  return year && month && day ? `${month}/${day}/${year}` : dateKey;
-}
-
-function parseDateInput(value: string): string | undefined {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-  if (!match) return undefined;
-
-  const [, month, day, year] = match;
-  const parsed = new Date(Number(year), Number(month) - 1, Number(day));
-  if (
-    parsed.getFullYear() !== Number(year) ||
-    parsed.getMonth() !== Number(month) - 1 ||
-    parsed.getDate() !== Number(day)
-  ) return undefined;
-
-  return `${year}-${month}-${day}`;
-}
 
 const ASSISTANT_COPY: Record<string, { question: string; label: string; placeholder: string }> = {
   food: { question: 'What are we eating? Give me the delicious details. 🍴', label: 'Meal', placeholder: 'Breakfast, sushi night…' },
@@ -103,9 +86,10 @@ export default function ActivityFormScreen() {
   const theme = useTheme();
   const router = useRouter();
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ date?: string; id?: string }>();
+  const params = useLocalSearchParams<{ date?: string; id?: string; category?: string }>();
   const editId = typeof params.id === 'string' ? params.id : undefined;
   const aiEnabled = usePreferences((state) => state.aiEnabled);
+  const enabledAddons = useAddons((state) => state.enabled);
 
   const categories = useSchedule((state) => state.categories);
   const existing = useSchedule((state) => state.activities.find((activity) => activity.id === editId));
@@ -120,11 +104,13 @@ export default function ActivityFormScreen() {
 
   const initialId = editId ?? 'draft';
   const initialDate = existing?.date ?? (typeof params.date === 'string' ? params.date : todayKey());
+  const initialStartMinutes = existing?.startMinutes ?? nowMinutes();
   const [title, setTitle] = useState(existing?.title ?? '');
-  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? '');
-  const [date, setDate] = useState(() => formatDateForInput(initialDate));
-  const [startHour, setStartHour] = useState(String(existing ? Math.floor(existing.startMinutes / 60) : 9));
-  const [startMinute, setStartMinute] = useState(String(existing ? existing.startMinutes % 60 : 0));
+  const requestedCategory = typeof params.category === 'string' ? params.category : '';
+  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? requestedCategory);
+  const [date, setDate] = useState(initialDate);
+  const [startHour, setStartHour] = useState(String(Math.floor(initialStartMinutes / 60)));
+  const [startMinute, setStartMinute] = useState(String(initialStartMinutes % 60));
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 60));
   const status: ActivityStatus = existing?.status ?? 'upcoming';
   const [notes, setNotes] = useState(existing?.notes ?? '');
@@ -138,9 +124,11 @@ export default function ActivityFormScreen() {
   const [analyzing, setAnalyzing] = useState(false);
 
   const category = categories.find((item) => item.id === categoryId) ?? (editId ? categories[0] : undefined);
+  const availableCategories = categories.filter((item) => isCategoryEnabled(item.id, enabledAddons));
   const isEditing = Boolean(editId && existing);
   const missingActivity = Boolean(editId && !existing);
   const allowLeave = useRef(false);
+  const close = () => goBackOrReplace(router, '/(tabs)/calendar');
 
   const signature = JSON.stringify({
     title,
@@ -214,7 +202,13 @@ export default function ActivityFormScreen() {
     const selectedUri = result.canceled ? undefined : result.assets[0]?.uri;
     if (!selectedUri) return;
     setPhoto(selectedUri);
-    setMeal((current) => ({ ...current, photo: selectedUri, aiAnalysis: undefined }));
+    setMeal((current) => ({
+      ...current,
+      photo: selectedUri,
+      originalPhoto: undefined,
+      photoProcessingVersion: undefined,
+      aiAnalysis: undefined,
+    }));
     if (analyzeAfterPick) await analyzePhoto(selectedUri);
   };
 
@@ -224,11 +218,15 @@ export default function ActivityFormScreen() {
     setAnalyzing(true);
     setAnalysisError(undefined);
     try {
-      const { analysis } = await analyzeMealPhoto(photoUri, title);
+      const { analysis, processedPhotoUri, photoProcessingVersion } = await analyzeMealPhoto(photoUri, title);
+      const displayPhoto = processedPhotoUri ?? photoUri;
+      setPhoto(displayPhoto);
       setMeal((current) => ({
         ...current,
         name: current.name || title,
-        photo: photoUri,
+        photo: displayPhoto,
+        originalPhoto: processedPhotoUri ? photoUri : undefined,
+        photoProcessingVersion,
         aiAnalysis: analysis,
         items: analysis.items,
       }));
@@ -316,8 +314,8 @@ export default function ActivityFormScreen() {
   const save = () => {
     setError(undefined);
     if (!title.trim()) return setError('Title is required.');
-    const dateKey = parseDateInput(date);
-    if (!dateKey) return setError('Date must use MM/DD/YYYY.');
+    if (!isDateKey(date)) return setError('Choose a valid date.');
+    const dateKey = date;
     if (!category) return setError('Choose an event type.');
     if (Number(duration) < 5 || !Number.isFinite(Number(duration))) {
       return setError('Duration must be at least 5 minutes.');
@@ -359,6 +357,7 @@ export default function ActivityFormScreen() {
         status,
         notes: notes.trim() || undefined,
         photo: category.supportsPhotos ? photo : undefined,
+        photoProcessingVersion: category.detailKind === 'food' ? meal.photoProcessingVersion : undefined,
         summary,
       },
       meal:
@@ -377,7 +376,7 @@ export default function ActivityFormScreen() {
           : undefined,
     });
     allowLeave.current = true;
-    router.back();
+    close();
   };
 
   const savedDraftId = initialId;
@@ -403,7 +402,7 @@ export default function ActivityFormScreen() {
         onPress: () => {
           deleteActivity(editId);
           allowLeave.current = true;
-          router.back();
+          close();
         },
       },
     ]);
@@ -412,7 +411,7 @@ export default function ActivityFormScreen() {
   if (missingActivity) {
     return (
       <Screen>
-        <IconButton icon="chevron-left" accessibilityLabel="Go back" background="transparent" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" accessibilityLabel="Go back" background="transparent" onPress={close} />
         <AppText variant="title">Event not found</AppText>
         <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
       </Screen>
@@ -422,7 +421,7 @@ export default function ActivityFormScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <IconButton icon="close" accessibilityLabel="Cancel editing" background="transparent" onPress={() => router.back()} />
+        <IconButton icon="close" accessibilityLabel="Cancel editing" background="transparent" onPress={close} />
         <AppText variant="title">{isEditing ? editorTitle : 'Add event'}</AppText>
       </View>
 
@@ -435,7 +434,7 @@ export default function ActivityFormScreen() {
           <AppText variant="title">What are we getting into?</AppText>
           <AppText variant="body" color="secondary">Pick a vibe and I’ll help with the rest.</AppText>
           <View style={styles.wrap}>
-            {categories.map((item) => (
+            {availableCategories.map((item) => (
               <Pressable
                 key={item.id}
                 accessibilityRole="radio"
@@ -495,7 +494,7 @@ export default function ActivityFormScreen() {
       <>
       <SectionHeader title="Schedule" />
       <View style={styles.twoColumns}>
-        <View style={styles.flex}><Input label="Date" value={date} onChangeText={setDate} placeholder="MM/DD/YYYY" /></View>
+        <View style={styles.flex}><DateField label="Date" value={date} onChange={setDate} /></View>
         <View style={styles.flex}><Input label="Duration (min)" value={duration} onChangeText={setDuration} keyboardType="number-pad" /></View>
       </View>
       <View style={styles.timeSection}>
@@ -506,12 +505,13 @@ export default function ActivityFormScreen() {
             <View style={styles.flex}><Input label="Minute" value={startMinute} onChangeText={setStartMinute} keyboardType="number-pad" /></View>
           </View>
         ) : (
-          <DateTimePicker
+          <ExpoDateTimePicker
             value={startTimeValue}
             mode="time"
             display="spinner"
             locale="en_US"
             accentColor={theme.accentPrimary}
+            themeVariant={theme.name}
             style={styles.timePicker}
             onValueChange={(_event, value) => {
               setStartHour(String(value.getHours()));
@@ -529,7 +529,7 @@ export default function ActivityFormScreen() {
           <AppText variant="body" color="secondary">
             Upload a clear photo to identify foods and estimate portions and nutrients. You can edit every result before saving.
           </AppText>
-          {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
+          {photo ? <Image source={photo} style={styles.photo} contentFit={meal.photoProcessingVersion ? 'contain' : 'cover'} transition={160} /> : null}
           <View style={styles.twoColumns}>
             <Button
               onPress={() => void pickPhoto(aiEnabled)}
@@ -553,7 +553,7 @@ export default function ActivityFormScreen() {
           {!aiEnabled ? (
             <AppText variant="caption" color="secondary">AI summaries are disabled in Profile. The image will be attached without analysis.</AppText>
           ) : null}
-          {analysisError ? <AppText variant="callout" color="danger">{analysisError}</AppText> : null}
+          {analysisError ? <ErrorMessage message={analysisError} /> : null}
           {meal.aiAnalysis ? (
             <View style={[styles.analysisReady, { backgroundColor: theme.accentFaint, borderColor: theme.accentPrimary }]}>
               <AppText variant="bodyMedium">Analysis ready</AppText>
@@ -569,7 +569,13 @@ export default function ActivityFormScreen() {
               onPress={() => {
                 setPhoto(undefined);
                 setAnalysisError(undefined);
-                setMeal((current) => ({ ...current, photo: undefined, aiAnalysis: undefined }));
+                setMeal((current) => ({
+                  ...current,
+                  photo: undefined,
+                  originalPhoto: undefined,
+                  photoProcessingVersion: undefined,
+                  aiAnalysis: undefined,
+                }));
               }}
               accessibilityLabel="Remove meal photo">
               Remove photo
@@ -621,10 +627,10 @@ export default function ActivityFormScreen() {
         />
       ) : null}
 
-      {error ? <AppText variant="callout" color="danger">{error}</AppText> : null}
+      {error ? <ErrorMessage message={error} /> : null}
       <View style={styles.actions}>
         <Button onPress={save} disabled={!title.trim()} accessibilityLabel="Save event">Save</Button>
-        <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Cancel">Cancel</Button>
+        <Button variant="ghost" onPress={close} accessibilityLabel="Cancel">Cancel</Button>
         {isEditing ? <Button variant="danger" onPress={confirmDelete} accessibilityLabel="Delete event">Delete event</Button> : null}
       </View>
       </>
@@ -805,7 +811,7 @@ function MovieEditor({ movie, onSelect, guided = false }: { movie?: Movie; onSel
       {searching ? <ActivityIndicator style={styles.loader} /> : null}
       {searchError ? (
         <View style={styles.searchMessage}>
-          <AppText variant="callout" color="danger">{searchError}</AppText>
+          <ErrorMessage message={searchError} />
           <Button variant="secondary" onPress={() => setRetryKey((value) => value + 1)}>Try again</Button>
         </View>
       ) : null}

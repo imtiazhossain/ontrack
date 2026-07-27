@@ -13,4 +13,8 @@ export function createPersistStorage<T>() {
 export const STORAGE_KEYS = {
   schedule: 'ontrack/schedule/v1',
   preferences: 'ontrack/preferences/v1',
+  plants: 'ontrack/plants/v1',
+  addons: 'ontrack/addons/v1',
+  agents: 'ontrack/agents/v1',
+  travel: 'ontrack/travel/v1',
 } as const;

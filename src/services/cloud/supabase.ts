@@ -7,6 +7,17 @@ const secureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+const webStorage = {
+  getItem: (key: string) =>
+    typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+  },
+};
+
 let client: SupabaseClient | undefined;
 
 /** Returns undefined until the high-compliance cloud environment is configured. */
@@ -17,7 +28,7 @@ export function getSupabaseClient(): SupabaseClient | undefined {
   if (!url || !publishableKey) return undefined;
   client = createClient(url, publishableKey, {
     auth: {
-      storage: secureStorage,
+      storage: process.env.EXPO_OS === 'web' ? webStorage : secureStorage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
