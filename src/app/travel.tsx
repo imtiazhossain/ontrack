@@ -177,7 +177,7 @@ function TravelScreenContent() {
           <AppText variant="overline" color="accent">Travel</AppText>
           {!showForm ? (
             <Button
-              icon="plus"
+              icon="add"
               onPress={() => setShowForm(true)}
               accessibilityLabel="Plan a new trip">
               New trip
@@ -303,7 +303,7 @@ function TravelScreenContent() {
           <View style={styles.actionGrid}>
             <Button
               variant="secondary"
-              icon="airplane"
+              icon="flight"
               style={styles.actionButton}
               onPress={() =>
                 router.push({ pathname: '/travel/[id]/flights', params: { id: plan.id } } as never)
@@ -313,7 +313,7 @@ function TravelScreenContent() {
             </Button>
             <Button
               variant="secondary"
-              icon="bed.double.fill"
+              icon="lodging"
               style={styles.actionButton}
               onPress={() =>
                 router.push({ pathname: '/travel/[id]/stays', params: { id: plan.id } } as never)
@@ -323,7 +323,7 @@ function TravelScreenContent() {
             </Button>
             <Button
               variant="secondary"
-              icon="calendar.badge.plus"
+              icon="calendar-add"
               style={styles.actionButton}
               onPress={() => addTripToCalendar(plan)}
               accessibilityLabel={`Add ${plan.title} to calendar`}>
@@ -331,7 +331,7 @@ function TravelScreenContent() {
             </Button>
             <Button
               variant="secondary"
-              icon="list.bullet"
+              icon="list"
               style={styles.actionButton}
               onPress={() =>
                 router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)
@@ -341,7 +341,7 @@ function TravelScreenContent() {
             </Button>
             <Button
               variant="secondary"
-              icon="cloud.sun.fill"
+              icon="weather"
               style={styles.actionButton}
               onPress={() =>
                 void WebBrowser.openBrowserAsync(
@@ -365,7 +365,7 @@ function TravelScreenContent() {
             </Button>
           </View>
           <Button
-            icon="person.2.fill"
+            icon="people"
             style={styles.inviteButton}
             onPress={() =>
               router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)

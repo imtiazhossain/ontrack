@@ -1,0 +1,104 @@
+import type { SymbolViewProps } from 'expo-symbols';
+
+/** `{ ios, android, web }` symbol-name object accepted by `expo-symbols`. */
+export type PlatformIconNames = Extract<SymbolViewProps['name'], { ios?: unknown }>;
+
+/**
+ * Application-owned semantic icon names mapped to platform symbol names.
+ * iOS uses SF Symbols; Android and web use Material Symbols.
+ *
+ * Screens and stored data should reference these semantic keys instead of
+ * raw platform symbol strings.
+ */
+export const appIcons = {
+  // Categories
+  food: { ios: 'fork.knife', android: 'restaurant', web: 'restaurant' },
+  gym: { ios: 'dumbbell.fill', android: 'fitness_center', web: 'fitness_center' },
+  work: { ios: 'laptopcomputer', android: 'computer', web: 'computer' },
+  movie: { ios: 'film.fill', android: 'movie', web: 'movie' },
+  sleep: { ios: 'moon.zzz.fill', android: 'bedtime', web: 'bedtime' },
+  water: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
+  personal: { ios: 'person.fill', android: 'person', web: 'person' },
+  mindfulness: { ios: 'leaf.fill', android: 'self_improvement', web: 'self_improvement' },
+  learning: { ios: 'book.fill', android: 'menu_book', web: 'menu_book' },
+  appointment: { ios: 'calendar.badge.clock', android: 'calendar_clock', web: 'calendar_clock' },
+  habit: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+  plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
+
+  // Travel
+  flight: { ios: 'airplane', android: 'flight', web: 'flight' },
+  lodging: { ios: 'bed.double.fill', android: 'hotel', web: 'hotel' },
+  weather: { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' },
+  people: { ios: 'person.2.fill', android: 'group', web: 'group' },
+  agents: { ios: 'person.2.badge.gearshape', android: 'manage_accounts', web: 'manage_accounts' },
+  'scan-document': { ios: 'doc.text.viewfinder', android: 'document_scanner', web: 'document_scanner' },
+
+  // Navigation and actions
+  list: { ios: 'list.bullet', android: 'list', web: 'list' },
+  filter: { ios: 'slider.horizontal.3', android: 'tune', web: 'tune' },
+  photo: { ios: 'photo', android: 'image', web: 'image' },
+  location: { ios: 'location.fill', android: 'my_location', web: 'my_location' },
+  search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
+  'open-external': { ios: 'arrow.up.forward.app', android: 'open_in_new', web: 'open_in_new' },
+  chat: { ios: 'message.fill', android: 'chat', web: 'chat' },
+  currency: { ios: 'dollarsign.circle', android: 'attach_money', web: 'attach_money' },
+  clock: { ios: 'clock', android: 'schedule', web: 'schedule' },
+  download: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
+  check: { ios: 'checkmark', android: 'check', web: 'check' },
+  'minus-circle': { ios: 'minus.circle.fill', android: 'do_not_disturb_on', web: 'remove_circle' },
+  'plus-circle': { ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' },
+  'chevron-left': { ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' },
+  'chevron-right': { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
+  'chevron-down': { ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' },
+  'chevron-up': { ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' },
+  close: { ios: 'xmark', android: 'close', web: 'close' },
+  add: { ios: 'plus', android: 'add', web: 'add' },
+  edit: { ios: 'pencil', android: 'edit', web: 'edit' },
+  delete: { ios: 'trash', android: 'delete', web: 'delete' },
+  camera: { ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' },
+  calendar: { ios: 'calendar', android: 'calendar_month', web: 'calendar_month' },
+  'calendar-add': { ios: 'calendar.badge.plus', android: 'calendar_add_on', web: 'calendar_add_on' },
+  health: { ios: 'heart.text.square.fill', android: 'monitor_heart', web: 'monitor_heart' },
+  'nutrition-profiles': { ios: 'heart.text.clipboard', android: 'clinical_notes', web: 'clinical_notes' },
+  play: { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' },
+  pause: { ios: 'pause.fill', android: 'pause', web: 'pause' },
+  tip: { ios: 'lightbulb.max.fill', android: 'lightbulb', web: 'lightbulb' },
+  target: { ios: 'scope', android: 'center_focus_strong', web: 'center_focus_strong' },
+  layers: { ios: 'square.stack.3d.up', android: 'layers', web: 'layers' },
+  repeat: { ios: 'repeat', android: 'repeat', web: 'repeat' },
+  timer: { ios: 'timer', android: 'timer', web: 'timer' },
+  'arrow-up': { ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' },
+
+  // Activity status
+  'status-completed': { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
+  'status-skipped': { ios: 'arrow.uturn.left.circle', android: 'undo', web: 'undo' },
+  'status-upcoming': { ios: 'circle', android: 'radio_button_unchecked', web: 'radio_button_unchecked' },
+
+  // Exercises
+  'exercise-strength': { ios: 'figure.strengthtraining.traditional', android: 'exercise', web: 'exercise' },
+  'exercise-functional': { ios: 'figure.strengthtraining.functional', android: 'sports_gymnastics', web: 'sports_gymnastics' },
+  'exercise-row': { ios: 'figure.rower', android: 'rowing', web: 'rowing' },
+  'exercise-press': { ios: 'figure.arms.open', android: 'accessibility_new', web: 'accessibility_new' },
+  'exercise-pulldown': { ios: 'figure.play', android: 'sports_martial_arts', web: 'sports_martial_arts' },
+  'exercise-walk': { ios: 'figure.walk', android: 'directions_walk', web: 'directions_walk' },
+  'exercise-stand': { ios: 'figure.stand', android: 'man', web: 'man' },
+  'exercise-core': { ios: 'figure.core.training', android: 'sports_gymnastics', web: 'sports_gymnastics' },
+} as const satisfies Record<string, PlatformIconNames>;
+
+export type AppIconName = keyof typeof appIcons;
+
+/** Records persisted before the semantic refactor stored raw SF Symbol names. */
+const legacyIosLookup = new Map<string, PlatformIconNames>(
+  Object.values(appIcons).map((mapping) => [mapping.ios, mapping]),
+);
+
+const FALLBACK_ICON: PlatformIconNames = appIcons.personal;
+
+/**
+ * Resolves a semantic icon name (or a legacy persisted SF Symbol name) to
+ * the platform-name object required for cross-platform rendering.
+ */
+export function resolveAppIcon(name: AppIconName | (string & {})): PlatformIconNames {
+  if (name in appIcons) return appIcons[name as AppIconName];
+  return legacyIosLookup.get(name) ?? FALLBACK_ICON;
+}

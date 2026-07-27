@@ -49,7 +49,7 @@ export default function SleepDetailScreen() {
         </AppText>
         <Button
           size="lg"
-          icon="heart.text.square.fill"
+          icon="health"
           onPress={() => void openSleepData()}
           accessibilityLabel={`Open sleep data in ${healthAppName}`}>
           Open sleep data
@@ -59,7 +59,7 @@ export default function SleepDetailScreen() {
       <View style={styles.actions}>
         <Button
           variant="secondary"
-          icon="pencil"
+          icon="edit"
           onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}
           accessibilityLabel={`Edit ${activity.title}`}>
           Edit sleep plan

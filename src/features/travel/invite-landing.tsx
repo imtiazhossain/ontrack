@@ -203,14 +203,14 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
         <View style={styles.buttons}>
           <Button
             size="lg"
-            icon="arrow.up.forward.app"
+            icon="open-external"
             onPress={() => void Linking.openURL(customSchemeUrl)}>
             Open in onTrack
           </Button>
           <Button
             size="lg"
             variant="secondary"
-            icon="square.and.arrow.down"
+            icon="download"
             onPress={() => void Linking.openURL(ONTRACK_APP_STORE_URL)}>
             Download from the App Store
           </Button>

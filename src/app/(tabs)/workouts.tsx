@@ -583,7 +583,7 @@ export default function WorkoutsScreen() {
             </AppText>
             <Button
               size="lg"
-              icon="calendar.badge.plus"
+              icon="calendar-add"
               onPress={addWorkoutToToday}
               accessibilityLabel={`Add ${selectedExercises.length} exercises to today`}>
               Add workout to today
@@ -646,7 +646,7 @@ export default function WorkoutsScreen() {
 
         <Button
           variant="secondary"
-          icon="slider.horizontal.3"
+          icon="filter"
           onPress={openCustomPlanner}
           accessibilityLabel="Open the custom workout editor">
           Plan from scratch

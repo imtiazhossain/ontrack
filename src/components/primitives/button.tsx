@@ -1,8 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
-import type { SymbolViewProps } from 'expo-symbols';
 
-import { layout, radii, spacing } from '@/design-system';
+import { layout, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 import { AppText } from './app-text';
@@ -12,7 +11,7 @@ interface ButtonProps extends PropsWithChildren {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'md' | 'lg';
-  icon?: SymbolViewProps['name'];
+  icon?: AppIconName;
   disabled?: boolean;
   style?: ViewStyle;
   accessibilityLabel?: string;
@@ -66,7 +65,7 @@ export function Button({
 }
 
 interface IconButtonProps {
-  icon: SymbolViewProps['name'];
+  icon: AppIconName;
   onPress: () => void;
   color?: string;
   background?: string;

@@ -60,7 +60,7 @@ export default function MovieDetailScreen() {
         </View>
       ) : null}
       <View style={styles.actions}>
-        <Button variant="secondary" icon="pencil" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>
+        <Button variant="secondary" icon="edit" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>
           Edit event
         </Button>
         <Button onPress={() => setStatus(activity.id, activity.status === 'completed' ? 'upcoming' : 'completed')}>

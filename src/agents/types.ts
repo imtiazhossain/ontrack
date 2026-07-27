@@ -1,7 +1,6 @@
-import type { SymbolViewProps } from 'expo-symbols';
-
 import type { AddonEnabledState, AddonId } from '@/addons/types';
 import type { EntitlementState } from '@/entitlements/types';
+import type { AppIconName } from '@/design-system';
 
 export type AgentId = string;
 export type AgentProviderId = string;
@@ -25,7 +24,7 @@ export interface AgentDefinition {
   version: number;
   name: string;
   description: string;
-  icon: SymbolViewProps['name'];
+  icon: AppIconName;
   providerId: AgentProviderId;
   access: 'included' | 'paid';
   requiredAddonId?: AddonId;

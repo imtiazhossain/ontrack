@@ -53,14 +53,14 @@ export default function CalendarScreen() {
 
       <View style={styles.monthRow}>
         <IconButton
-          icon="chevron.left"
+          icon="chevron-left"
           accessibilityLabel="Previous month"
           background="transparent"
           onPress={() => shiftMonth(-1)}
         />
         <AppText variant="subheading">{formatMonthTitle(year, month)}</AppText>
         <IconButton
-          icon="chevron.right"
+          icon="chevron-right"
           accessibilityLabel="Next month"
           background="transparent"
           onPress={() => shiftMonth(1)}

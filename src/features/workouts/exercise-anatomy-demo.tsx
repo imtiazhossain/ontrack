@@ -512,7 +512,7 @@ function DemoContent({
             </View>
 
             <Button
-              icon={selected ? 'minus.circle.fill' : 'plus.circle.fill'}
+              icon={selected ? 'minus-circle' : 'plus-circle'}
               onPress={onToggleSelected}
               size="lg"
               variant={selected ? 'secondary' : 'primary'}>

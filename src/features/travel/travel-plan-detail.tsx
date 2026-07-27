@@ -21,6 +21,7 @@ import {
   Screen,
   SectionHeader,
   Symbol,
+  TimeField,
 } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { spacing } from '@/design-system';
@@ -73,24 +74,12 @@ const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'activity', label: 'Activity' },
 ];
 
-function parseTime(value: string): number | undefined {
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
-  if (!match) return undefined;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
-
 function formatTime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const minute = minutes % 60;
   const suffix = hours >= 12 ? 'PM' : 'AM';
   const displayHour = hours % 12 || 12;
   return `${displayHour}:${minute.toString().padStart(2, '0')} ${suffix}`;
-}
-
-function formatTimeInput(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 }
 
 function validBookingUrl(value: string): boolean {
@@ -129,7 +118,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [kind, setKind] = useState<TravelItemKind>('activity');
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(plan?.startDate ?? '');
-  const [time, setTime] = useState('09:00');
+  const [startMinutes, setStartMinutes] = useState(9 * 60);
   const [duration, setDuration] = useState('60');
   const [details, setDetails] = useState('');
   const [bookingUrl, setBookingUrl] = useState('');
@@ -223,7 +212,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       <Screen>
         <BackButton />
         <EmptyState
-          icon="airplane"
+          icon="flight"
           title="Trip not found"
           message="This trip may have been removed on another device."
         />
@@ -243,13 +232,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const addItem = () => {
     setError(undefined);
     setFlightDetailsError(undefined);
-    const startMinutes = parseTime(time);
     const durationMinutes = Number(duration);
     if (!title.trim()) return setError('Add a name for this itinerary item.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
       return setError(`Choose a date between ${plan.startDate} and ${plan.endDate}.`);
     }
-    if (startMinutes === undefined) return setError('Use a 24-hour time such as 09:30.');
+    if (startMinutes < 0 || startMinutes >= 24 * 60) {
+      return setError('Choose a valid start time.');
+    }
     if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 1440) {
       return setError('Duration must be between 1 and 1,440 minutes.');
     }
@@ -407,7 +397,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         if (imported.title) setTitle(imported.title);
         if (imported.date) setDate(imported.date);
         if (imported.startMinutes !== undefined) {
-          setTime(formatTimeInput(imported.startMinutes));
+          setStartMinutes(imported.startMinutes);
         }
         if (imported.durationMinutes !== undefined) {
           setDuration(String(imported.durationMinutes));
@@ -658,7 +648,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       <View style={styles.actions}>
         <Button
           variant="secondary"
-          icon="message.fill"
+          icon="chat"
           onPress={() =>
             router.push({ pathname: '/travel/[id]/chat', params: { id: plan.id } } as never)
           }>
@@ -680,7 +670,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         </Button>
         <Button
           variant="secondary"
-          icon="cloud.sun.fill"
+          icon="weather"
           onPress={() =>
             void WebBrowser.openBrowserAsync(
               googleWeatherUrl(plan.destination, plan.startDate, plan.endDate),
@@ -690,7 +680,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         </Button>
         <Button
           variant="secondary"
-          icon="dollarsign.circle"
+          icon="currency"
           onPress={() =>
             void WebBrowser.openBrowserAsync(
               googleCurrencyConversionUrl(plan.destination, dateLocale),
@@ -768,7 +758,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
                       pressed ? styles.pressed : undefined,
                     ]}>
                     <Symbol
-                      name={isExpanded ? 'chevron.up' : 'chevron.down'}
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
                       size="sm"
                       color={theme.textTertiary}
                     />
@@ -803,7 +793,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
                       <View style={styles.flightEditorActions}>
                         <Button
                           size="lg"
-                          icon="checkmark"
+                          icon="check"
                           style={styles.fullWidthAction}
                           onPress={() => saveEditedFlightDetails(item.id)}>
                           Save flight details
@@ -857,7 +847,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
                       {item.kind === 'flight' ? (
                         <Button
                           variant="secondary"
-                          icon="airplane"
+                          icon="flight"
                           style={styles.itineraryAction}
                           onPress={() =>
                             beginEditingFlightDetails(item.id, item.flight)
@@ -911,7 +901,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           />
         </View>
         <View style={styles.flex}>
-          <Input label="Time" value={time} onChangeText={setTime} placeholder="09:00" />
+          <TimeField label="Time" value={startMinutes} onChange={setStartMinutes} />
         </View>
       </View>
       <Input

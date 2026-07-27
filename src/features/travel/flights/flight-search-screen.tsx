@@ -142,7 +142,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
     return (
       <Screen>
         <BackButton />
-        <EmptyState icon="airplane" title="Trip not found" message="This trip may have been removed." />
+        <EmptyState icon="flight" title="Trip not found" message="This trip may have been removed." />
       </Screen>
     );
   }
@@ -234,7 +234,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
               autoCapitalize="characters"
               trailing={
                 <IconButton
-                  icon="location.fill"
+                  icon="location"
                   background="transparent"
                   disabled={locatingDeparture}
                   onPress={() => void fillDepartureFromLocation()}
@@ -302,13 +302,13 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
         {error ? <ErrorMessage message={error} /> : null}
         {featureFlags.liveFlightSearch ? (
           <Button
-            icon={loading ? 'xmark' : 'magnifyingglass'}
+            icon={loading ? 'close' : 'search'}
             onPress={loading ? cancelSearch : () => void runSearch()}>
             {loading ? 'Cancel live price check' : 'Search flights'}
           </Button>
         ) : null}
         <Button
-          icon="arrow.up.forward.app"
+          icon="open-external"
           disabled={
             comparing ||
             origin.trim().length < 3 ||
@@ -336,7 +336,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
           </AppText>
           {result.offers.length === 0 ? (
             <EmptyState
-              icon="airplane"
+              icon="flight"
               title="No flights found"
               message="Try nearby airport codes or different dates."
               actionLabel="Search again"

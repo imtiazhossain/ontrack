@@ -25,7 +25,7 @@ export default function PlantsScreen() {
 
       {plants.length === 0 ? (
         <EmptyState
-          icon="leaf.fill"
+          icon="plant"
           title="Grow your plant shelf"
           message="Photograph a plant to identify it, assess its health, and build a watering plan for your room."
           actionLabel="Analyze a plant"

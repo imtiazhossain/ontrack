@@ -18,7 +18,7 @@ export function BackButton({
   return (
     <View style={styles.container}>
       <IconButton
-        icon="chevron.left"
+        icon="chevron-left"
         accessibilityLabel={accessibilityLabel}
         background="transparent"
         onPress={() => goBackOrReplace(router, fallback)}

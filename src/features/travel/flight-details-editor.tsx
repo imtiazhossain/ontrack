@@ -33,7 +33,7 @@ export function FlightDetailsEditor({
         {onImport ? (
           <Button
             variant="secondary"
-            icon="doc.text.viewfinder"
+            icon="scan-document"
             disabled={importing}
             onPress={onImport}
             accessibilityLabel="Import flight confirmation document or screenshots">

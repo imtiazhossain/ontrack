@@ -131,7 +131,7 @@ export default function ProfileSettingsScreen() {
             ? `${installedAgentCount} installed · permissions and access`
             : 'Agent-ready · none installed'
         }
-        icon="person.2.badge.gearshape"
+        icon="agents"
         onPress={() => router.push('/agents' as never)}
         accessibilityLabel="Manage agents"
       />
@@ -140,7 +140,7 @@ export default function ProfileSettingsScreen() {
       <CloudAccountCard />
 
       <SectionHeader title="Nutrition" />
-      <Button variant="secondary" icon="heart.text.clipboard" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+      <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>

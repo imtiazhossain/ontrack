@@ -37,7 +37,7 @@ export function AgentManager() {
 
       {AGENTS.length === 0 ? (
         <EmptyState
-          icon="person.2.badge.gearshape"
+          icon="agents"
           title="Ready for future agents"
           message="The shared catalog, permissions, providers, storage, and cross-device sync are in place. No agents have been added yet."
         />

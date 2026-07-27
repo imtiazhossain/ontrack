@@ -27,6 +27,7 @@
       }
     },
     "android": {
+      "package": "com.imtihoss.ontracknow",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,8 +38,7 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "package": "com.imtihoss.ontracknow"
+      ]
     },
     "web": {
       "output": "server",

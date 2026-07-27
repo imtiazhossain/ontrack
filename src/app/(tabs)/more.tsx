@@ -1,22 +1,21 @@
-import type { SymbolViewProps } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Screen, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { fontFamilies, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 
 interface MoreMenuItem {
   label: string;
-  icon: SymbolViewProps['name'];
+  icon: AppIconName;
   href: '/profile' | '/plants' | '/travel';
 }
 
 const MENU_ITEMS: MoreMenuItem[] = [
-  { label: 'Profile', icon: 'person', href: '/profile' },
-  { label: 'Plants', icon: 'leaf', href: '/plants' },
-  { label: 'Travel', icon: 'airplane', href: '/travel' },
+  { label: 'Profile', icon: 'personal', href: '/profile' },
+  { label: 'Plants', icon: 'plant', href: '/plants' },
+  { label: 'Travel', icon: 'flight', href: '/travel' },
 ];
 
 export default function MoreScreen() {
@@ -58,7 +57,7 @@ export default function MoreScreen() {
                   <Symbol name={item.icon} size={25} color={theme.accentPrimary} />
                 </View>
                 <AppText style={styles.rowLabel}>{item.label}</AppText>
-                <Symbol name="chevron.right" size={18} color={theme.textTertiary} />
+                <Symbol name="chevron-right" size={18} color={theme.textTertiary} />
               </Pressable>
               {index < MENU_ITEMS.length - 1 ? (
                 <View style={[styles.separator, { backgroundColor: theme.separator }]} />

@@ -82,7 +82,7 @@ export default function PlantCheckInScreen() {
       <AppText variant="title">Check in on {plant.nickname}</AppText>
       <AppText color="secondary">Use similar lighting and framing when possible. The assessment compares only visible changes.</AppText>
       {photo ? <Image source={photo} style={styles.hero} contentFit="cover" /> : null}
-      <View style={styles.row}><View style={styles.flex}><Button onPress={() => void camera()} icon="camera.fill">Camera</Button></View><View style={styles.flex}><Button variant="secondary" onPress={() => void library()} icon="photo">Library</Button></View></View>
+      <View style={styles.row}><View style={styles.flex}><Button onPress={() => void camera()} icon="camera">Camera</Button></View><View style={styles.flex}><Button variant="secondary" onPress={() => void library()} icon="photo">Library</Button></View></View>
       <Button onPress={() => void analyze()} disabled={!photo || busy}>{busy ? 'Analyzing…' : 'Analyze check-in'}</Button>
       {result ? (
         <>

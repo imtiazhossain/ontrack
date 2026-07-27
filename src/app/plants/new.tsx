@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import {
@@ -35,14 +35,6 @@ function numberValue(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function parseReminder(value: string) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-  if (!match) return undefined;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  return hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60 ? hours * 60 + minutes : undefined;
-}
-
 export default function NewPlantScreen() {
   const router = useRouter();
   const addPlant = usePlants((state) => state.addPlant);
@@ -66,7 +58,7 @@ export default function NewPlantScreen() {
   const [windowDistance, setWindowDistance] = useState('1');
   const [sunHours, setSunHours] = useState('3');
   const [lastWatered, setLastWatered] = useState(todayKey());
-  const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderMinutes, setReminderMinutes] = useState(9 * 60);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -221,8 +213,8 @@ export default function NewPlantScreen() {
       setError('Enter valid pot and room measurements.');
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(lastWatered) || parseReminder(reminderTime) === undefined) {
-      setError('Use YYYY-MM-DD for the watering date and HH:MM for reminder time.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lastWatered) || reminderMinutes < 0 || reminderMinutes >= 24 * 60) {
+      setError('Choose a watering date and reminder time.');
       return;
     }
     setBusy(true);
@@ -245,8 +237,7 @@ export default function NewPlantScreen() {
 
   const savePlant = async () => {
     if (!plantPhoto || !identity || !health || !carePlan) return;
-    const reminderMinutes = parseReminder(reminderTime);
-    if (reminderMinutes === undefined || carePlan.watering.minMl <= 0 || carePlan.watering.maxMl < carePlan.watering.minMl || carePlan.watering.intervalDays < 1) {
+    if (reminderMinutes < 0 || reminderMinutes >= 24 * 60 || carePlan.watering.minMl <= 0 || carePlan.watering.maxMl < carePlan.watering.minMl || carePlan.watering.intervalDays < 1) {
       setError('Review the watering range, interval, and reminder time.');
       return;
     }
@@ -298,7 +289,7 @@ export default function NewPlantScreen() {
         <>
           {plantPhoto ? <Image source={plantPhoto} style={styles.hero} contentFit="cover" /> : <View style={styles.photoPlaceholder}><AppText color="secondary">No plant photo yet</AppText></View>}
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Button onPress={() => void capturePhoto('plant')} icon="camera.fill">Camera</Button></View>
+            <View style={styles.flex}><Button onPress={() => void capturePhoto('plant')} icon="camera">Camera</Button></View>
             <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('plant')} icon="photo">Library</Button></View>
           </View>
           <Button onPress={() => void analyzeIdentity()} disabled={!plantPhoto || busy}>
@@ -356,7 +347,7 @@ export default function NewPlantScreen() {
           <Input label="Plant nickname" value={nickname} onChangeText={setNickname} />
           <View style={styles.buttonRow}>
             <View style={styles.flex}><Input label="Pot diameter (cm)" keyboardType="decimal-pad" value={potDiameter} onChangeText={setPotDiameter} /></View>
-            <View style={styles.flex}><Input label="Last watered (YYYY-MM-DD)" value={lastWatered} onChangeText={setLastWatered} /></View>
+            <View style={styles.flex}><DateField label="Last watered" value={lastWatered} onChange={setLastWatered} maximumDate={todayKey()} /></View>
           </View>
           <SectionHeader title="Drainage holes" />
           <ChipRow options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'unknown', label: 'Not sure' }]} selected={drainage} onSelect={setDrainage} />
@@ -366,11 +357,11 @@ export default function NewPlantScreen() {
             <View style={styles.flex}><Input label="Distance from window (m)" keyboardType="decimal-pad" value={windowDistance} onChangeText={setWindowDistance} /></View>
             <View style={styles.flex}><Input label="Direct sun (hours/day)" keyboardType="decimal-pad" value={sunHours} onChangeText={setSunHours} /></View>
           </View>
-          <Input label="Reminder time (HH:MM)" value={reminderTime} onChangeText={setReminderTime} />
+          <TimeField label="Reminder time" value={reminderMinutes} onChange={setReminderMinutes} />
           <SectionHeader title="Optional room photo" detail="Discarded after analysis" />
           {roomPhoto ? <Image source={roomPhoto} style={styles.roomPhoto} contentFit="cover" /> : null}
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Button variant="secondary" onPress={() => void capturePhoto('room')} icon="camera.fill">Room camera</Button></View>
+            <View style={styles.flex}><Button variant="secondary" onPress={() => void capturePhoto('room')} icon="camera">Room camera</Button></View>
             <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('room')} icon="photo">Room library</Button></View>
           </View>
           <Button onPress={() => void generateCarePlan()} disabled={busy || !identityConfirmed}>{busy ? 'Building care plan…' : 'Build care plan'}</Button>
