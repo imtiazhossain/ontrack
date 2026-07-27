@@ -1,4 +1,7 @@
-import { mergeImportedFlights } from '../flight-confirmation-itinerary';
+import {
+  expandedTripRangeForFlights,
+  mergeImportedFlights,
+} from '../flight-confirmation-itinerary';
 import type { ParsedFlightSegment } from '../flight-confirmation-parser';
 import type { TravelItineraryItem } from '../types';
 
@@ -85,5 +88,20 @@ describe('flight confirmation itinerary merge', () => {
     });
 
     expect(second).toHaveLength(2);
+  });
+
+  it('expands a stale trip range to contain confirmation dates', () => {
+    expect(
+      expandedTripRangeForFlights(
+        { startDate: '2026-09-08', endDate: '2026-09-13' },
+        [
+          SEGMENTS[0],
+          { ...SEGMENTS[1], date: '2026-09-14' },
+        ],
+      ),
+    ).toEqual({
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
   });
 });

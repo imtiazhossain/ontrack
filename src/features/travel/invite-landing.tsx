@@ -7,6 +7,7 @@ import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/component
 import { spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
+  acceptTravelInvite,
   createInstalledTravelInviteUrl,
   decodeTravelInvite,
   findMatchingTravelPlan,
@@ -93,8 +94,16 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     if (!invite || !decoded) return;
     if (handledInvite.current === invite) return;
     handledInvite.current = invite;
+    void acceptTravelInvite(invite).catch(() => undefined);
 
     if (existingPlan) {
+      if (isShortInvite) {
+        savePlan({
+          ...existingPlan,
+          chatAccessCode: invite.slice(2),
+          updatedAt: new Date().toISOString(),
+        });
+      }
       setAddonEnabled('travel', true);
       router.replace(
         hasOnboarded
@@ -108,6 +117,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     const plan = {
       ...decoded,
       id: `trip-invite-${travelPlanIdentityKey(decoded)}`,
+      chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -125,6 +135,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     hasOnboarded,
     invite,
     isWeb,
+    isShortInvite,
     replaceTravelActivities,
     router,
     savePlan,

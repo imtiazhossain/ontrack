@@ -119,11 +119,31 @@ function findDate(
     );
     if (value) candidates.push(value);
   }
-  return candidates.find(
+  const dateWithinTrip = candidates.find(
     (value) =>
       (!minimumDate || value >= minimumDate) &&
       (!maximumDate || value <= maximumDate),
   );
+  if (dateWithinTrip) return dateWithinTrip;
+
+  if (minimumDate && maximumDate) {
+    return candidates
+      .map((value, index) => {
+        const distance =
+          value < minimumDate
+            ? Date.parse(`${minimumDate}T00:00:00Z`) -
+              Date.parse(`${value}T00:00:00Z`)
+            : Date.parse(`${value}T00:00:00Z`) -
+              Date.parse(`${maximumDate}T00:00:00Z`);
+        return { value, distance, index };
+      })
+      .sort(
+        (left, right) =>
+          left.distance - right.distance || left.index - right.index,
+      )[0]?.value;
+  }
+
+  return candidates[0];
 }
 
 function parseMinutes(hourText: string, minuteText: string, suffix?: string): number {

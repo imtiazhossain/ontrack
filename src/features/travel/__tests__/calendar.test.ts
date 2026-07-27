@@ -26,6 +26,7 @@ const PLAN: TravelPlan = {
       },
     },
   ],
+  participants: [],
   createdAt: '2026-07-26T00:00:00.000Z',
   updatedAt: '2026-07-26T00:00:00.000Z',
 };

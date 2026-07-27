@@ -21,14 +21,26 @@ export interface TravelItineraryItem {
   flight?: TravelFlightDetails;
 }
 
+export interface TravelParticipant {
+  id: string;
+  name: string;
+  email?: string;
+  inviteCode: string;
+  invitedAt: string;
+  acceptedAt?: string;
+}
+
 export interface TravelPlan {
   id: string;
+  /** Hosted invite capability used by an invited member to join this trip's chat. */
+  chatAccessCode?: string;
   title: string;
   destination: string;
   startDate: string;
   endDate: string;
   notes?: string;
   itinerary: TravelItineraryItem[];
+  participants: TravelParticipant[];
   createdAt: string;
   updatedAt: string;
 }
