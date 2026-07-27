@@ -250,11 +250,17 @@ export class TravelInviteError extends Error {
   }
 }
 
-function requireInviteClient() {
+async function requireAuthenticatedInviteClient() {
   const client = getSupabaseClient();
   if (!client) {
     throw new TravelInviteError(
       'Short travel links are not configured for this build. Add the Supabase public URL and publishable key, then try again.',
+    );
+  }
+  const { data, error } = await client.auth.getSession();
+  if (error || !data.session) {
+    throw new TravelInviteError(
+      'Sign in to onTrack with the email address that was invited, then try again.',
     );
   }
   return client;
@@ -280,22 +286,20 @@ export function createInstalledTravelInviteUrl(invite?: string): string {
 
 export interface TravelInvitee {
   name: string;
-  email?: string;
+  email: string;
 }
 
 export async function publishTravelInvite(
   plan: TravelPlan,
-  invitee?: TravelInvitee,
+  invitee: TravelInvitee,
 ): Promise<string> {
-  const args = invitee
-    ? {
-        invite_payload: { invite: encodeTravelInvite(plan) },
-        invite_trip_id: plan.id,
-        invitee_name: invitee.name.trim(),
-        invitee_email: invitee.email?.trim().toLowerCase() || null,
-      }
-    : { invite_payload: { invite: encodeTravelInvite(plan) } };
-  const { data, error } = await requireInviteClient().rpc('create_travel_invite', args);
+  const client = await requireAuthenticatedInviteClient();
+  const { data, error } = await client.rpc('create_travel_invite', {
+    invite_payload: { invite: encodeTravelInvite(plan) },
+    invite_trip_id: plan.id,
+    invitee_name: invitee.name.trim(),
+    invitee_email: invitee.email.trim().toLowerCase(),
+  });
   if (error || typeof data !== 'string' || !/^[a-f0-9]{20}$/.test(data)) {
     throw new TravelInviteError(
       error?.message ?? 'The invitation could not be created. Please try again.',
@@ -307,9 +311,10 @@ export async function publishTravelInvite(
 export async function resolveTravelInvite(
   value: string,
 ): Promise<Omit<TravelPlan, 'id' | 'createdAt' | 'updatedAt'> | undefined> {
-  if (!isShortTravelInvite(value)) return decodeTravelInvite(value);
+  if (!isShortTravelInvite(value)) return undefined;
 
-  const { data, error } = await requireInviteClient().rpc('resolve_travel_invite', {
+  const client = await requireAuthenticatedInviteClient();
+  const { data, error } = await client.rpc('resolve_travel_invite', {
     invite_code: value.slice(SHORT_INVITE_PREFIX.length),
   });
   if (error) throw new TravelInviteError('This invitation could not be opened.');
@@ -326,7 +331,8 @@ export async function resolveTravelInvite(
 
 export async function acceptTravelInvite(value: string): Promise<void> {
   if (!isShortTravelInvite(value)) return;
-  const { error } = await requireInviteClient().rpc('accept_travel_invite', {
+  const client = await requireAuthenticatedInviteClient();
+  const { error } = await client.rpc('accept_travel_invite', {
     invite_code: value.slice(SHORT_INVITE_PREFIX.length),
   });
   if (error) throw new TravelInviteError('The invitation could not be accepted.');
@@ -336,7 +342,8 @@ export async function loadTravelInviteStatuses(
   codes: string[],
 ): Promise<Record<string, string>> {
   if (codes.length === 0 || !getSupabaseClient()) return {};
-  const { data, error } = await requireInviteClient().rpc('travel_invite_statuses', {
+  const client = await requireAuthenticatedInviteClient();
+  const { data, error } = await client.rpc('travel_invite_statuses', {
     invite_codes: codes,
   });
   if (error) throw new TravelInviteError('Invite statuses could not be refreshed.');
@@ -358,14 +365,14 @@ export async function loadTravelInviteStatuses(
 function travelInviteShareContent(
   plan: TravelPlan,
   code: string,
-  invitee?: TravelInvitee,
+  invitee: TravelInvitee,
 ) {
   const inviteUrl = createTravelInviteUrl(
     code,
     process.env.EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL,
   );
   const message = [
-    `${invitee?.name ? `${invitee.name}, you’re` : 'You’re'} invited to “${plan.title}” ✈️`,
+    `${invitee.name}, you’re invited to “${plan.title}” ✈️`,
     `${plan.destination} · ${formatDateLong(plan.startDate)} – ${formatDateLong(plan.endDate)}`,
     'Open the trip in onTrack',
   ].join('\n');
@@ -381,7 +388,7 @@ function travelInviteShareContent(
 async function openTravelInviteShareSheet(
   plan: TravelPlan,
   code: string,
-  invitee?: TravelInvitee,
+  invitee: TravelInvitee,
 ): Promise<boolean> {
   const { inviteUrl, message } = travelInviteShareContent(plan, code, invitee);
   const result = await Share.share(
@@ -397,7 +404,7 @@ async function openTravelInviteShareSheet(
 
 export async function shareTravelPlan(
   plan: TravelPlan,
-  invitee?: TravelInvitee,
+  invitee: TravelInvitee,
 ): Promise<string | undefined> {
   const code = await publishTravelInvite(plan, invitee);
   const shared = await openTravelInviteShareSheet(plan, code, invitee);
@@ -413,7 +420,8 @@ export async function resendTravelInvite(
 }
 
 export async function revokeTravelInvite(code: string): Promise<void> {
-  const { error } = await requireInviteClient().rpc('revoke_travel_invite', {
+  const client = await requireAuthenticatedInviteClient();
+  const { error } = await client.rpc('revoke_travel_invite', {
     invite_code: code,
   });
   if (error) throw new TravelInviteError('The invitation could not be removed.');

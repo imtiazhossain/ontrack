@@ -489,12 +489,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     const name = inviteName.trim();
     const email = inviteEmail.trim().toLowerCase();
     if (!name) return setInviteError('Add your friend’s name.');
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return setInviteError('Enter a complete email address.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return setInviteError(
+        'Enter the email address your friend uses to sign in to onTrack.',
+      );
     }
     setSharingInvite(true);
     try {
-      const code = await shareTravelPlan(plan, { name, email: email || undefined });
+      const code = await shareTravelPlan(plan, { name, email });
       if (!code) return;
       const now = new Date().toISOString();
       updatePlan({
@@ -504,7 +506,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           {
             id: newId('trip-person'),
             name,
-            email: email || undefined,
+            email,
             inviteCode: code,
             invitedAt: now,
           },
@@ -530,7 +532,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     try {
       await resendTravelInvite(
         plan,
-        { name: participant.name, email: participant.email },
+        { name: participant.name, email: participant.email ?? '' },
         participant.inviteCode,
       );
     } catch (reason) {

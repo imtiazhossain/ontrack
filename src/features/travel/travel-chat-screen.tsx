@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
   StyleSheet,
   TextInput,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +19,7 @@ import {
   ErrorMessage,
   IconButton,
 } from '@/components/primitives';
+import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import { layout, radii, spacing, typography } from '@/design-system';
 import {
   chatNotificationsAreEnabled,
@@ -52,8 +55,10 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
   const [loading, setLoading] = useState(Boolean(accessCode));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string>();
+  const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   const refresh = useCallback(async () => {
     if (!accessCode) return;
@@ -96,7 +101,15 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
       .then((enabled) => {
         if (active) setNotificationsEnabled(enabled);
       })
-      .catch(() => undefined);
+      .catch((reason: unknown) => {
+        if (
+          active &&
+          reason instanceof Error &&
+          reason.message.startsWith('Push alerts are unavailable')
+        ) {
+          setNotificationsAvailable(false);
+        }
+      });
     return () => {
       active = false;
     };
@@ -107,6 +120,27 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
     const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(timer);
   }, [messages.length]);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const updateInset = (event: KeyboardEvent) => {
+      Keyboard.scheduleLayoutAnimation(event);
+      setKeyboardInset(
+        Math.max(0, event.endCoordinates.height - insets.bottom),
+      );
+    };
+    const showSubscription = Keyboard.addListener(showEvent, updateInset);
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardInset(0);
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [insets.bottom]);
 
   const send = async () => {
     if (!accessCode || !deviceId || !draft.trim() || sending) return;
@@ -138,7 +172,18 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
       await enableTravelChatNotifications(accessCode, deviceId);
       setNotificationsEnabled(true);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Notifications could not be enabled.');
+      if (
+        reason instanceof Error &&
+        reason.message.startsWith('Push alerts are unavailable')
+      ) {
+        setNotificationsAvailable(false);
+      } else {
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Notifications could not be enabled.',
+        );
+      }
     } finally {
       setEnablingNotifications(false);
     }
@@ -172,20 +217,22 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
-      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
+    <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <View style={[styles.header, { borderBottomColor: theme.separator }]}>
         <BackButton accessibilityLabel="Back to trip" />
         <View style={styles.headerCopy}>
           <AppText variant="heading" numberOfLines={1}>{plan.title}</AppText>
           <AppText variant="caption" color="secondary">
-            {plan.participants.length + 1} trip members
+            {plan.id === ALL_ACCOUNTS_TEST_TRIP.id
+              ? 'Shared test chat'
+              : `${plan.participants.length + 1} ${
+                  plan.participants.length === 0 ? 'trip member' : 'trip members'
+                }`}
           </AppText>
         </View>
       </View>
 
-      {!notificationsEnabled ? (
+      {notificationsAvailable && !notificationsEnabled ? (
         <View style={[styles.notificationBanner, { backgroundColor: theme.accentFaint }]}>
           <View style={styles.bannerCopy}>
             <AppText variant="callout" color="accent">Get new-message alerts</AppText>
@@ -220,7 +267,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
             styles.messages,
             messages.length === 0 ? styles.emptyMessages : undefined,
           ]}
-          keyboardDismissMode={process.env.EXPO_OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
@@ -271,6 +318,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
             borderTopColor: theme.separator,
             backgroundColor: theme.backgroundPrimary,
             paddingBottom: Math.max(insets.bottom, spacing.sm),
+            marginBottom: keyboardInset,
           },
         ]}>
         <TextInput
@@ -296,7 +344,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           onPress={() => void send()}
         />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

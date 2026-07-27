@@ -5,6 +5,7 @@ import {
   encodeTravelInvite,
   findMatchingTravelPlan,
   isShortTravelInvite,
+  resolveTravelInvite,
   travelPlanIdentityKey,
   travelInviteKey,
 } from '../share';
@@ -82,6 +83,10 @@ describe('travel invites', () => {
     );
     expect(decodeTravelInvite(legacyPayload)?.destination).toBe('Montréal');
     expect(decodeTravelInvite(decodeURIComponent(legacyPayload))?.destination).toBe('Montréal');
+  });
+
+  it('does not resolve embedded trip payloads through the invitation flow', async () => {
+    await expect(resolveTravelInvite(encodeTravelInvite(plan))).resolves.toBeUndefined();
   });
 
   it('rejects malformed invites', () => {

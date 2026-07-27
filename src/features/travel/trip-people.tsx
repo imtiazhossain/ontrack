@@ -204,7 +204,7 @@ export function TripPeople({
             autoCapitalize="words"
           />
           <Input
-            label="Email (optional)"
+            label="onTrack account email"
             value={email}
             onChangeText={onEmailChange}
             placeholder="friend@example.com"
@@ -212,6 +212,9 @@ export function TripPeople({
             autoCapitalize="none"
             autoCorrect={false}
           />
+          <AppText variant="caption" color="secondary">
+            Only this signed-in account can open and view the trip.
+          </AppText>
           {error ? <ErrorMessage message={error} selectable /> : null}
           <View style={styles.actions}>
             <Button disabled={inviting} onPress={onInvite}>

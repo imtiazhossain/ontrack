@@ -9,7 +9,6 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
   acceptTravelInvite,
   createInstalledTravelInviteUrl,
-  decodeTravelInvite,
   findMatchingTravelPlan,
   isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
@@ -39,10 +38,6 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const setAddonEnabled = useAddons((state) => state.setEnabled);
   const handledInvite = useRef<string | undefined>(undefined);
   const isShortInvite = Boolean(invite && isShortTravelInvite(invite));
-  const embeddedDecoded = useMemo(
-    () => (invite && !isShortInvite ? decodeTravelInvite(invite) : undefined),
-    [invite, isShortInvite],
-  );
   const [remoteResult, setRemoteResult] = useState<{
     invite: string;
     plan?: Awaited<ReturnType<typeof resolveTravelInvite>>;
@@ -51,7 +46,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const currentRemoteResult = remoteResult?.invite === invite ? remoteResult : undefined;
   const remoteDecoded = currentRemoteResult?.plan;
   const inviteError = currentRemoteResult?.error;
-  const decoded = isShortInvite ? remoteDecoded : embeddedDecoded;
+  const decoded = remoteDecoded;
   const existingPlan = useMemo(
     () => (decoded ? findMatchingTravelPlan(plans, decoded) : undefined),
     [decoded, plans],
@@ -74,14 +69,21 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
         setRemoteResult(
           plan
             ? { invite, plan }
-            : { invite, error: 'This travel invitation is invalid or expired.' },
+            : {
+                invite,
+                error:
+                  'This invitation is unavailable for the signed-in account, or it has expired.',
+              },
         );
       })
       .catch((error: unknown) => {
         if (!active) return;
         setRemoteResult({
           invite,
-          error: error instanceof Error ? error.message : 'This invitation could not be opened.',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'This invitation could not be opened.',
         });
       });
     return () => {

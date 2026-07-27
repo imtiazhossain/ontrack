@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, ErrorMessage, Input, Screen, Symbol } from '@/components/primitives';
@@ -8,7 +8,6 @@ import { radii, spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { validateTravelDateRange } from '@/features/travel/date-range';
-import { decodeTravelInvite, travelInviteKey } from '@/features/travel/share';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
@@ -31,7 +30,6 @@ export default function TravelScreen() {
 function TravelScreenContent() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ invite?: string }>();
   const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const removePlan = useTravel((state) => state.removePlan);
@@ -55,33 +53,6 @@ function TravelScreenContent() {
   const [editDestination, setEditDestination] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [detailsError, setDetailsError] = useState<string>();
-  const importedInvite = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (typeof params.invite !== 'string') return;
-    if (importedInvite.current === params.invite) return;
-    importedInvite.current = params.invite;
-    const invite = params.invite;
-    const timer = setTimeout(() => {
-      const imported = decodeTravelInvite(invite);
-      if (!imported) {
-        setError('This travel invite is invalid or incomplete.');
-        return;
-      }
-      const now = new Date().toISOString();
-      const plan = {
-        ...imported,
-        id: `trip-invite-${travelInviteKey(invite)}`,
-        createdAt: now,
-        updatedAt: now,
-      };
-      savePlan(plan);
-      replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
-      setShowForm(false);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [params.invite, replaceTravelActivities, savePlan]);
-
   const sortedPlans = useMemo(
     () => [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate)),
     [plans],

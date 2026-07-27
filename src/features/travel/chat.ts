@@ -148,7 +148,14 @@ export async function enableTravelChatNotifications(
   if (typeof projectId !== 'string') {
     throw new TravelChatError('The Expo project ID is missing from this build.');
   }
-  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  let token: string;
+  try {
+    token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  } catch {
+    throw new TravelChatError(
+      'Push alerts are unavailable in this app build. Chat messages still work normally.',
+    );
+  }
   const { error } = await requireClient().rpc('register_travel_chat_device', {
     chat_access_code: accessCode,
     chat_device_id: deviceId,
