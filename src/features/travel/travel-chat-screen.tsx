@@ -193,7 +193,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
         <View style={styles.paddedHeader}><BackButton /></View>
-        <EmptyState icon="message" title="Trip not found" message="This trip is no longer available." />
+        <EmptyState icon="chat" title="Trip not found" message="This trip is no longer available." />
       </View>
     );
   }
@@ -207,7 +207,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
         </View>
         <View style={styles.center}>
           <EmptyState
-            icon="person.2.fill"
+            icon="people"
             title="Chat opens when a friend joins"
             message="Invite someone to this trip. Once they accept, everyone can start planning here."
           />
@@ -271,7 +271,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
-              icon="message.fill"
+              icon="chat"
               title="Start the conversation"
               message="Share ideas, arrival plans, reservations, and anything the group should know."
             />
@@ -336,7 +336,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           ]}
         />
         <IconButton
-          icon="arrow.up"
+          icon="arrow-up"
           accessibilityLabel="Send message"
           disabled={!draft.trim() || !deviceId || sending}
           color={theme.textOnAccent}

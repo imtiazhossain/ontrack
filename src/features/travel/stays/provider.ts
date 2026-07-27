@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
-import type { SymbolViewProps } from 'expo-symbols';
 
+import type { AppIconName } from '@/design-system';
 import type { TravelPlan } from '@/features/travel/types';
 
 export type StayProviderId = 'booking' | 'airbnb' | 'hostelworld';
@@ -16,7 +16,7 @@ export interface StayProvider {
   id: StayProviderId;
   name: string;
   description: string;
-  icon: SymbolViewProps['name'];
+  icon: AppIconName;
   searchUrl: (input: StaySearchInput) => string;
 }
 
@@ -70,21 +70,21 @@ export const stayProviders: StayProvider[] = [
     id: 'booking',
     name: 'Booking.com',
     description: 'Hotels, apartments, and resorts',
-    icon: 'building.2.fill',
+    icon: 'building',
     searchUrl: bookingSearchUrl,
   },
   {
     id: 'airbnb',
     name: 'Airbnb',
     description: 'Homes, rooms, and unique stays',
-    icon: 'house.fill',
+    icon: 'home',
     searchUrl: airbnbSearchUrl,
   },
   {
     id: 'hostelworld',
     name: 'Hostelworld',
     description: 'Hostels and social stays',
-    icon: 'bed.double.fill',
+    icon: 'lodging',
     searchUrl: hostelworldSearchUrl,
   },
 ];

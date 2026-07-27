@@ -37,7 +37,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
       <Screen>
         <BackButton />
         <EmptyState
-          icon="bed.double.fill"
+          icon="lodging"
           title="Trip not found"
           message="This trip may have been removed."
         />
@@ -62,7 +62,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
 
       <Card variant="sunken" style={styles.tripSummary}>
         <View style={styles.summaryRow}>
-          <Symbol name="mappin.and.ellipse" size="sm" color={theme.accentPrimary} />
+          <Symbol name="location" size="sm" color={theme.accentPrimary} />
           <AppText variant="subheading" style={styles.flex}>{search.destination}</AppText>
         </View>
         <View style={styles.summaryDetails}>
@@ -74,7 +74,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
             </AppText>
           </View>
           <View style={styles.summaryDetail}>
-            <Symbol name="person.2.fill" size="sm" color={theme.textTertiary} />
+            <Symbol name="people" size="sm" color={theme.textTertiary} />
             <AppText variant="caption" color="secondary">{guestLabel}</AppText>
           </View>
         </View>
@@ -101,7 +101,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
               </AppText>
             </View>
             <Symbol
-              name="arrow.up.right"
+              name="open-external"
               size="sm"
               color={theme.textTertiary}
             />

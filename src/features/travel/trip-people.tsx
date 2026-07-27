@@ -78,7 +78,7 @@ function PersonRow({
                   styles.inlineRemoveAction,
                   { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
                 ]}>
-                <Symbol name="xmark" size="sm" color={theme.danger} />
+                <Symbol name="close" size="sm" color={theme.danger} />
               </Pressable>
             </View>
           ) : (
@@ -92,7 +92,7 @@ function PersonRow({
         </View>
         {!accepted ? (
           <View style={[styles.status, { backgroundColor: theme.backgroundSunken }]}>
-            <Symbol name="clock.fill" size="sm" color={theme.textTertiary} />
+            <Symbol name="clock" size="sm" color={theme.textTertiary} />
             <AppText variant="caption" color="secondary">Pending</AppText>
           </View>
         ) : null}
@@ -108,7 +108,7 @@ function PersonRow({
               styles.personAction,
               { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
             ]}>
-            <Symbol name="paperplane.fill" size="sm" color={theme.accentPrimary} />
+            <Symbol name="send" size="sm" color={theme.accentPrimary} />
             <AppText variant="callout" color="accent">
               {managing ? 'Working…' : 'Resend'}
             </AppText>
@@ -226,7 +226,7 @@ export function TripPeople({
           </View>
         </Card>
       ) : (
-        <Button icon="person.badge.plus" onPress={onBeginInvite}>
+        <Button icon="invite" onPress={onBeginInvite}>
           Invite a friend
         </Button>
       )}
