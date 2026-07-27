@@ -1,0 +1,39 @@
+import {
+  dateDisplayFormatForLocale,
+  formatDateKey,
+  fromDateKey,
+  isDateKey,
+  nativeDatePickerLocale,
+  toDateKey,
+} from '@/utils/date';
+
+describe('date keys', () => {
+  it('round trips valid local calendar dates', () => {
+    expect(toDateKey(fromDateKey('2028-02-29'))).toBe('2028-02-29');
+  });
+
+  it('rejects impossible and malformed dates', () => {
+    expect(isDateKey('2026-02-29')).toBe(false);
+    expect(isDateKey('2026-13-01')).toBe(false);
+    expect(isDateKey('07/26/2026')).toBe(false);
+  });
+
+  it('uses month-first display only for locales that prefer it', () => {
+    expect(dateDisplayFormatForLocale('en-US')).toBe('mdy');
+    expect(dateDisplayFormatForLocale('en-PH')).toBe('mdy');
+    expect(dateDisplayFormatForLocale('en-CA')).toBe('iso');
+    expect(dateDisplayFormatForLocale('en-GB')).toBe('iso');
+  });
+
+  it('changes presentation without changing the stored date key', () => {
+    const stored = '2026-07-26';
+    expect(formatDateKey(stored, 'mdy')).toBe('07/26/2026');
+    expect(formatDateKey(stored, 'iso')).toBe(stored);
+  });
+
+  it('handles legacy preferences without a native picker locale', () => {
+    expect(nativeDatePickerLocale(undefined)).toBeUndefined();
+    expect(nativeDatePickerLocale('system')).toBeUndefined();
+    expect(nativeDatePickerLocale('en-US')).toBe('en_US');
+  });
+});

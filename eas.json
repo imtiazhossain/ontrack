@@ -9,15 +9,40 @@
       "distribution": "internal",
       "autoIncrement": true
     },
+    "testflight": {
+      "developmentClient": false,
+      "distribution": "store",
+      "environment": "preview",
+      "channel": "testflight",
+      "autoIncrement": true,
+      "env": {
+        "EAS_USE_CACHE": "1",
+        "EXPO_PUBLIC_APP_ENV": "testflight",
+        "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
     "production": {
       "environment": "production",
+      "channel": "production",
       "autoIncrement": true,
+      "env": {
+        "EAS_USE_CACHE": "1",
+        "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
+      },
       "ios": {
         "resourceClass": "m-medium"
       }
     }
   },
   "submit": {
+    "testflight": {
+      "ios": {
+        "ascAppId": "6789723522"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6789723522"

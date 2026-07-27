@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "F5HRXF5795.com.imtihoss.ontracknow"
+        ],
+        "components": [
+          {
+            "/": "/invite/travel",
+            "comment": "Open shared onTrack travel invitations."
+          }
+        ]
+      }
+    ]
+  }
+}

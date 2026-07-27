@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, spacing } from '@/design-system';
@@ -8,8 +8,6 @@ import { useTheme } from '@/hooks/use-theme';
 interface ScreenProps extends PropsWithChildren {
   /** Scrollable content (default) or a fixed layout */
   scroll?: boolean;
-  /** Respect the top safe area (off for screens under a navigation header) */
-  topInset?: boolean;
   /** Extra bottom padding for content above the tab bar */
   bottomInset?: boolean;
   padded?: boolean;
@@ -20,7 +18,6 @@ interface ScreenProps extends PropsWithChildren {
 export function Screen({
   children,
   scroll = true,
-  topInset = true,
   bottomInset = true,
   padded = true,
   style,
@@ -30,7 +27,8 @@ export function Screen({
   const insets = useSafeAreaInsets();
 
   const paddingStyle: ViewStyle = {
-    paddingTop: topInset ? insets.top + spacing.sm : 0,
+    // The app shell owns the non-scrolling top safe area.
+    paddingTop: spacing.sm,
     paddingBottom: bottomInset ? insets.bottom + layout.tabBarInset : spacing.xl,
     ...(padded
       ? {
@@ -51,9 +49,11 @@ export function Screen({
   return (
     <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[paddingStyle, contentStyle]}
+        contentContainerStyle={[styles.scrollContent, paddingStyle, contentStyle]}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
@@ -63,4 +63,5 @@ export function Screen({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
 });

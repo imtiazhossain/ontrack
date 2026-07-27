@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActionSheetIOS, ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, EmptyState, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, EmptyState, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { MealAnalysisReview } from '@/features/nutrition/analysis-review';
@@ -33,6 +33,8 @@ export default function FoodDetailScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<MealAnalysis | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [pendingOriginalPhoto, setPendingOriginalPhoto] = useState<string>();
+  const [pendingPhotoProcessingVersion, setPendingPhotoProcessingVersion] = useState<number>();
   const [draftId, setDraftId] = useState<string>();
   const [linkInput, setLinkInput] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -45,11 +47,18 @@ export default function FoodDetailScreen() {
 
   const analyzeAsset = async (photoUri: string) => {
     setPendingPhoto(photoUri);
+    setPendingOriginalPhoto(undefined);
+    setPendingPhotoProcessingVersion(undefined);
     setAnalyzing(true);
     setPendingAnalysis(null);
     setCandidates([]);
     try {
       const response = await analyzeMealPhoto(photoUri, activity?.title);
+      if (response.processedPhotoUri) {
+        setPendingPhoto(response.processedPhotoUri);
+        setPendingOriginalPhoto(photoUri);
+      }
+      setPendingPhotoProcessingVersion(response.photoProcessingVersion);
       setPendingAnalysis(response.analysis);
       setDraftId(response.draftId);
       setPendingSourceUrl(undefined);
@@ -141,6 +150,8 @@ export default function FoodDetailScreen() {
         mealType: meal?.mealType ?? 'lunch',
         name: activity.title,
         photo: pendingPhoto ?? meal?.photo,
+        originalPhoto: pendingPhoto !== null ? pendingOriginalPhoto : meal?.originalPhoto,
+        photoProcessingVersion: pendingPhoto !== null ? pendingPhotoProcessingVersion : meal?.photoProcessingVersion,
         sourceKind: pendingSourceUrl ? 'link' : 'photo',
         sourceUrl: pendingSourceUrl,
         aiAnalysis: confirmed.analysis,
@@ -148,9 +159,15 @@ export default function FoodDetailScreen() {
         notes: meal?.notes,
       };
       upsertMeal(savedMeal);
-      updateActivity(activity.id, { summary: `${confirmed.analysis.totalCalories} kcal · ${confirmed.analysis.proteinG}g protein`, photo: savedMeal.photo });
+      updateActivity(activity.id, {
+        summary: `${confirmed.analysis.totalCalories} kcal · ${confirmed.analysis.proteinG}g protein`,
+        photo: savedMeal.photo,
+        photoProcessingVersion: savedMeal.photoProcessingVersion,
+      });
       setPendingAnalysis(null);
       setPendingPhoto(null);
+      setPendingOriginalPhoto(undefined);
+      setPendingPhotoProcessingVersion(undefined);
       setDraftId(undefined);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The analysis could not be saved.');
@@ -165,7 +182,14 @@ export default function FoodDetailScreen() {
   return (
     <Screen>
       <BackButton />
-      {displayPhoto ? <Image source={displayPhoto} style={styles.photo} contentFit="cover" /> : null}
+      {displayPhoto ? (
+        <Image
+          source={displayPhoto}
+          style={styles.photo}
+          contentFit={(pendingPhoto !== null ? pendingPhotoProcessingVersion : meal?.photoProcessingVersion) ? 'contain' : 'cover'}
+          transition={160}
+        />
+      ) : null}
       <AppText variant="overline" color="tertiary">{category.name}</AppText>
       <AppText variant="title">{meal?.name ?? activity.title}</AppText>
 
@@ -196,7 +220,7 @@ export default function FoodDetailScreen() {
       ))}
 
       {analyzing ? <View style={styles.loading}><ActivityIndicator /><AppText variant="callout" color="secondary">Analyzing your meal…</AppText></View> : null}
-      {error ? <AppText variant="callout" color="danger" style={styles.error}>{error}</AppText> : null}
+      {error ? <ErrorMessage message={error} style={styles.error} /> : null}
       {displayAnalysis ? (
         <MealAnalysisReview
           analysis={displayAnalysis}

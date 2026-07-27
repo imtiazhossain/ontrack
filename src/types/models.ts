@@ -37,10 +37,15 @@ export interface Activity {
   /** Short human summary shown on the card, e.g. "620 kcal · balanced" */
   summary?: string;
   photo?: string | number;
+  /** Version of the foreground-isolation treatment applied to food photos. */
+  photoProcessingVersion?: number;
   recurrence?: RecurrenceRule;
   /** Links generated plant-care activities back to their plant profile. */
   plantId?: string;
   careKind?: 'watering' | 'pruning';
+  /** Links calendar entries generated from a travel plan back to that plan. */
+  travelPlanId?: string;
+  travelItemId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -131,6 +136,10 @@ export interface Meal {
   mealType: MealType;
   name: string;
   photo?: string | number;
+  /** Original user-selected photo retained for future processing improvements. */
+  originalPhoto?: string;
+  /** Version of the foreground-isolation treatment applied to `photo`. */
+  photoProcessingVersion?: number;
   sourceKind?: 'photo' | 'link' | 'manual';
   sourceUrl?: string;
   /** Original AI output, never mutated after analysis */

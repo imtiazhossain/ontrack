@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { usePreferences } from '@/store/preferences';
 export default function OnboardingScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const insets = useSafeAreaInsets();
   const completeOnboarding = usePreferences((s) => s.completeOnboarding);
 
@@ -20,7 +21,7 @@ export default function OnboardingScreen() {
 
   const finish = () => {
     completeOnboarding({ name: name.trim() || 'You', goal: goal.trim() || 'Live intentionally' });
-    router.replace('/(tabs)');
+    router.replace(returnTo === '/travel' ? ('/travel' as never) : '/(tabs)');
   };
 
   const gradient = timeOfDayGradient(theme, new Date().getHours());
@@ -37,7 +38,7 @@ export default function OnboardingScreen() {
           showsVerticalScrollIndicator={false}>
           <LinearGradient
             colors={gradient}
-            style={[styles.hero, { paddingTop: insets.top + spacing.xxl, paddingBottom: spacing.xxl }]}> 
+            style={[styles.hero, { paddingTop: spacing.xxl, paddingBottom: spacing.xxl }]}>
             <AppText variant="overline" color="tertiary">
               onTrack
             </AppText>

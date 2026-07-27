@@ -2,11 +2,13 @@ import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { useTheme } from '@/hooks/use-theme';
+import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 
 export default function TabsLayout() {
   const theme = useTheme();
   const hasOnboarded = usePreferences((s) => s.hasOnboarded);
+  const enabledAddons = useAddons((s) => s.enabled);
 
   if (!hasOnboarded) {
     return <Redirect href="/onboarding" />;
@@ -27,14 +29,28 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="calendar" />
       </NativeTabs.Trigger>
+      {enabledAddons.fitness ? (
+        <NativeTabs.Trigger name="workouts">
+          <NativeTabs.Trigger.Label>Workout</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }} />
+        </NativeTabs.Trigger>
+      ) : null}
       <NativeTabs.Trigger name="insights">
         <NativeTabs.Trigger.Label>Insights</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.line.uptrend.xyaxis" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plants">
-        <NativeTabs.Trigger.Label>Plants</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'leaf', selected: 'leaf.fill' }} />
-      </NativeTabs.Trigger>
+      {enabledAddons.plants ? (
+        <NativeTabs.Trigger name="plants">
+          <NativeTabs.Trigger.Label>Plants</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: 'leaf', selected: 'leaf.fill' }} />
+        </NativeTabs.Trigger>
+      ) : null}
+      {enabledAddons.travel ? (
+        <NativeTabs.Trigger name="travel">
+          <NativeTabs.Trigger.Label>Travel</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: 'airplane', selected: 'airplane' }} />
+        </NativeTabs.Trigger>
+      ) : null}
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />

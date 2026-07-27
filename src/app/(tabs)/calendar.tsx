@@ -3,9 +3,11 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, IconButton, Screen } from '@/components/primitives';
+import { isActivityEnabled } from '@/addons/registry';
 import { MonthGrid } from '@/features/calendar/month-grid';
 import { layout, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
 import { formatMonthTitle, fromDateKey, todayKey } from '@/utils/date';
 
@@ -13,13 +15,15 @@ export default function CalendarScreen() {
   const theme = useTheme();
   const router = useRouter();
   const activities = useSchedule((state) => state.activities);
+  const enabledAddons = useAddons((state) => state.enabled);
   const activitiesByDate = useMemo(() => {
     const grouped: Record<string, typeof activities> = {};
     for (const activity of activities) {
+      if (!isActivityEnabled(activity, enabledAddons)) continue;
       (grouped[activity.date] ??= []).push(activity);
     }
     return grouped;
-  }, [activities]);
+  }, [activities, enabledAddons]);
 
   const today = todayKey();
   const [selected, setSelected] = useState(today);

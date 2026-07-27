@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { applyPlantCarePlan, wateringDueAt } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
@@ -65,7 +65,7 @@ export default function EditPlantScreen() {
       <Input label="Location" value={location} onChangeText={setLocation} multiline />
       <Input label="Distance guidance" value={windowDistance} onChangeText={setWindowDistance} />
       <Input label="Light guidance" value={light} onChangeText={setLight} multiline />
-      {error ? <AppText color="danger">{error}</AppText> : null}
+      {error ? <ErrorMessage message={error} /> : null}
       <Button onPress={() => void save()}>Save and reschedule</Button>
     </Screen>
   );

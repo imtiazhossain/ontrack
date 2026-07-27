@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, BackButton, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { analyzePlantCheckIn, persistPlantPhoto, PlantServiceError } from '@/services/plants';
 import { applyPlantCarePlan } from '@/services/plants/schedule';
@@ -99,7 +99,7 @@ export default function PlantCheckInScreen() {
         </>
       ) : null}
       {busy ? <ActivityIndicator /> : null}
-      {error ? <AppText color="danger" selectable>{error}</AppText> : null}
+      {error ? <ErrorMessage message={error} selectable /> : null}
     </Screen>
   );
 }

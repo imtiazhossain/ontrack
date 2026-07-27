@@ -7,6 +7,7 @@ import type { MealLinkCandidate, MealLinkResolution, NutritionErrorCode } from '
 import { isPrivateHostname, sanitizeMealUrl } from './url-safety';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const FDC_URL = 'https://api.nal.usda.gov/fdc/v1';
 const MAX_ITEMS = 8;
 const MAX_VISION_ITEMS = 4;
@@ -411,6 +412,41 @@ export async function analyzePhoto(input: { imageDataUrl: string; mealName?: str
     throw new Error('INVALID_IMAGE');
   }
   return assembleAnalysis(await identifyFoods(input.imageDataUrl, input.mealName));
+}
+
+/**
+ * Isolates the visible meal for consistent square thumbnails. GPT Image 1.5 is
+ * intentionally used because GPT Image 2 does not support transparent output.
+ */
+export async function enhanceMealImage(input: { imageDataUrl: string; mealName?: string }): Promise<string> {
+  const match = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(input.imageDataUrl);
+  if (!match || input.imageDataUrl.length > 5_500_000) throw new Error('INVALID_IMAGE');
+
+  const imageBytes = Uint8Array.from(Buffer.from(match[2], 'base64'));
+  const form = new FormData();
+  form.append('model', process.env.OPENAI_MEAL_IMAGE_MODEL ?? 'gpt-image-1.5');
+  form.append('image[]', new Blob([imageBytes], { type: `image/${match[1]}` }), `meal.${match[1] === 'jpeg' ? 'jpg' : match[1]}`);
+  form.append(
+    'prompt',
+    'Create a faithful product-photo cutout of the exact visible prepared meal. Remove the entire background, table, utensils, hands, packaging, and black or empty borders. Preserve every visible food item, its real appearance, portions, colors, and arrangement without adding, removing, restyling, or inventing food. Center the complete meal with comfortable even padding so nothing is cropped in a square thumbnail. Output only the meal on transparency.' +
+      (input.mealName?.trim() ? ` The meal is called ${input.mealName.trim()}.` : ''),
+  );
+  form.append('size', '1024x1024');
+  form.append('quality', 'low');
+  form.append('background', 'transparent');
+  form.append('output_format', 'png');
+
+  const response = await fetch(OPENAI_IMAGE_EDITS_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: form,
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!response.ok) throw new Error(`OpenAI image edit failed (${response.status})`);
+  const body = await response.json() as { data?: { b64_json?: string }[] };
+  const output = body.data?.[0]?.b64_json;
+  if (!output) throw new Error('INVALID_IMAGE');
+  return `data:image/png;base64,${output}`;
 }
 
 export async function analyzeLinkCandidate(candidate: MealLinkCandidate): Promise<MealAnalysis> {

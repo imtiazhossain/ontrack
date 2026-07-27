@@ -1,0 +1,78 @@
+package expo.modules.traveldocumentreader
+
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.net.Uri
+import android.os.ParcelFileDescriptor
+import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+import java.io.File
+import kotlin.math.min
+
+class TravelDocumentReaderModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name("TravelDocumentReader")
+
+    AsyncFunction("recognizeTextAsync") { uriValue: String ->
+      val context = appContext.reactContext
+        ?: throw IllegalStateException("The app is not ready to read documents.")
+      val uri = Uri.parse(uriValue)
+      val file = uri.path?.let(::File)
+        ?: throw IllegalArgumentException("The selected confirmation document could not be opened.")
+      when (file.extension.lowercase()) {
+        "txt", "eml" -> file.readText()
+        "pdf" -> recognizePdf(file)
+        else -> recognizeImage(InputImage.fromFilePath(context, uri))
+      }
+    }
+  }
+
+  private fun recognizePdf(file: File): String {
+    val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    val renderer = PdfRenderer(descriptor)
+    val pages = mutableListOf<String>()
+    try {
+      for (index in 0 until min(renderer.pageCount, 12)) {
+        val page = renderer.openPage(index)
+        try {
+          val width = min(2200, page.width * 3)
+          val height = (width.toFloat() / page.width * page.height).toInt()
+          val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+          bitmap.eraseColor(android.graphics.Color.WHITE)
+          page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+          pages.add(recognizeImage(InputImage.fromBitmap(bitmap, 0)))
+          bitmap.recycle()
+        } finally {
+          page.close()
+        }
+      }
+    } finally {
+      renderer.close()
+      descriptor.close()
+    }
+    val text = pages.filter { it.isNotBlank() }.joinToString("\n\n")
+    if (text.isBlank()) throw IllegalArgumentException(
+      "No readable flight information was found in this document."
+    )
+    return text
+  }
+
+  private fun recognizeImage(image: InputImage): String {
+    val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    return try {
+      val result = Tasks.await(recognizer.process(image))
+      if (result.text.isBlank()) {
+        throw IllegalArgumentException(
+          "No readable flight information was found in this document."
+        )
+      }
+      result.text
+    } finally {
+      recognizer.close()
+    }
+  }
+}

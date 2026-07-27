@@ -1,4 +1,5 @@
 export const DAY_MS = 24 * 60 * 60 * 1000;
+export type DateDisplayFormat = 'mdy' | 'iso';
 
 /** YYYY-MM-DD in local time. */
 export function toDateKey(date: Date): string {
@@ -10,7 +11,50 @@ export function toDateKey(date: Date): string {
 
 export function fromDateKey(key: string): Date {
   const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
+  return new Date(y, m - 1, d, 12);
+}
+
+export function isDateKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = fromDateKey(value);
+  return !Number.isNaN(parsed.valueOf()) && toDateKey(parsed) === value;
+}
+
+export function deviceLocale(): string {
+  try {
+    const formatter = Intl.DateTimeFormat();
+    if (typeof formatter.resolvedOptions === 'function') {
+      return formatter.resolvedOptions().locale || 'system';
+    }
+  } catch {
+    // Older Hermes runtimes still support Date#toLocaleDateString but may not
+    // expose the complete Intl formatter API.
+  }
+  return 'system';
+}
+
+export function dateDisplayFormatForLocale(locale?: string): DateDisplayFormat {
+  const sample = new Date(2006, 10, 22, 12);
+  try {
+    const rendered = sample.toLocaleDateString(locale === 'system' ? undefined : locale);
+    const firstNumber = rendered.match(/\d+/)?.[0];
+    return Number(firstNumber) === 11 ? 'mdy' : 'iso';
+  } catch {
+    return 'iso';
+  }
+}
+
+export function nativeDatePickerLocale(locale: unknown): string | undefined {
+  return typeof locale === 'string' && locale !== 'system'
+    ? locale.replace('-', '_')
+    : undefined;
+}
+
+export function formatDateKey(value: string, format: DateDisplayFormat): string {
+  if (!isDateKey(value)) return value;
+  if (format === 'iso') return value;
+  const [year, month, day] = value.split('-');
+  return `${month}/${day}/${year}`;
 }
 
 export function todayKey(): string {

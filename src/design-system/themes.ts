@@ -77,6 +77,22 @@ export const darkTheme: Theme = {
   overlayScrim: 'rgba(0, 0, 0, 0.6)',
 };
 
+export const lightTravelTheme: Theme = {
+  ...lightTheme,
+  accentPrimary: palette.travelBlue,
+  accentSoft: palette.travelBlueSoft,
+  accentFaint: palette.travelBlueFaint,
+  textOnAccent: '#F7FCFF',
+};
+
+export const darkTravelTheme: Theme = {
+  ...darkTheme,
+  accentPrimary: palette.travelBlueDark,
+  accentSoft: palette.travelBlueSoftDark,
+  accentFaint: palette.travelBlueFaintDark,
+  textOnAccent: '#F7FCFF',
+};
+
 export interface CategoryColors {
   main: string;
   tint: string;
