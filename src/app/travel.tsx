@@ -324,7 +324,7 @@ function TravelScreenContent() {
             </Button>
             <Button
               variant="secondary"
-              icon="dollarsign.circle"
+              icon="currency"
               style={styles.actionButton}
               onPress={() =>
                 void WebBrowser.openBrowserAsync(

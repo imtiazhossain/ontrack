@@ -28,8 +28,11 @@ export const appIcons = {
   // Travel
   flight: { ios: 'airplane', android: 'flight', web: 'flight' },
   lodging: { ios: 'bed.double.fill', android: 'hotel', web: 'hotel' },
+  building: { ios: 'building.2.fill', android: 'apartment', web: 'apartment' },
+  home: { ios: 'house.fill', android: 'home', web: 'home' },
   weather: { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' },
   people: { ios: 'person.2.fill', android: 'group', web: 'group' },
+  invite: { ios: 'person.badge.plus', android: 'person_add', web: 'person_add' },
   agents: { ios: 'person.2.badge.gearshape', android: 'manage_accounts', web: 'manage_accounts' },
   'scan-document': { ios: 'doc.text.viewfinder', android: 'document_scanner', web: 'document_scanner' },
 
@@ -41,6 +44,7 @@ export const appIcons = {
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
   'open-external': { ios: 'arrow.up.forward.app', android: 'open_in_new', web: 'open_in_new' },
   chat: { ios: 'message.fill', android: 'chat', web: 'chat' },
+  send: { ios: 'paperplane.fill', android: 'send', web: 'send' },
   currency: { ios: 'dollarsign.circle', android: 'attach_money', web: 'attach_money' },
   clock: { ios: 'clock', android: 'schedule', web: 'schedule' },
   download: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
