@@ -10,7 +10,9 @@ describe('keyboard scrolling invariant', () => {
 
     expect(screen).toContain('automaticallyAdjustKeyboardInsets');
     expect(screen).toContain('keyboardShouldPersistTaps="handled"');
-    expect(screen).toContain("Platform.OS === 'ios' ? 'interactive' : 'on-drag'");
+    expect(screen).toContain(
+      "Platform.OS === 'ios' ? 'interactive' : 'on-drag'",
+    );
     expect(screen).toContain('scrollContent: { flexGrow: 1 }');
   });
 
@@ -34,5 +36,16 @@ describe('keyboard scrolling invariant', () => {
     expect(chatScreen).toContain('Keyboard.scheduleLayoutAnimation(event)');
     expect(chatScreen).toContain('marginBottom: keyboardInset');
     expect(chatScreen).not.toContain('<KeyboardAvoidingView');
+  });
+
+  it('lets the to-do list own the complete page scroll gesture', () => {
+    const todoScreen = readFileSync(
+      join(process.cwd(), 'src/features/todos/todo-list-screen.tsx'),
+      'utf8',
+    );
+
+    expect(todoScreen).toContain('<FlatList');
+    expect(todoScreen).toContain('ListHeaderComponent=');
+    expect(todoScreen).not.toContain('TouchableWithoutFeedback');
   });
 });

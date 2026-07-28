@@ -54,7 +54,7 @@ interface AuthContextValue {
   isGuest: boolean;
   workingProvider?: AuthProvider;
   error?: string;
-  continueWithProvider: (provider: AuthProvider) => Promise<void>;
+  continueWithProvider: (provider: AuthProvider, returnTo?: string) => Promise<void>;
   continueAsGuest: () => Promise<void>;
   completeOAuthCallback: (url: string) => Promise<void>;
   resolveDataConflict: (choice: DataResolution) => Promise<void>;
@@ -214,9 +214,10 @@ export function AuthSessionProvider({
   }, []);
 
   const continueWithProvider = useCallback(
-    async (provider: AuthProvider) => {
+    async (provider: AuthProvider, returnTo?: string) => {
       if (providerLockRef.current || workingProvider) return;
       providerLockRef.current = true;
+      if (returnTo) useAuthAccess.getState().setAuthReturnTo(returnTo);
       useAuthAccess.getState().startAuthUpgrade();
       setWorkingProvider(provider);
       setError(undefined);

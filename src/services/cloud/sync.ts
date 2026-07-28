@@ -14,7 +14,7 @@ import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { normalizeTodoTasks, useTodos } from '@/store/todos';
+import { privateTodoPayload, useTodos } from '@/store/todos';
 
 import { loadEntitlements } from './entitlements';
 import { decideAccountData } from './data-ownership';
@@ -185,9 +185,9 @@ const domains: {
   },
   {
     name: 'todos',
-    read: () => ({ tasks: useTodos.getState().tasks }),
+    read: () => privateTodoPayload(useTodos.getState()),
     write: (payload) => {
-      useTodos.setState({ tasks: normalizeTodoTasks(payload.tasks) });
+      useTodos.getState().replacePrivateData(payload);
     },
     reset: () => useTodos.getState().reset(),
     subscribe: (onChange) => useTodos.subscribe(onChange),
@@ -293,7 +293,11 @@ export function hasMeaningfulLocalData(): boolean {
   const preferences = usePreferences.getState();
   if (preferences.hasOnboarded || preferences.name.trim() || preferences.goal.trim()) return true;
   if (usePlants.getState().plants.length > 0) return true;
-  if (useTodos.getState().tasks.length > 0) return true;
+  const todoState = useTodos.getState();
+  if (
+    todoState.tasks.length > 0 ||
+    todoState.lists.some((list) => list.name !== 'To Do')
+  ) return true;
   if (Object.keys(useAgents.getState().installations).length > 0) return true;
   if (Object.keys(useAgents.getState().conversations).length > 0) return true;
   if (useTravel.getState().plans.some((plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id)) return true;
