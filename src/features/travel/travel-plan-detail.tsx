@@ -11,7 +11,6 @@ import Animated, {
 
 import {
   AppText,
-  BackButton,
   Button,
   Card,
   DateField,
@@ -210,7 +209,6 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <Screen>
-        <BackButton />
         <EmptyState
           icon="flight"
           title="Trip not found"
@@ -588,7 +586,6 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton accessibilityLabel="Back to travel" />
       {editingDetails ? (
         <TravelPlanDetailsEditor
           title={editTitle}

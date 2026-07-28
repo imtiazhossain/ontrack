@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActionSheetIOS, ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, EmptyState, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, EmptyState, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { MealAnalysisReview } from '@/features/nutrition/analysis-review';
@@ -183,12 +183,11 @@ export default function FoodDetailScreen() {
     }
   };
 
-  if (!activity) return <Screen><BackButton /><AppText variant="title">Meal not found</AppText></Screen>;
+  if (!activity) return <Screen><AppText variant="title">Meal not found</AppText></Screen>;
   const category = findCategory(categories, activity.categoryId);
 
   return (
     <Screen>
-      <BackButton />
       {displayPhoto ? (
         <Image
           source={displayPhoto}

@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Screen } from '@/components/primitives';
+import { AppText, Button, Screen } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
@@ -21,7 +21,6 @@ export default function MovieDetailScreen() {
   if (!activity || !movie) {
     return (
       <Screen>
-        <BackButton />
         <AppText variant="title">Movie event not found</AppText>
         <Button onPress={() => router.back()}>Go back</Button>
       </Screen>
@@ -33,7 +32,6 @@ export default function MovieDetailScreen() {
 
   return (
     <Screen>
-      <BackButton />
       <CategoryBadge category={category} />
       {movie.posterUrl ? (
         <Pressable

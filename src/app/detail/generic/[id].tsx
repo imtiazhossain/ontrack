@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Screen } from '@/components/primitives';
+import { AppText, Button, Screen } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { spacing } from '@/design-system';
@@ -20,7 +20,6 @@ export default function GenericDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <BackButton />
         <AppText variant="title">Activity not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
           Go back
@@ -33,7 +32,6 @@ export default function GenericDetailScreen() {
 
   return (
     <Screen>
-      <BackButton />
       <CategoryBadge category={category} />
       <AppText variant="title" style={styles.title}>
         {activity.title}

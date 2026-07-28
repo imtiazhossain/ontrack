@@ -27,6 +27,26 @@ export function BackButton({
   );
 }
 
+/** Back control used by the shared native stack header on every non-root route. */
+export function HeaderBackButton({
+  accessibilityLabel = 'Go back',
+  fallback = '/(tabs)',
+}: {
+  accessibilityLabel?: string;
+  fallback?: Href;
+}) {
+  const router = useRouter();
+
+  return (
+    <IconButton
+      icon="back"
+      accessibilityLabel={accessibilityLabel}
+      background="transparent"
+      onPress={() => goBackOrReplace(router, fallback)}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   container: { alignSelf: 'flex-start', marginBottom: spacing.sm },
 });

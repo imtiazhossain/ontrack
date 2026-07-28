@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { AppText, Button, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { applyPlantCarePlan, wateringDueAt } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
@@ -27,7 +27,7 @@ export default function EditPlantScreen() {
   const [reminderMinutes, setReminderMinutes] = useState(plant?.reminderMinutes ?? 9 * 60);
   const [error, setError] = useState<string>();
 
-  if (!plant) return <Screen><BackButton /><AppText variant="title">Plant not found</AppText></Screen>;
+  if (!plant) return <Screen><AppText variant="title">Plant not found</AppText></Screen>;
 
   const save = async () => {
     if (!nickname.trim() || value(minMl) <= 0 || value(maxMl) < value(minMl) || value(interval) < 1 || reminderMinutes < 0 || reminderMinutes >= 1440) {
@@ -50,7 +50,6 @@ export default function EditPlantScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <BackButton />
       <AppText variant="title">Edit {plant.nickname}</AppText>
       <Input label="Nickname" value={nickname} onChangeText={setNickname} />
       <SectionHeader title="Watering" />

@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { spacing } from '@/design-system';
 import { aiProvider } from '@/services/ai';
@@ -43,7 +43,6 @@ export default function GymDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <BackButton />
         <AppText variant="title">Workout not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
           Go back
@@ -56,7 +55,6 @@ export default function GymDetailScreen() {
 
   return (
     <Screen>
-      <BackButton />
       <AppText variant="overline" color="tertiary">
         {category.name}
       </AppText>

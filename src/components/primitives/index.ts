@@ -12,5 +12,5 @@ export { Input } from './input';
 export { SectionHeader } from './section-header';
 export { EmptyState } from './empty-state';
 export { ErrorMessage } from './error-message';
-export { BackButton } from './back-button';
+export { BackButton, HeaderBackButton } from './back-button';
 export { SettingsActionRow, SettingsRow, SettingsToggleRow } from './settings-row';

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, Screen } from '@/components/primitives';
+import { AppText, Button, Card, Screen } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { spacing } from '@/design-system';
@@ -21,7 +21,6 @@ export default function SleepDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <BackButton />
         <AppText variant="title">Sleep activity not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
           Go back
@@ -35,7 +34,6 @@ export default function SleepDetailScreen() {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton />
       <CategoryBadge category={category} />
       <AppText variant="title">{activity.title}</AppText>
       <AppText variant="callout" color="secondary">

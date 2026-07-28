@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, BackButton, Button } from '@/components/primitives';
+import { AppText, Button } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useSchedule } from '@/store/schedule';
@@ -102,7 +102,6 @@ export default function ActiveWorkoutScreen() {
   if (!activity || !storedWorkout || !current || !currentSet) {
     return (
       <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-        <BackButton />
         <AppText variant="title">Workout not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
           Go back
@@ -114,7 +113,6 @@ export default function ActiveWorkoutScreen() {
   return (
     <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <View style={styles.header}>
-        <BackButton accessibilityLabel="Exit active workout" />
         <AppText variant="overline" color="tertiary">
           Active workout · {elapsedLabel}
         </AppText>

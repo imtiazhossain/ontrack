@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { AppText, BackButton, Button, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,7 +21,6 @@ export default function WorkDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <BackButton />
         <AppText variant="title">Work session not found</AppText>
         <Button onPress={() => router.back()} accessibilityLabel="Go back">
           Go back
@@ -45,7 +44,6 @@ export default function WorkDetailScreen() {
 
   return (
     <Screen>
-      <BackButton />
       <AppText variant="overline" color="tertiary">
         {category.name}
       </AppText>
