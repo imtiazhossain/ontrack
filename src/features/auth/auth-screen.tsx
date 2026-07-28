@@ -19,7 +19,13 @@ import { useAuthSession } from './auth-provider';
 import { GoogleMark } from './provider-marks';
 import { ProviderButton } from './provider-button';
 
-export function AuthScreen({ variant = 'welcome' }: { variant?: 'welcome' | 'upgrade' }) {
+export function AuthScreen({
+  variant = 'welcome',
+  returnTo,
+}: {
+  variant?: 'welcome' | 'upgrade';
+  returnTo?: string;
+}) {
   const theme = useTheme();
   const { height, width } = useWindowDimensions();
   const {
@@ -117,11 +123,11 @@ export function AuthScreen({ variant = 'welcome' }: { variant?: 'welcome' | 'upg
             <AppleProviderButton
               dark={theme.name === 'dark'}
               disabled={busy}
-              onPress={() => void continueWithProvider('apple')}
+              onPress={() => void continueWithProvider('apple', returnTo)}
             />
             <ProviderButton
               icon={<GoogleMark />}
-              onPress={() => void continueWithProvider('google')}
+              onPress={() => void continueWithProvider('google', returnTo)}
               disabled={busy}
               backgroundColor="#FFFFFF"
               borderColor="#DADCE0"

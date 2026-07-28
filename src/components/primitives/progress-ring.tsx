@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedProps,
   useSharedValue,
@@ -36,6 +36,8 @@ export function ProgressRing({
   const theme = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
+  const labelFontSize = Math.min(22, Math.max(13, size * 0.26));
+  const sublabelFontSize = Math.min(12.5, Math.max(9, size * 0.17));
   const animated = useSharedValue(0);
 
   useEffect(() => {
@@ -76,14 +78,36 @@ export function ProgressRing({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      {label ? (
-        <AppText variant={size >= 80 ? 'heading' : 'subheading'}>{label}</AppText>
-      ) : null}
-      {sublabel ? (
-        <AppText variant="caption" color="tertiary">
-          {sublabel}
-        </AppText>
-      ) : null}
+      <View style={styles.labelStack}>
+        {label ? (
+          <AppText
+            variant="heading"
+            style={{
+              fontSize: labelFontSize,
+              lineHeight: labelFontSize * 1.15,
+            }}>
+            {label}
+          </AppText>
+        ) : null}
+        {sublabel ? (
+          <AppText
+            variant="caption"
+            color="tertiary"
+            style={{
+              fontSize: sublabelFontSize,
+              lineHeight: sublabelFontSize * 1.2,
+            }}>
+            {sublabel}
+          </AppText>
+        ) : null}
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  labelStack: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

@@ -12,11 +12,13 @@ import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provid
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
+import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
 import { useTheme } from '@/hooks/use-theme';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
+import { useAuthAccess } from '@/store/auth-access';
 import { useTravel } from '@/store/travel';
 
 export default function RootLayout() {
@@ -45,6 +47,13 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const aiEnabled = usePreferences((state) => state.aiEnabled);
   const appAccess = isGuest || phase === 'authenticated';
   const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
+  useTodoCollaboration(hydrated && phase === 'authenticated');
+
+  useEffect(() => {
+    if (phase !== 'authenticated') return;
+    const returnTo = useAuthAccess.getState().takeAuthReturnTo();
+    if (returnTo) router.replace(returnTo as never);
+  }, [phase, router]);
 
   useEffect(() => {
     if (hydrated && appAccess) withoutGuestDirtyTracking(seedIfNeeded);
@@ -153,6 +162,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="travel" />
         <Stack.Screen name="agents" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="todos/[id]" />
+        <Stack.Screen name="todos/[id]/settings" />
+        <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
         <Stack.Screen name="i/[code]" />
         <Stack.Screen name="travel/[id]" />
@@ -184,6 +196,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           contentStyle: { backgroundColor: theme.backgroundPrimary },
         }}
       />
+      <Stack.Screen name="l/[code]" />
     </Stack>
   );
 }

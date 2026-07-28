@@ -26,6 +26,12 @@ export const appIcons = {
   plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
   insights: { ios: 'chart.line.uptrend.xyaxis', android: 'monitoring', web: 'monitoring' },
   tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
+  groceries: { ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' },
+  maintenance: {
+    ios: 'wrench.and.screwdriver.fill',
+    android: 'handyman',
+    web: 'handyman',
+  },
 
   // Travel
   flight: { ios: 'airplane', android: 'flight', web: 'flight' },
@@ -41,6 +47,14 @@ export const appIcons = {
   // Navigation and actions
   list: { ios: 'list.bullet', android: 'list', web: 'list' },
   filter: { ios: 'slider.horizontal.3', android: 'tune', web: 'tune' },
+  sort: { ios: 'arrow.up.arrow.down', android: 'sort', web: 'sort' },
+  more: { ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' },
+  copy: { ios: 'doc.on.doc', android: 'content_copy', web: 'content_copy' },
+  share: { ios: 'square.and.arrow.up', android: 'share', web: 'share' },
+  settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
+  smart: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+  'arrow-down': { ios: 'arrow.down', android: 'arrow_downward', web: 'arrow_downward' },
+  alphabetical: { ios: 'textformat', android: 'sort_by_alpha', web: 'sort_by_alpha' },
   photo: { ios: 'photo', android: 'image', web: 'image' },
   location: { ios: 'location.fill', android: 'my_location', web: 'my_location' },
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
