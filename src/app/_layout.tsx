@@ -94,7 +94,7 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen name="day/[date]" />
-            <Stack.Screen name="profile" />
+            <Stack.Screen name="workouts" />
             <Stack.Screen name="plants" />
             <Stack.Screen name="travel" />
             <Stack.Screen name="agents" />

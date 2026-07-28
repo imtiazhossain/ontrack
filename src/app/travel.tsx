@@ -156,10 +156,10 @@ function TravelScreenContent() {
           ) : null}
         </View>
         <View style={styles.heroRow}>
-          <AppText variant="title" style={styles.heroTitle}>Where to next?</AppText>
           <View style={[styles.planeBadge, { backgroundColor: theme.accentFaint }]}>
             <AppText variant="heading">✈️</AppText>
           </View>
+          <AppText variant="title" style={styles.heroTitle}>Where to next?</AppText>
         </View>
       </View>
 

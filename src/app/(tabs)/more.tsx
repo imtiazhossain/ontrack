@@ -2,25 +2,40 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Screen, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing, type AppIconName } from '@/design-system';
+import {
+  categoryColors,
+  fontFamilies,
+  palette,
+  radii,
+  spacing,
+  type AppIconName,
+} from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { useAddons } from '@/store/addons';
 import { haptics } from '@/utils/haptics';
 
 interface MoreMenuItem {
   label: string;
   icon: AppIconName;
-  href: '/profile' | '/plants' | '/travel';
+  href: '/workouts' | '/plants' | '/travel';
+  color: 'workout' | 'plant' | 'travel';
 }
 
-const MENU_ITEMS: MoreMenuItem[] = [
-  { label: 'Profile', icon: 'personal', href: '/profile' },
-  { label: 'Plants', icon: 'plant', href: '/plants' },
-  { label: 'Travel', icon: 'flight', href: '/travel' },
+const FEATURE_MENU_ITEMS: MoreMenuItem[] = [
+  { label: 'Plants', icon: 'plant', href: '/plants', color: 'plant' },
+  { label: 'Travel', icon: 'flight', href: '/travel', color: 'travel' },
 ];
 
 export default function MoreScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const fitnessEnabled = useAddons((state) => state.enabled.fitness);
+  const menuItems: MoreMenuItem[] = fitnessEnabled
+    ? [
+        { label: 'Workout', icon: 'gym', href: '/workouts', color: 'workout' },
+        ...FEATURE_MENU_ITEMS,
+      ]
+    : FEATURE_MENU_ITEMS;
 
   return (
     <Screen scroll={false} contentStyle={styles.screenContent}>
@@ -43,27 +58,47 @@ export default function MoreScreen() {
                   : '0 7px 24px rgba(0, 0, 0, 0.28)',
             },
           ]}>
-          {MENU_ITEMS.map((item, index) => (
-            <View key={item.href}>
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel={`Open ${item.label}`}
-                onPress={() => {
-                  haptics.select();
-                  router.push(item.href);
-                }}
-                style={({ pressed }) => [styles.row, pressed && { opacity: 0.62 }]}>
-                <View style={[styles.iconTile, { backgroundColor: theme.accentFaint }]}>
-                  <Symbol name={item.icon} size={25} color={theme.accentPrimary} />
-                </View>
-                <AppText style={styles.rowLabel}>{item.label}</AppText>
-                <Symbol name="chevron-right" size={18} color={theme.textTertiary} />
-              </Pressable>
-              {index < MENU_ITEMS.length - 1 ? (
-                <View style={[styles.separator, { backgroundColor: theme.separator }]} />
-              ) : null}
-            </View>
-          ))}
+          {menuItems.map((item, index) => {
+            const plantColors = categoryColors(theme, 'plant');
+            const iconColor =
+              item.color === 'plant'
+                ? plantColors.main
+                : item.color === 'travel'
+                  ? theme.name === 'light'
+                    ? palette.travelBlue
+                    : palette.travelBlueDark
+                  : palette.ink0;
+            const tileColor =
+              item.color === 'plant'
+                ? plantColors.tint
+                : item.color === 'travel'
+                  ? theme.name === 'light'
+                    ? palette.travelBlueFaint
+                    : palette.travelBlueFaintDark
+                  : palette.paper2;
+
+            return (
+              <View key={item.href}>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${item.label}`}
+                  onPress={() => {
+                    haptics.select();
+                    router.push(item.href);
+                  }}
+                  style={({ pressed }) => [styles.row, pressed && { opacity: 0.62 }]}>
+                  <View style={[styles.iconTile, { backgroundColor: tileColor }]}>
+                    <Symbol name={item.icon} size={25} color={iconColor} />
+                  </View>
+                  <AppText style={styles.rowLabel}>{item.label}</AppText>
+                  <Symbol name="chevron-right" size={18} color={theme.textTertiary} />
+                </Pressable>
+                {index < menuItems.length - 1 ? (
+                  <View style={[styles.separator, { backgroundColor: theme.separator }]} />
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       </View>
     </Screen>

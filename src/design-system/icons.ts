@@ -24,6 +24,7 @@ export const appIcons = {
   appointment: { ios: 'calendar.badge.clock', android: 'calendar_clock', web: 'calendar_clock' },
   habit: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
   plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
+  insights: { ios: 'chart.line.uptrend.xyaxis', android: 'monitoring', web: 'monitoring' },
 
   // Travel
   flight: { ios: 'airplane', android: 'flight', web: 'flight' },
