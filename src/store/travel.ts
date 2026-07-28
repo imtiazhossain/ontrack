@@ -5,6 +5,7 @@ import {
   ALL_ACCOUNTS_TEST_TRIP,
   withAllAccountsTestTrip,
 } from '@/constants/travel';
+import { featureFlags } from '@/constants/feature-flags';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { normalizeTravelPlan, normalizeTravelPlans } from '@/features/travel/normalize';
 import type { TravelPlan } from '@/features/travel/types';
@@ -20,7 +21,7 @@ interface TravelState {
 export const useTravel = create<TravelState>()(
   persist(
     (set) => ({
-      plans: [ALL_ACCOUNTS_TEST_TRIP],
+      plans: withAllAccountsTestTrip([]),
       savePlan: (plan) =>
         set((state) => {
           const normalized = normalizeTravelPlan(plan);
@@ -35,13 +36,14 @@ export const useTravel = create<TravelState>()(
       removePlan: (id) =>
         set((state) => ({
           plans:
-            id === ALL_ACCOUNTS_TEST_TRIP.id
+            id === ALL_ACCOUNTS_TEST_TRIP.id &&
+            featureFlags.allAccountsTestTrip
               ? state.plans
               : state.plans.filter((item) => item.id !== id),
         })),
       replacePlans: (plans) =>
         set({ plans: withAllAccountsTestTrip(normalizeTravelPlans(plans)) }),
-      reset: () => set({ plans: [ALL_ACCOUNTS_TEST_TRIP] }),
+      reset: () => set({ plans: withAllAccountsTestTrip([]) }),
     }),
     {
       name: STORAGE_KEYS.travel,

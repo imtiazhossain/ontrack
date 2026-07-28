@@ -13,6 +13,7 @@ import {
   analyzeMealLink,
   analyzeMealPhoto,
   confirmMealAnalysis,
+  persistMealPhoto,
   resolveMealLink,
   type MealLinkCandidate,
   NutritionServiceError,
@@ -70,10 +71,19 @@ export default function FoodDetailScreen() {
     }
   };
 
+  const persistAndAnalyzeAsset = async (uri: string) => {
+    try {
+      const durableUri = await persistMealPhoto(uri, `${activityId}-original`);
+      await analyzeAsset(durableUri);
+    } catch {
+      setError('The selected photo could not be saved. Please choose it again.');
+    }
+  };
+
   // Android may destroy this screen while the system camera/picker is open;
   // recover the photo and resume analysis when the screen is recreated.
   usePendingImagePickerResult((uri) => {
-    void analyzeAsset(uri);
+    void persistAndAnalyzeAsset(uri);
   });
 
   const takePhoto = async () => {
@@ -81,7 +91,9 @@ export default function FoodDetailScreen() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return setError('Camera access is required to photograph a meal.');
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
-    if (!result.canceled && result.assets[0]?.uri) await analyzeAsset(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]?.uri) {
+      await persistAndAnalyzeAsset(result.assets[0].uri);
+    }
   };
 
   const choosePhoto = async () => {
@@ -89,7 +101,9 @@ export default function FoodDetailScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return setError('Photo library access is required to choose a meal photo.');
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
-    if (!result.canceled && result.assets[0]?.uri) await analyzeAsset(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]?.uri) {
+      await persistAndAnalyzeAsset(result.assets[0].uri);
+    }
   };
 
   const showMealSources = () => {

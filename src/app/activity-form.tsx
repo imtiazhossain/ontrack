@@ -10,7 +10,7 @@ import { isCategoryEnabled } from '@/addons/registry';
 import { radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
-import { analyzeMealPhoto, NutritionServiceError } from '@/services/nutrition';
+import { analyzeMealPhoto, NutritionServiceError, persistMealPhoto } from '@/services/nutrition';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
 import { usePreferences } from '@/store/preferences';
 import { useAddons } from '@/store/addons';
@@ -163,11 +163,28 @@ export default function ActivityFormScreen() {
     return unsubscribe;
   }, [dirty, navigation]);
 
+  const selectMealPhoto = async (uri: string) => {
+    try {
+      const durableUri = await persistMealPhoto(uri, `${initialId}-original`);
+      setPhoto(durableUri);
+      setMeal((current) => ({
+        ...current,
+        photo: durableUri,
+        originalPhoto: undefined,
+        photoProcessingVersion: undefined,
+        aiAnalysis: undefined,
+      }));
+      return durableUri;
+    } catch {
+      setAnalysisError('The selected photo could not be saved. Please choose it again.');
+      return undefined;
+    }
+  };
+
   // Android may destroy this screen while the system picker is open;
   // recover the selection when the screen is recreated.
   usePendingImagePickerResult((uri) => {
-    setPhoto(uri);
-    setMeal((current) => ({ ...current, photo: uri, aiAnalysis: undefined }));
+    void selectMealPhoto(uri);
   });
 
   const pickPhoto = async (analyzeAfterPick = false) => {
@@ -186,15 +203,8 @@ export default function ActivityFormScreen() {
     });
     const selectedUri = result.canceled ? undefined : result.assets[0]?.uri;
     if (!selectedUri) return;
-    setPhoto(selectedUri);
-    setMeal((current) => ({
-      ...current,
-      photo: selectedUri,
-      originalPhoto: undefined,
-      photoProcessingVersion: undefined,
-      aiAnalysis: undefined,
-    }));
-    if (analyzeAfterPick) await analyzePhoto(selectedUri);
+    const durableUri = await selectMealPhoto(selectedUri);
+    if (analyzeAfterPick && durableUri) await analyzePhoto(durableUri);
   };
 
   const analyzePhoto = async (selectedPhoto?: string) => {
