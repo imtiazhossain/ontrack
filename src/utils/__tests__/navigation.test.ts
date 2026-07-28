@@ -64,3 +64,15 @@ describe('feature route ownership', () => {
     );
   });
 });
+
+describe('root stack back button', () => {
+  it('hides the iOS 26 Liquid Glass background around the custom back control', () => {
+    const rootLayout = readFileSync(
+      join(process.cwd(), 'src/app', '_layout.tsx'),
+      'utf8',
+    );
+
+    expect(rootLayout).toContain("type: 'custom' as const");
+    expect(rootLayout).toContain('hidesSharedBackground: true');
+  });
+});

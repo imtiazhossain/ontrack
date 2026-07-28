@@ -72,7 +72,17 @@ export default function RootLayout() {
               headerTitle: '',
               headerShadowVisible: false,
               headerStyle: { backgroundColor: theme.backgroundPrimary },
-              headerLeft: () => <HeaderBackButton />,
+              ...(process.env.EXPO_OS === 'ios'
+                ? {
+                    unstable_headerLeftItems: () => [
+                      {
+                        type: 'custom' as const,
+                        element: <HeaderBackButton />,
+                        hidesSharedBackground: true,
+                      },
+                    ],
+                  }
+                : { headerLeft: () => <HeaderBackButton /> }),
               contentStyle: {
                 backgroundColor: theme.backgroundPrimary,
                 paddingTop: spacing.md,
