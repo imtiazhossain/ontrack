@@ -1,11 +1,10 @@
-import { useState } from 'react';
-
 import { DayHeader } from '@/features/daily-tracking/day-header';
 import { DayView } from '@/features/daily-tracking/day-view';
-import { todayKey } from '@/utils/date';
+import { useUI } from '@/store/ui';
 
 export default function TodayScreen() {
-  const [date, setDate] = useState(todayKey());
+  const date = useUI((state) => state.selectedDate);
+  const setDate = useUI((state) => state.setSelectedDate);
 
   return (
     <DayView
