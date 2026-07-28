@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, DateField, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, DateField, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { featureFlags } from '@/constants/feature-flags';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -88,7 +88,6 @@ export default function NutritionProfileScreen() {
 
   return (
     <Screen>
-      <BackButton />
       <AppText variant="title">Nutrition profiles</AppText>
       <AppText variant="body" color="secondary">Targets are wellness estimates. Clinical profiles remain memory-only until the approved cloud is configured.</AppText>
 

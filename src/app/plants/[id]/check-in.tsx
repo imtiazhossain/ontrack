@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { analyzePlantCheckIn, persistPlantPhoto, PlantServiceError } from '@/services/plants';
 import { applyPlantCarePlan } from '@/services/plants/schedule';
@@ -24,7 +24,7 @@ export default function PlantCheckInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  if (!plant) return <Screen><BackButton /><AppText variant="title">Plant not found</AppText></Screen>;
+  if (!plant) return <Screen><AppText variant="title">Plant not found</AppText></Screen>;
 
   const camera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -78,7 +78,6 @@ export default function PlantCheckInScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <BackButton />
       <AppText variant="title">Check in on {plant.nickname}</AppText>
       <AppText color="secondary">Use similar lighting and framing when possible. The assessment compares only visible changes.</AppText>
       {photo ? <Image source={photo} style={styles.hero} contentFit="cover" /> : null}

@@ -51,6 +51,7 @@ export const appIcons = {
   check: { ios: 'checkmark', android: 'check', web: 'check' },
   'minus-circle': { ios: 'minus.circle.fill', android: 'do_not_disturb_on', web: 'remove_circle' },
   'plus-circle': { ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' },
+  back: { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' },
   'chevron-left': { ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' },
   'chevron-right': { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
   'chevron-down': { ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' },

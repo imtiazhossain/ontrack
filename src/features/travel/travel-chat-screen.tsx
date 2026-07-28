@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppText,
-  BackButton,
   Button,
   EmptyState,
   ErrorMessage,
@@ -192,7 +191,6 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-        <View style={styles.paddedHeader}><BackButton /></View>
         <EmptyState icon="chat" title="Trip not found" message="This trip is no longer available." />
       </View>
     );
@@ -202,7 +200,6 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
         <View style={styles.paddedHeader}>
-          <BackButton />
           <AppText variant="title">Trip chat</AppText>
         </View>
         <View style={styles.center}>
@@ -219,7 +216,6 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
   return (
     <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <View style={[styles.header, { borderBottomColor: theme.separator }]}>
-        <BackButton accessibilityLabel="Back to trip" />
         <View style={styles.headerCopy}>
           <AppText variant="heading" numberOfLines={1}>{plan.title}</AppText>
           <AppText variant="caption" color="secondary">

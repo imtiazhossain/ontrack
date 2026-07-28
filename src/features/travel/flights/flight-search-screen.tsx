@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 
 import {
   AppText,
-  BackButton,
   Button,
   Card,
   DateField,
@@ -141,7 +140,6 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <Screen>
-        <BackButton />
         <EmptyState icon="flight" title="Trip not found" message="This trip may have been removed." />
       </Screen>
     );
@@ -211,7 +209,6 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton accessibilityLabel="Back to trip" />
       <View style={styles.heading}>
         <AppText variant="overline" color="accent">Flight search</AppText>
         <AppText variant="title">Flights for {plan.title}</AppText>

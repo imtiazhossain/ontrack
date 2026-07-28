@@ -5,7 +5,6 @@ import type { AgentDefinition } from '@/agents/types';
 import { getAddon } from '@/addons/registry';
 import {
   AppText,
-  BackButton,
   Button,
   Card,
   EmptyState,
@@ -28,7 +27,6 @@ export function AgentManager() {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton accessibilityLabel="Back to profile" />
       <AppText variant="title">Agents</AppText>
       <AppText variant="body" color="secondary">
         Agents are optional companions that connect to existing onTrack add-ons. You stay in

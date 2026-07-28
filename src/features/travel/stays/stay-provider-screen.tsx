@@ -2,7 +2,6 @@ import { StyleSheet, View } from 'react-native';
 
 import {
   AppText,
-  BackButton,
   Card,
   EmptyState,
   Screen,
@@ -35,7 +34,6 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <Screen>
-        <BackButton />
         <EmptyState
           icon="lodging"
           title="Trip not found"
@@ -50,8 +48,6 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton accessibilityLabel="Back to trip" />
-
       <View style={styles.heading}>
         <AppText variant="overline" color="accent">Stay search</AppText>
         <AppText variant="title">Where do you want to check?</AppText>

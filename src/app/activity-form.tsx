@@ -396,7 +396,6 @@ export default function ActivityFormScreen() {
   if (missingActivity) {
     return (
       <Screen>
-        <IconButton icon="chevron-left" accessibilityLabel="Go back" background="transparent" onPress={close} />
         <AppText variant="title">Event not found</AppText>
         <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
       </Screen>
@@ -406,7 +405,6 @@ export default function ActivityFormScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <IconButton icon="close" accessibilityLabel="Cancel editing" background="transparent" onPress={close} />
         <AppText variant="title">{isEditing ? editorTitle : 'Add event'}</AppText>
       </View>
 

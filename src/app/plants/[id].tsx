@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, BackButton, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import {
   addPruningActivity,
@@ -21,7 +21,7 @@ export default function PlantDetailScreen() {
   const [amount, setAmount] = useState('');
 
   if (!plant) {
-    return <Screen><BackButton /><AppText variant="title">Plant not found</AppText></Screen>;
+    return <Screen><AppText variant="title">Plant not found</AppText></Screen>;
   }
 
   const dueKey = toDateKey(new Date(plant.nextWateringAt));
@@ -35,7 +35,6 @@ export default function PlantDetailScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <BackButton />
       <Image source={plant.photoUri} style={styles.hero} contentFit="cover" />
       <View style={styles.titleRow}>
         <View style={styles.flex}>

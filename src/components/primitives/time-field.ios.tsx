@@ -1,10 +1,14 @@
 import ExpoDateTimePicker from '@expo/ui/community/datetime-picker';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { spacing } from '@/design-system';
+import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { formatMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
+import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
   dateToMinutes,
@@ -12,7 +16,7 @@ import {
   type TimeFieldProps,
 } from './time-field.types';
 
-/** iOS wheel / spinner time picker — always inline. */
+/** Tappable iOS time field backed by a full-width native wheel picker. */
 export function TimeField({
   label = 'Time',
   value,
@@ -22,25 +26,83 @@ export function TimeField({
   testID,
 }: TimeFieldProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const [showPicker, setShowPicker] = useState(false);
   const minutes = clampMinutesFromMidnight(value);
+  const displayValue = formatMinutes(minutes);
 
   return (
-    <View style={styles.wrapper} accessibilityLabel={accessibilityLabel}>
+    <View style={styles.wrapper}>
       <AppText variant="overline" color="tertiary">
         {label}
       </AppText>
-      <ExpoDateTimePicker
-        value={minutesToDate(minutes)}
-        mode="time"
-        display="spinner"
-        locale="en_US"
-        accentColor={theme.accentPrimary}
-        themeVariant={theme.name}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityValue={{ text: displayValue }}
         disabled={disabled}
-        style={styles.timePicker}
-        testID={testID}
-        onValueChange={(_event, selected) => onChange(dateToMinutes(selected))}
-      />
+        onPress={() => setShowPicker(true)}
+        style={({ pressed }) => [
+          styles.field,
+          {
+            backgroundColor: theme.backgroundSunken,
+            opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
+          },
+        ]}
+        testID={testID}>
+        <Symbol name="clock" size="sm" color={theme.textSecondary} />
+        <AppText variant="body" style={styles.timeText}>
+          {displayValue}
+        </AppText>
+      </Pressable>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowPicker(false)}
+        presentationStyle="overFullScreen"
+        transparent
+        visible={showPicker}>
+        <View
+          style={[
+            styles.modalRoot,
+            {
+              backgroundColor: theme.overlayScrim,
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}>
+          <Pressable
+            accessibilityLabel="Close time picker"
+            onPress={() => setShowPicker(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.pickerSheet, { backgroundColor: theme.backgroundElevated }]}>
+            <View style={styles.pickerHeader}>
+              <AppText variant="subheading">{label}</AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Done choosing time"
+                hitSlop={8}
+                onPress={() => setShowPicker(false)}>
+                <AppText variant="callout" color="accent">
+                  Done
+                </AppText>
+              </Pressable>
+            </View>
+            <ExpoDateTimePicker
+              value={minutesToDate(minutes)}
+              mode="time"
+              display="spinner"
+              locale="en_US"
+              accentColor={theme.accentPrimary}
+              themeVariant={theme.name}
+              style={styles.timePicker}
+              testID={testID ? `${testID}-picker` : undefined}
+              onValueChange={(_event, selected) => onChange(dateToMinutes(selected))}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -48,6 +110,37 @@ export function TimeField({
 const styles = StyleSheet.create({
   wrapper: {
     gap: spacing.sm,
+  },
+  field: {
+    width: '100%',
+    minHeight: 48,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  timeText: {
+    flex: 1,
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: layout.screenPadding,
+  },
+  pickerSheet: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    overflow: 'hidden',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   timePicker: {
     width: '100%',
