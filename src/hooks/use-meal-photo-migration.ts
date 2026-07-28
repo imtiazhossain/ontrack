@@ -4,6 +4,7 @@ import {
   CURRENT_MEAL_PHOTO_PROCESSING_VERSION,
   enhanceMealPhoto,
 } from '@/services/nutrition';
+import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
 import { useSchedule } from '@/store/schedule';
 
 /** Upgrades user-added meal photos once after persisted state has loaded. */
@@ -24,19 +25,22 @@ export function useMealPhotoMigration(enabled: boolean) {
 
       for (const meal of pending) {
         if (cancelled || typeof meal.photo !== 'string') return;
+        const sourcePhoto = meal.photo;
         try {
           const enhanced = await enhanceMealPhoto(
-            meal.originalPhoto ?? meal.photo,
+            meal.originalPhoto ?? sourcePhoto,
             meal.name,
             `meal-${meal.activityId}-v${CURRENT_MEAL_PHOTO_PROCESSING_VERSION}`,
           );
           if (cancelled) return;
-          useSchedule.getState().setProcessedMealPhoto(
-            meal.activityId,
-            enhanced.photoUri,
-            meal.originalPhoto ?? meal.photo,
-            enhanced.version,
-          );
+          withoutGuestDirtyTracking(() => {
+            useSchedule.getState().setProcessedMealPhoto(
+              meal.activityId,
+              enhanced.photoUri,
+              meal.originalPhoto ?? sourcePhoto,
+              enhanced.version,
+            );
+          });
         } catch {
           // Keep the original usable photo. A future app launch can retry.
         }

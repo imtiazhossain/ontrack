@@ -17,4 +17,6 @@ export const STORAGE_KEYS = {
   addons: 'ontrack/addons/v1',
   agents: 'ontrack/agents/v1',
   travel: 'ontrack/travel/v1',
+  todos: 'ontrack/todos/v1',
+  authAccess: 'ontrack/auth-access/v1',
 } as const;

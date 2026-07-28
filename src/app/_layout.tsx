@@ -1,39 +1,59 @@
-import { Stack, useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useHydrated } from '@/hooks/use-hydrated';
-import { useCloudSync } from '@/hooks/use-cloud-sync';
-import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
-import { useTheme } from '@/hooks/use-theme';
-import { useSchedule } from '@/store/schedule';
-import { usePreferences } from '@/store/preferences';
-import { useTravel } from '@/store/travel';
-import { configurePlantNotifications } from '@/services/plants/notifications';
-import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { AppSafeArea, HeaderBackButton } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
+import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
+import { useHydrated } from '@/hooks/use-hydrated';
+import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
+import { useTheme } from '@/hooks/use-theme';
+import { configurePlantNotifications } from '@/services/plants/notifications';
+import { reconcilePlantSchedules } from '@/services/plants/schedule';
+import { usePreferences } from '@/store/preferences';
+import { useSchedule } from '@/store/schedule';
+import { useTravel } from '@/store/travel';
 
 export default function RootLayout() {
   const theme = useTheme();
   const hydrated = useHydrated();
-  const seedIfNeeded = useSchedule((s) => s.seedIfNeeded);
-  const aiEnabled = usePreferences((state) => state.aiEnabled);
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+        <AppSafeArea>
+          <AuthSessionProvider hydrated={hydrated}>
+            <RootNavigator hydrated={hydrated} />
+          </AuthSessionProvider>
+        </AppSafeArea>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function RootNavigator({ hydrated }: { hydrated: boolean }) {
+  const theme = useTheme();
   const router = useRouter();
-  useCloudSync(hydrated);
+  const { phase, isGuest } = useAuthSession();
+  const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
+  const aiEnabled = usePreferences((state) => state.aiEnabled);
+  const appAccess = isGuest || phase === 'authenticated';
+  const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
 
   useEffect(() => {
-    if (hydrated) seedIfNeeded();
-  }, [hydrated, seedIfNeeded]);
+    if (hydrated && appAccess) withoutGuestDirtyTracking(seedIfNeeded);
+  }, [appAccess, hydrated, seedIfNeeded]);
 
-  useMealPhotoMigration(hydrated && aiEnabled);
+  useMealPhotoMigration(hydrated && appAccess && aiEnabled);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !appAccess) return;
     void configurePlantNotifications().catch(() => undefined).then(reconcilePlantSchedules);
     if (Platform.OS === 'web') return;
     const redirect = (response: Notifications.NotificationResponse | null) => {
@@ -55,78 +75,115 @@ export default function RootLayout() {
     void Notifications.getLastNotificationResponseAsync().then(redirect);
     const subscription = Notifications.addNotificationResponseReceivedListener(redirect);
     return () => subscription.remove();
-  }, [hydrated, router]);
+  }, [appAccess, hydrated, router]);
 
-  if (!hydrated) {
+  if (!hydrated || phase === 'loading') {
     return <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary }} />;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-        <AppSafeArea>
-          <Stack
-            screenOptions={{
-              headerShown: true,
-              headerTitle: '',
-              headerShadowVisible: false,
-              headerStyle: { backgroundColor: theme.backgroundPrimary },
-              ...(process.env.EXPO_OS === 'ios'
-                ? {
-                    unstable_headerLeftItems: () => [
-                      {
-                        type: 'custom' as const,
-                        element: <HeaderBackButton />,
-                        hidesSharedBackground: true,
-                      },
-                    ],
-                  }
-                : { headerLeft: () => <HeaderBackButton /> }),
-              contentStyle: {
-                backgroundColor: theme.backgroundPrimary,
-                paddingTop: spacing.md,
-              },
-            }}>
-            <Stack.Screen
-              name="onboarding"
-              options={{
-                animation: 'fade',
-                headerShown: false,
-                contentStyle: { backgroundColor: theme.backgroundPrimary },
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-                contentStyle: { backgroundColor: theme.backgroundPrimary },
-              }}
-            />
-            <Stack.Screen name="workouts" />
-            <Stack.Screen name="plants" />
-            <Stack.Screen name="travel" />
-            <Stack.Screen name="agents" />
-            <Stack.Screen name="invite/travel" />
-            <Stack.Screen name="i/[code]" />
-            <Stack.Screen name="travel/[id]" />
-            <Stack.Screen name="travel/[id]/stays" />
-            <Stack.Screen name="travel/[id]/chat" />
-            <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="detail/food/[id]" />
-            <Stack.Screen name="detail/gym/[id]" />
-            <Stack.Screen name="detail/gym-active/[id]" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
-            <Stack.Screen name="detail/work/[id]" />
-            <Stack.Screen name="detail/movie/[id]" />
-            <Stack.Screen name="detail/sleep/[id]" />
-            <Stack.Screen name="detail/generic/[id]" />
-            <Stack.Screen name="plants/new" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="plants/[id]" />
-            <Stack.Screen name="plants/[id]/edit" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="plants/[id]/check-in" options={{ presentation: 'modal' }} />
-          </Stack>
-        </AppSafeArea>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        headerTitle: '',
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: theme.backgroundPrimary },
+        ...(process.env.EXPO_OS === 'ios'
+          ? {
+              unstable_headerLeftItems: () => [
+                {
+                  type: 'custom' as const,
+                  element: <HeaderBackButton />,
+                  hidesSharedBackground: true,
+                },
+              ],
+            }
+          : { headerLeft: () => <HeaderBackButton /> }),
+        contentStyle: {
+          backgroundColor: theme.backgroundPrimary,
+          paddingTop: spacing.md,
+        },
+      }}>
+      <Stack.Protected guard={welcomeAccess}>
+        <Stack.Screen
+          name="welcome"
+          options={{
+            animation: 'fade',
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+      </Stack.Protected>
+      <Stack.Protected guard={phase === 'resolving-data'}>
+        <Stack.Screen
+          name="auth/data-choice"
+          options={{
+            animation: 'fade',
+            headerShown: false,
+            gestureEnabled: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+      </Stack.Protected>
+      <Stack.Protected guard={appAccess}>
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+        <Stack.Screen
+          name="onboarding"
+          options={{
+            animation: 'fade',
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+        <Stack.Screen
+          name="account"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+        <Stack.Screen name="workouts" />
+        <Stack.Screen name="plants" />
+        <Stack.Screen name="travel" />
+        <Stack.Screen name="agents" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="invite/travel" />
+        <Stack.Screen name="i/[code]" />
+        <Stack.Screen name="travel/[id]" />
+        <Stack.Screen name="travel/[id]/flights" />
+        <Stack.Screen name="travel/[id]/stays" />
+        <Stack.Screen name="travel/[id]/chat" />
+        <Stack.Screen name="nutrition-profile" />
+        <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="detail/food/[id]" />
+        <Stack.Screen name="detail/gym/[id]" />
+        <Stack.Screen
+          name="detail/gym-active/[id]"
+          options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+        />
+        <Stack.Screen name="detail/work/[id]" />
+        <Stack.Screen name="detail/movie/[id]" />
+        <Stack.Screen name="detail/sleep/[id]" />
+        <Stack.Screen name="detail/generic/[id]" />
+        <Stack.Screen name="plants/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="plants/[id]" />
+        <Stack.Screen name="plants/[id]/edit" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="plants/[id]/check-in" options={{ presentation: 'modal' }} />
+      </Stack.Protected>
+      <Stack.Screen
+        name="auth/callback"
+        options={{
+          animation: 'fade',
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.backgroundPrimary },
+        }}
+      />
+    </Stack>
   );
 }

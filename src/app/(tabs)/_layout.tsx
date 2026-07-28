@@ -3,12 +3,16 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { useTodos } from '@/store/todos';
 import { useUI } from '@/store/ui';
 import { todayKey } from '@/utils/date';
 
 export default function TabsLayout() {
   const theme = useTheme();
   const hasOnboarded = usePreferences((s) => s.hasOnboarded);
+  const openTaskCount = useTodos(
+    (state) => state.tasks.filter((task) => !task.completed).length,
+  );
   const setSelectedDate = useUI((state) => state.setSelectedDate);
 
   if (!hasOnboarded) {
@@ -32,9 +36,17 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />
+      <NativeTabs.Trigger name="to-do">
+        <NativeTabs.Trigger.Label>To Do</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'checklist', selected: 'checkmark.circle.fill' }}
+          md="checklist"
+        />
+        {openTaskCount > 0 ? (
+          <NativeTabs.Trigger.Badge>
+            {openTaskCount > 99 ? '99+' : String(openTaskCount)}
+          </NativeTabs.Trigger.Badge>
+        ) : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="insights">
         <NativeTabs.Trigger.Label>Insights</NativeTabs.Trigger.Label>

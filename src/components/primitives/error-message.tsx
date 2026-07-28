@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   findNodeHandle,
+  Platform,
   type Text,
 } from 'react-native';
 
@@ -21,8 +22,10 @@ export function ErrorMessage({
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      const reactTag = findNodeHandle(ref.current);
-      if (reactTag) AccessibilityInfo.setAccessibilityFocus(reactTag);
+      if (Platform.OS !== 'web') {
+        const reactTag = findNodeHandle(ref.current);
+        if (reactTag) AccessibilityInfo.setAccessibilityFocus(reactTag);
+      }
       AccessibilityInfo.announceForAccessibility(`Error: ${message}`);
     }, 100);
 

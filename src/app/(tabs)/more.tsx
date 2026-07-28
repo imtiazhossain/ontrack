@@ -17,9 +17,23 @@ import { haptics } from '@/utils/haptics';
 interface MoreMenuItem {
   label: string;
   icon: AppIconName;
-  href: '/workouts' | '/plants' | '/travel';
-  color: 'workout' | 'plant' | 'travel';
+  href: '/profile' | '/workouts' | '/plants' | '/travel';
+  color: 'profile' | 'workout' | 'plant' | 'travel';
 }
+
+const PROFILE_MENU_ITEM: MoreMenuItem = {
+  label: 'Profile',
+  icon: 'personal',
+  href: '/profile',
+  color: 'profile',
+};
+
+const WORKOUT_MENU_ITEM: MoreMenuItem = {
+  label: 'Workout',
+  icon: 'gym',
+  href: '/workouts',
+  color: 'workout',
+};
 
 const FEATURE_MENU_ITEMS: MoreMenuItem[] = [
   { label: 'Plants', icon: 'plant', href: '/plants', color: 'plant' },
@@ -30,12 +44,11 @@ export default function MoreScreen() {
   const router = useRouter();
   const theme = useTheme();
   const fitnessEnabled = useAddons((state) => state.enabled.fitness);
-  const menuItems: MoreMenuItem[] = fitnessEnabled
-    ? [
-        { label: 'Workout', icon: 'gym', href: '/workouts', color: 'workout' },
-        ...FEATURE_MENU_ITEMS,
-      ]
-    : FEATURE_MENU_ITEMS;
+  const menuItems: MoreMenuItem[] = [
+    PROFILE_MENU_ITEM,
+    ...(fitnessEnabled ? [WORKOUT_MENU_ITEM] : []),
+    ...FEATURE_MENU_ITEMS,
+  ];
 
   return (
     <Screen scroll={false} contentStyle={styles.screenContent}>
@@ -61,7 +74,9 @@ export default function MoreScreen() {
           {menuItems.map((item, index) => {
             const plantColors = categoryColors(theme, 'plant');
             const iconColor =
-              item.color === 'plant'
+              item.color === 'profile'
+                ? theme.accentPrimary
+                : item.color === 'plant'
                 ? plantColors.main
                 : item.color === 'travel'
                   ? theme.name === 'light'
@@ -69,7 +84,9 @@ export default function MoreScreen() {
                     : palette.travelBlueDark
                   : palette.ink0;
             const tileColor =
-              item.color === 'plant'
+              item.color === 'profile'
+                ? theme.accentFaint
+                : item.color === 'plant'
                 ? plantColors.tint
                 : item.color === 'travel'
                   ? theme.name === 'light'

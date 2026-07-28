@@ -1,20 +1,35 @@
+import { Directory, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { DEFAULT_ADDON_STATE } from '@/addons/registry';
 import type { AddonEnabledState } from '@/addons/types';
 import type { AgentConversations, AgentInstallations } from '@/agents/types';
+import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
+import { deletePlant } from '@/services/plants/schedule';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
+import { useNutrition } from '@/store/nutrition';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import { normalizeTodoTasks, useTodos } from '@/store/todos';
 
-import { getSupabaseClient } from './supabase';
-import { prepareCloudMedia, resolveCloudMedia } from './media';
 import { loadEntitlements } from './entitlements';
+import { decideAccountData } from './data-ownership';
+import { prepareCloudMedia, resolveCloudMedia } from './media';
+import { getSupabaseClient } from './supabase';
 
-type SyncDomainName = 'addons' | 'agents' | 'preferences' | 'schedule' | 'plants' | 'travel';
+export type SyncDomainName =
+  | 'addons'
+  | 'agents'
+  | 'preferences'
+  | 'schedule'
+  | 'plants'
+  | 'travel'
+  | 'todos';
+export type InitialSyncResult = 'ready' | 'conflict';
 type JsonObject = Record<string, unknown>;
 
 interface CloudSyncStatus {
@@ -38,6 +53,7 @@ const domains: {
   name: SyncDomainName;
   read: () => JsonObject;
   write: (payload: JsonObject) => void;
+  reset: () => void;
   subscribe: (onChange: () => void) => () => void;
 }[] = [
   {
@@ -54,6 +70,7 @@ const domains: {
         typeof payload.updatedAt === 'string' ? payload.updatedAt : undefined,
       );
     },
+    reset: () => useAddons.getState().reset(),
     subscribe: (onChange) => useAddons.subscribe(onChange),
   },
   {
@@ -76,6 +93,7 @@ const domains: {
         typeof payload.updatedAt === 'string' ? payload.updatedAt : undefined,
       );
     },
+    reset: () => useAgents.getState().reset(),
     subscribe: (onChange) => useAgents.subscribe(onChange),
   },
   {
@@ -114,6 +132,7 @@ const domains: {
             : usePreferences.getState().dateDisplayFormat,
       });
     },
+    reset: () => usePreferences.getState().resetAll(),
     subscribe: (onChange) => usePreferences.subscribe(onChange),
   },
   {
@@ -143,6 +162,7 @@ const domains: {
           : useSchedule.getState().categories,
       });
     },
+    reset: () => useSchedule.getState().resetAll(),
     subscribe: (onChange) => useSchedule.subscribe(onChange),
   },
   {
@@ -151,6 +171,7 @@ const domains: {
     write: (payload) => {
       if (Array.isArray(payload.plants)) usePlants.setState({ plants: payload.plants });
     },
+    reset: () => usePlants.getState().reset(),
     subscribe: (onChange) => usePlants.subscribe(onChange),
   },
   {
@@ -159,53 +180,42 @@ const domains: {
     write: (payload) => {
       if (Array.isArray(payload.plans)) useTravel.getState().replacePlans(payload.plans);
     },
+    reset: () => useTravel.getState().reset(),
     subscribe: (onChange) => useTravel.subscribe(onChange),
+  },
+  {
+    name: 'todos',
+    read: () => ({ tasks: useTodos.getState().tasks }),
+    write: (payload) => {
+      useTodos.setState({ tasks: normalizeTodoTasks(payload.tasks) });
+    },
+    reset: () => useTodos.getState().reset(),
+    subscribe: (onChange) => useTodos.subscribe(onChange),
   },
 ];
 
-let stopActiveSync: (() => void) | undefined;
+let stopSubscriptions: (() => void) | undefined;
+let activeUserId: string | undefined;
+let activeEmail: string | undefined;
+let pendingRemote: Map<SyncDomainName, JsonObject> | undefined;
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Sync failed.';
+}
 
 async function pushDomain(userId: string, domain: (typeof domains)[number]) {
   const client = getSupabaseClient();
-  if (!client) return;
+  if (!client) throw new Error('Cloud sync is not configured for this build.');
   const payload = await prepareCloudMedia(userId, domain.name, domain.read());
   const { error } = await client.from('app_state').upsert(
     { user_id: userId, domain: domain.name, payload },
     { onConflict: 'user_id,domain' },
   );
   if (error) throw error;
-  useCloudSyncStatus.setState({
-    state: 'synced',
-    lastSyncedAt: new Date().toISOString(),
-    message: undefined,
-  });
 }
 
-async function activateSync(userId: string, email?: string) {
-  stopActiveSync?.();
-  stopActiveSync = undefined;
-  const client = getSupabaseClient();
-  if (!client) return;
-  useCloudSyncStatus.setState({ state: 'syncing', email, message: undefined });
-  await loadEntitlements(userId);
-
-  const { data, error } = await client
-    .from('app_state')
-    .select('domain,payload')
-    .eq('user_id', userId);
-  if (error) throw error;
-
-  const remote = new Map(
-    (data ?? []).map((row) => [row.domain as SyncDomainName, objectValue(row.payload)]),
-  );
-  const missing: (typeof domains)[number][] = [];
-  for (const domain of domains) {
-    const payload = remote.get(domain.name);
-    if (payload) domain.write(await resolveCloudMedia(payload));
-    else missing.push(domain);
-  }
-  await Promise.all(missing.map((domain) => pushDomain(userId, domain)));
-
+function startSubscriptions(userId: string, email?: string) {
+  stopSubscriptions?.();
   const timers = new Map<SyncDomainName, ReturnType<typeof setTimeout>>();
   const unsubscribers = domains.map((domain) =>
     domain.subscribe(() => {
@@ -214,66 +224,213 @@ async function activateSync(userId: string, email?: string) {
       timers.set(
         domain.name,
         setTimeout(() => {
-          void pushDomain(userId, domain).catch((syncError: unknown) => {
-            useCloudSyncStatus.setState({
-              state: 'error',
-              message: syncError instanceof Error ? syncError.message : 'Sync failed.',
+          timers.delete(domain.name);
+          void pushDomain(userId, domain)
+            .then(() => {
+              useCloudSyncStatus.setState({
+                state: 'synced',
+                email,
+                lastSyncedAt: new Date().toISOString(),
+                message: undefined,
+              });
+            })
+            .catch((error: unknown) => {
+              useCloudSyncStatus.setState({
+                state: 'error',
+                email,
+                message: errorMessage(error),
+              });
             });
-          });
         }, 1200),
       );
     }),
   );
-
-  stopActiveSync = () => {
+  stopSubscriptions = () => {
     timers.forEach(clearTimeout);
     unsubscribers.forEach((unsubscribe) => unsubscribe());
   };
+}
+
+async function deleteAppOwnedMedia() {
+  const plants = [...usePlants.getState().plants];
+  await Promise.all(plants.map((plant) => deletePlant(plant.id)));
+  if (Platform.OS === 'web') return;
+  for (const name of ['plants', 'meal-images']) {
+    const directory = new Directory(Paths.document, name);
+    if (directory.exists) {
+      try {
+        await directory.delete();
+      } catch {
+        // Best-effort cleanup; store references are cleared below.
+      }
+    }
+  }
+}
+
+async function resetLocalDomains() {
+  stopSubscriptions?.();
+  stopSubscriptions = undefined;
+  await deleteAppOwnedMedia();
+  domains.forEach((domain) => domain.reset());
+  useNutrition.getState().reset();
+}
+
+async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
+  const resolved = new Map<SyncDomainName, JsonObject>();
+  await Promise.all(
+    [...remote.entries()].map(async ([name, payload]) => {
+      resolved.set(name, await resolveCloudMedia(payload));
+    }),
+  );
+  await resetLocalDomains();
+  for (const domain of domains) {
+    const payload = resolved.get(domain.name);
+    if (payload) domain.write(payload);
+  }
+}
+
+export function hasMeaningfulLocalData(): boolean {
+  const preferences = usePreferences.getState();
+  if (preferences.hasOnboarded || preferences.name.trim() || preferences.goal.trim()) return true;
+  if (usePlants.getState().plants.length > 0) return true;
+  if (useTodos.getState().tasks.length > 0) return true;
+  if (Object.keys(useAgents.getState().installations).length > 0) return true;
+  if (Object.keys(useAgents.getState().conversations).length > 0) return true;
+  if (useTravel.getState().plans.some((plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id)) return true;
+  return Object.entries(useAddons.getState().enabled).some(
+    ([id, enabled]) => enabled !== DEFAULT_ADDON_STATE[id as keyof AddonEnabledState],
+  );
+}
+
+export async function prepareAccountSync(
+  userId: string,
+  email: string | undefined,
+  localCanConflict: boolean,
+): Promise<InitialSyncResult> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud sync is not configured for this build.');
+  stopCloudSync();
+  activeUserId = userId;
+  activeEmail = email;
+  useCloudSyncStatus.setState({ state: 'syncing', email, message: undefined });
+
+  const { data, error } = await client
+    .from('app_state')
+    .select('domain,payload')
+    .eq('user_id', userId);
+  if (error) throw error;
+
+  const remote = new Map<SyncDomainName, JsonObject>();
+  for (const row of data ?? []) {
+    const payload = objectValue(row.payload);
+    if (payload && domains.some((domain) => domain.name === row.domain)) {
+      remote.set(row.domain as SyncDomainName, payload);
+    }
+  }
+
+  const decision = decideAccountData(remote.size, localCanConflict, localCanConflict);
+  if (decision === 'upload-device') {
+    try {
+      await Promise.all(domains.map((domain) => pushDomain(userId, domain)));
+    } catch (uploadError) {
+      // The account had no rows before this first upload. Remove any partial
+      // rows so retrying cannot turn a failed promotion into a false conflict.
+      await client.from('app_state').delete().eq('user_id', userId);
+      throw uploadError;
+    }
+  } else if (decision === 'resolve-conflict') {
+    pendingRemote = remote;
+    return 'conflict';
+  } else {
+    await applyRemote(remote);
+  }
+
+  pendingRemote = undefined;
+  await loadEntitlements(userId);
+  startSubscriptions(userId, email);
   useCloudSyncStatus.setState({
     state: 'synced',
     email,
     lastSyncedAt: new Date().toISOString(),
     message: undefined,
   });
+  return 'ready';
 }
 
-export function startCloudSync(): () => void {
-  const client = getSupabaseClient();
-  if (!client) {
-    useCloudSyncStatus.setState({ state: 'disabled' });
-    return () => undefined;
+export async function resolveAccountSync(choice: 'cloud' | 'device') {
+  if (!activeUserId || !pendingRemote) throw new Error('There is no data choice to resolve.');
+  useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
+  if (choice === 'cloud') {
+    await applyRemote(pendingRemote);
+  } else {
+    await Promise.all(domains.map((domain) => pushDomain(activeUserId!, domain)));
   }
+  pendingRemote = undefined;
+  await loadEntitlements(activeUserId);
+  startSubscriptions(activeUserId, activeEmail);
+  useCloudSyncStatus.setState({
+    state: 'synced',
+    email: activeEmail,
+    lastSyncedAt: new Date().toISOString(),
+    message: undefined,
+  });
+}
 
-  let active = true;
-  const startForSession = (userId?: string, email?: string) => {
-    if (!active) return;
-    if (!userId) {
-      stopActiveSync?.();
-      stopActiveSync = undefined;
-      useCloudSyncStatus.setState({ state: 'signed-out', email: undefined });
-      return;
-    }
-    void activateSync(userId, email).catch((error: unknown) => {
-      if (!active) return;
-      useCloudSyncStatus.setState({
-        state: 'error',
-        email,
-        message: error instanceof Error ? error.message : 'Sync failed.',
-      });
+export function cancelAccountSync() {
+  pendingRemote = undefined;
+  stopCloudSync();
+  useCloudSyncStatus.setState({
+    state: getSupabaseClient() ? 'signed-out' : 'disabled',
+    email: undefined,
+    message: undefined,
+  });
+}
+
+export async function flushCloudSync() {
+  if (!activeUserId) return;
+  stopSubscriptions?.();
+  stopSubscriptions = undefined;
+  useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
+  try {
+    await Promise.all(domains.map((domain) => pushDomain(activeUserId!, domain)));
+    useCloudSyncStatus.setState({
+      state: 'synced',
+      email: activeEmail,
+      lastSyncedAt: new Date().toISOString(),
+      message: undefined,
     });
-  };
+  } catch (error) {
+    useCloudSyncStatus.setState({
+      state: 'error',
+      email: activeEmail,
+      message: errorMessage(error),
+    });
+    throw error;
+  } finally {
+    if (activeUserId) startSubscriptions(activeUserId, activeEmail);
+  }
+}
 
-  void client.auth.getSession().then(({ data }) => {
-    startForSession(data.session?.user.id, data.session?.user.email);
-  });
-  const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
-    setTimeout(() => startForSession(session?.user.id, session?.user.email), 0);
-  });
+export function stopCloudSync() {
+  stopSubscriptions?.();
+  stopSubscriptions = undefined;
+  activeUserId = undefined;
+  activeEmail = undefined;
+}
 
-  return () => {
-    active = false;
-    listener.subscription.unsubscribe();
-    stopActiveSync?.();
-    stopActiveSync = undefined;
-  };
+export async function clearLocalAccountData() {
+  pendingRemote = undefined;
+  stopCloudSync();
+  await resetLocalDomains();
+  useCloudSyncStatus.setState({
+    state: getSupabaseClient() ? 'signed-out' : 'disabled',
+    email: undefined,
+    lastSyncedAt: undefined,
+    message: undefined,
+  });
+}
+
+/** Backward-compatible cleanup for callers mounted by older navigation shells. */
+export function startCloudSync(): () => void {
+  return () => stopCloudSync();
 }
