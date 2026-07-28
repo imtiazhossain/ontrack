@@ -174,7 +174,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
     tasks.length === 0
       ? 'A clear page is a fresh start.'
       : openTasks.length === 0
-        ? 'Everything is handled. Take the win.'
+        ? 'Everything is handled.'
         : completedCount === 0
           ? `${openTasks.length} ${openTasks.length === 1 ? 'task is' : 'tasks are'} ready for your attention.`
           : `${completedCount} down. Keep the rhythm going.`;
@@ -291,8 +291,8 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   </View>
                   <ProgressRing
                     progress={progress}
-                    size={54}
-                    strokeWidth={5}
+                    size={48}
+                    strokeWidth={4}
                     label={`${Math.round(progress * 100)}%`}
                     sublabel="done"
                     trackColor={theme.backgroundSunken}
@@ -376,6 +376,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                         : `Showing ${completedCount} closed tasks. Show open tasks`
                     }
                     accessibilityHint="Toggles between open and closed tasks"
+                    hitSlop={4}
                     onPress={() => {
                       setFilter(filter === 'open' ? 'completed' : 'open');
                       haptics.select();
@@ -863,12 +864,18 @@ function TodoEmptyState({
         >
           <Symbol
             name="status-completed"
-            size={29}
+            size={24}
             color={theme.textTertiary}
           />
         </View>
-        <AppText variant="heading">A clean slate</AppText>
-        <AppText variant="body" color="secondary" align="center">
+        <AppText variant="heading" style={styles.emptyTitle}>
+          A clean slate
+        </AppText>
+        <AppText
+          variant="body"
+          color="secondary"
+          align="center"
+          style={styles.emptyBody}>
           Completed tasks will collect here when you’re ready to look back.
         </AppText>
       </View>
@@ -881,15 +888,22 @@ function TodoEmptyState({
         <View
           style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}
         >
-          <Symbol name="status-completed" size={29} color={theme.success} />
+          <Symbol name="status-completed" size={24} color={theme.success} />
         </View>
-        <AppText variant="heading">Everything is handled</AppText>
-        <AppText variant="body" color="secondary" align="center">
+        <AppText variant="heading" style={styles.emptyTitle}>
+          All caught up
+        </AppText>
+        <AppText
+          variant="body"
+          color="secondary"
+          align="center"
+          style={styles.emptyBody}>
           Enjoy the space you made—or add the next small thing.
         </AppText>
         <View style={styles.emptyActions}>
           <Pressable
             accessibilityRole="button"
+            hitSlop={2}
             onPress={onShowCompleted}
             style={({ pressed }) => [
               styles.emptyAction,
@@ -901,6 +915,7 @@ function TodoEmptyState({
           </Pressable>
           <Pressable
             accessibilityRole="button"
+            hitSlop={2}
             onPress={onFocusComposer}
             style={({ pressed }) => [
               styles.emptyAction,
@@ -920,10 +935,16 @@ function TodoEmptyState({
   return (
     <View style={styles.empty}>
       <View style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}>
-        <Symbol name="tasks" size={29} color={theme.accentPrimary} />
+        <Symbol name="tasks" size={24} color={theme.accentPrimary} />
       </View>
-      <AppText variant="heading">Your list is wide open</AppText>
-      <AppText variant="body" color="secondary" align="center">
+      <AppText variant="heading" style={styles.emptyTitle}>
+        Your list is wide open
+      </AppText>
+      <AppText
+        variant="body"
+        color="secondary"
+        align="center"
+        style={styles.emptyBody}>
         Start with one clear, kind commitment to yourself.
       </AppText>
       <View style={styles.suggestions}>
@@ -954,7 +975,7 @@ function TodoEmptyState({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screenContent: {
-    paddingTop: Platform.select({ web: 76, default: spacing.lg }),
+    paddingTop: Platform.select({ web: 76, default: spacing.sm }),
   },
   content: {
     width: '100%',
@@ -969,15 +990,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  headingCopy: { gap: spacing.xxs },
+  headingCopy: { gap: spacing.xs },
   title: {
     fontFamily: fontFamilies.serif,
-    fontSize: 35,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 38,
     fontWeight: '600',
   },
   openPill: {
-    minHeight: 30,
+    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -986,24 +1007,24 @@ const styles = StyleSheet.create({
   },
   openDot: { width: 7, height: 7, borderRadius: radii.pill },
   hero: {
-    minHeight: 82,
+    minHeight: 84,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
   },
-  heroCopy: { flex: 1, gap: spacing.xxs },
+  heroCopy: { flex: 1, gap: spacing.xs },
   heroOverline: {
     fontSize: 10,
     lineHeight: 12,
     letterSpacing: 1.1,
   },
   heroHeadline: {
-    fontSize: 17,
+    fontSize: 16,
     lineHeight: 21,
   },
   heroSupporting: {
@@ -1028,8 +1049,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   addButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
@@ -1042,7 +1063,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   taskStatus: {
-    height: 44,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -1072,7 +1093,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   list: { flex: 1 },
-  listContent: { gap: spacing.sm, paddingBottom: spacing.lg },
+  listContent: { gap: spacing.sm, paddingBottom: spacing.md },
   listEmptyContent: { flexGrow: 1 },
   taskRow: {
     minHeight: 68,
@@ -1131,18 +1152,28 @@ const styles = StyleSheet.create({
   empty: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
   },
   emptyIcon: {
-    width: 62,
-    height: 62,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.xl,
     borderCurve: 'continuous',
+  },
+  emptyTitle: {
+    fontSize: 21,
+    lineHeight: 26,
+  },
+  emptyBody: {
+    maxWidth: 340,
+    fontSize: 14,
+    lineHeight: 20,
   },
   suggestions: {
     width: '100%',
@@ -1161,6 +1192,7 @@ const styles = StyleSheet.create({
   },
   emptyActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.sm,
     paddingTop: spacing.sm,
@@ -1169,7 +1201,7 @@ const styles = StyleSheet.create({
     minHeight: layout.minTapTarget,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 18,
     borderRadius: radii.pill,
   },
   pressed: { opacity: 0.62 },

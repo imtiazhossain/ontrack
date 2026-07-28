@@ -4,6 +4,7 @@ import { getSupabaseClient } from './supabase';
 
 const BUCKET = 'app-media';
 const MARKER_PREFIX = 'ontrack-media:';
+const MISSING_LOCAL_MEDIA = Symbol('missing-local-media');
 const localUploadCache = new Map<string, string>();
 const signedUrlCache = new Map<string, string>();
 
@@ -49,7 +50,17 @@ async function uploadLocalUri(userId: string, domain: string, uri: string) {
 
   const path = `${userId}/${domain}/${stableHash(uri)}${extension(uri)}`;
   const file = new File(uri);
-  const bytes = await file.arrayBuffer();
+  // Picker and camera results may live in an OS-managed cache. Older records
+  // can therefore outlive their file; omit that broken media reference without
+  // blocking the rest of the account promotion.
+  if (!file.exists) return MISSING_LOCAL_MEDIA;
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await file.arrayBuffer();
+  } catch (error) {
+    if (!file.exists) return MISSING_LOCAL_MEDIA;
+    throw error;
+  }
   const { error } = await client.storage.from(BUCKET).upload(path, bytes, {
     contentType: contentType(uri),
     upsert: true,
@@ -69,15 +80,16 @@ async function prepareValue(userId: string, domain: string, value: unknown): Pro
     return value;
   }
   if (Array.isArray(value)) {
-    return Promise.all(value.map((item) => prepareValue(userId, domain, item)));
+    const items = await Promise.all(value.map((item) => prepareValue(userId, domain, item)));
+    return items.filter((item) => item !== MISSING_LOCAL_MEDIA);
   }
   if (value && typeof value === 'object') {
-    const entries = await Promise.all(
+    const entries = (await Promise.all(
       Object.entries(value).map(async ([key, item]) => [
         key,
         await prepareValue(userId, domain, item),
       ] as const),
-    );
+    )).filter(([, item]) => item !== MISSING_LOCAL_MEDIA);
     return Object.fromEntries(entries);
   }
   return value;

@@ -115,6 +115,7 @@ export function ChecklistPopoverMenu({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ expanded: visible }}
+        hitSlop={4}
         onPress={open}
         style={({ pressed }) => [
           styles.trigger,
@@ -126,7 +127,7 @@ export function ChecklistPopoverMenu({
             opacity: pressed ? 0.72 : 1,
           },
         ]}>
-        <Symbol name={triggerIcon} size={18} color={theme.accentPrimary} />
+        <Symbol name={triggerIcon} size={16} color={theme.accentPrimary} />
       </Pressable>
 
       <Modal
@@ -271,8 +272,8 @@ export function ChecklistPopoverMenu({
 
 const styles = StyleSheet.create({
   trigger: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,

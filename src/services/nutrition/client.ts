@@ -82,6 +82,27 @@ export async function prepareMealImage(photoUri: string): Promise<string> {
   return dataUrl;
 }
 
+/**
+ * Re-encodes a picker/camera result and stores it in the app's durable
+ * documents directory. Image picker URIs can point at an OS-managed cache and
+ * must not be persisted directly in schedule state.
+ */
+export async function persistMealPhoto(photoUri: string, key: string): Promise<string> {
+  if (Platform.OS === 'web' || !photoUri.startsWith('file://')) return photoUri;
+  const result = await ImageManipulator.manipulateAsync(
+    photoUri,
+    [{ resize: { width: 1280 } }],
+    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  const directory = new Directory(Paths.document, 'meal-images');
+  directory.create({ idempotent: true, intermediates: true });
+  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const source = new File(result.uri);
+  const destination = new File(directory, `${safeKey}-${Date.now()}.jpg`);
+  await source.copy(destination);
+  return destination.uri;
+}
+
 export async function analyzeMealPhoto(
   photoUri: string,
   mealName?: string,

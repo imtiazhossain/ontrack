@@ -1,3 +1,4 @@
+import { featureFlags } from '@/constants/feature-flags';
 import type { TravelPlan } from '@/features/travel/types';
 
 /**
@@ -19,8 +20,11 @@ export const ALL_ACCOUNTS_TEST_TRIP: TravelPlan = {
 };
 
 export function withAllAccountsTestTrip(plans: TravelPlan[]): TravelPlan[] {
-  return [
-    ALL_ACCOUNTS_TEST_TRIP,
-    ...plans.filter((plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id),
-  ];
+  const plansWithoutTestTrip = plans.filter(
+    (plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id,
+  );
+
+  return featureFlags.allAccountsTestTrip
+    ? [ALL_ACCOUNTS_TEST_TRIP, ...plansWithoutTestTrip]
+    : plansWithoutTestTrip;
 }

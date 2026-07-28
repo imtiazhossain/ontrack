@@ -36,7 +36,11 @@ export function ProgressRing({
   const theme = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const labelFontSize = Math.min(22, Math.max(13, size * 0.26));
+  const hasWideLabel = (label?.length ?? 0) >= 4;
+  const labelFontSize = Math.min(
+    22,
+    Math.max(hasWideLabel ? 11 : 13, size * (hasWideLabel ? 0.23 : 0.26)),
+  );
   const sublabelFontSize = Math.min(12.5, Math.max(9, size * 0.17));
   const animated = useSharedValue(0);
 
@@ -85,6 +89,7 @@ export function ProgressRing({
             style={{
               fontSize: labelFontSize,
               lineHeight: labelFontSize * 1.15,
+              fontVariant: ['tabular-nums'],
             }}>
             {label}
           </AppText>
