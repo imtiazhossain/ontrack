@@ -32,6 +32,7 @@ export function getSupabaseClient(): SupabaseClient | undefined {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      flowType: 'pkce',
     },
   });
   return client;

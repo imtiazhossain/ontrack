@@ -25,6 +25,7 @@ export const appIcons = {
   habit: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
   plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
   insights: { ios: 'chart.line.uptrend.xyaxis', android: 'monitoring', web: 'monitoring' },
+  tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
 
   // Travel
   flight: { ios: 'airplane', android: 'flight', web: 'flight' },
@@ -50,6 +51,8 @@ export const appIcons = {
   clock: { ios: 'clock', android: 'schedule', web: 'schedule' },
   download: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },
+  important: { ios: 'star', android: 'star', web: 'star' },
+  'important-filled': { ios: 'star.fill', android: 'star', web: 'star' },
   'minus-circle': { ios: 'minus.circle.fill', android: 'do_not_disturb_on', web: 'remove_circle' },
   'plus-circle': { ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' },
   back: { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' },

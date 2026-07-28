@@ -22,6 +22,7 @@ import { useAgents } from '@/store/agents';
 import { useSchedule } from '@/store/schedule';
 import { usePlants } from '@/store/plants';
 import { useTravel } from '@/store/travel';
+import { useTodos } from '@/store/todos';
 import { deletePlant } from '@/services/plants/schedule';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
@@ -52,6 +53,7 @@ export default function ProfileSettingsScreen() {
   const plants = usePlants((s) => s.plants);
   const resetPlants = usePlants((s) => s.reset);
   const resetTravel = useTravel((s) => s.reset);
+  const resetTodos = useTodos((s) => s.reset);
 
   const handleReset = async () => {
     await Promise.all(plants.map((plant) => deletePlant(plant.id)));
@@ -61,6 +63,7 @@ export default function ProfileSettingsScreen() {
     resetAgents();
     resetSchedule();
     resetTravel();
+    resetTodos();
     seedIfNeeded();
   };
 

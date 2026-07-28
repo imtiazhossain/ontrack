@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
+import { useAuthAccess } from '@/store/auth-access';
 import {
   dateDisplayFormatForLocale,
   deviceLocale,
@@ -41,6 +42,7 @@ export const usePreferences = create<PreferencesState>()(
       dateDisplayFormat: dateDisplayFormatForLocale(initialLocale),
       completeOnboarding: ({ name, goal }) => {
         const dateLocale = deviceLocale();
+        useAuthAccess.getState().markGuestDataDirty();
         set({
           hasOnboarded: true,
           name,

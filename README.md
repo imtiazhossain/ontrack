@@ -51,7 +51,7 @@ src/
 - Tester-controlled Food, Fitness, Plants, and Travel add-ons
 - Travel plans, calendar dates, friend invites, flight search, and stay search
 - Hosted install-or-open travel invitations at `ontrack--links.expo.app`
-- Optional account sync through the existing Supabase client
+- Google/Apple SSO with local guest mode and guest-to-account data resolution
 - Agent-ready catalog, permissions, install/remove state, provider runtime, and synced conversations
   (no concrete agents are included yet)
 - One week of seed data on first launch
@@ -66,8 +66,10 @@ environment, then apply the Supabase migrations before inviting cross-device tes
 values are absent, the same binary runs in local test mode and never waits for a server.
 
 The app uses one `app_state` row per account and data domain, private `app-media` storage, row-level
-security, and debounced writes. No realtime, feature-flag, subscription, or plugin vendor is
-required for the beta.
+security, and debounced writes. Guests stay local until they choose Google or Apple; see
+[`docs/AUTH_SETUP.md`](docs/AUTH_SETUP.md) for provider-console callbacks, Apple entitlement and
+secret-rotation requirements, and release gates. No realtime, feature-flag, subscription, or plugin
+vendor is required for the beta.
 
 ## Meal analysis
 

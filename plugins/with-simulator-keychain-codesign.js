@@ -6,6 +6,7 @@ const { withXcodeProject } = require('@expo/config-plugins');
  * errSecMissingEntitlement. Re-sign the .app with a local trusted identity when present.
  */
 const SCRIPT_NAME = '[onTrack] Re-sign simulator app for Keychain';
+const DEV_LAUNCHER_SCRIPT_NAME = '[Expo Dev Launcher] Strip Local Network Keys for Release';
 
 const SHELL_SCRIPT = `set -e
 if [ "\${PLATFORM_NAME}" != "iphonesimulator" ]; then
@@ -30,20 +31,36 @@ echo "Re-signed simulator app with $IDENTITY"
 
 function ensureResignPhase(project) {
   const section = project.hash.project.objects.PBXShellScriptBuildPhase || {};
+  let hasResignPhase = false;
+
   for (const key of Object.keys(section)) {
     const phase = section[key];
-    if (phase && typeof phase === 'object' && phase.name === SCRIPT_NAME) {
-      return project;
+    if (
+      phase &&
+      typeof phase === 'object' &&
+      (phase.name === SCRIPT_NAME || phase.name === DEV_LAUNCHER_SCRIPT_NAME)
+    ) {
+      phase.alwaysOutOfDate = 1;
+      if (phase.name === SCRIPT_NAME) {
+        hasResignPhase = true;
+      }
     }
   }
+  if (hasResignPhase) {
+    return project;
+  }
+
   const target = project.getFirstTarget();
   if (!target?.uuid) {
     return project;
   }
-  project.addBuildPhase([], 'PBXShellScriptBuildPhase', SCRIPT_NAME, target.uuid, {
+  const addedPhase = project.addBuildPhase([], 'PBXShellScriptBuildPhase', SCRIPT_NAME, target.uuid, {
     shellPath: '/bin/sh',
     shellScript: SHELL_SCRIPT,
   });
+  if (addedPhase?.buildPhase) {
+    addedPhase.buildPhase.alwaysOutOfDate = 1;
+  }
   return project;
 }
 

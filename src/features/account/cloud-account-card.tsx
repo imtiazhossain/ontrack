@@ -1,69 +1,48 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, Input } from '@/components/primitives';
+import { AppText, Button, ErrorMessage } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { useAuthSession } from '@/features/auth/auth-provider';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  createAccountWithEmail,
-  signInWithEmail,
-  signOutCloudAccount,
-} from '@/services/cloud/account';
-import { getSupabaseClient } from '@/services/cloud/supabase';
 import { useCloudSyncStatus } from '@/services/cloud/sync';
 
 export function CloudAccountCard() {
+  const router = useRouter();
   const theme = useTheme();
   const sync = useCloudSyncStatus();
-  const configured = Boolean(getSupabaseClient());
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { isGuest, user, signOutCurrentDevice } = useAuthSession();
   const [working, setWorking] = useState(false);
-  const [message, setMessage] = useState<{ text: string; isError: boolean }>();
+  const [message, setMessage] = useState<string>();
 
-  const submit = async (mode: 'signin' | 'signup') => {
-    setMessage(undefined);
-    if (!email.trim() || password.length < 8) {
-      setMessage({
-        text: 'Enter an email and a password with at least 8 characters.',
-        isError: true,
-      });
-      return;
-    }
-    setWorking(true);
-    try {
-      const user =
-        mode === 'signin'
-          ? await signInWithEmail(email, password)
-          : await createAccountWithEmail(email, password);
-      setMessage({
-        text: user
-          ? 'Signed in. This device will now sync.'
-          : 'Check your email to confirm the account, then sign in.',
-        isError: false,
-      });
-      setPassword('');
-    } catch (error) {
-      setMessage({
-        text: error instanceof Error ? error.message : 'Account request failed.',
-        isError: true,
-      });
-    } finally {
-      setWorking(false);
-    }
-  };
+  const provider = String(user?.app_metadata.provider ?? 'account');
+  const providerLabel =
+    provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'Existing account';
 
-  const signOut = async () => {
+  const signOut = async (force = false) => {
     setWorking(true);
     setMessage(undefined);
     try {
-      await signOutCloudAccount();
-      setMessage({ text: 'Signed out. Local data remains on this device.', isError: false });
-    } catch (error) {
-      setMessage({
-        text: error instanceof Error ? error.message : 'Sign out failed.',
-        isError: true,
-      });
+      const result = await signOutCurrentDevice(force);
+      if (result.status === 'sync-failed') {
+        setMessage(result.message);
+        Alert.alert(
+          'Changes are not synced',
+          `${result.message}\n\nSigning out anyway removes this device’s local data. Cloud data and photos in your system library are not deleted.`,
+          [
+            { text: 'Stay signed in', style: 'cancel' },
+            { text: 'Retry sync', onPress: () => void signOut(false) },
+            {
+              text: 'Sign out anyway',
+              style: 'destructive',
+              onPress: () => void signOut(true),
+            },
+          ],
+        );
+      }
+    } catch (signOutError) {
+      setMessage(signOutError instanceof Error ? signOutError.message : 'Sign out failed.');
     } finally {
       setWorking(false);
     }
@@ -71,77 +50,60 @@ export function CloudAccountCard() {
 
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
-      {sync.email ? (
+      {isGuest ? (
         <>
-          <AppText variant="bodyMedium">{sync.email}</AppText>
-          {sync.state === 'error' ? (
-            <ErrorMessage
-              message={sync.message ?? 'Sync needs attention.'}
-              variant="caption"
-            />
-          ) : (
-            <AppText variant="caption" color="secondary">
-              {sync.state === 'syncing'
-                ? 'Syncing…'
-                : 'Cloud sync is on. Add-ons, agents, and app data follow this account.'}
-            </AppText>
-          )}
-          <Button variant="secondary" disabled={working} onPress={() => void signOut()} accessibilityLabel="Sign out of cloud sync">
-            Sign out
-          </Button>
-        </>
-      ) : configured ? (
-        <>
-          <AppText variant="bodyMedium">Sync between devices</AppText>
-          <AppText variant="caption" color="secondary">
-            Use one onTrack account on every device. The app still works offline between syncs.
-          </AppText>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-          />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-          />
-          <View style={styles.actions}>
-            <Button disabled={working} style={styles.flex} onPress={() => void submit('signin')} accessibilityLabel="Sign in">
-              Sign in
-            </Button>
-            <Button variant="secondary" disabled={working} style={styles.flex} onPress={() => void submit('signup')} accessibilityLabel="Create account">
-              Create account
-            </Button>
+          <View style={styles.heading}>
+            <AppText variant="bodyMedium">You’re using guest mode</AppText>
+            <View style={[styles.pill, { backgroundColor: theme.accentFaint }]}>
+              <AppText variant="overline" color="accent">This device</AppText>
+            </View>
           </View>
+          <AppText variant="caption" color="secondary">
+            Create or sign in to back up your plans, protect app-owned photos, and continue on another device.
+          </AppText>
+          <Button
+            onPress={() => router.push('/account' as never)}
+            accessibilityLabel="Create or sign in to an account">
+            Create or sign in
+          </Button>
         </>
       ) : (
         <>
-          <AppText variant="bodyMedium">Local test mode</AppText>
-          <AppText variant="caption" color="secondary">
-            This build works without a server. Add the existing Supabase URL and publishable key to the TestFlight environment to enable account sync.
-          </AppText>
+          <View style={styles.heading}>
+            <View style={styles.flex}>
+              <AppText variant="bodyMedium">{user?.email ?? 'Signed in'}</AppText>
+              <AppText variant="caption" color="secondary">{providerLabel}</AppText>
+            </View>
+            <View style={[styles.pill, { backgroundColor: theme.accentFaint }]}>
+              <AppText variant="overline" color="accent">
+                {sync.state === 'syncing' ? 'Syncing' : sync.state === 'error' ? 'Attention' : 'Synced'}
+              </AppText>
+            </View>
+          </View>
+          {sync.state === 'error' ? (
+            <ErrorMessage message={sync.message ?? 'Cloud sync needs attention.'} variant="caption" />
+          ) : (
+            <AppText variant="caption" color="secondary">
+              Your account data follows you across signed-in devices and remains available between syncs.
+            </AppText>
+          )}
+          <Button
+            variant="secondary"
+            disabled={working}
+            onPress={() => void signOut()}
+            accessibilityLabel="Sign out of this device">
+            {working ? 'Finishing sync…' : 'Sign out of this device'}
+          </Button>
         </>
       )}
-      {message ? (
-        message.isError ? (
-          <ErrorMessage message={message.text} variant="caption" />
-        ) : (
-          <AppText variant="caption" color="secondary">{message.text}</AppText>
-        )
-      ) : null}
+      {message ? <ErrorMessage message={message} variant="caption" /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.md },
-  actions: { flexDirection: 'row', gap: spacing.sm },
+  heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1 },
+  pill: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.pill },
 });
