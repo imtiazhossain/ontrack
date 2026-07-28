@@ -77,7 +77,8 @@
         {
           "defaultChannel": "event-chat"
         }
-      ]
+      ],
+      "./plugins/with-simulator-keychain-codesign.js"
     ],
     "experiments": {
       "typedRoutes": true
