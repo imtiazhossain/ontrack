@@ -3,10 +3,13 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { useUI } from '@/store/ui';
+import { todayKey } from '@/utils/date';
 
 export default function TabsLayout() {
   const theme = useTheme();
   const hasOnboarded = usePreferences((s) => s.hasOnboarded);
+  const setSelectedDate = useUI((state) => state.setSelectedDate);
 
   if (!hasOnboarded) {
     return <Redirect href="/onboarding" />;
@@ -19,7 +22,9 @@ export default function TabsLayout() {
       iconColor={theme.textTertiary}
       tintColor={theme.accentPrimary}
       labelStyle={{ selected: { color: theme.accentPrimary } }}>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger
+        name="index"
+        listeners={{ tabPress: () => setSelectedDate(todayKey()) }}>
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'sun.max', selected: 'sun.max.fill' }} md="light_mode" />
       </NativeTabs.Trigger>

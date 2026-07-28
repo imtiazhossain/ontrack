@@ -93,7 +93,6 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: theme.backgroundPrimary },
               }}
             />
-            <Stack.Screen name="day/[date]" />
             <Stack.Screen name="workouts" />
             <Stack.Screen name="plants" />
             <Stack.Screen name="travel" />

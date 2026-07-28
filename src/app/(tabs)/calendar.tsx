@@ -9,6 +9,7 @@ import { layout, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
+import { useUI } from '@/store/ui';
 import { formatMonthTitle, fromDateKey, todayKey } from '@/utils/date';
 
 export default function CalendarScreen() {
@@ -16,6 +17,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const activities = useSchedule((state) => state.activities);
   const enabledAddons = useAddons((state) => state.enabled);
+  const setSelectedDate = useUI((state) => state.setSelectedDate);
   const activitiesByDate = useMemo(() => {
     const grouped: Record<string, typeof activities> = {};
     for (const activity of activities) {
@@ -40,6 +42,11 @@ export default function CalendarScreen() {
   const shiftMonth = (delta: number) => {
     const next = new Date(year, month + delta, 1);
     setCursor(next);
+  };
+
+  const openDay = () => {
+    setSelectedDate(selected);
+    router.navigate('/(tabs)');
   };
 
   return (
@@ -82,7 +89,7 @@ export default function CalendarScreen() {
             : `${dayCount} ${dayCount === 1 ? 'activity' : 'activities'} planned`}
         </AppText>
         <Button
-          onPress={() => router.push({ pathname: '/day/[date]', params: { date: selected } })}
+          onPress={openDay}
           accessibilityLabel="Open day">
           Open day
         </Button>
