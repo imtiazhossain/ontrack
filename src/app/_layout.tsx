@@ -16,6 +16,7 @@ import { useTravel } from '@/store/travel';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { AppSafeArea, HeaderBackButton } from '@/components/primitives';
+import { spacing } from '@/design-system';
 
 export default function RootLayout() {
   const theme = useTheme();
@@ -72,10 +73,26 @@ export default function RootLayout() {
               headerShadowVisible: false,
               headerStyle: { backgroundColor: theme.backgroundPrimary },
               headerLeft: () => <HeaderBackButton />,
-              contentStyle: { backgroundColor: theme.backgroundPrimary },
+              contentStyle: {
+                backgroundColor: theme.backgroundPrimary,
+                paddingTop: spacing.md,
+              },
             }}>
-            <Stack.Screen name="onboarding" options={{ animation: 'fade', headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="onboarding"
+              options={{
+                animation: 'fade',
+                headerShown: false,
+                contentStyle: { backgroundColor: theme.backgroundPrimary },
+              }}
+            />
+            <Stack.Screen
+              name="(tabs)"
+              options={{
+                headerShown: false,
+                contentStyle: { backgroundColor: theme.backgroundPrimary },
+              }}
+            />
             <Stack.Screen name="day/[date]" />
             <Stack.Screen name="profile" />
             <Stack.Screen name="plants" />
