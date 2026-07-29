@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { getSharedPayloads } from 'expo-sharing';
 import { Stack, useRouter } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
@@ -29,12 +30,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-        <AppSafeArea>
-          <AuthSessionProvider hydrated={hydrated}>
-            <RootNavigator hydrated={hydrated} />
-          </AuthSessionProvider>
-        </AppSafeArea>
+        <ThemeProvider value={theme.name === 'dark' ? DarkTheme : DefaultTheme}>
+          <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+          <AppSafeArea>
+            <AuthSessionProvider hydrated={hydrated}>
+              <RootNavigator hydrated={hydrated} />
+            </AuthSessionProvider>
+          </AppSafeArea>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
