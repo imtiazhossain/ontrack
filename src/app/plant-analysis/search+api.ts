@@ -1,3 +1,4 @@
+import { compressResponse } from '@/services/http/compression';
 import { plantCorsHeaders, plantError, plantOptionsResponse } from '@/services/plants/server';
 import { searchPlantTaxa } from '@/services/plants/taxonomy';
 
@@ -8,5 +9,8 @@ export async function GET(request: Request) {
   if (query.length < 2 || query.length > 80) {
     return plantError('Enter at least two characters to search for a plant.', 'INVALID_INPUT', 400);
   }
-  return Response.json({ results: await searchPlantTaxa(query) }, { headers: plantCorsHeaders });
+  return compressResponse(
+    request,
+    Response.json({ results: await searchPlantTaxa(query) }, { headers: plantCorsHeaders }),
+  );
 }

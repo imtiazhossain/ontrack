@@ -1,4 +1,8 @@
-import { formatTodoListText } from '@/features/todos/share';
+import {
+  createInstalledTodoCollaboratorJoinUrl,
+  createTodoCollaboratorJoinUrl,
+  formatTodoListText,
+} from '@/features/todos/share';
 import type { TodoList, TodoMember, TodoTask } from '@/store/todos';
 
 const list: TodoList = {
@@ -68,6 +72,15 @@ describe('pretty to-do list text', () => {
   it('omits assignments for private lists and celebrates an empty list', () => {
     expect(formatTodoListText({ name: 'Maintenance' }, [], [])).toBe(
       ['📝 Maintenance', '', '✓ All done!', '', 'All done · onTrack'].join('\n'),
+    );
+  });
+
+  it('creates web fallback and installed-app collaborator links', () => {
+    expect(createTodoCollaboratorJoinUrl('abc123')).toBe(
+      'https://ontrack--links.expo.app/c/abc123',
+    );
+    expect(createInstalledTodoCollaboratorJoinUrl('abc123')).toBe(
+      'ontrack:///c/abc123',
     );
   });
 });

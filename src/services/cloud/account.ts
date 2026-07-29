@@ -41,7 +41,14 @@ export function appleNameMetadata(fullName?: {
 
 export function accessibleAuthError(error: unknown) {
   const fallback = 'Sign-in could not be completed. Check your connection and try again.';
-  const message = error instanceof Error ? error.message : fallback;
+  const objectMessage =
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+      ? (error as { message: string }).message
+      : undefined;
+  const message = (error instanceof Error ? error.message : objectMessage)?.trim() || fallback;
   if (/network|fetch|offline/i.test(message)) {
     return 'You appear to be offline. Reconnect and try again, or continue as a guest.';
   }

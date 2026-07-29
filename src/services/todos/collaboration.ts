@@ -103,29 +103,58 @@ function permanentMutationError(message: string) {
   );
 }
 
+const TODO_MUTATION_BATCH_SIZE = 50;
+
 export async function flushTodoMutations(): Promise<void> {
   const client = await authenticatedClient();
   while (true) {
-    const mutation = useTodos.getState().pendingMutations[0];
-    if (!mutation) return;
-    useTodos.getState().markMutationAttempt(mutation.id);
-    const { error } = await client.rpc('apply_todo_mutation', {
-      mutation_id: mutation.id,
-      requested_list_id: mutation.listId,
-      operation: mutation.operation,
-      mutation_payload: mutation.payload,
+    const batch = useTodos
+      .getState()
+      .pendingMutations.slice(0, TODO_MUTATION_BATCH_SIZE);
+    if (batch.length === 0) return;
+    batch.forEach((mutation) => {
+      useTodos.getState().markMutationAttempt(mutation.id);
     });
-    if (!error) {
-      useTodos.getState().acknowledgeMutation(mutation.id);
-      continue;
+    const { data, error } = await client.rpc('apply_todo_mutations', {
+      mutations: batch.map((mutation) => ({
+        id: mutation.id,
+        listId: mutation.listId,
+        operation: mutation.operation,
+        payload: mutation.payload,
+      })),
+    });
+    if (error || !Array.isArray(data)) return;
+
+    const results = new Map<string, { ok: boolean; error?: string }>();
+    for (const value of data) {
+      if (!value || typeof value !== 'object') continue;
+      const result = value as Record<string, unknown>;
+      if (typeof result.id !== 'string' || typeof result.ok !== 'boolean') continue;
+      results.set(result.id, {
+        ok: result.ok,
+        error: typeof result.error === 'string' ? result.error : undefined,
+      });
     }
 
-    if (permanentMutationError(error.message)) {
-      useTodos.getState().rejectMutation(mutation.id, error.message);
-      await loadTodoListSnapshot(mutation.listId).catch(() => undefined);
-      continue;
+    let shouldRetryLater = false;
+    const rejectedLists = new Set<string>();
+    for (const mutation of batch) {
+      const result = results.get(mutation.id);
+      if (result?.ok) {
+        useTodos.getState().acknowledgeMutation(mutation.id);
+      } else if (result?.error && permanentMutationError(result.error)) {
+        useTodos.getState().rejectMutation(mutation.id, result.error);
+        rejectedLists.add(mutation.listId);
+      } else {
+        shouldRetryLater = true;
+      }
     }
-    return;
+    await Promise.all(
+      [...rejectedLists].map((listId) =>
+        loadTodoListSnapshot(listId).catch(() => undefined),
+      ),
+    );
+    if (shouldRetryLater) return;
   }
 }
 
@@ -342,6 +371,62 @@ export async function acceptTodoShareLink(code: string): Promise<string> {
   return data;
 }
 
+export async function createTodoCollaboratorLink(listIds: string[]): Promise<string> {
+  const client = await authenticatedClient();
+  const { data, error } = await client.rpc('create_todo_collaborator_link', {
+    requested_list_ids: listIds,
+  });
+  if (error || typeof data !== 'string') {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'A collaborator link could not be created.'),
+    );
+  }
+  return data;
+}
+
+export async function resolveTodoCollaboratorLink(
+  code: string,
+): Promise<{ inviterName: string; listNames: string[] } | undefined> {
+  const client = await authenticatedClient();
+  const { data, error } = await client.rpc('resolve_todo_collaborator_link', {
+    link_code: code,
+  });
+  if (error) {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'This collaborator link could not be opened.'),
+    );
+  }
+  const row = Array.isArray(data) ? data[0] : undefined;
+  if (
+    !row ||
+    typeof row.inviter_name !== 'string' ||
+    !Array.isArray(row.list_names)
+  ) {
+    return undefined;
+  }
+  const listNames = row.list_names.filter(
+    (name: unknown): name is string => typeof name === 'string',
+  );
+  return listNames.length ? { inviterName: row.inviter_name, listNames } : undefined;
+}
+
+export async function acceptTodoCollaboratorLink(code: string): Promise<string[]> {
+  const client = await authenticatedClient();
+  const { data, error } = await client.rpc('accept_todo_collaborator_link', {
+    link_code: code,
+  });
+  const listIds = Array.isArray(data)
+    ? data.filter((id: unknown): id is string => typeof id === 'string')
+    : [];
+  if (error || !listIds.length) {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'This collaborator link is invalid or has been revoked.'),
+    );
+  }
+  await Promise.all(listIds.map((listId) => loadTodoListSnapshot(listId)));
+  return listIds;
+}
+
 export async function removeTodoMember(listId: string, userId: string) {
   const client = await authenticatedClient();
   const { error } = await client.rpc('remove_todo_member', {
@@ -353,21 +438,49 @@ export async function removeTodoMember(listId: string, userId: string) {
 }
 
 export async function leaveTodoList(listId: string) {
-  const client = await authenticatedClient();
-  const { error } = await client.rpc('leave_todo_list', {
-    requested_list_id: listId,
-  });
-  if (error) throw new TodoCollaborationError(error.message);
+  const state = useTodos.getState();
+  const list = state.lists.find((item) => item.id === listId);
+  const rollback = list
+    ? {
+        list,
+        tasks: state.tasks.filter((task) => task.listId === listId),
+        members: state.members.filter((member) => member.listId === listId),
+      }
+    : undefined;
   useTodos.getState().removeSharedList(listId);
+  try {
+    const client = await authenticatedClient();
+    const { error } = await client.rpc('leave_todo_list', {
+      requested_list_id: listId,
+    });
+    if (error) throw new TodoCollaborationError(error.message);
+  } catch (error) {
+    if (rollback) useTodos.getState().replaceSharedSnapshot(rollback);
+    throw error;
+  }
 }
 
 export async function deleteSharedTodoList(listId: string) {
-  const client = await authenticatedClient();
-  const { error } = await client.rpc('delete_todo_list', {
-    requested_list_id: listId,
-  });
-  if (error) throw new TodoCollaborationError(error.message);
+  const state = useTodos.getState();
+  const list = state.lists.find((item) => item.id === listId);
+  const rollback = list
+    ? {
+        list,
+        tasks: state.tasks.filter((task) => task.listId === listId),
+        members: state.members.filter((member) => member.listId === listId),
+      }
+    : undefined;
   useTodos.getState().removeSharedList(listId);
+  try {
+    const client = await authenticatedClient();
+    const { error } = await client.rpc('delete_todo_list', {
+      requested_list_id: listId,
+    });
+    if (error) throw new TodoCollaborationError(error.message);
+  } catch (error) {
+    if (rollback) useTodos.getState().replaceSharedSnapshot(rollback);
+    throw error;
+  }
 }
 
 export function subscribeToTodoList(

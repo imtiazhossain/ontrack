@@ -12,7 +12,7 @@ import {
 } from '@/components/primitives/time-field.types';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import { formatMinutes } from '@/utils/date';
+import { formatMinutes, nowMinutes } from '@/utils/date';
 
 /**
  * Android-only Material time field: pressable summary + dialog clock picker.
@@ -28,8 +28,8 @@ export function MaterialTimeField({
 }: TimeFieldProps) {
   const theme = useTheme();
   const [showPicker, setShowPicker] = useState(false);
-  const minutes = clampMinutesFromMidnight(value);
-  const displayValue = formatMinutes(minutes);
+  const minutes = clampMinutesFromMidnight(value ?? nowMinutes());
+  const displayValue = value === null ? 'Choose time' : formatMinutes(minutes);
 
   return (
     <View style={styles.wrapper}>

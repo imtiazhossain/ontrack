@@ -25,7 +25,8 @@
         "NSCameraUsageDescription": "onTrack uses the camera to capture meal, activity, and plant-care photos.",
         "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal, activity, and plant-care photos.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "F5HRXF5795"
     },
     "android": {
       "package": "com.imtihoss.ontracknow",
@@ -38,6 +39,16 @@
               "scheme": "https",
               "host": "ontrack--links.expo.app",
               "pathPrefix": "/l/"
+            },
+            {
+              "scheme": "https",
+              "host": "ontrack--links.expo.app",
+              "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "ontrack--links.expo.app",
+              "pathPrefix": "/c/"
             }
           ],
           "category": [
@@ -63,7 +74,14 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "headers": {
+            "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400"
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -97,7 +115,32 @@
           "defaultChannel": "event-chat"
         }
       ],
-      "./plugins/with-simulator-keychain-codesign.js"
+      "./plugins/with-simulator-keychain-codesign.js",
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "activationRule": {
+              "supportsText": true,
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsWebPageWithMaxCount": 1,
+              "supportsImageWithMaxCount": 1,
+              "supportsFileWithMaxCount": 1
+            }
+          },
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": [
+              "text/plain",
+              "text/uri-list",
+              "text/calendar",
+              "application/ics",
+              "image/*"
+            ]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

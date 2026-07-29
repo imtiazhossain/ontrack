@@ -1,7 +1,7 @@
 export interface TimeFieldProps {
   label?: string;
-  /** Minutes from local midnight (0–1439). */
-  value: number;
+  /** Minutes from local midnight (0–1439), or null until a time is chosen. */
+  value: number | null;
   onChange: (minutesFromMidnight: number) => void;
   disabled?: boolean;
   accessibilityLabel?: string;

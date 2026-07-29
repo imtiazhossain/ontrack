@@ -69,18 +69,18 @@ public class TravelDocumentReaderModule: Module {
 
 private final class InvalidDocumentUrlException: Exception, @unchecked Sendable {
   override var reason: String {
-    "The selected confirmation document could not be opened."
+    "The shared document could not be opened."
   }
 }
 
 private final class UnsupportedDocumentException: Exception, @unchecked Sendable {
   override var reason: String {
-    "Choose a PDF, image, text file, or saved email."
+    "Choose a supported image, PDF, text file, or saved email."
   }
 }
 
 private final class NoTextFoundException: Exception, @unchecked Sendable {
   override var reason: String {
-    "No readable flight information was found in this document."
+    "No readable text was found in this document."
   }
 }

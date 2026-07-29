@@ -72,4 +72,13 @@ describe('accessible authentication errors', () => {
       'invalid or expired',
     );
   });
+
+  it('preserves messages from Supabase error objects', () => {
+    expect(
+      accessibleAuthError({
+        code: '23514',
+        message: 'new row violates check constraint "app_state_domain_check"',
+      }),
+    ).toBe('new row violates check constraint "app_state_domain_check"');
+  });
 });

@@ -8,8 +8,12 @@
         ],
         "components": [
           {
+            "/": "/i/*",
+            "comment": "Open short onTrack travel invitations."
+          },
+          {
             "/": "/invite/travel",
-            "comment": "Open shared onTrack travel invitations."
+            "comment": "Open legacy onTrack travel invitations."
           }
         ]
       }

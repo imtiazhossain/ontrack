@@ -1,4 +1,5 @@
 import { corsHeaders, normalizeMovieDetails, optionsResponse, tmdbRequest } from '@/services/movies/server';
+import { compressResponse } from '@/services/http/compression';
 
 export function OPTIONS() {
   return optionsResponse();
@@ -14,5 +15,5 @@ export async function GET(request: Request, { id }: { id: string }) {
   if (!(upstream instanceof Response) || !upstream.ok) return upstream;
   const movie = normalizeMovieDetails((await upstream.json()) as Record<string, unknown>, type);
   if (!movie) return Response.json({ error: 'Movie not found.' }, { status: 404, headers: corsHeaders });
-  return Response.json(movie, { headers: corsHeaders });
+  return compressResponse(request, Response.json(movie, { headers: corsHeaders }));
 }

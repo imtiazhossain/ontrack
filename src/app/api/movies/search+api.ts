@@ -1,4 +1,5 @@
 import { corsHeaders, normalizeSearchMovie, optionsResponse, tmdbRequest } from '@/services/movies/server';
+import { compressResponse } from '@/services/http/compression';
 
 export function OPTIONS() {
   return optionsResponse();
@@ -17,5 +18,5 @@ export async function GET(request: Request) {
         .map((item) => normalizeSearchMovie(item as Record<string, unknown>))
         .filter((movie) => movie !== undefined)
     : [];
-  return Response.json({ results }, { headers: corsHeaders });
+  return compressResponse(request, Response.json({ results }, { headers: corsHeaders }));
 }

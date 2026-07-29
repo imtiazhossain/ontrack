@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import { formatMinutes } from '@/utils/date';
+import { formatMinutes, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
 import { Symbol } from './symbol';
@@ -28,8 +28,8 @@ export function TimeField({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [showPicker, setShowPicker] = useState(false);
-  const minutes = clampMinutesFromMidnight(value);
-  const displayValue = formatMinutes(minutes);
+  const minutes = clampMinutesFromMidnight(value ?? nowMinutes());
+  const displayValue = value === null ? 'Choose time' : formatMinutes(minutes);
 
   return (
     <View style={styles.wrapper}>

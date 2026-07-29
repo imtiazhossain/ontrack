@@ -5,6 +5,7 @@ import {
   nutritionError,
   nutritionOptionsResponse,
 } from '@/services/nutrition/server';
+import { compressResponse } from '@/services/http/compression';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
 
@@ -15,7 +16,10 @@ export async function POST(request: Request) {
   if (!input?.imageDataUrl) return nutritionError('A meal image is required.', 'INVALID_IMAGE', 400);
   try {
     const analysis = await analyzePhoto({ imageDataUrl: input.imageDataUrl, mealName: input.mealName });
-    return Response.json({ draftId: crypto.randomUUID(), analysis }, { headers: nutritionCorsHeaders });
+    return compressResponse(
+      request,
+      Response.json({ draftId: crypto.randomUUID(), analysis }, { headers: nutritionCorsHeaders }),
+    );
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn('Meal analysis provider failure:', error instanceof Error ? error.message : 'unknown error');

@@ -62,8 +62,9 @@ must compile agent code into the app; do not download executable agent code at r
   requires it.
 - Put vendor travel search behind `TravelSearchProvider`. The beta uses free provider web checkout
   links, so onTrack stores no payment data and pays no aggregator fee.
-- Travel sharing uses the stable `ontrack--links.expo.app` EAS Hosting alias and Apple Universal
-  Links. The landing page keeps the invite payload available while a friend installs the app.
+- Travel and checklist sharing use the stable `ontrack--links.expo.app` EAS Hosting alias and
+  Apple Universal Links. Landing pages keep the invitation route available while a friend installs
+  the app.
 - Keep AI optional and offload only when a user explicitly requests analysis. Cache normalized
   results in the owning domain.
 - MCP is for developer/admin automation, not the mobile runtime.

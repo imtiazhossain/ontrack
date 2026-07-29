@@ -2,6 +2,7 @@ import { resolve4, resolve6 } from 'node:dns/promises';
 
 import { AI_DISCLAIMER } from '@/services/ai';
 import { validateMealAnalysis } from '@/services/ai/validate';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import type { FoodItem, MealAnalysis, NutrientValue, NutritionSource } from '@/types/models';
 import type { MealLinkCandidate, MealLinkResolution, NutritionErrorCode } from './types';
 import { isPrivateHostname, sanitizeMealUrl } from './url-safety';
@@ -196,7 +197,7 @@ function responseText(body: Record<string, unknown>): string | undefined {
 }
 
 async function openAIResponse(payload: Record<string, unknown>) {
-  const response = await fetch(OPENAI_RESPONSES_URL, {
+  const response = await guardedFetch('openai', OPENAI_RESPONSES_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -209,7 +210,9 @@ async function openAIResponse(payload: Record<string, unknown>) {
       reasoning: { effort: 'low' },
       ...payload,
     }),
-    signal: AbortSignal.timeout(45_000),
+  }, {
+    timeoutMs: 45_000,
+    maxConcurrency: 2,
   });
   if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
   return response.json() as Promise<Record<string, unknown>>;
@@ -223,7 +226,7 @@ async function ollamaVisionResponse(imageDataUrl: string, prompt: string): Promi
   const encodedImage = imageDataUrl.slice(imageDataUrl.indexOf(',') + 1);
   let response: Response;
   try {
-    response = await fetch(new URL('/api/chat', baseUrl), {
+    response = await guardedFetch('ollama', new URL('/api/chat', baseUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -235,7 +238,9 @@ async function ollamaVisionResponse(imageDataUrl: string, prompt: string): Promi
         options: { temperature: 0, num_predict: 900 },
         messages: [{ role: 'user', content: prompt, images: [encodedImage] }],
       }),
-      signal: AbortSignal.timeout(120_000),
+    }, {
+      timeoutMs: 120_000,
+      maxConcurrency: 1,
     });
   } catch {
     throw new Error('OLLAMA_UNAVAILABLE');
@@ -311,18 +316,21 @@ async function groundFood(food: VisionFood, index: number): Promise<{ item: Food
   if (!apiKey || food.portionGrams <= 0) return { item: fallback };
 
   try {
-    const search = await fetch(`${FDC_URL}/foods/search?api_key=${encodeURIComponent(apiKey)}`, {
+    const search = await guardedFetch('usda-fdc', `${FDC_URL}/foods/search?api_key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: food.name, pageSize: 1, dataType: ['Foundation', 'Survey (FNDDS)', 'Branded'] }),
-      signal: AbortSignal.timeout(8_000),
+    }, {
+      timeoutMs: 8_000,
+      maxConcurrency: 6,
     });
     if (!search.ok) return { item: fallback };
     const searchBody = await search.json() as { foods?: { fdcId?: number; description?: string }[] };
     const match = searchBody.foods?.[0];
     if (!match?.fdcId) return { item: fallback };
-    const details = await fetch(`${FDC_URL}/food/${match.fdcId}?api_key=${encodeURIComponent(apiKey)}`, {
-      signal: AbortSignal.timeout(8_000),
+    const details = await guardedFetch('usda-fdc', `${FDC_URL}/food/${match.fdcId}?api_key=${encodeURIComponent(apiKey)}`, {}, {
+      timeoutMs: 8_000,
+      maxConcurrency: 6,
     });
     if (!details.ok) return { item: fallback };
     const detailsBody = await details.json() as { foodNutrients?: FdcFoodNutrient[] };
@@ -436,11 +444,13 @@ export async function enhanceMealImage(input: { imageDataUrl: string; mealName?:
   form.append('background', 'transparent');
   form.append('output_format', 'png');
 
-  const response = await fetch(OPENAI_IMAGE_EDITS_URL, {
+  const response = await guardedFetch('openai', OPENAI_IMAGE_EDITS_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: form,
-    signal: AbortSignal.timeout(90_000),
+  }, {
+    timeoutMs: 90_000,
+    maxConcurrency: 2,
   });
   if (!response.ok) throw new Error(`OpenAI image edit failed (${response.status})`);
   const body = await response.json() as { data?: { b64_json?: string }[] };
@@ -478,10 +488,13 @@ async function fetchPublicPage(rawUrl: string): Promise<{ sanitizedUrl: string; 
   for (let redirect = 0; redirect <= 3; redirect += 1) {
     const url = new URL(current);
     await assertPublicDns(url);
-    const response = await fetch(current, {
+    const response = await guardedFetch('meal-link-fetch', current, {
       redirect: 'manual',
       headers: { 'User-Agent': 'onTrack meal-link resolver/1.0', Accept: 'text/html,application/json' },
-      signal: AbortSignal.timeout(8_000),
+    }, {
+      timeoutMs: 8_000,
+      maxConcurrency: 6,
+      failureThreshold: 4,
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location');

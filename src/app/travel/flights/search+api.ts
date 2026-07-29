@@ -4,6 +4,7 @@ import {
   searchFlightOffers,
   validateFlightSearch,
 } from '@/features/travel/flights/server';
+import { compressResponse } from '@/services/http/compression';
 
 const searchesByClient = new Map<string, { count: number; resetsAt: number }>();
 
@@ -34,5 +35,5 @@ export async function POST(request: Request) {
       { status: 400, headers: flightCorsHeaders },
     );
   }
-  return searchFlightOffers(input);
+  return compressResponse(request, await searchFlightOffers(input));
 }

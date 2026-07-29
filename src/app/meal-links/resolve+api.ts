@@ -5,6 +5,7 @@ import {
   nutritionOptionsResponse,
   resolveLink,
 } from '@/services/nutrition/server';
+import { compressResponse } from '@/services/http/compression';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
 
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   if (!input?.url || input.url.length > 2_000) return nutritionError('Enter a valid meal link.', 'INVALID_URL', 400);
   try {
     const result = await resolveLink(input.url);
-    return Response.json(result, { headers: nutritionCorsHeaders });
+    return compressResponse(request, Response.json(result, { headers: nutritionCorsHeaders }));
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
     if (code === 'BLOCKED_LINK') return nutritionError('This link could not be read safely.', 'BLOCKED_LINK', 422);

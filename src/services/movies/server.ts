@@ -1,3 +1,5 @@
+import { guardedFetch } from '@/services/http/dependency-guard';
+
 import { normalizeMovieDetails, normalizeSearchMovie } from './normalize';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -6,6 +8,7 @@ export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Cache-Control': 'no-store',
 };
 
 export function optionsResponse() {
@@ -17,8 +20,11 @@ export async function tmdbRequest(path: string) {
   if (!token) return Response.json({ error: 'Movie service is not configured.' }, { status: 503, headers: corsHeaders });
 
   try {
-    const response = await fetch(`${TMDB_BASE_URL}${path}`, {
+    const response = await guardedFetch('tmdb', `${TMDB_BASE_URL}${path}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    }, {
+      timeoutMs: 8_000,
+      maxConcurrency: 8,
     });
     if (response.status === 429) {
       return Response.json({ error: 'Too many movie searches. Please try again shortly.' }, { status: 429, headers: corsHeaders });
@@ -34,4 +40,3 @@ export async function tmdbRequest(path: string) {
 }
 
 export { normalizeMovieDetails, normalizeSearchMovie };
-
