@@ -21,7 +21,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Screen, Symbol } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { todoListIcon } from '@/features/todos/list-icon';
+import {
+  collaboratorInitial,
+  todoListIcon,
+} from '@/features/todos/list-icon';
 import { useTheme } from '@/hooks/use-theme';
 import {
   deleteSharedTodoList,
@@ -72,16 +75,7 @@ export function TodoListsOverview() {
       if (!listNames.includes(member.displayName)) listNames.push(member.displayName);
       names.set(member.listId, listNames);
     }
-    return new Map(
-      [...names].map(([listId, listNames]) => {
-        const visible = listNames.slice(0, 2);
-        const remaining = listNames.length - visible.length;
-        return [
-          listId,
-          remaining > 0 ? `${visible.join(', ')} +${remaining}` : visible.join(', '),
-        ];
-      }),
-    );
+    return names;
   }, [members, user?.id]);
 
   const add = () => {
@@ -310,7 +304,7 @@ function TodoListCard({
   isActive,
 }: {
   list: TodoList;
-  collaboratorNames?: string;
+  collaboratorNames?: string[];
   open: number;
   total: number;
   onPress: () => void;
@@ -330,8 +324,8 @@ function TodoListCard({
   const longPressGestureRef = useRef(false);
   const horizontalTouchRef = useRef(false);
   const touchOriginRef = useRef<{ x: number; y: number } | undefined>(undefined);
-  const icon = todoListIcon(list.name, list.mode);
-  const isCollaborativeIcon = icon === 'people';
+  const icon = todoListIcon(list.name);
+  const collaboratorLabel = collaboratorNames?.join(', ');
   const leaving = list.mode === 'shared' && list.role === 'member';
   return (
     <View style={[styles.swipeable, { backgroundColor: theme.danger }]}>
@@ -371,7 +365,7 @@ function TodoListCard({
           accessibilityHint="Tap to open. Long press and drag to reorder. Swipe left for actions."
           accessibilityRole="button"
           accessibilityLabel={`${list.name}, ${open} open of ${total}${
-            collaboratorNames ? `, shared with ${collaboratorNames}` : ''
+            collaboratorLabel ? `, shared with ${collaboratorLabel}` : ''
           }`}
           onAccessibilityAction={(event) => {
             if (event.nativeEvent.actionName === 'moveUp') onMoveUp();
@@ -444,23 +438,45 @@ function TodoListCard({
             style={[
               styles.cardIcon,
               {
-                backgroundColor:
-                  isCollaborativeIcon ? theme.accentFaint : theme.backgroundSunken,
+                backgroundColor: theme.backgroundSunken,
               },
             ]}>
             <Symbol
               name={icon}
               size={22}
-              color={isCollaborativeIcon ? theme.accentPrimary : theme.textSecondary}
+              color={theme.textSecondary}
             />
           </View>
           <View style={styles.cardCopy}>
             <AppText variant="subheading" numberOfLines={1}>{list.name}</AppText>
             {collaboratorNames ? (
               <View style={styles.collaborators}>
-                <Symbol name="people" size={14} color={theme.textTertiary} />
+                <View style={styles.collaboratorAvatars}>
+                  {collaboratorNames.slice(0, 2).map((name, index) => (
+                    <View
+                      key={`${name}-${index}`}
+                      style={[
+                        styles.collaboratorAvatar,
+                        {
+                          backgroundColor: theme.accentFaint,
+                          borderColor: theme.backgroundElevated,
+                        },
+                        index > 0 && styles.collaboratorAvatarOverlap,
+                      ]}>
+                      <AppText
+                        style={[
+                          styles.collaboratorInitial,
+                          { color: theme.accentPrimary },
+                        ]}>
+                        {collaboratorInitial(name)}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
                 <AppText variant="caption" color="secondary" numberOfLines={1}>
-                  {collaboratorNames}
+                  {collaboratorNames.length > 2
+                    ? `${collaboratorNames.slice(0, 2).join(', ')} +${collaboratorNames.length - 2}`
+                    : collaboratorLabel}
                 </AppText>
               </View>
             ) : null}
@@ -601,6 +617,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  collaboratorAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  collaboratorAvatar: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: radii.pill,
+  },
+  collaboratorAvatarOverlap: { marginLeft: -5 },
+  collaboratorInitial: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
   },
   count: { alignItems: 'center', minWidth: 44 },
   removeAction: {
