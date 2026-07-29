@@ -9,6 +9,13 @@ describe('collaborative to-do access contract', () => {
     ),
     'utf8',
   );
+  const collaboratorLinkMigration = readFileSync(
+    join(
+      process.cwd(),
+      'supabase/migrations/202607280002_todo_collaborator_links.sql',
+    ),
+    'utf8',
+  );
 
   it('keeps shared tables behind RLS and authenticated RPCs', () => {
     for (const table of [
@@ -48,6 +55,28 @@ describe('collaborative to-do access contract', () => {
   it('adds todos to the account-domain constraint', () => {
     expect(migration).toContain(
       "'addons', 'agents', 'preferences', 'schedule', 'plants', 'travel', 'todos'",
+    );
+  });
+
+  it('protects multi-checklist collaborator links and stores only token digests', () => {
+    for (const table of [
+      'todo_collaborator_links',
+      'todo_collaborator_link_lists',
+    ]) {
+      expect(collaboratorLinkMigration).toContain(
+        `alter table public.${table} enable row level security`,
+      );
+      expect(collaboratorLinkMigration).toContain(
+        `revoke all on public.${table} from anon, authenticated`,
+      );
+    }
+    expect(collaboratorLinkMigration).toContain('token_hash bytea not null unique');
+    expect(collaboratorLinkMigration).not.toMatch(/\bcode\s+text\b/);
+    expect(collaboratorLinkMigration).not.toMatch(
+      /grant execute on function public\.(create|resolve|accept)_todo_collaborator_link[\s\S]*?to anon/,
+    );
+    expect(collaboratorLinkMigration).toContain(
+      'You can only invite collaborators to checklists you own.',
     );
   });
 });

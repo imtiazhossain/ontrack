@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
   acceptTravelInvite,
@@ -31,6 +32,7 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
 
 function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const router = useRouter();
+  const { user, continueWithProvider, workingProvider } = useAuthSession();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
   const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
@@ -51,8 +53,8 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     () => (decoded ? findMatchingTravelPlan(plans, decoded) : undefined),
     [decoded, plans],
   );
-  const resolving = isShortInvite && !decoded && !inviteError;
   const isWeb = process.env.EXPO_OS === 'web';
+  const resolving = !isWeb && Boolean(user) && isShortInvite && !decoded && !inviteError;
   const nativeError =
     !invite
       ? 'This travel invitation is invalid or incomplete.'
@@ -60,7 +62,10 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
         (!resolving && !decoded ? 'This travel invitation is invalid or expired.' : undefined);
 
   useEffect(() => {
-    if (!invite || !isShortInvite) return;
+    // The hosted page does not share the installed app's authenticated
+    // session. Keep the invite private there and hand the capability to the
+    // installed app, where it can be resolved for the signed-in recipient.
+    if (isWeb || !user || !invite || !isShortInvite) return;
 
     let active = true;
     void resolveTravelInvite(invite)
@@ -89,7 +94,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     return () => {
       active = false;
     };
-  }, [invite, isShortInvite]);
+  }, [invite, isShortInvite, isWeb, user]);
 
   useEffect(() => {
     if (isWeb) return;
@@ -145,6 +150,31 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   ]);
 
   if (!isWeb) {
+    if (invite && isShortInvite && !user) {
+      const returnTo = `/i/${invite.slice(2)}`;
+      return (
+        <Screen contentStyle={styles.center}>
+          <Symbol name="airplane" size={44} />
+          <AppText variant="display" align="center">You’re invited ✈️</AppText>
+          <AppText variant="body" color="secondary" align="center">
+            Sign in with the email address that was invited. Your trip invitation will still be
+            here when you return.
+          </AppText>
+          <Button
+            disabled={Boolean(workingProvider)}
+            onPress={() => void continueWithProvider('apple', returnTo)}>
+            {workingProvider === 'apple' ? 'Opening Apple…' : 'Continue with Apple'}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={Boolean(workingProvider)}
+            onPress={() => void continueWithProvider('google', returnTo)}>
+            {workingProvider === 'google' ? 'Opening Google…' : 'Continue with Google'}
+          </Button>
+        </Screen>
+      );
+    }
+
     return (
       <Screen contentStyle={styles.center}>
         <Symbol name="airplane" size={44} />
@@ -175,33 +205,20 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
       </View>
 
       <Card style={styles.inviteCard}>
-        {resolving ? (
+        {isShortInvite ? (
           <AppText variant="body" color="secondary">
-            Loading your invitation…
+            This is a private trip invitation. Open it in onTrack and sign in with the invited
+            email address to view the details.
           </AppText>
-        ) : decoded ? (
-          <>
-            <AppText variant="heading">{decoded.title}</AppText>
-            <AppText variant="subheading" color="accent">
-              {decoded.destination}
-            </AppText>
-            <AppText variant="body" color="secondary">
-              {decoded.startDate} → {decoded.endDate}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {decoded.itinerary.length} itinerary{' '}
-              {decoded.itinerary.length === 1 ? 'item' : 'items'}
-            </AppText>
-          </>
         ) : (
           <ErrorMessage
-            message={inviteError ?? 'This invitation is invalid or incomplete.'}
+            message="This invitation is invalid or incomplete."
             variant="body"
           />
         )}
       </Card>
 
-      {decoded ? (
+      {isShortInvite ? (
         <View style={styles.buttons}>
           <Button
             size="lg"

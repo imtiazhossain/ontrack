@@ -62,16 +62,43 @@ export function createInstalledTodoJoinUrl(code: string): string {
   return `ontrack:///l/${code}`;
 }
 
+export function createTodoCollaboratorJoinUrl(code: string): string {
+  return `${ONTRACK_LIST_SHARE_URL.replace(/\/$/, '')}/c/${code}`;
+}
+
+export function createInstalledTodoCollaboratorJoinUrl(code: string): string {
+  return `ontrack:///c/${code}`;
+}
+
 export async function shareTodoInvite(listName: string, code: string): Promise<boolean> {
   const url = createTodoJoinUrl(code);
   const message = [`Join my “${listName}” list on onTrack 📝`, url].join('\n\n');
   const result = await Share.share(
     {
       title: `${listName} · onTrack`,
-      message: process.env.EXPO_OS === 'ios' ? `Join my “${listName}” list on onTrack 📝` : message,
-      ...(process.env.EXPO_OS === 'ios' ? { url } : {}),
+      message,
     },
     { subject: `Join ${listName} on onTrack` },
+  );
+  return result.action !== Share.dismissedAction;
+}
+
+export async function shareTodoCollaboratorInvite(
+  listNames: string[],
+  code: string,
+): Promise<boolean> {
+  const url = createTodoCollaboratorJoinUrl(code);
+  const label =
+    listNames.length === 1
+      ? `my “${listNames[0]}” checklist`
+      : `${listNames.length} of my checklists`;
+  const invitation = `Collaborate on ${label} in onTrack 📝`;
+  const result = await Share.share(
+    {
+      title: 'Collaborate in onTrack',
+      message: `${invitation}\n\n${url}`,
+    },
+    { subject: 'Join my checklists on onTrack' },
   );
   return result.action !== Share.dismissedAction;
 }

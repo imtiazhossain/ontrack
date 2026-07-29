@@ -33,6 +33,8 @@ import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 
+type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
+
 export function TravelChatScreen({ planId }: { planId: string }) {
   return (
     <FeatureThemeProvider feature="travel">
@@ -44,12 +46,12 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 function TravelChatScreenContent({ planId }: { planId: string }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<TravelChatMessage>>(null);
+  const listRef = useRef<FlatList<OptimisticTravelChatMessage>>(null);
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const senderName = usePreferences((state) => state.name).trim() || 'Trip member';
   const accessCode = plan ? travelChatAccessCode(plan) : undefined;
   const [deviceId, setDeviceId] = useState('');
-  const [messages, setMessages] = useState<TravelChatMessage[]>([]);
+  const [messages, setMessages] = useState<OptimisticTravelChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(Boolean(accessCode));
   const [sending, setSending] = useState(false);
@@ -63,7 +65,14 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
     if (!accessCode) return;
     try {
       const next = await loadTravelChatMessages(accessCode);
-      setMessages(next);
+      setMessages((current) => [
+        ...next,
+        ...current.filter(
+          (message) =>
+            message.pending &&
+            !next.some((remote) => remote.id === message.id),
+        ),
+      ]);
       setError(undefined);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Messages could not be loaded.');
@@ -143,6 +152,18 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
 
   const send = async () => {
     if (!accessCode || !deviceId || !draft.trim() || sending) return;
+    const body = draft.trim();
+    const optimisticId = `pending-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimisticMessage: OptimisticTravelChatMessage = {
+      id: optimisticId,
+      senderName,
+      senderDeviceId: deviceId,
+      body,
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+    setMessages((current) => [...current, optimisticMessage]);
+    setDraft('');
     setSending(true);
     setError(undefined);
     try {
@@ -150,14 +171,20 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
         accessCode,
         senderName,
         senderDeviceId: deviceId,
-        body: draft,
+        body,
       });
-      setMessages((current) =>
-        current.some((item) => item.id === message.id) ? current : [...current, message],
-      );
-      setDraft('');
+      setMessages((current) => {
+        const withoutOptimistic = current.filter((item) => item.id !== optimisticId);
+        return withoutOptimistic.some((item) => item.id === message.id)
+          ? withoutOptimistic
+          : [...withoutOptimistic, message];
+      });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Your message could not be sent.');
+      setMessages((current) => current.filter((item) => item.id !== optimisticId));
+      setDraft((current) => current || body);
+      const detail =
+        reason instanceof Error ? reason.message : 'Your message could not be sent.';
+      setError(`Message not sent. Your draft was restored. ${detail}`);
     } finally {
       setSending(false);
     }
@@ -284,6 +311,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
                 <View
                   style={[
                     styles.bubble,
+                    item.pending ? styles.pendingBubble : undefined,
                     {
                       backgroundColor: mine ? theme.accentPrimary : theme.backgroundSunken,
                     },
@@ -296,10 +324,12 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
                   variant="caption"
                   color="tertiary"
                   style={mine ? styles.myTimestamp : undefined}>
-                  {new Intl.DateTimeFormat(undefined, {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  }).format(new Date(item.createdAt))}
+                  {item.pending
+                    ? 'Sending…'
+                    : new Intl.DateTimeFormat(undefined, {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      }).format(new Date(item.createdAt))}
                 </AppText>
               </View>
             );
@@ -383,6 +413,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
+  pendingBubble: { opacity: 0.66 },
   myTimestamp: { textAlign: 'right' },
   composer: {
     flexDirection: 'row',

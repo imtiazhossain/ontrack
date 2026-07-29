@@ -1,5 +1,6 @@
 import { normalizeFlightOffers } from './normalize';
 import type { FlightSearchInput, FlightSearchResponse } from './types';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import { isDateKey } from '@/utils/date';
 
 const TEST_BASE_URL = 'https://test.api.amadeus.com';
@@ -45,11 +46,13 @@ async function accessToken(baseUrl: string, clientId: string, clientSecret: stri
     client_id: clientId,
     client_secret: clientSecret,
   });
-  const response = await fetch(`${baseUrl}/v1/security/oauth2/token`, {
+  const response = await guardedFetch('amadeus', `${baseUrl}/v1/security/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
-    signal: AbortSignal.timeout(10_000),
+  }, {
+    timeoutMs: 10_000,
+    maxConcurrency: 4,
   });
   if (!response.ok) throw new Error('AUTH_FAILED');
   const json = await response.json() as { access_token?: string; expires_in?: number };
@@ -69,9 +72,11 @@ async function airportCode(baseUrl: string, token: string, value: string): Promi
     keyword: value.trim(),
     view: 'LIGHT',
   });
-  const response = await fetch(`${baseUrl}/v1/reference-data/locations?${params}`, {
+  const response = await guardedFetch('amadeus', `${baseUrl}/v1/reference-data/locations?${params}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    signal: AbortSignal.timeout(10_000),
+  }, {
+    timeoutMs: 10_000,
+    maxConcurrency: 4,
   });
   if (!response.ok) return undefined;
   const body = await response.json() as {
@@ -131,9 +136,11 @@ export async function searchFlightOffers(input: FlightSearchInput): Promise<Resp
       currencyCode: input.currencyCode,
       max: '20',
     });
-    const response = await fetch(`${baseUrl}/v2/shopping/flight-offers?${params}`, {
+    const response = await guardedFetch('amadeus', `${baseUrl}/v2/shopping/flight-offers?${params}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      signal: AbortSignal.timeout(20_000),
+    }, {
+      timeoutMs: 20_000,
+      maxConcurrency: 4,
     });
     if (response.status === 429) {
       return errorResponse('Flight search is busy. Try again shortly.', 'RATE_LIMITED', 429);

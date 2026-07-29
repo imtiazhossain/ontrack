@@ -1,3 +1,5 @@
+import { compressResponse } from '@/services/http/compression';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import { nutritionCorsHeaders, nutritionError, nutritionOptionsResponse } from '@/services/nutrition/server';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
@@ -13,9 +15,22 @@ export async function GET(request: Request) {
   if (!authorization || !supabaseUrl || !publishableKey || !profileId) {
     return nutritionError('Authentication and a profile are required.', 'PERMISSION_DENIED', 401);
   }
-  const response = await fetch(`${supabaseUrl}/rest/v1/meals?profile_id=eq.${encodeURIComponent(profileId)}&select=*,meal_items(*)`, {
-    headers: { Authorization: authorization, apikey: publishableKey },
-  });
+  let response: Response;
+  try {
+    response = await guardedFetch('supabase-rest', `${supabaseUrl}/rest/v1/meals?profile_id=eq.${encodeURIComponent(profileId)}&select=*,meal_items(*)`, {
+      headers: { Authorization: authorization, apikey: publishableKey },
+    }, {
+      timeoutMs: 10_000,
+      maxConcurrency: 16,
+    });
+  } catch {
+    return nutritionError('Insights are temporarily unavailable.', 'PROVIDER_FAILURE', 503);
+  }
   if (!response.ok) return nutritionError('Insights could not be loaded.', 'PERMISSION_DENIED', response.status);
-  return new Response(await response.text(), { headers: { ...nutritionCorsHeaders, 'Content-Type': 'application/json' } });
+  return compressResponse(
+    request,
+    new Response(await response.text(), {
+      headers: { ...nutritionCorsHeaders, 'Content-Type': 'application/json' },
+    }),
+  );
 }

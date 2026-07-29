@@ -12,6 +12,22 @@
         "buildType": "apk"
       }
     },
+    "device": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "device",
+      "autoIncrement": true,
+      "env": {
+        "EAS_USE_CACHE": "1",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "resourceClass": "m-medium"
+      }
+    },
     "testflight": {
       "developmentClient": false,
       "distribution": "store",

@@ -1,3 +1,5 @@
+import { guardedFetch } from '@/services/http/dependency-guard';
+
 export interface PlantTaxonSearchResult {
   id: string;
   commonName: string;
@@ -85,9 +87,11 @@ export async function searchPlantTaxa(query: string): Promise<PlantTaxonSearchRe
   url.searchParams.set('per_page', '30');
 
   try {
-    const response = await fetch(url, {
+    const response = await guardedFetch('inaturalist', url, {
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(8_000),
+    }, {
+      timeoutMs: 8_000,
+      maxConcurrency: 6,
     });
     if (!response.ok) return fallback;
     const remote = normalizePlantTaxa(await response.json(), query);

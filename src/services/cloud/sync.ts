@@ -203,15 +203,32 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Sync failed.';
 }
 
-async function pushDomain(userId: string, domain: (typeof domains)[number]) {
+const CLOUD_WRITE_BATCH_SIZE = 100;
+
+async function pushDomains(
+  userId: string,
+  selectedDomains: (typeof domains)[number][],
+) {
   const client = getSupabaseClient();
   if (!client) throw new Error('Cloud sync is not configured for this build.');
-  const payload = await prepareCloudMedia(userId, domain.name, domain.read());
-  const { error } = await client.from('app_state').upsert(
-    { user_id: userId, domain: domain.name, payload },
-    { onConflict: 'user_id,domain' },
+  const rows = await Promise.all(
+    selectedDomains.map(async (domain) => ({
+      user_id: userId,
+      domain: domain.name,
+      payload: await prepareCloudMedia(userId, domain.name, domain.read()),
+    })),
   );
-  if (error) throw error;
+  for (let start = 0; start < rows.length; start += CLOUD_WRITE_BATCH_SIZE) {
+    const { error } = await client.from('app_state').upsert(
+      rows.slice(start, start + CLOUD_WRITE_BATCH_SIZE),
+      { onConflict: 'user_id,domain' },
+    );
+    if (error) throw error;
+  }
+}
+
+async function pushDomain(userId: string, domain: (typeof domains)[number]) {
+  await pushDomains(userId, [domain]);
 }
 
 function startSubscriptions(userId: string, email?: string) {
@@ -335,7 +352,7 @@ export async function prepareAccountSync(
   const decision = decideAccountData(remote.size, localCanConflict, localCanConflict);
   if (decision === 'upload-device') {
     try {
-      await Promise.all(domains.map((domain) => pushDomain(userId, domain)));
+      await pushDomains(userId, domains);
     } catch (uploadError) {
       // The account had no rows before this first upload. Remove any partial
       // rows so retrying cannot turn a failed promotion into a false conflict.
@@ -367,7 +384,7 @@ export async function resolveAccountSync(choice: 'cloud' | 'device') {
   if (choice === 'cloud') {
     await applyRemote(pendingRemote);
   } else {
-    await Promise.all(domains.map((domain) => pushDomain(activeUserId!, domain)));
+    await pushDomains(activeUserId, domains);
   }
   pendingRemote = undefined;
   await loadEntitlements(activeUserId);
@@ -396,7 +413,7 @@ export async function flushCloudSync() {
   stopSubscriptions = undefined;
   useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
   try {
-    await Promise.all(domains.map((domain) => pushDomain(activeUserId!, domain)));
+    await pushDomains(activeUserId, domains);
     useCloudSyncStatus.setState({
       state: 'synced',
       email: activeEmail,

@@ -1,4 +1,5 @@
 import { canUsePlantIdentityForCare, validatePlantCarePlan, validatePlantHealth, validatePlantIdentity } from '@/services/plants/validate';
+import { compressResponse } from '@/services/http/compression';
 import {
   assertPlantAnalysisEnabled,
   checkPlantHealth,
@@ -23,9 +24,12 @@ export async function POST(request: Request) {
     return plantError('A valid check-in image and plant profile are required.', 'INVALID_INPUT', 400);
   }
   try {
-    return Response.json(await checkPlantHealth({
-      imageDataUrl: input.imageDataUrl, identity, previousHealth, currentCarePlan, room,
-    }), { headers: plantCorsHeaders });
+    return compressResponse(
+      request,
+      Response.json(await checkPlantHealth({
+        imageDataUrl: input.imageDataUrl, identity, previousHealth, currentCarePlan, room,
+      }), { headers: plantCorsHeaders }),
+    );
   } catch (error) {
     if (error instanceof Error && error.message === 'OLLAMA_UNAVAILABLE') {
       return plantError(

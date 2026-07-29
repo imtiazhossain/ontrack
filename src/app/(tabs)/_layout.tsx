@@ -36,7 +36,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="to-do">
+      <NativeTabs.Trigger name="to-do" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Checklists</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: 'checklist', selected: 'checkmark.circle.fill' }}

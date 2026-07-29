@@ -1,3 +1,5 @@
+import { compressResponse } from '@/services/http/compression';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import { nutritionCorsHeaders, nutritionError, nutritionOptionsResponse } from '@/services/nutrition/server';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
@@ -12,13 +14,27 @@ async function forward(request: Request, method: 'GET' | 'POST') {
   if (!authorization) return nutritionError('Authentication is required.', 'PERMISSION_DENIED', 401);
   const profileId = new URL(request.url).searchParams.get('id');
   const url = `${supabaseUrl}/rest/v1/nutrition_profiles${profileId ? `?id=eq.${encodeURIComponent(profileId)}` : ''}`;
-  const response = await fetch(url, {
-    method,
-    headers: { Authorization: authorization, apikey: publishableKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: method === 'POST' ? JSON.stringify(await request.json()) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await guardedFetch('supabase-rest', url, {
+      method,
+      headers: { Authorization: authorization, apikey: publishableKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: method === 'POST' ? JSON.stringify(await request.json()) : undefined,
+    }, {
+      timeoutMs: 10_000,
+      maxConcurrency: 16,
+    });
+  } catch {
+    return nutritionError('Profiles are temporarily unavailable.', 'PROVIDER_FAILURE', 503);
+  }
   if (!response.ok) return nutritionError('The profile request was denied.', 'PERMISSION_DENIED', response.status);
-  return new Response(await response.text(), { status: response.status, headers: { ...nutritionCorsHeaders, 'Content-Type': 'application/json' } });
+  return compressResponse(
+    request,
+    new Response(await response.text(), {
+      status: response.status,
+      headers: { ...nutritionCorsHeaders, 'Content-Type': 'application/json' },
+    }),
+  );
 }
 
 export function GET(request: Request) { return forward(request, 'GET'); }

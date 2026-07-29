@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { getSharedPayloads } from 'expo-sharing';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -45,6 +46,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const { phase, isGuest } = useAuthSession();
   const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
   const aiEnabled = usePreferences((state) => state.aiEnabled);
+  const hasOnboarded = usePreferences((state) => state.hasOnboarded);
   const appAccess = isGuest || phase === 'authenticated';
   const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
   useTodoCollaboration(hydrated && phase === 'authenticated');
@@ -60,6 +62,15 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   }, [appAccess, hydrated, seedIfNeeded]);
 
   useMealPhotoMigration(hydrated && appAccess && aiEnabled);
+
+  useEffect(() => {
+    if (!hydrated || !appAccess || !hasOnboarded || Platform.OS === 'web') return;
+    try {
+      if (getSharedPayloads().length > 0) router.replace('/share-event');
+    } catch {
+      // Older native builds do not include incoming sharing.
+    }
+  }, [appAccess, hasOnboarded, hydrated, router]);
 
   useEffect(() => {
     if (!hydrated || !appAccess) return;
@@ -164,9 +175,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="profile" />
         <Stack.Screen name="todos/[id]" />
         <Stack.Screen name="todos/[id]/settings" />
+        <Stack.Screen name="todo-collaborators" />
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
-        <Stack.Screen name="i/[code]" />
         <Stack.Screen name="travel/[id]" />
         <Stack.Screen name="travel/[id]/flights" />
         <Stack.Screen name="travel/[id]/stays" />
@@ -188,6 +199,12 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="plants/[id]/edit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="plants/[id]/check-in" options={{ presentation: 'modal' }} />
       </Stack.Protected>
+      <Stack.Protected guard={appAccess && hasOnboarded}>
+        <Stack.Screen
+          name="share-event"
+          options={{ presentation: 'modal', gestureEnabled: false }}
+        />
+      </Stack.Protected>
       <Stack.Screen
         name="auth/callback"
         options={{
@@ -196,7 +213,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           contentStyle: { backgroundColor: theme.backgroundPrimary },
         }}
       />
+      <Stack.Screen name="i/[code]" />
       <Stack.Screen name="l/[code]" />
+      <Stack.Screen name="c/[code]" />
     </Stack>
   );
 }

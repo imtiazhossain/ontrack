@@ -13,6 +13,7 @@ import type {
   Workout,
   WorkSession,
 } from '@/types/models';
+import { isDateKey } from '@/utils/date';
 
 let idCounter = 0;
 export function newId(prefix = 'a'): string {
@@ -47,6 +48,15 @@ export interface EventSavePayload {
   movie?: Movie;
 }
 
+export interface ImportedEventDraft {
+  title: string;
+  date: string;
+  startMinutes: number;
+  durationMinutes: number;
+  notes?: string;
+  categoryId: string;
+}
+
 interface ScheduleState {
   seeded: boolean;
   activities: Activity[];
@@ -59,6 +69,7 @@ interface ScheduleState {
   seedIfNeeded: () => void;
   addActivity: (draft: ActivityDraft) => Activity;
   replaceTravelActivities: (travelPlanId: string, drafts: ActivityDraft[]) => Activity[];
+  importEvents: (drafts: ImportedEventDraft[]) => Activity[];
   saveEvent: (payload: EventSavePayload) => Activity;
   updateActivity: (id: string, patch: Partial<Omit<Activity, 'id' | 'createdAt'>>) => void;
   deleteActivity: (id: string) => void;
@@ -126,6 +137,87 @@ export const useSchedule = create<ScheduleState>()(
             ...activities,
           ],
         }));
+        return activities;
+      },
+
+      importEvents: (drafts) => {
+        if (drafts.length === 0) throw new Error('Choose at least one event to import.');
+        const categories = get().categories;
+        const normalized = drafts.map((draft) => {
+          const title = draft.title.trim();
+          const category = categories.find((item) => item.id === draft.categoryId);
+          if (!title) throw new Error('Every imported event needs a title.');
+          if (!isDateKey(draft.date)) throw new Error('Every imported event needs a valid date.');
+          if (
+            !Number.isInteger(draft.startMinutes) ||
+            draft.startMinutes < 0 ||
+            draft.startMinutes > 1439
+          ) {
+            throw new Error('Every imported event needs a valid time.');
+          }
+          if (
+            !Number.isFinite(draft.durationMinutes) ||
+            draft.durationMinutes < 5
+          ) {
+            throw new Error('Every imported event needs a duration of at least 5 minutes.');
+          }
+          if (!category) throw new Error('Every imported event needs a valid category.');
+          if (category.detailKind === 'movie' || category.detailKind === 'plant') {
+            throw new Error(`${category.name} events must be created from their dedicated editor.`);
+          }
+          return {
+            ...draft,
+            title,
+            durationMinutes: Math.round(draft.durationMinutes),
+            notes: draft.notes?.trim() || undefined,
+            category,
+          };
+        });
+
+        const now = new Date().toISOString();
+        const activities = normalized.map(({ category: _category, ...draft }) => ({
+          id: newId('imported-event'),
+          status: 'upcoming' as const,
+          createdAt: now,
+          updatedAt: now,
+          ...draft,
+        }));
+
+        set((state) => {
+          const meals = [...state.meals];
+          const workouts = [...state.workouts];
+          const workSessions = [...state.workSessions];
+          activities.forEach((activity, index) => {
+            const category = normalized[index].category;
+            if (category.detailKind === 'food') {
+              meals.push({
+                activityId: activity.id,
+                mealType: 'lunch',
+                name: activity.title,
+                items: [],
+              });
+            } else if (category.detailKind === 'gym') {
+              workouts.push({
+                activityId: activity.id,
+                type: 'custom',
+                name: activity.title,
+                exercises: [],
+              });
+            } else if (category.detailKind === 'work') {
+              workSessions.push({
+                activityId: activity.id,
+                tasks: [],
+                focusMinutes: 0,
+              });
+            }
+          });
+          return {
+            activities: [...state.activities, ...activities],
+            meals,
+            workouts,
+            workSessions,
+          };
+        });
         return activities;
       },
 

@@ -1,4 +1,5 @@
 import { hasConfidentPlantIdentity, validatePlantCarePlan, validatePlantHealth, validatePlantIdentity } from './validate';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import type { PlantCarePlan, PlantHealthAssessment, PlantIdentity, RoomProfile } from '@/types/models';
 import type { PlantServiceErrorCode } from './types';
 
@@ -164,7 +165,7 @@ function responseText(body: Record<string, unknown>): string | undefined {
 }
 
 async function openAIResponse(payload: Record<string, unknown>) {
-  const response = await fetch(OPENAI_RESPONSES_URL, {
+  const response = await guardedFetch('openai', OPENAI_RESPONSES_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -174,7 +175,9 @@ async function openAIResponse(payload: Record<string, unknown>) {
       reasoning: { effort: 'low' },
       ...payload,
     }),
-    signal: AbortSignal.timeout(60_000),
+  }, {
+    timeoutMs: 60_000,
+    maxConcurrency: 2,
   });
   if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
   return response.json() as Promise<Record<string, unknown>>;
@@ -189,7 +192,7 @@ async function ollamaStructuredResponse(
   if (!['127.0.0.1', 'localhost', '::1'].includes(baseUrl.hostname)) throw new Error('OLLAMA_UNAVAILABLE');
   let response: Response;
   try {
-    response = await fetch(new URL('/api/chat', baseUrl), {
+    response = await guardedFetch('ollama', new URL('/api/chat', baseUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -207,7 +210,9 @@ async function ollamaStructuredResponse(
             : null),
         }],
       }),
-      signal: AbortSignal.timeout(120_000),
+    }, {
+      timeoutMs: 120_000,
+      maxConcurrency: 1,
     });
   } catch {
     throw new Error('OLLAMA_UNAVAILABLE');

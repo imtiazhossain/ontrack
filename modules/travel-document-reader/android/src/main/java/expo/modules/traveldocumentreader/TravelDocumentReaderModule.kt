@@ -22,7 +22,7 @@ class TravelDocumentReaderModule : Module() {
         ?: throw IllegalStateException("The app is not ready to read documents.")
       val uri = Uri.parse(uriValue)
       val file = uri.path?.let(::File)
-        ?: throw IllegalArgumentException("The selected confirmation document could not be opened.")
+        ?: throw IllegalArgumentException("The shared document could not be opened.")
       when (file.extension.lowercase()) {
         "txt", "eml" -> file.readText()
         "pdf" -> recognizePdf(file)
@@ -56,7 +56,7 @@ class TravelDocumentReaderModule : Module() {
     }
     val text = pages.filter { it.isNotBlank() }.joinToString("\n\n")
     if (text.isBlank()) throw IllegalArgumentException(
-      "No readable flight information was found in this document."
+      "No readable text was found in this document."
     )
     return text
   }
@@ -67,7 +67,7 @@ class TravelDocumentReaderModule : Module() {
       val result = Tasks.await(recognizer.process(image))
       if (result.text.isBlank()) {
         throw IllegalArgumentException(
-          "No readable flight information was found in this document."
+          "No readable text was found in this document."
         )
       }
       result.text

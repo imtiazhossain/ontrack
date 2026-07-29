@@ -1,4 +1,5 @@
 import { canUsePlantIdentityForCare, validatePlantHealth, validatePlantIdentity } from '@/services/plants/validate';
+import { compressResponse } from '@/services/http/compression';
 import {
   assertPlantAnalysisEnabled,
   createCarePlan,
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   }
   try {
     const carePlan = await createCarePlan({ identity, health, room: input.room, roomImageDataUrl });
-    return Response.json({ carePlan }, { headers: plantCorsHeaders });
+    return compressResponse(request, Response.json({ carePlan }, { headers: plantCorsHeaders }));
   } catch (error) {
     if (error instanceof Error && error.message === 'OLLAMA_UNAVAILABLE') {
       return plantError(

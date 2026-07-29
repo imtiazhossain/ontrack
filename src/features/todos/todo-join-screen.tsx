@@ -25,6 +25,10 @@ interface ResolvedList {
   ownerName: string;
 }
 
+const APP_STORE_URL = 'https://apps.apple.com/app/id6789723522';
+const PLAY_STORE_URL =
+  'https://play.google.com/store/apps/details?id=com.imtihoss.ontracknow';
+
 export function TodoJoinScreen({ code }: { code: string }) {
   const router = useRouter();
   const { user, continueWithProvider, workingProvider } = useAuthSession();
@@ -81,11 +85,25 @@ export function TodoJoinScreen({ code }: { code: string }) {
           {workingProvider === 'google' ? 'Opening Google…' : 'Continue with Google'}
         </Button>
         {Platform.OS === 'web' ? (
-          <Button
-            variant="secondary"
-            onPress={() => void Linking.openURL(createInstalledTodoJoinUrl(code))}>
-            Open installed app
-          </Button>
+          <>
+            <Button
+              size="lg"
+              onPress={() => void Linking.openURL(createInstalledTodoJoinUrl(code))}>
+              Open onTrack
+            </Button>
+            <Button
+              variant="secondary"
+              icon="download"
+              onPress={() => void Linking.openURL(APP_STORE_URL)}>
+              Download for iPhone
+            </Button>
+            <Button
+              variant="secondary"
+              icon="download"
+              onPress={() => void Linking.openURL(PLAY_STORE_URL)}>
+              Download for Android
+            </Button>
+          </>
         ) : null}
       </Screen>
     );

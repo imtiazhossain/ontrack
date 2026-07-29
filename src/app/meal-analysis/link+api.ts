@@ -5,6 +5,7 @@ import {
   nutritionError,
   nutritionOptionsResponse,
 } from '@/services/nutrition/server';
+import { compressResponse } from '@/services/http/compression';
 import type { MealLinkCandidate } from '@/services/nutrition/types';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
@@ -16,7 +17,10 @@ export async function POST(request: Request) {
   if (!input?.candidate?.itemName) return nutritionError('Choose a meal candidate first.', 'AMBIGUOUS_MEAL', 400);
   try {
     const analysis = await analyzeLinkCandidate(input.candidate);
-    return Response.json({ draftId: crypto.randomUUID(), analysis }, { headers: nutritionCorsHeaders });
+    return compressResponse(
+      request,
+      Response.json({ draftId: crypto.randomUUID(), analysis }, { headers: nutritionCorsHeaders }),
+    );
   } catch {
     return nutritionError('Meal analysis is temporarily unavailable.', 'PROVIDER_FAILURE', 502);
   }

@@ -1,3 +1,5 @@
+import { compressResponse } from '@/services/http/compression';
+import { guardedFetch } from '@/services/http/dependency-guard';
 import { nutritionCorsHeaders, nutritionError, nutritionOptionsResponse } from '@/services/nutrition/server';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
@@ -10,11 +12,22 @@ export async function POST(request: Request, { id }: { id: string }) {
     return nutritionError('Clinical target approval is not configured.', 'NOT_CONFIGURED', 503);
   }
   if (!authorization) return nutritionError('Authentication is required.', 'PERMISSION_DENIED', 401);
-  const response = await fetch(`${supabaseUrl}/rest/v1/nutrition_target_versions?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { Authorization: authorization, apikey: publishableKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({ status: 'approved', approved_at: new Date().toISOString() }),
-  });
+  let response: Response;
+  try {
+    response = await guardedFetch('supabase-rest', `${supabaseUrl}/rest/v1/nutrition_target_versions?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { Authorization: authorization, apikey: publishableKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ status: 'approved', approved_at: new Date().toISOString() }),
+    }, {
+      timeoutMs: 10_000,
+      maxConcurrency: 16,
+    });
+  } catch {
+    return nutritionError('Target approval is temporarily unavailable.', 'PROVIDER_FAILURE', 503);
+  }
   if (!response.ok) return nutritionError('Only a verified assigned clinician can approve this target.', 'PERMISSION_DENIED', 403);
-  return Response.json({ target: (await response.json() as unknown[])[0] }, { headers: nutritionCorsHeaders });
+  return compressResponse(
+    request,
+    Response.json({ target: (await response.json() as unknown[])[0] }, { headers: nutritionCorsHeaders }),
+  );
 }

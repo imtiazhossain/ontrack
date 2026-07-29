@@ -22,7 +22,7 @@ export function TimeField({
   accessibilityLabel = label,
   testID,
 }: TimeFieldProps) {
-  const minutes = clampMinutesFromMidnight(value);
+  const minutes = clampMinutesFromMidnight(value ?? 0);
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
 
@@ -41,7 +41,7 @@ export function TimeField({
         <View style={styles.flex}>
           <Input
             label="Hour"
-            value={pad(hours)}
+            value={value === null ? '' : pad(hours)}
             onChangeText={(next) => commit(next, String(mins))}
             keyboardType="number-pad"
             editable={!disabled}
@@ -50,7 +50,7 @@ export function TimeField({
         <View style={styles.flex}>
           <Input
             label="Minute"
-            value={pad(mins)}
+            value={value === null ? '' : pad(mins)}
             onChangeText={(next) => commit(String(hours), next)}
             keyboardType="number-pad"
             editable={!disabled}

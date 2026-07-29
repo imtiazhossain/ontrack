@@ -6,6 +6,7 @@ import {
   plantOptionsResponse,
   validImageDataUrl,
 } from '@/services/plants/server';
+import { compressResponse } from '@/services/http/compression';
 
 export function OPTIONS() { return plantOptionsResponse(); }
 
@@ -15,7 +16,10 @@ export async function POST(request: Request) {
   const input = await request.json().catch(() => undefined) as { imageDataUrl?: unknown } | undefined;
   if (!validImageDataUrl(input?.imageDataUrl)) return plantError('A valid plant image is required.', 'INVALID_IMAGE', 400);
   try {
-    return Response.json(await identifyPlantImage(input.imageDataUrl), { headers: plantCorsHeaders });
+    return compressResponse(
+      request,
+      Response.json(await identifyPlantImage(input.imageDataUrl), { headers: plantCorsHeaders }),
+    );
   } catch (error) {
     if (error instanceof Error && error.message === 'UNCLEAR_IMAGE') {
       return plantError('The plant could not be identified confidently. Retake a clear whole-plant or leaf photo.', 'UNCLEAR_IMAGE', 422);

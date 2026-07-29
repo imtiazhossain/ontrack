@@ -13,7 +13,7 @@ export default function RootHtml({ children }: PropsWithChildren) {
         <meta name="apple-itunes-app" content="app-id=6789723522" />
         <meta
           name="description"
-          content="Open shared travel plans, dates, and itineraries in onTrack."
+          content="Open shared checklists, travel plans, dates, and itineraries in onTrack."
         />
         <style
           dangerouslySetInnerHTML={{

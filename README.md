@@ -50,7 +50,8 @@ src/
 - Plant identification, health check-ins, room-aware care plans, and local watering reminders
 - Tester-controlled Food, Fitness, Plants, and Travel add-ons
 - Travel plans, calendar dates, friend invites, flight search, and stay search
-- Hosted install-or-open travel invitations at `ontrack--links.expo.app`
+- Hosted install-or-open travel and checklist collaboration invitations at
+  `ontrack--links.expo.app`
 - Google/Apple SSO with local guest mode and guest-to-account data resolution
 - Agent-ready catalog, permissions, install/remove state, provider runtime, and synced conversations
   (no concrete agents are included yet)
