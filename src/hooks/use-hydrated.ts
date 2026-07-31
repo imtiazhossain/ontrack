@@ -8,6 +8,7 @@ import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTodos } from '@/store/todos';
 import { useTravel } from '@/store/travel';
+import { useVisionBoard } from '@/store/vision-board';
 
 /** True only after every persisted store has finished rehydrating from disk. */
 export function useHydrated(): boolean {
@@ -26,6 +27,7 @@ export function useHydrated(): boolean {
       useAgents.persist.rehydrate(),
       useAuthAccess.persist.rehydrate(),
       useTodos.persist.rehydrate(),
+      useVisionBoard.persist.rehydrate(),
     ]).then(() => {
       if (active) setHydrated(true);
     });

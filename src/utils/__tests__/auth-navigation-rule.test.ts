@@ -52,4 +52,13 @@ describe('authentication navigation invariants', () => {
       rootLayout.indexOf('<Stack'),
     );
   });
+
+  it('waits for vision board persistence before releasing the loading shell', () => {
+    const hydrated = readFileSync(
+      join(process.cwd(), 'src/hooks/use-hydrated.ts'),
+      'utf8',
+    );
+    expect(hydrated).toContain("from '@/store/vision-board'");
+    expect(hydrated).toContain('useVisionBoard.persist.rehydrate()');
+  });
 });

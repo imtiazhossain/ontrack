@@ -4,6 +4,7 @@ import type {
   VisionBoardItem,
 } from './types';
 import { DEFAULT_VISION_BOARD_CATEGORY_DATA } from './defaults';
+import { hasCustomizedVisionBoardItems } from './sample';
 export { hasCustomizedVisionBoardItems } from './sample';
 
 export interface VisionBoardItemCounts {
@@ -63,6 +64,18 @@ export function hasCustomizedVisionBoardCategories(
       category.order !== index
     );
   });
+}
+
+/** Showcase all-view stays until sample items change or a default category is removed. */
+export function canUseVisionBoardShowcase(
+  categories: VisionBoardCategory[],
+  items: VisionBoardItem[],
+) {
+  if (hasCustomizedVisionBoardItems(items)) return false;
+  const ids = new Set(categories.map((category) => category.id));
+  return DEFAULT_VISION_BOARD_CATEGORY_DATA.every((category) =>
+    ids.has(category.id),
+  );
 }
 
 export function newestFirst(items: VisionBoardItem[]) {

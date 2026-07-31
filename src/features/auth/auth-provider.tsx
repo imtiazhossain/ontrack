@@ -28,7 +28,9 @@ import { useAgents } from '@/store/agents';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
+import { useTodos } from '@/store/todos';
 import { useTravel } from '@/store/travel';
+import { useVisionBoard } from '@/store/vision-board';
 
 import { isGuestDirtyTrackingSuppressed } from './guest-dirty-tracking';
 
@@ -187,6 +189,8 @@ export function AuthSessionProvider({
         useAddons.subscribe(mark),
         useAgents.subscribe(mark),
         useTravel.subscribe(mark),
+        useTodos.subscribe(mark),
+        useVisionBoard.subscribe(mark),
       ];
     }, 750);
     return () => {

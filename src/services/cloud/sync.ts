@@ -302,14 +302,25 @@ function startSubscriptions(userId: string, email?: string) {
   };
 }
 
-async function deleteAppOwnedMedia() {
-  const plants = [...usePlants.getState().plants];
+async function deleteAppOwnedMedia(options?: {
+  plants?: boolean;
+  visionBoard?: boolean;
+  mealImages?: boolean;
+}) {
+  const clearPlants = options?.plants ?? true;
+  const clearVisionBoard = options?.visionBoard ?? true;
+  const clearMealImages = options?.mealImages ?? clearPlants;
+  const plants = clearPlants ? [...usePlants.getState().plants] : [];
   await Promise.all([
     ...plants.map((plant) => deletePlant(plant.id)),
-    deleteAllVisionBoardImages(),
+    clearVisionBoard ? deleteAllVisionBoardImages() : Promise.resolve(),
   ]);
   if (Platform.OS === 'web') return;
-  for (const name of ['plants', 'meal-images']) {
+  const directories = [
+    ...(clearPlants ? ['plants'] : []),
+    ...(clearMealImages ? ['meal-images'] : []),
+  ];
+  for (const name of directories) {
     const directory = new Directory(Paths.document, name);
     if (directory.exists) {
       try {
@@ -336,10 +347,26 @@ async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
       resolved.set(name, await resolveCloudMedia(payload));
     }),
   );
-  await resetLocalDomains();
-  for (const domain of domains) {
-    const payload = resolved.get(domain.name);
-    if (payload) domain.write(payload);
+  stopSubscriptions?.();
+  stopSubscriptions = undefined;
+
+  // Only replace domains the account already stores. Newly added domains
+  // (or domains that failed to upload) keep local device data and sync up
+  // once subscriptions resume.
+  const replacing = domains.filter((domain) => resolved.has(domain.name));
+  const replacingPlants = replacing.some((domain) => domain.name === 'plants');
+  const replacingSchedule = replacing.some((domain) => domain.name === 'schedule');
+  await deleteAppOwnedMedia({
+    plants: replacingPlants,
+    visionBoard: replacing.some((domain) => domain.name === 'vision-board'),
+    mealImages: replacingPlants || replacingSchedule,
+  });
+  for (const domain of replacing) {
+    domain.reset();
+    domain.write(resolved.get(domain.name)!);
+  }
+  if (replacingSchedule) {
+    useNutrition.getState().reset();
   }
 }
 
