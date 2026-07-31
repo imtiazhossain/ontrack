@@ -15,6 +15,7 @@ describe('add-on registry', () => {
       'travel',
       'vision-board',
       'games',
+      'vehicles',
     ]);
     expect(DEFAULT_ADDON_STATE).toEqual({
       food: true,
@@ -23,6 +24,7 @@ describe('add-on registry', () => {
       travel: true,
       'vision-board': true,
       games: true,
+      vehicles: true,
     });
   });
 

@@ -109,6 +109,22 @@ export const darkPlantTheme: Theme = {
   textOnAccent: '#F4FBF6',
 };
 
+export const lightVehicleTheme: Theme = {
+  ...lightTheme,
+  accentPrimary: palette.vehicleSteel,
+  accentSoft: palette.vehicleSteelSoft,
+  accentFaint: palette.vehicleSteelFaint,
+  textOnAccent: '#F5FAFD',
+};
+
+export const darkVehicleTheme: Theme = {
+  ...darkTheme,
+  accentPrimary: palette.vehicleSteelDark,
+  accentSoft: palette.vehicleSteelSoftDark,
+  accentFaint: palette.vehicleSteelFaintDark,
+  textOnAccent: '#F5FAFD',
+};
+
 export interface CategoryColors {
   main: string;
   tint: string;

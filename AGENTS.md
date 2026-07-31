@@ -68,6 +68,7 @@ After app-affecting changes, leave Metro healthy and verified (`/status` 200 on 
 | Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`, `expenses/travel-expenses-sheet`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
 | Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`) |
+| Vehicles tab | `app/(tabs)/vehicles.tsx` (+ `features/vehicles/*`, `store/vehicles.ts`, `services/vehicles/` for VIN/parts + `collaboration.ts`, join via `app/v/[code].tsx`) |
 | Games tab | `app/(tabs)/games.tsx` (+ `features/games/games-hub`, `balloon-pop/*`) |
 | Auth / guest | `features/auth/` |
 | Cloud sync | `services/cloud/sync.ts` |

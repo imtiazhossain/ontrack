@@ -56,6 +56,13 @@ export const ADDONS = [
     categoryIds: [],
     tabRoute: 'games',
   },
+  {
+    id: 'vehicles',
+    name: 'Vehicle Tracker',
+    description: 'Maintenance, mileage, expenses, registration, insurance, and parts.',
+    categoryIds: [],
+    tabRoute: 'vehicles',
+  },
 ] as const satisfies readonly AddonDefinition[];
 
 export const DEFAULT_ADDON_STATE: AddonEnabledState = {
@@ -65,6 +72,7 @@ export const DEFAULT_ADDON_STATE: AddonEnabledState = {
   travel: true,
   'vision-board': true,
   games: true,
+  vehicles: true,
 };
 
 /** Beta default. Paid access can later replace this from server-owned rows. */
@@ -75,6 +83,7 @@ export const DEFAULT_ADDON_ENTITLEMENTS: AddonEntitlementState = {
   travel: { active: true, source: 'included' },
   'vision-board': { active: true, source: 'included' },
   games: { active: true, source: 'included' },
+  vehicles: { active: true, source: 'included' },
 };
 
 const ADDON_BY_ID = new Map<AddonId, AddonDefinition>(ADDONS.map((addon) => [addon.id, addon]));

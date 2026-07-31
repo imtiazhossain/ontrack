@@ -5,14 +5,16 @@ import {
   darkPlantTheme,
   darkTheme,
   darkTravelTheme,
+  darkVehicleTheme,
   lightPlantTheme,
   lightTheme,
   lightTravelTheme,
+  lightVehicleTheme,
   type Theme,
 } from '@/design-system';
 import { usePreferences } from '@/store/preferences';
 
-type FeatureTheme = 'default' | 'travel' | 'plants';
+type FeatureTheme = 'default' | 'travel' | 'plants' | 'vehicles';
 
 const FeatureThemeContext = createContext<FeatureTheme>('default');
 
@@ -33,6 +35,9 @@ export function useTheme(): Theme {
   }
   if (feature === 'plants') {
     return resolved === 'dark' ? darkPlantTheme : lightPlantTheme;
+  }
+  if (feature === 'vehicles') {
+    return resolved === 'dark' ? darkVehicleTheme : lightVehicleTheme;
   }
   return resolved === 'dark' ? darkTheme : lightTheme;
 }

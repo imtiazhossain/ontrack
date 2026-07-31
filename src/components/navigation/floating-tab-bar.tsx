@@ -98,6 +98,11 @@ const TAB_META: Record<
     icon: 'games',
     href: '/(tabs)/games',
   },
+  vehicles: {
+    label: 'Vehicles',
+    icon: 'vehicles',
+    href: '/(tabs)/vehicles',
+  },
 };
 
 export function FloatingTabBar({
@@ -131,6 +136,7 @@ export function FloatingTabBar({
         if (route.name === 'travel') return enabledAddons.travel;
         if (route.name === 'vision-board') return enabledAddons['vision-board'];
         if (route.name === 'games') return enabledAddons.games;
+        if (route.name === 'vehicles') return enabledAddons.vehicles;
         return route.name in TAB_META;
       }),
     [enabledAddons, state.routes],

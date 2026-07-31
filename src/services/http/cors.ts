@@ -10,7 +10,7 @@ export function apiCorsHeaders(
   const allowed = new Set(
     (process.env.ALLOWED_ORIGINS ?? process.env.EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL ?? '')
       .split(',')
-      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .map((origin: string) => origin.trim().replace(/\/$/, ''))
       .filter(Boolean),
   );
   const origin = request?.headers.get('Origin')?.replace(/\/$/, '');

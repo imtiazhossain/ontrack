@@ -35,7 +35,7 @@ describe('goBackOrReplace', () => {
 });
 
 describe('feature route ownership', () => {
-  it.each(['profile', 'workouts', 'plants', 'travel', 'vision-board', 'games'])(
+  it.each(['profile', 'workouts', 'plants', 'travel', 'vision-board', 'games', 'vehicles'])(
     'keeps /%s in the tab carousel without a duplicate root route',
     (feature) => {
       const appDirectory = join(process.cwd(), 'src/app');

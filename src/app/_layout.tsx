@@ -22,6 +22,7 @@ import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
 import { useTheme } from '@/hooks/use-theme';
 import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
+import { useVehicleCollaboration } from '@/hooks/use-vehicle-collaboration';
 import { getNotificationsModule } from '@/services/notifications/runtime';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
@@ -67,6 +68,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const appAccess = isGuest || phase === 'authenticated';
   const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
   useTodoCollaboration(hydrated && phase === 'authenticated');
+  useVehicleCollaboration(hydrated && phase === 'authenticated');
 
   useEffect(() => {
     if (phase !== 'authenticated') return;
@@ -268,6 +270,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="plants/[id]" />
         <Stack.Screen name="plants/[id]/edit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="plants/[id]/check-in" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="vehicles/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="vehicles/[id]" />
+        <Stack.Screen name="vehicles/[id]/settings" />
       </Stack.Protected>
       <Stack.Protected guard={appAccess && hasOnboarded}>
         <Stack.Screen
@@ -290,6 +295,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
       <Stack.Screen name="i/[code]" />
       <Stack.Screen name="l/[code]" />
       <Stack.Screen name="c/[code]" />
+      <Stack.Screen name="v/[code]" />
     </Stack>
   );
 }
