@@ -40,8 +40,7 @@ import {
   visionBoardImageSource,
 } from './sample';
 import {
-  hasCustomizedVisionBoardCategories,
-  hasCustomizedVisionBoardItems,
+  canUseVisionBoardShowcase,
   newestFirst,
   orderedVisionBoardCategories,
 } from './selectors';
@@ -317,10 +316,7 @@ function isDefaultBoard(
   categories: VisionBoardCategory[],
   items: VisionBoardItem[],
 ) {
-  return (
-    !hasCustomizedVisionBoardCategories(categories) &&
-    !hasCustomizedVisionBoardItems(items)
-  );
+  return canUseVisionBoardShowcase(categories, items);
 }
 
 function cardsFromBoard(

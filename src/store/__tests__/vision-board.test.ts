@@ -60,6 +60,42 @@ describe('vision board store', () => {
     );
   });
 
+  it('persists a newly created category across rehydrate', async () => {
+    const at = '2026-07-30T12:00:00.000Z';
+    const categories = [
+      ...createDefaultVisionBoardCategories(at),
+      {
+        id: 'vision-category-test',
+        name: 'Test',
+        intention: 'Try a new board.',
+        icon: 'vision-board' as const,
+        accent: 'sage' as const,
+        background: 'linen' as const,
+        order: 5,
+        createdAt: at,
+        updatedAt: at,
+      },
+    ];
+    await mockAsyncStorage.setItem(
+      STORAGE_KEYS.visionBoard,
+      JSON.stringify({
+        state: {
+          categories,
+          items: [],
+          sampleVersion: VISION_BOARD_SAMPLE_VERSION,
+          updatedAt: at,
+        },
+        version: 0,
+      }),
+    );
+
+    await useVisionBoard.persist.rehydrate();
+
+    expect(
+      useVisionBoard.getState().categories.some((category) => category.id === 'vision-category-test'),
+    ).toBe(true);
+  });
+
   it('upgrades an older persisted empty board with the example once', async () => {
     const updatedAt = '2026-07-29T09:00:00.000Z';
     await mockAsyncStorage.setItem(

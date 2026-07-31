@@ -1,4 +1,5 @@
 import {
+  canUseVisionBoardShowcase,
   categoryCover,
   countVisionBoardItems,
   hasCustomizedVisionBoardCategories,
@@ -101,5 +102,42 @@ describe('vision board selectors', () => {
     );
     expect(hasCustomizedVisionBoardItems(moved)).toBe(true);
     expect(hasCustomizedVisionBoardItems(sample.slice(1))).toBe(true);
+  });
+
+  it('keeps the consolidated showcase when an extra category is added', () => {
+    const at = '2026-07-29T08:00:00.000Z';
+    const categories = createDefaultVisionBoardCategories(at);
+    const items = createSampleVisionBoardItems(at);
+    expect(canUseVisionBoardShowcase(categories, items)).toBe(true);
+
+    const withExtra: VisionBoardCategory[] = [
+      ...categories,
+      {
+        id: 'vision-category-test',
+        name: 'Test',
+        intention: 'Try a new board.',
+        icon: 'vision-board',
+        accent: 'sage',
+        background: 'linen',
+        order: categories.length,
+        createdAt: at,
+        updatedAt: at,
+      },
+    ];
+    expect(hasCustomizedVisionBoardCategories(withExtra)).toBe(true);
+    expect(canUseVisionBoardShowcase(withExtra, items)).toBe(true);
+    expect(
+      canUseVisionBoardShowcase(categories.slice(1), items),
+    ).toBe(false);
+    expect(
+      canUseVisionBoardShowcase(
+        withExtra,
+        items.map((item, index) =>
+          index === 0
+            ? { ...item, frame: { ...item.frame, x: item.frame.x - 0.05 } }
+            : item,
+        ),
+      ),
+    ).toBe(false);
   });
 });
