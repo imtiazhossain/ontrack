@@ -31,6 +31,7 @@ import {
 } from '@/services/todos/collaboration';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import { useTodos } from '@/store/todos';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
   const router = useRouter();
@@ -113,32 +114,25 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   };
 
   const removeList = () => {
-    appPrompt.alert(
-      'Delete this list?',
-      'The list and every item in it will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void run('delete', async () => {
-              if (list.mode === 'private') {
-                useTodos
-                  .getState()
-                  .recipes.filter((recipe) => recipe.listId === list.id)
-                  .forEach((recipe) =>
-                    deletePersistedRecipeImage(recipe.sourceImageUri),
-                  );
-              }
-              if (list.mode === 'shared') await deleteSharedTodoList(list.id);
-              else deletePrivateList(list.id);
-              router.replace('/(tabs)/to-do' as never);
-            });
-          },
-        },
-      ],
-    );
+    confirmDestructiveAction({
+      title: 'Delete this list?',
+      message: 'The list and every item in it will be permanently deleted.',
+      onConfirm: () => {
+        void run('delete', async () => {
+          if (list.mode === 'private') {
+            useTodos
+              .getState()
+              .recipes.filter((recipe) => recipe.listId === list.id)
+              .forEach((recipe) =>
+                deletePersistedRecipeImage(recipe.sourceImageUri),
+              );
+          }
+          if (list.mode === 'shared') await deleteSharedTodoList(list.id);
+          else deletePrivateList(list.id);
+          router.replace('/(tabs)/to-do' as never);
+        });
+      },
+    });
   };
 
   return (
@@ -384,18 +378,16 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           variant="danger"
           disabled={Boolean(working)}
           onPress={() =>
-            appPrompt.alert('Leave this list?', 'It will disappear from your account.', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Leave',
-                style: 'destructive',
-                onPress: () =>
-                  void run('leave', async () => {
-                    await leaveTodoList(list.id);
-                    router.replace('/(tabs)/to-do' as never);
-                  }),
-              },
-            ])
+            confirmDestructiveAction({
+              title: 'Leave this list?',
+              message: 'It will disappear from your account.',
+              actionLabel: 'Leave',
+              onConfirm: () =>
+                void run('leave', async () => {
+                  await leaveTodoList(list.id);
+                  router.replace('/(tabs)/to-do' as never);
+                }),
+            })
           }>
           Leave list
         </Button>

@@ -1,3 +1,4 @@
+import { asTrimmedString } from '@/utils/parse';
 import type { MovieDetails, MovieSearchResult } from './types';
 
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -20,12 +21,8 @@ type RawMovieDetails = RawSearchMovie & {
   episode_run_time?: unknown;
 };
 
-function stringValue(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
 function posterUrl(path: unknown): string | undefined {
-  const value = stringValue(path);
+  const value = asTrimmedString(path);
   return value ? `${POSTER_BASE_URL}${value.startsWith('/') ? value : `/${value}`}` : undefined;
 }
 
@@ -33,15 +30,15 @@ export function normalizeSearchMovie(raw: RawSearchMovie): MovieSearchResult | u
   if (raw.adult === true || typeof raw.id !== 'number') return undefined;
   const mediaType = raw.media_type === 'tv' ? 'tv' : raw.media_type === 'movie' || raw.media_type === undefined ? 'movie' : undefined;
   if (!mediaType) return undefined;
-  const title = stringValue(mediaType === 'tv' ? raw.name : raw.title);
+  const title = asTrimmedString(mediaType === 'tv' ? raw.name : raw.title);
   if (!title) return undefined;
   return {
     tmdbId: raw.id,
     mediaType,
     title,
-    releaseDate: stringValue(mediaType === 'tv' ? raw.first_air_date : raw.release_date),
+    releaseDate: asTrimmedString(mediaType === 'tv' ? raw.first_air_date : raw.release_date),
     posterUrl: posterUrl(raw.poster_path),
-    overview: stringValue(raw.overview) ?? '',
+    overview: asTrimmedString(raw.overview) ?? '',
   };
 }
 
@@ -55,7 +52,7 @@ export function normalizeMovieDetails(raw: RawMovieDetails, mediaType: 'movie' |
   const genres = Array.isArray(raw.genres)
     ? raw.genres
         .map((genre) =>
-          genre && typeof genre === 'object' && 'name' in genre ? stringValue(genre.name) : undefined,
+          genre && typeof genre === 'object' && 'name' in genre ? asTrimmedString(genre.name) : undefined,
         )
         .filter((genre): genre is string => Boolean(genre))
     : [];

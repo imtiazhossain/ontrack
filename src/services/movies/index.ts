@@ -1,8 +1,5 @@
-import Constants from 'expo-constants';
-import { fetch } from 'expo/fetch';
-import { Platform } from 'react-native';
-
-import { authHeader } from '@/services/cloud/access-token';
+import { apiRequest } from '@/services/http/api-client';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
 import type { MovieDetails, MovieSearchResponse } from './types';
 
 export type { MovieDetails, MovieSearchResult } from './types';
@@ -15,36 +12,25 @@ export class MovieServiceError extends Error {
 }
 
 function apiUrl(path: string): string {
-  if (Platform.OS === 'web') return path;
-  const developmentHost = __DEV__ ? Constants.expoConfig?.hostUri : undefined;
-  const baseUrl = developmentHost
-    ? `http://${developmentHost}`
-    : process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-  if (!baseUrl) throw new MovieServiceError('Movie search is not configured for this build.');
-  return `${baseUrl}${path}`;
+  return resolveExpoApiUrl(path, {
+    configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+    createNotConfiguredError: () =>
+      new MovieServiceError('Movie search is not configured for this build.'),
+  });
 }
 
+
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(apiUrl(path), {
-      signal,
-      headers: await authHeader(),
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-    if (error instanceof MovieServiceError) throw error;
-    throw new MovieServiceError(
-      __DEV__
-        ? 'Movie search needs the Expo server. Run npm run ios and leave that terminal open, then try again.'
-        : 'Unable to connect. Check your internet connection and try again.',
-    );
-  }
-  if (!response.ok) {
-    const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
-    throw new MovieServiceError(body?.error ?? 'Movie search is temporarily unavailable.', response.status);
-  }
-  return response.json() as Promise<T>;
+  return apiRequest<T, MovieServiceError>({
+    url: apiUrl(path),
+    method: 'GET',
+    signal,
+    offlineMessage: __DEV__
+      ? 'Movie search needs the Expo server. Run npm run ios and leave that terminal open, then try again.'
+      : 'Unable to connect. Check your internet connection and try again.',
+    unavailableMessage: 'Movie search is temporarily unavailable.',
+    createError: (message, _code, status) => new MovieServiceError(message, status ?? 0),
+  });
 }
 
 export function searchMovies(query: string, signal?: AbortSignal) {

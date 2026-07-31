@@ -1,12 +1,10 @@
-import Constants from 'expo-constants';
-import { fetch } from 'expo/fetch';
-import { Directory, File, Paths } from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import { authHeader } from '@/services/cloud/access-token';
+import { apiRequest } from '@/services/http/api-client';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
+import { prepareJpegDataUrl, persistJpegToDocuments } from '@/utils/image-persist';
 import type {
-  RecipeImportApiError,
   RecipeImportDraft,
   RecipeImportErrorCode,
   RecipeImportRequest,
@@ -24,95 +22,65 @@ export class RecipeImportError extends Error {
 }
 
 function apiUrl(path: string) {
-  const configured = (
-    process.env.EXPO_PUBLIC_RECIPE_API_URL ??
-    process.env.EXPO_PUBLIC_NUTRITION_API_URL
-  )?.replace(/\/$/, '');
-  if (configured) return `${configured}${path}`;
-  if (Platform.OS === 'web') return path;
-  const developmentHost = __DEV__ ? Constants.expoConfig?.hostUri : undefined;
-  if (developmentHost) return `http://${developmentHost}${path}`;
-  throw new RecipeImportError(
-    'Recipe import is not configured for this build.',
-    'NOT_CONFIGURED',
-  );
+  return resolveExpoApiUrl(path, {
+    configuredBaseUrl:
+      process.env.EXPO_PUBLIC_RECIPE_API_URL ?? process.env.EXPO_PUBLIC_NUTRITION_API_URL,
+    preferConfiguredFirst: true,
+    createNotConfiguredError: () =>
+      new RecipeImportError(
+        'Recipe import is not configured for this build.',
+        'NOT_CONFIGURED',
+      ),
+  });
 }
+
 
 export async function analyzeRecipe(
   request: RecipeImportRequest,
   signal?: AbortSignal,
 ) {
-  let response: Response;
-  try {
-    response = await fetch(apiUrl('/recipe-imports/analyze'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-      body: JSON.stringify(request),
-      signal,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-    if (error instanceof RecipeImportError) throw error;
-    throw new RecipeImportError(
-      'Unable to connect. Check your internet connection.',
-      'OFFLINE',
-    );
-  }
-  if (!response.ok) {
-    const body = (await response.json().catch(() => undefined)) as
-      | RecipeImportApiError
-      | undefined;
-    throw new RecipeImportError(
-      body?.error ?? 'Recipe analysis is temporarily unavailable.',
-      body?.code ?? 'PROVIDER_FAILURE',
-      response.status,
-    );
-  }
-  return response.json() as Promise<RecipeImportDraft>;
+  return apiRequest<RecipeImportDraft, RecipeImportError>({
+    url: apiUrl('/recipe-imports/analyze'),
+    method: 'POST',
+    body: request,
+    signal,
+    offlineMessage: 'Unable to connect. Check your internet connection.',
+    unavailableMessage: 'Recipe analysis is temporarily unavailable.',
+    defaultErrorCode: 'PROVIDER_FAILURE',
+    createError: (message, code, status) =>
+      new RecipeImportError(
+        message,
+        (code as RecipeImportErrorCode | undefined) ?? 'PROVIDER_FAILURE',
+        status ?? 0,
+      ),
+  });
 }
 
 /** Re-encoding removes metadata while keeping enough detail for recipe text. */
 export async function prepareRecipeImage(photoUri: string) {
-  const result = await ImageManipulator.manipulateAsync(
-    photoUri,
-    [{ resize: { width: 2_048 } }],
-    {
-      compress: 0.82,
-      format: ImageManipulator.SaveFormat.JPEG,
-      base64: true,
+  return prepareJpegDataUrl(photoUri, {
+    width: 2_048,
+    compress: 0.82,
+    maxDataUrlLength: 8_000_000,
+    onInvalid: (reason) => {
+      throw new RecipeImportError(
+        reason === 'too_large'
+          ? 'The selected image is too large.'
+          : 'The selected image could not be prepared.',
+        'INVALID_IMAGE',
+      );
     },
-  );
-  if (!result.base64) {
-    throw new RecipeImportError(
-      'The selected image could not be prepared.',
-      'INVALID_IMAGE',
-    );
-  }
-  const imageDataUrl = `data:image/jpeg;base64,${result.base64}`;
-  if (imageDataUrl.length > 8_000_000) {
-    throw new RecipeImportError(
-      'The selected image is too large.',
-      'INVALID_IMAGE',
-    );
-  }
-  return imageDataUrl;
+  });
 }
 
 /** Picker files may be temporary, so copy the sanitized thumbnail to documents. */
 export async function persistRecipeImage(photoUri: string, key: string) {
-  if (Platform.OS === 'web' || !photoUri.startsWith('file://')) return photoUri;
-  const result = await ImageManipulator.manipulateAsync(
-    photoUri,
-    [{ resize: { width: 1_280 } }],
-    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG },
-  );
-  const directory = new Directory(Paths.document, 'recipe-images');
-  directory.create({ idempotent: true, intermediates: true });
-  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '-');
-  const source = new File(result.uri);
-  const destination = new File(directory, `${safeKey}-${Date.now()}.jpg`);
-  await source.copy(destination);
-  return destination.uri;
+  return persistJpegToDocuments(photoUri, {
+    width: 1_280,
+    compress: 0.82,
+    directorySegments: ['recipe-images'],
+    fileStem: key,
+  });
 }
 
 export function deletePersistedRecipeImage(uri?: string) {

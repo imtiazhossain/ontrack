@@ -34,11 +34,17 @@ describe('travel document reader build invariant', () => {
       join(process.cwd(), 'src/features/travel/flight-confirmation-import.ts'),
       'utf8',
     );
+    const pickImageSource = readFileSync(
+      join(process.cwd(), 'src/utils/pick-image.ts'),
+      'utf8',
+    );
 
-    expect(source).toContain("from 'expo-image-picker'");
-    expect(source).toContain("mediaTypes: ['images']");
+    expect(source).toContain("from '@/utils/pick-image'");
+    expect(source).toContain('pickLibraryImages');
     expect(source).toContain('allowsMultipleSelection: true');
     expect(source).toContain('selectionLimit: MAX_SCREENSHOTS');
     expect(source).toContain("source === 'screenshots'");
+    expect(pickImageSource).toContain("mediaTypes: ['images']");
+    expect(pickImageSource).toContain('allowsMultipleSelection');
   });
 });

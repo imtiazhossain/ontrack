@@ -1,13 +1,11 @@
-import Constants from 'expo-constants';
-import { fetch } from 'expo/fetch';
 import { Directory, EncodingType, File, Paths } from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
-import { authHeader } from '@/services/cloud/access-token';
+import { apiRequest } from '@/services/http/api-client';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
 import type { MealAnalysis } from '@/types/models';
+import { prepareJpegDataUrl, persistJpegToDocuments } from '@/utils/image-persist';
 import type {
-  ApiErrorBody,
   MealLinkResolution,
   MealImageEnhancementResponse,
   NutritionErrorCode,
@@ -30,57 +28,50 @@ export class NutritionServiceError extends Error {
 }
 
 function apiUrl(path: string): string {
-  const configured = process.env.EXPO_PUBLIC_NUTRITION_API_URL?.replace(/\/$/, '');
-  if (configured) return `${configured}${path}`;
-  if (Platform.OS === 'web') return path;
-  const developmentHost = __DEV__ ? Constants.expoConfig?.hostUri : undefined;
-  if (developmentHost) return `http://${developmentHost}${path}`;
-  throw new NutritionServiceError(
-    'Nutrition analysis is not configured for this build.',
-    'NOT_CONFIGURED',
-  );
+  return resolveExpoApiUrl(path, {
+    configuredBaseUrl: process.env.EXPO_PUBLIC_NUTRITION_API_URL,
+    preferConfiguredFirst: true,
+    createNotConfiguredError: () =>
+      new NutritionServiceError(
+        'Nutrition analysis is not configured for this build.',
+        'NOT_CONFIGURED',
+      ),
+  });
 }
 
-async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(apiUrl(path), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-    if (error instanceof NutritionServiceError) throw error;
-    throw new NutritionServiceError('Unable to connect. Check your internet connection.', 'OFFLINE');
-  }
-  if (!response.ok) {
-    const parsed = (await response.json().catch(() => undefined)) as ApiErrorBody | undefined;
-    throw new NutritionServiceError(
-      parsed?.error ?? 'Nutrition analysis is temporarily unavailable.',
-      parsed?.code ?? 'PROVIDER_FAILURE',
-      response.status,
-    );
-  }
-  return response.json() as Promise<T>;
+function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T, NutritionServiceError>({
+    url: apiUrl(path),
+    method: 'POST',
+    body,
+    signal,
+    offlineMessage: 'Unable to connect. Check your internet connection.',
+    unavailableMessage: 'Nutrition analysis is temporarily unavailable.',
+    defaultErrorCode: 'PROVIDER_FAILURE',
+    createError: (message, code, status) =>
+      new NutritionServiceError(
+        message,
+        (code as NutritionErrorCode | undefined) ?? 'PROVIDER_FAILURE',
+        status ?? 0,
+      ),
+  });
 }
 
 /** Resizes and re-encodes the image, which removes EXIF metadata before upload. */
 export async function prepareMealImage(photoUri: string): Promise<string> {
-  const result = await ImageManipulator.manipulateAsync(
-    photoUri,
-    [{ resize: { width: 1280 } }],
-    { compress: 0.72, format: ImageManipulator.SaveFormat.JPEG, base64: true },
-  );
-  if (!result.base64) {
-    throw new NutritionServiceError('The selected image could not be prepared.', 'INVALID_IMAGE');
-  }
-  const dataUrl = `data:image/jpeg;base64,${result.base64}`;
-  if (dataUrl.length > 5_500_000) {
-    throw new NutritionServiceError('The selected image is too large.', 'INVALID_IMAGE');
-  }
-  return dataUrl;
+  return prepareJpegDataUrl(photoUri, {
+    width: 1280,
+    compress: 0.72,
+    maxDataUrlLength: 5_500_000,
+    onInvalid: (reason) => {
+      throw new NutritionServiceError(
+        reason === 'too_large'
+          ? 'The selected image is too large.'
+          : 'The selected image could not be prepared.',
+        'INVALID_IMAGE',
+      );
+    },
+  });
 }
 
 /**
@@ -89,19 +80,12 @@ export async function prepareMealImage(photoUri: string): Promise<string> {
  * must not be persisted directly in schedule state.
  */
 export async function persistMealPhoto(photoUri: string, key: string): Promise<string> {
-  if (Platform.OS === 'web' || !photoUri.startsWith('file://')) return photoUri;
-  const result = await ImageManipulator.manipulateAsync(
-    photoUri,
-    [{ resize: { width: 1280 } }],
-    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG },
-  );
-  const directory = new Directory(Paths.document, 'meal-images');
-  directory.create({ idempotent: true, intermediates: true });
-  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '-');
-  const source = new File(result.uri);
-  const destination = new File(directory, `${safeKey}-${Date.now()}.jpg`);
-  await source.copy(destination);
-  return destination.uri;
+  return persistJpegToDocuments(photoUri, {
+    width: 1280,
+    compress: 0.82,
+    directorySegments: ['meal-images'],
+    fileStem: key,
+  });
 }
 
 export async function analyzeMealPhoto(

@@ -1,5 +1,12 @@
 import { AI_DISCLAIMER } from '@/services/ai';
 import { validateMealAnalysis } from '@/services/ai/validate';
+import {
+  defaultOllamaModel,
+  defaultOpenAIModel,
+  fetchOllamaChatJson,
+  fetchOpenAIResponses,
+  openAIResponseText,
+} from '@/services/ai/vision-transport';
 import { gatePaidApiRequest } from '@/services/http/api-gate';
 import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
@@ -8,7 +15,6 @@ import type { MealLinkCandidate, MealLinkResolution, NutritionErrorCode } from '
 import { sanitizeMealUrl } from './url-safety';
 import { assertPublicDns } from './url-safety.server';
 
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const FDC_URL = 'https://api.nal.usda.gov/fdc/v1';
 const MAX_ITEMS = 8;
@@ -17,6 +23,15 @@ type MealAIProvider = 'ollama' | 'openai';
 
 function mealAIProvider(): MealAIProvider {
   return process.env.MEAL_AI_PROVIDER === 'ollama' ? 'ollama' : 'openai';
+}
+
+function openAIResponse(payload: Record<string, unknown>) {
+  return fetchOpenAIResponses({
+    model: defaultOpenAIModel(process.env.OPENAI_MEAL_MODEL),
+    safetyIdentifier: 'ontrack-meal-analysis',
+    payload,
+    timeoutMs: 45_000,
+  });
 }
 
 export const nutritionCorsHeaders = apiCorsHeaders();
@@ -186,86 +201,20 @@ const VISION_SCHEMA = {
   },
 } as const;
 
-function responseText(body: Record<string, unknown>): string | undefined {
-  if (typeof body.output_text === 'string') return body.output_text;
-  const output = Array.isArray(body.output) ? body.output : [];
-  for (const item of output) {
-    if (typeof item !== 'object' || item === null) continue;
-    const content = Array.isArray((item as Record<string, unknown>).content)
-      ? ((item as Record<string, unknown>).content as unknown[])
-      : [];
-    for (const part of content) {
-      if (typeof part === 'object' && part !== null && typeof (part as Record<string, unknown>).text === 'string') {
-        return (part as Record<string, unknown>).text as string;
-      }
-    }
-  }
-  return undefined;
-}
-
-async function openAIResponse(payload: Record<string, unknown>) {
-  const response = await guardedFetch('openai', OPENAI_RESPONSES_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MEAL_MODEL ?? 'gpt-5.6-terra',
-      store: false,
-      safety_identifier: 'ontrack-meal-analysis',
-      reasoning: { effort: 'low' },
-      ...payload,
-    }),
-  }, {
-    timeoutMs: 45_000,
-    maxConcurrency: 2,
-  });
-  if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
-  return response.json() as Promise<Record<string, unknown>>;
-}
-
 async function ollamaVisionResponse(imageDataUrl: string, prompt: string): Promise<VisionOutput> {
-  const baseUrl = new URL(process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434');
-  if (!['127.0.0.1', 'localhost', '::1'].includes(baseUrl.hostname)) {
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  const encodedImage = imageDataUrl.slice(imageDataUrl.indexOf(',') + 1);
-  let response: Response;
-  try {
-    response = await guardedFetch('ollama', new URL('/api/chat', baseUrl), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.OLLAMA_MEAL_MODEL ?? 'qwen3-vl:2b',
-        stream: false,
-        think: false,
-        format: VISION_SCHEMA,
-        keep_alive: '15m',
-        options: { temperature: 0, num_predict: 900 },
-        messages: [{ role: 'user', content: prompt, images: [encodedImage] }],
-      }),
-    }, {
-      timeoutMs: 120_000,
-      maxConcurrency: 1,
-    });
-  } catch {
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  if (!response.ok) throw new Error('OLLAMA_UNAVAILABLE');
-  const body = await response.json() as { message?: { content?: string; thinking?: string } };
-  const structuredText = body.message?.content || body.message?.thinking;
-  if (!structuredText) throw new Error('INVALID_ANALYSIS');
-  try {
-    const output = normalizeVisionOutput(JSON.parse(structuredText));
-    return {
-      ...output,
-      foods: output.foods.map((food) => ({ ...food, confidence: Math.min(food.confidence, 0.75) })),
-      overallConfidence: Math.min(output.overallConfidence, 0.75),
-    };
-  } catch {
-    throw new Error('INVALID_ANALYSIS');
-  }
+  const parsed = await fetchOllamaChatJson({
+    model: defaultOllamaModel(process.env.OLLAMA_MEAL_MODEL),
+    prompt,
+    schema: VISION_SCHEMA,
+    imageDataUrls: [imageDataUrl],
+    numPredict: 900,
+  });
+  const output = normalizeVisionOutput(parsed);
+  return {
+    ...output,
+    foods: output.foods.map((food) => ({ ...food, confidence: Math.min(food.confidence, 0.75) })),
+    overallConfidence: Math.min(output.overallConfidence, 0.75),
+  };
 }
 
 async function identifyFoods(imageDataUrl: string, mealName?: string): Promise<VisionOutput> {
@@ -289,7 +238,7 @@ async function identifyFoods(imageDataUrl: string, mealName?: string): Promise<V
     }],
     text: { format: { type: 'json_schema', name: 'meal_photo', strict: true, schema: VISION_SCHEMA } },
   });
-  const text = responseText(body);
+  const text = openAIResponseText(body);
   if (!text) throw new Error('The model did not return an analysis.');
   return normalizeVisionOutput(JSON.parse(text));
 }
@@ -478,7 +427,7 @@ export async function analyzeLinkCandidate(candidate: MealLinkCandidate): Promis
       `Servings: ${candidate.servings}\nSources:\n${sourceSummary}`,
     text: { format: { type: 'json_schema', name: 'meal_link_analysis', strict: true, schema: VISION_SCHEMA } },
   });
-  const text = responseText(body);
+  const text = openAIResponseText(body);
   if (!text) throw new Error('INVALID_ANALYSIS');
   return assembleAnalysis(JSON.parse(text) as VisionOutput, candidate.sources);
 }
@@ -538,7 +487,7 @@ export async function resolveLink(rawUrl: string): Promise<MealLinkResolution> {
       `URL: ${page.sanitizedUrl}\nPublic page text: ${page.text}`,
     text: { format: { type: 'json_schema', name: 'meal_link', strict: true, schema: LINK_SCHEMA } },
   });
-  const text = responseText(body);
+  const text = openAIResponseText(body);
   if (!text) throw new Error('AMBIGUOUS_MEAL');
   const parsed = JSON.parse(text) as { candidates?: Omit<MealLinkCandidate, 'id' | 'sources'>[] };
   const rawSources: NutritionSource[] = [];

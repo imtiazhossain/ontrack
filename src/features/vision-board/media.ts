@@ -1,25 +1,17 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
+
+import { persistJpegToDocumentsWithSize } from '@/utils/image-persist';
 
 const DIRECTORY_NAME = 'vision-board';
 
 export async function persistVisionBoardImage(uri: string, id: string) {
-  if (Platform.OS === 'web' || !uri.startsWith('file://')) {
-    return { uri, width: 1, height: 1 };
-  }
-  const result = await ImageManipulator.manipulateAsync(
-    uri,
-    [{ resize: { width: 1_600 } }],
-    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG },
-  );
-  const directory = new Directory(Paths.document, DIRECTORY_NAME);
-  directory.create({ idempotent: true, intermediates: true });
-  const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '-');
-  const source = new File(result.uri);
-  const destination = new File(directory, `${safeId}-${Date.now()}.jpg`);
-  await source.copy(destination);
-  return { uri: destination.uri, width: result.width, height: result.height };
+  return persistJpegToDocumentsWithSize(uri, {
+    width: 1_600,
+    compress: 0.82,
+    directorySegments: [DIRECTORY_NAME],
+    fileStem: id,
+  });
 }
 
 export function isOwnedVisionBoardImage(uri: string) {

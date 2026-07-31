@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import {
   clearSharedPayloads,
   getResolvedSharedPayloadsAsync,
@@ -14,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -31,10 +29,11 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
+import { scaleIngredients } from '@/features/todos/grocery-utils';
 import {
-  parseQuantityText,
-  scaleIngredients,
-} from '@/features/todos/grocery-utils';
+  RecipeIngredientEditor,
+  type EditableRecipeIngredient,
+} from '@/features/todos/recipe-ingredient-editor';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -47,28 +46,21 @@ import {
 } from '@/services/recipes';
 import { sanitizeMealUrl } from '@/services/nutrition/url-safety';
 import {
-  canonicalIngredientKey,
   useTodos,
   type TodoIngredientInput,
   type TodoRecipeSourceKind,
 } from '@/store/todos';
 import { haptics } from '@/utils/haptics';
+import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
+import { asPositiveNumber } from '@/utils/parse';
 
-interface EditableIngredient extends RecipeImportIngredient {
-  id: string;
-}
 
 let ingredientId = 0;
-function withIds(ingredients: RecipeImportIngredient[]): EditableIngredient[] {
+function withIds(ingredients: RecipeImportIngredient[]): EditableRecipeIngredient[] {
   return ingredients.map((ingredient) => ({
     ...ingredient,
     id: `ingredient-${Date.now()}-${ingredientId++}`,
   }));
-}
-
-function numberOrUndefined(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function sharedUrl() {
@@ -93,8 +85,8 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
   const addRecipe = useTodos((state) => state.addRecipe);
   const [url, setUrl] = useState('');
   const [draft, setDraft] = useState<RecipeImportDraft>();
-  const [ingredients, setIngredients] = useState<EditableIngredient[]>([]);
-  const baseIngredients = useRef<EditableIngredient[]>([]);
+  const [ingredients, setIngredients] = useState<EditableRecipeIngredient[]>([]);
+  const baseIngredients = useRef<EditableRecipeIngredient[]>([]);
   const [name, setName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourceServings, setSourceServings] = useState('');
@@ -289,39 +281,29 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
   };
 
   const pickCamera = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError('Camera permission is needed to photograph a recipe.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+    const uri = await pickCameraImage({
       quality: 1,
-      allowsEditing: false,
+      onDenied: () =>
+        setError('Camera permission is needed to photograph a recipe.'),
     });
-    const uri = result.canceled ? undefined : result.assets[0]?.uri;
     if (uri) await analyzeImage(uri);
   };
 
   const pickLibrary = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted && Platform.OS !== 'web') {
-      setError('Photo-library permission is needed to select a recipe image.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const uri = await pickLibraryImage({
       quality: 1,
-      allowsEditing: false,
-      selectionLimit: 1,
+      onDenied: () => {
+        if (Platform.OS !== 'web') {
+          setError('Photo-library permission is needed to select a recipe image.');
+        }
+      },
     });
-    const uri = result.canceled ? undefined : result.assets[0]?.uri;
     if (uri) await analyzeImage(uri);
   };
 
   const rescale = (sourceValue: string, targetValue: string) => {
-    const sourceNumber = numberOrUndefined(sourceValue);
-    const targetNumber = numberOrUndefined(targetValue);
+    const sourceNumber = asPositiveNumber(Number(sourceValue));
+    const targetNumber = asPositiveNumber(Number(targetValue));
     const scaled = scaleIngredients(
       baseIngredients.current.map(
         ({ id: _id, ...ingredient }): TodoIngredientInput => ({
@@ -354,17 +336,6 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
     setScaleWarnings(scaled.warnings);
   };
 
-  const updateIngredient = (
-    id: string,
-    patch: Partial<EditableIngredient>,
-  ) => {
-    setIngredients((current) =>
-      current.map((ingredient) =>
-        ingredient.id === id ? { ...ingredient, ...patch } : ingredient,
-      ),
-    );
-  };
-
   const save = async () => {
     const validIngredients = ingredients.filter(
       (ingredient) => ingredient.name.trim(),
@@ -386,8 +357,8 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
         sourceKind: (draft?.sourceKind ?? 'url') as TodoRecipeSourceKind,
         sourceUrl: sanitizedSourceUrl,
         sourceImageUri: durableImageUri,
-        originalServings: numberOrUndefined(sourceServings),
-        targetServings: numberOrUndefined(targetServings),
+        originalServings: asPositiveNumber(Number(sourceServings)),
+        targetServings: asPositiveNumber(Number(targetServings)),
         ingredients: validIngredients.map((ingredient) => ({
           name: ingredient.name,
           canonicalKey: ingredient.canonicalKey,
@@ -570,111 +541,26 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
             </Card>
           ) : null}
 
-          <View style={styles.ingredientSection}>
-            <View style={styles.ingredientHeading}>
-              <SectionHeader title={`${ingredients.length} ingredients`} />
-              <Button
-                variant="ghost"
-                onPress={() =>
-                  setIngredients((current) => [
-                    ...current,
-                    {
-                      id: `ingredient-${Date.now()}-${ingredientId++}`,
-                      name: '',
-                      canonicalKey: '',
-                      quantityValue: null,
-                      quantityText: null,
-                      unit: null,
-                      preparation: null,
-                      originalText: '',
-                      confidence: 1,
-                    },
-                  ])
-                }>
-                Add row
-              </Button>
-            </View>
-            {ingredients.map((ingredient, index) => (
-              <Card key={ingredient.id} style={styles.ingredientCard}>
-                <View style={styles.ingredientCardHeader}>
-                  <AppText variant="overline" color="tertiary">
-                    Ingredient {index + 1}
-                  </AppText>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ingredient ${index + 1}`}
-                    onPress={() =>
-                      setIngredients((current) =>
-                        current.filter((item) => item.id !== ingredient.id),
-                      )
-                    }>
-                    <Symbol name="delete" size={18} color={theme.danger} />
-                  </Pressable>
-                </View>
-                <Input
-                  label="Ingredient"
-                  value={ingredient.name}
-                  maxLength={100}
-                  onChangeText={(value) =>
-                    updateIngredient(ingredient.id, {
-                      name: value,
-                      canonicalKey: canonicalIngredientKey(value),
-                    })
-                  }
-                />
-                <View style={styles.servingRow}>
-                  <View style={styles.flex}>
-                    <Input
-                      label="Amount"
-                      value={ingredient.quantityText ?? ''}
-                      maxLength={40}
-                      placeholder="2 or to taste"
-                      onChangeText={(value) => {
-                        const numeric = parseQuantityText(value);
-                        updateIngredient(ingredient.id, {
-                          quantityText: value || null,
-                          quantityValue:
-                            value.trim() && numeric !== undefined
-                              ? numeric
-                              : null,
-                        });
-                      }}
-                    />
-                  </View>
-                  <View style={styles.flex}>
-                    <Input
-                      label="Unit"
-                      value={ingredient.unit ?? ''}
-                      maxLength={40}
-                      placeholder="cups"
-                      onChangeText={(value) =>
-                        updateIngredient(ingredient.id, {
-                          unit: value || null,
-                        })
-                      }
-                    />
-                  </View>
-                </View>
-                <Input
-                  label="Preparation"
-                  value={ingredient.preparation ?? ''}
-                  maxLength={80}
-                  placeholder="diced, divided…"
-                  onChangeText={(value) =>
-                    updateIngredient(ingredient.id, {
-                      preparation: value || null,
-                    })
-                  }
-                />
-                {ingredient.quantityValue === null &&
-                ingredient.quantityText ? (
-                  <AppText variant="caption" color="accent">
-                    This amount is ambiguous and will not be scaled.
-                  </AppText>
-                ) : null}
-              </Card>
-            ))}
-          </View>
+          <RecipeIngredientEditor
+            ingredients={ingredients}
+            onChange={setIngredients}
+            onAdd={() =>
+              setIngredients((current) => [
+                ...current,
+                {
+                  id: `ingredient-${Date.now()}-${ingredientId++}`,
+                  name: '',
+                  canonicalKey: '',
+                  quantityValue: null,
+                  quantityText: null,
+                  unit: null,
+                  preparation: null,
+                  originalText: '',
+                  confidence: 1,
+                },
+              ])
+            }
+          />
 
           <Button
             size="lg"
@@ -745,18 +631,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-  },
-  ingredientSection: { gap: spacing.md },
-  ingredientHeading: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ingredientCard: { gap: spacing.md },
-  ingredientCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   optionCard: {
     borderRadius: radii.lg,

@@ -14,11 +14,9 @@ import type {
   WorkSession,
 } from '@/types/models';
 import { isDateKey } from '@/utils/date';
+import { newId } from '@/utils/id';
 
-let idCounter = 0;
-export function newId(prefix = 'a'): string {
-  return `${prefix}-${Date.now().toString(36)}-${(++idCounter).toString(36)}`;
-}
+export { newId } from '@/utils/id';
 
 export interface ActivityDraft {
   date: string;

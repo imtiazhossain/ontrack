@@ -17,6 +17,7 @@ import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { formatDateKey, todayKey } from '@/utils/date';
 
 /** Primary carousel section for travel planning. */
@@ -351,10 +352,11 @@ function TravelScreenContent() {
               accessibilityLabel={`Delete ${plan.title}`}
               hitSlop={8}
               onPress={() =>
-                appPrompt.alert('Delete trip?', `Remove “${plan.title}”?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => removePlan(plan.id) },
-                ])
+                confirmDestructiveAction({
+                  title: 'Delete trip?',
+                  message: `Remove “${plan.title}”?`,
+                  onConfirm: () => removePlan(plan.id),
+                })
               }
               style={({ pressed }) => [
                 styles.deleteAction,

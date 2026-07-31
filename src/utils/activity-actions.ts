@@ -1,5 +1,6 @@
 import { appPrompt } from '@/components/primitives';
 import type { Activity } from '@/types/models';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 export type ActivityAction = 'edit' | 'skip' | 'unskip' | 'delete' | 'duplicate' | 'move-tomorrow';
 
@@ -54,8 +55,9 @@ export function showActivityActions({ activity, onAction }: ShowActivityActionsI
 }
 
 export function confirmDeleteActivity(title: string, onConfirm: () => void) {
-  appPrompt.alert('Delete activity', `Remove "${title}" from your schedule?`, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: onConfirm },
-  ]);
+  confirmDestructiveAction({
+    title: 'Delete activity',
+    message: `Remove "${title}" from your schedule?`,
+    onConfirm,
+  });
 }

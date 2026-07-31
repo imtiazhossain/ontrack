@@ -101,6 +101,17 @@ export function formatDateLong(key: string): string {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
+/** Plant watering / care due chip: Overdue, Due today, or Due {date}. */
+export function formatDueLabel(dueKey: string, options?: { overduePrefix?: string }): string {
+  if (isPast(dueKey)) {
+    return options?.overduePrefix
+      ? `${options.overduePrefix} ${formatDateLong(dueKey)}`
+      : 'Overdue';
+  }
+  if (isToday(dueKey)) return 'Due today';
+  return `Due ${formatDateLong(dueKey)}`;
+}
+
 export function formatWeekday(key: string): string {
   return WEEKDAYS[fromDateKey(key).getDay()];
 }

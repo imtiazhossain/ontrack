@@ -1,32 +1,19 @@
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-} from 'react-native-reanimated';
 
 import {
   AppText,
   appPrompt,
   Button,
-  Card,
-  DateField,
   EmptyState,
   ErrorMessage,
-  Input,
   Screen,
   SectionHeader,
   Symbol,
-  TimeField,
 } from '@/components/primitives';
-import { ChipRow } from '@/components/shared';
 import { spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
-import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import {
   importFlightConfirmation,
@@ -42,9 +29,6 @@ import {
   validateFlightDetails,
   type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
-import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
-import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
-import { googleFlightStatusUrl } from '@/features/travel/flight-status-link';
 import { normalizeTravelPlan } from '@/features/travel/normalize';
 import {
   loadTravelInviteStatuses,
@@ -54,6 +38,9 @@ import {
 } from '@/features/travel/share';
 import { TripPeople } from '@/features/travel/trip-people';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
+import { TravelItineraryForm } from '@/features/travel/travel-itinerary-form';
+import { TravelItineraryItem } from '@/features/travel/travel-itinerary-item';
+import { TravelPlanActions } from '@/features/travel/travel-plan-actions';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import type {
@@ -61,34 +48,16 @@ import type {
   TravelParticipant,
   TravelPlan,
 } from '@/features/travel/types';
-import { googleWeatherUrl } from '@/features/travel/weather';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { formatDateKey, formatDuration } from '@/utils/date';
-
-const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
-  { value: 'flight', label: 'Flight' },
-  { value: 'stay', label: 'Stay' },
-  { value: 'activity', label: 'Activity' },
-];
-
-function formatTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  const suffix = hours >= 12 ? 'PM' : 'AM';
-  const displayHour = hours % 12 || 12;
-  return `${displayHour}:${minute.toString().padStart(2, '0')} ${suffix}`;
-}
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { formatDateKey } from '@/utils/date';
+import { isHttpsUrl } from '@/utils/safe-url';
 
 function validBookingUrl(value: string): boolean {
-  if (!value) return true;
-  try {
-    return new URL(value).protocol === 'https:';
-  } catch {
-    return false;
-  }
+  return !value || isHttpsUrl(value);
 }
 
 export function TravelPlanDetail({ planId }: { planId: string }) {
@@ -287,10 +256,12 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   };
 
   const confirmRemoveItem = (item: TravelPlan['itinerary'][number]) => {
-    appPrompt.alert('Remove itinerary item?', item.title, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.id) },
-    ]);
+    confirmDestructiveAction({
+      title: 'Remove itinerary item?',
+      message: item.title,
+      actionLabel: 'Remove',
+      onConfirm: () => removeItem(item.id),
+    });
   };
 
   const beginEditingFlightDetails = (
@@ -569,20 +540,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 
   const confirmRemoveParticipant = (participant: TravelParticipant) => {
     const accepted = Boolean(participant.acceptedAt);
-    appPrompt.alert(
-      accepted ? 'Remove friend?' : 'Remove invitation?',
-      accepted
+    confirmDestructiveAction({
+      title: accepted ? 'Remove friend?' : 'Remove invitation?',
+      message: accepted
         ? `${participant.name} will be removed from this trip and their invite link will stop working.`
         : `${participant.name}’s invite link will stop working.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: accepted ? 'Remove friend' : 'Remove invite',
-          style: 'destructive',
-          onPress: () => void removeParticipant(participant),
-        },
-      ],
-    );
+      actionLabel: accepted ? 'Remove friend' : 'Remove invite',
+      onConfirm: () => void removeParticipant(participant),
+    });
   };
 
   return (
@@ -645,51 +610,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         </View>
       ) : null}
 
-      <View style={styles.actions}>
-        <Button
-          variant="secondary"
-          icon="chat"
-          onPress={() =>
-            router.push({ pathname: '/travel/[id]/chat', params: { id: plan.id } } as never)
-          }>
-          Group chat
-        </Button>
-        <Button
-          variant="secondary"
-          onPress={() =>
-            router.push({ pathname: '/travel/[id]/flights', params: { id: plan.id } } as never)
-          }>
-          Find flights
-        </Button>
-        <Button
-          variant="secondary"
-          onPress={() =>
-            router.push({ pathname: '/travel/[id]/stays', params: { id: plan.id } } as never)
-          }>
-          Find stays
-        </Button>
-        <Button
-          variant="secondary"
-          icon="weather"
-          onPress={() =>
-            void WebBrowser.openBrowserAsync(
-              googleWeatherUrl(plan.destination, plan.startDate, plan.endDate),
-            )
-          }>
-          Weather
-        </Button>
-        <Button
-          variant="secondary"
-          icon="currency"
-          onPress={() =>
-            void WebBrowser.openBrowserAsync(
-              googleCurrencyConversionUrl(plan.destination, dateLocale),
-            )
-          }
-          accessibilityLabel={`Convert your home currency for ${plan.destination} with Google`}>
-          Currency
-        </Button>
-      </View>
+      <TravelPlanActions plan={plan} dateLocale={dateLocale} />
 
       <TripPeople
         participants={plan.participants}
@@ -720,276 +641,65 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           Add flights, stays, and things to do. Each item is also added to the onTrack calendar.
         </AppText>
       ) : null}
-      {sortedItinerary.map((item) => {
-        const isExpanded = !minimizedItemIds.has(item.id);
-        return (
-          <Animated.View
-            key={item.id}
-            layout={LinearTransition.duration(180)}>
-            <Card variant="sunken" style={styles.itemCard}>
-              <View style={styles.itemHeader}>
-                <View style={styles.flex}>
-                  <AppText variant="subheading">{item.title}</AppText>
-                  <AppText variant="caption" color="accent">
-                    {formatDateKey(item.date, dateDisplayFormat)} ·{' '}
-                    {formatTime(item.startMinutes)} ·{' '}
-                    {item.kind === 'flight'
-                      ? formatDuration(item.durationMinutes)
-                      : `${item.durationMinutes} min`}
-                  </AppText>
-                </View>
-                <View style={styles.itemHeaderActions}>
-                  <AppText variant="overline" color="tertiary">
-                    {item.kind}
-                  </AppText>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${isExpanded ? 'Minimize' : 'Maximize'} ${item.title}`}
-                    accessibilityHint={
-                      isExpanded
-                        ? 'Hides the event details and actions'
-                        : 'Shows the event details and actions'
-                    }
-                    accessibilityState={{ expanded: isExpanded }}
-                    hitSlop={8}
-                    onPress={() => toggleItineraryItem(item.id)}
-                    style={({ pressed }) => [
-                      styles.itemSizeAction,
-                      pressed ? styles.pressed : undefined,
-                    ]}>
-                    <Symbol
-                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                      size="sm"
-                      color={theme.textTertiary}
-                    />
-                  </Pressable>
-                </View>
-              </View>
-              {isExpanded ? (
-                <Animated.View
-                  entering={FadeIn.duration(150)}
-                  exiting={FadeOut.duration(120)}
-                  style={styles.itemDetails}>
-                  {item.details ? (
-                    <AppText variant="body" color="secondary">
-                      {item.details}
-                    </AppText>
-                  ) : null}
-                  {item.kind === 'flight' &&
-                  item.flight &&
-                  editingFlightItemId !== item.id ? (
-                    <FlightDetailsSummary details={item.flight} />
-                  ) : null}
-                  {item.kind === 'flight' && editingFlightItemId === item.id ? (
-                    <View style={styles.flightEditor}>
-                      <FlightDetailsEditor
-                        value={editedFlightDetails}
-                        onChange={setEditedFlightDetails}
-                        error={editedFlightDetailsError}
-                        importedFileName={editedFlightFileName}
-                        importing={importingFlightTarget === item.id}
-                        onImport={() => chooseConfirmationImport(item.id)}
-                      />
-                      <View style={styles.flightEditorActions}>
-                        <Button
-                          size="lg"
-                          icon="check"
-                          style={styles.fullWidthAction}
-                          onPress={() => saveEditedFlightDetails(item.id)}>
-                          Save flight details
-                        </Button>
-                        <View
-                          style={[
-                            styles.flightEditorSecondaryActions,
-                            { borderTopColor: theme.separator },
-                          ]}>
-                          <Button
-                            variant="ghost"
-                            style={styles.flex}
-                            onPress={() => setEditingFlightItemId(undefined)}>
-                            Cancel
-                          </Button>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Remove ${item.title}`}
-                            hitSlop={8}
-                            onPress={() => confirmRemoveItem(item)}
-                            style={({ pressed }) => [
-                              styles.removeFlightAction,
-                              pressed ? styles.pressed : undefined,
-                            ]}>
-                            <Symbol name="trash" size="sm" color={theme.danger} />
-                            <AppText variant="callout" color="danger">
-                              Remove
-                            </AppText>
-                          </Pressable>
-                        </View>
-                      </View>
-                    </View>
-                  ) : null}
-                  {editingFlightItemId !== item.id ? (
-                    <View style={styles.itineraryActions}>
-                      {item.kind === 'flight' &&
-                      googleFlightStatusUrl(item.flight, item.date) ? (
-                        <Button
-                          variant="secondary"
-                          icon="clock"
-                          style={styles.itineraryAction}
-                          accessibilityLabel={`Check live status for ${item.flight?.flightNumber}`}
-                          onPress={() =>
-                            void Linking.openURL(
-                              googleFlightStatusUrl(item.flight, item.date)!,
-                            )
-                          }>
-                          Check live status
-                        </Button>
-                      ) : null}
-                      {item.kind === 'flight' ? (
-                        <Button
-                          variant="secondary"
-                          icon="flight"
-                          style={styles.itineraryAction}
-                          onPress={() =>
-                            beginEditingFlightDetails(item.id, item.flight)
-                          }>
-                          {item.flight ? 'Edit flight' : 'Add flight details'}
-                        </Button>
-                      ) : null}
-                      {item.bookingUrl && validBookingUrl(item.bookingUrl) ? (
-                        <Button
-                          variant="secondary"
-                          style={styles.itineraryAction}
-                          onPress={() =>
-                            void WebBrowser.openBrowserAsync(item.bookingUrl!)
-                          }>
-                          Booking
-                        </Button>
-                      ) : null}
-                      {item.kind !== 'flight' ? (
-                        <Button
-                          variant="ghost"
-                          style={styles.itineraryAction}
-                          onPress={() => confirmRemoveItem(item)}>
-                          Remove
-                        </Button>
-                      ) : null}
-                    </View>
-                  ) : null}
-                </Animated.View>
-              ) : null}
-            </Card>
-          </Animated.View>
-        );
-      })}
-
-      <SectionHeader title="Add to the plan" />
-      <ChipRow options={ITEM_KINDS} selected={kind} onSelect={setKind} />
-      <Input
-        label="Name"
-        value={title}
-        onChangeText={setTitle}
-        placeholder={kind === 'flight' ? 'Flight to Lisbon' : kind === 'stay' ? 'Hotel check-in' : 'Dinner in Alfama'}
-      />
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <DateField
-            label="Date"
-            value={date}
-            minimumDate={plan.startDate}
-            maximumDate={plan.endDate}
-            onChange={setDate}
-          />
-        </View>
-        <View style={styles.flex}>
-          <TimeField label="Time" value={startMinutes} onChange={setStartMinutes} />
-        </View>
-      </View>
-      <Input
-        label="Duration (minutes)"
-        value={duration}
-        onChangeText={setDuration}
-        keyboardType="number-pad"
-      />
-      {kind === 'flight' ? (
-        <FlightDetailsEditor
-          value={flightDetails}
-          onChange={setFlightDetails}
-          error={flightDetailsError}
-          importedFileName={importedFlightFileName}
-          importing={importingFlightTarget === 'new'}
-          onImport={() => chooseConfirmationImport('new')}
+      {sortedItinerary.map((item) => (
+        <TravelItineraryItem
+          key={item.id}
+          item={item}
+          expanded={!minimizedItemIds.has(item.id)}
+          dateDisplayFormat={dateDisplayFormat}
+          editingFlightItemId={editingFlightItemId}
+          editedFlightDetails={editedFlightDetails}
+          editedFlightDetailsError={editedFlightDetailsError}
+          editedFlightFileName={editedFlightFileName}
+          importingFlight={importingFlightTarget === item.id}
+          onToggle={() => toggleItineraryItem(item.id)}
+          onEditedFlightDetailsChange={setEditedFlightDetails}
+          onImportFlight={() => chooseConfirmationImport(item.id)}
+          onSaveFlightDetails={() => saveEditedFlightDetails(item.id)}
+          onCancelFlightEdit={() => setEditingFlightItemId(undefined)}
+          onBeginFlightEdit={() => beginEditingFlightDetails(item.id, item.flight)}
+          onRemove={() => confirmRemoveItem(item)}
         />
-      ) : null}
-      <Input
-        label="Details"
-        value={details}
-        onChangeText={setDetails}
-        placeholder={
-          kind === 'flight'
-            ? 'Terminal, baggage, or check-in notes…'
-            : 'Confirmation number, meeting point, ideas…'
-        }
-        multiline
+      ))}
+
+      <TravelItineraryForm
+        kind={kind}
+        title={title}
+        date={date}
+        startMinutes={startMinutes}
+        duration={duration}
+        details={details}
+        bookingUrl={bookingUrl}
+        flightDetails={flightDetails}
+        flightDetailsError={flightDetailsError}
+        importedFlightFileName={importedFlightFileName}
+        importingFlight={importingFlightTarget === 'new'}
+        error={error}
+        planStartDate={plan.startDate}
+        planEndDate={plan.endDate}
+        onKindChange={setKind}
+        onTitleChange={setTitle}
+        onDateChange={setDate}
+        onStartMinutesChange={setStartMinutes}
+        onDurationChange={setDuration}
+        onDetailsChange={setDetails}
+        onBookingUrlChange={setBookingUrl}
+        onFlightDetailsChange={setFlightDetails}
+        onImportFlight={() => chooseConfirmationImport('new')}
+        onAdd={addItem}
       />
-      <Input
-        label="Booking link (optional)"
-        value={bookingUrl}
-        onChangeText={setBookingUrl}
-        placeholder="https://…"
-        keyboardType="url"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      {error ? <ErrorMessage message={error} selectable /> : null}
-      <Button onPress={addItem}>Add itinerary item</Button>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { gap: spacing.sm },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  itineraryActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  itineraryAction: {
-    flexBasis: 0,
-    flexGrow: 1,
-    minWidth: '45%',
-    paddingHorizontal: spacing.sm,
-  },
   detailsLink: {
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  itemCard: { gap: spacing.md },
-  itemDetails: { gap: spacing.md },
-  itemHeaderActions: { alignItems: 'flex-end', gap: spacing.xs },
-  itemSizeAction: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flightEditor: { gap: spacing.md },
-  flightEditorActions: { gap: spacing.sm },
-  fullWidthAction: { width: '100%' },
-  flightEditorSecondaryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: spacing.sm,
-  },
-  removeFlightAction: {
-    flex: 1,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  itemHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   dateEditor: { gap: spacing.md },
   dateEditorActions: {
     flexDirection: 'row',
@@ -998,6 +708,5 @@ const styles = StyleSheet.create({
   },
   dateLink: { alignSelf: 'flex-start' },
   pressed: { opacity: 0.6 },
-  twoColumns: { flexDirection: 'row', gap: spacing.sm },
   flex: { flex: 1, gap: spacing.xxs },
 });

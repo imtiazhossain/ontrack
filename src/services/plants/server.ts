@@ -1,11 +1,16 @@
+import {
+  defaultOllamaModel,
+  defaultOpenAIModel,
+  fetchOllamaChatJson,
+  fetchOpenAIResponses,
+  parseOpenAIJsonResponse,
+} from '@/services/ai/vision-transport';
 import { gatePaidApiRequest } from '@/services/http/api-gate';
 import { apiCorsHeaders } from '@/services/http/cors';
-import { guardedFetch } from '@/services/http/dependency-guard';
 import type { PlantCarePlan, PlantHealthAssessment, PlantIdentity, RoomProfile } from '@/types/models';
 import type { PlantServiceErrorCode } from './types';
 import { hasConfidentPlantIdentity, validatePlantCarePlan, validatePlantHealth, validatePlantIdentity } from './validate';
 
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const MAX_IMAGE_LENGTH = 5_500_000;
 type PlantAIProvider = 'ollama' | 'openai';
 
@@ -17,6 +22,37 @@ const LOCAL_CARE_SOURCES = [
 function plantAIProvider(): PlantAIProvider {
   const configured = process.env.PLANT_AI_PROVIDER ?? process.env.MEAL_AI_PROVIDER;
   return configured === 'openai' ? 'openai' : 'ollama';
+}
+
+function openAIResponse(payload: Record<string, unknown>) {
+  return fetchOpenAIResponses({
+    model: defaultOpenAIModel(process.env.OPENAI_PLANT_MODEL),
+    safetyIdentifier: 'ontrack-plant-analysis',
+    payload,
+    timeoutMs: 60_000,
+  });
+}
+
+function ollamaStructuredResponse(
+  prompt: string,
+  schema: Record<string, unknown>,
+  imageDataUrls: string[] = [],
+) {
+  return fetchOllamaChatJson({
+    model: defaultOllamaModel(
+      process.env.OLLAMA_PLANT_MODEL,
+      process.env.OLLAMA_MEAL_MODEL,
+    ),
+    prompt,
+    schema,
+    imageDataUrls,
+    appendNoThink: true,
+    numPredict: 1800,
+  });
+}
+
+function parseBody(body: Record<string, unknown>) {
+  return parseOpenAIJsonResponse(body);
 }
 
 export const plantCorsHeaders = apiCorsHeaders();
@@ -155,88 +191,6 @@ const CHECK_IN_SCHEMA = {
     carePlan: { anyOf: [CARE_SCHEMA, { type: 'null' }] },
   },
 } as const;
-
-function responseText(body: Record<string, unknown>): string | undefined {
-  if (typeof body.output_text === 'string') return body.output_text;
-  const output = Array.isArray(body.output) ? body.output : [];
-  for (const item of output) {
-    if (typeof item !== 'object' || item === null) continue;
-    const content = Array.isArray((item as Record<string, unknown>).content)
-      ? (item as { content: unknown[] }).content : [];
-    for (const part of content) {
-      if (typeof part === 'object' && part !== null && typeof (part as Record<string, unknown>).text === 'string') {
-        return (part as Record<string, unknown>).text as string;
-      }
-    }
-  }
-  return undefined;
-}
-
-async function openAIResponse(payload: Record<string, unknown>) {
-  const response = await guardedFetch('openai', OPENAI_RESPONSES_URL, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: process.env.OPENAI_PLANT_MODEL ?? 'gpt-5.6-terra',
-      store: false,
-      safety_identifier: 'ontrack-plant-analysis',
-      reasoning: { effort: 'low' },
-      ...payload,
-    }),
-  }, {
-    timeoutMs: 60_000,
-    maxConcurrency: 2,
-  });
-  if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
-  return response.json() as Promise<Record<string, unknown>>;
-}
-
-async function ollamaStructuredResponse(
-  prompt: string,
-  schema: Record<string, unknown>,
-  imageDataUrls: string[] = [],
-) {
-  const baseUrl = new URL(process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434');
-  if (!['127.0.0.1', 'localhost', '::1'].includes(baseUrl.hostname)) throw new Error('OLLAMA_UNAVAILABLE');
-  let response: Response;
-  try {
-    response = await guardedFetch('ollama', new URL('/api/chat', baseUrl), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.OLLAMA_PLANT_MODEL ?? process.env.OLLAMA_MEAL_MODEL ?? 'qwen3-vl:2b',
-        stream: false,
-        think: false,
-        format: schema,
-        keep_alive: '15m',
-        options: { temperature: 0, num_predict: 1800 },
-        messages: [{
-          role: 'user',
-          content: `${prompt} /no_think`,
-          ...(imageDataUrls.length
-            ? { images: imageDataUrls.map((image) => image.slice(image.indexOf(',') + 1)) }
-            : null),
-        }],
-      }),
-    }, {
-      timeoutMs: 120_000,
-      maxConcurrency: 1,
-    });
-  } catch {
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  if (!response.ok) throw new Error('OLLAMA_UNAVAILABLE');
-  const body = await response.json() as { message?: { content?: string; thinking?: string } };
-  const text = body.message?.content || body.message?.thinking;
-  if (!text) throw new Error('INVALID_ANALYSIS');
-  try { return JSON.parse(text) as unknown; } catch { throw new Error('INVALID_ANALYSIS'); }
-}
-
-function parseBody(body: Record<string, unknown>) {
-  const text = responseText(body);
-  if (!text) throw new Error('INVALID_ANALYSIS');
-  try { return JSON.parse(text) as unknown; } catch { throw new Error('INVALID_ANALYSIS'); }
-}
 
 export async function identifyPlantImage(imageDataUrl: string) {
   const prompt = `Identify this houseplant only when multiple visible features agree. First inspect its growth habit

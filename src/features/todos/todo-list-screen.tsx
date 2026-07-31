@@ -17,9 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import {
-    appPrompt,
     AppText,
-    DragHandle,
     ErrorMessage,
     IconButton,
     ProgressRing,
@@ -35,6 +33,10 @@ import {
 } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
+import { TodoEmptyState } from '@/features/todos/todo-empty-state';
+import { ChecklistItemSeparator, TodoRow } from '@/features/todos/todo-row';
+import { sortTodoTasks, type TodoFilter, type TodoSort } from '@/features/todos/todo-sort';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
@@ -47,77 +49,6 @@ import {
 import { useUI } from '@/store/ui';
 import { haptics } from '@/utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type TodoFilter = 'open' | 'completed';
-type TodoSort = 'manual' | 'smart' | 'newest' | 'oldest' | 'alphabetical';
-
-const QUICK_START_TASKS = [
-  'Plan tomorrow',
-  'Take a movement break',
-  'Call someone I care about',
-] as const;
-
-function byPriorityAndRecency(a: TodoTask, b: TodoTask) {
-  if (a.important !== b.important) return a.important ? -1 : 1;
-  return b.createdAt.localeCompare(a.createdAt);
-}
-
-function sortTodoTasks(
-  tasks: TodoTask[],
-  sort: TodoSort,
-  filter: TodoFilter,
-) {
-  return [...tasks].sort((a, b) => {
-    if (sort === 'manual') {
-      return (
-        (a.position ?? Number.MAX_SAFE_INTEGER) -
-          (b.position ?? Number.MAX_SAFE_INTEGER) ||
-        b.createdAt.localeCompare(a.createdAt) ||
-        a.id.localeCompare(b.id)
-      );
-    }
-    if (sort === 'newest') {
-      return b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
-    }
-    if (sort === 'oldest') {
-      return a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
-    }
-    if (sort === 'alphabetical') {
-      return (
-        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) ||
-        a.id.localeCompare(b.id)
-      );
-    }
-    if (filter === 'completed') {
-      return (
-        (b.completedAt ?? '').localeCompare(a.completedAt ?? '') ||
-        a.id.localeCompare(b.id)
-      );
-    }
-    return byPriorityAndRecency(a, b) || a.id.localeCompare(b.id);
-  });
-}
-
-function confirmDestructiveAction({
-  title,
-  message,
-  actionLabel,
-  onConfirm,
-}: {
-  title: string;
-  message: string;
-  actionLabel: string;
-  onConfirm: () => void;
-}) {
-  appPrompt.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: actionLabel,
-      style: 'destructive',
-      onPress: onConfirm,
-    },
-  ]);
-}
 
 export function TodoListScreen({ listId }: { listId: string }) {
   const router = useRouter();
@@ -218,7 +149,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
 
   if (!list) {
     return (
-      <Screen contentStyle={styles.empty}>
+      <Screen contentStyle={styles.missingList}>
         <Symbol name="tasks" size={40} color={theme.textTertiary} />
         <AppText variant="heading">List unavailable</AppText>
         <AppText variant="body" color="secondary" align="center">
@@ -299,33 +230,6 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     </AppText>
                     <AppText style={styles.title}>{list.name}</AppText>
                   </View>
-                  <View
-                    style={[
-                      styles.openPill,
-                      {
-                        backgroundColor: openTasks.length
-                          ? theme.accentFaint
-                          : theme.backgroundSunken,
-                      },
-                    ]}>
-                    <View
-                      style={[
-                        styles.openDot,
-                        {
-                          backgroundColor: openTasks.length
-                            ? theme.accentPrimary
-                            : theme.success,
-                        },
-                      ]}
-                    />
-                    <AppText
-                      variant="caption"
-                      color={openTasks.length ? 'accent' : 'success'}>
-                      {openTasks.length
-                        ? `${openTasks.length} open`
-                        : 'All clear'}
-                    </AppText>
-                  </View>
                 </View>
 
                 <View
@@ -392,6 +296,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     placeholder="What needs your attention?"
                     placeholderTextColor={theme.textTertiary}
                     returnKeyType="done"
+                    underlineColorAndroid="transparent"
                     style={[styles.composerInput, { color: theme.textPrimary }]}
                     value={draft}
                   />
@@ -474,7 +379,10 @@ export function TodoListScreen({ listId }: { listId: string }) {
                         },
                       ]}
                     />
-                    <AppText variant="overline" color="secondary">
+                    <AppText
+                      variant="overline"
+                      color="secondary"
+                      style={styles.taskStatusLabel}>
                       {filter === 'open' ? 'Open' : 'Closed'}
                     </AppText>
                     <View
@@ -485,12 +393,15 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     />
                     <AppText
                       variant="subheading"
-                      style={{
-                        color:
-                          filter === 'open'
-                            ? theme.accentPrimary
-                            : theme.success,
-                      }}>
+                      style={[
+                        styles.taskStatusCount,
+                        {
+                          color:
+                            filter === 'open'
+                              ? theme.accentPrimary
+                              : theme.success,
+                        },
+                      ]}>
                       {filter === 'open' ? openTasks.length : completedCount}
                     </AppText>
                   </Pressable>
@@ -723,393 +634,6 @@ export function TodoListScreen({ listId }: { listId: string }) {
   );
 }
 
-function TodoRow({
-  task,
-  canComplete,
-  editMode,
-  editing,
-  isActive,
-  listOwner,
-  members,
-  onDelete,
-  onDragStart,
-  onCycleAssignee,
-  onStartEdit,
-  onEndEdit,
-  onToggle,
-  onToggleImportant,
-  onUpdate,
-}: {
-  task: TodoTask;
-  canComplete: boolean;
-  editMode: boolean;
-  editing: boolean;
-  isActive: boolean;
-  listOwner: boolean;
-  members: TodoMember[];
-  onDelete: () => void;
-  onDragStart: () => void;
-  onCycleAssignee: () => void;
-  onStartEdit: () => void;
-  onEndEdit: () => void;
-  onToggle: () => void;
-  onToggleImportant: () => void;
-  onUpdate: (title: string) => void;
-}) {
-  const theme = useTheme();
-  const [draft, setDraft] = useState(task.title);
-
-  useEffect(() => {
-    if (!editing) setDraft(task.title);
-  }, [editing, task.title]);
-
-  const commitEdit = () => {
-    const title = draft.trim();
-    if (title) onUpdate(title);
-    else setDraft(task.title);
-    onEndEdit();
-  };
-
-  const confirmDelete = () => {
-    Keyboard.dismiss();
-    confirmDestructiveAction({
-      title: `Delete “${task.title}”?`,
-      message: 'This checklist item will be permanently deleted.',
-      actionLabel: 'Delete',
-      onConfirm: onDelete,
-    });
-  };
-
-  return (
-    <Pressable
-      accessible={false}
-      accessibilityActions={
-        listOwner && editMode
-          ? [{ name: 'delete', label: `Delete ${task.title}` }]
-          : undefined
-      }
-      onAccessibilityAction={(event) => {
-        if (
-          listOwner &&
-          editMode &&
-          event.nativeEvent.actionName === 'delete'
-        ) {
-          confirmDelete();
-        }
-      }}
-      onPress={Keyboard.dismiss}
-      style={[
-        styles.taskRow,
-        {
-          backgroundColor: theme.backgroundElevated,
-          borderColor:
-            task.important && !task.completed
-              ? theme.accentSoft
-              : theme.separator,
-        },
-      ]}
-    >
-      {editMode && listOwner ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Delete ${task.title}`}
-          accessibilityHint="Deletes after confirmation"
-          hitSlop={2}
-          onPress={confirmDelete}
-          style={({ pressed }) => [
-            styles.rowAction,
-            { backgroundColor: `${theme.danger}18` },
-            pressed && styles.pressed,
-          ]}>
-          <Symbol name="delete" size={18} color={theme.danger} />
-        </Pressable>
-      ) : (
-        <Pressable
-          accessibilityLabel={
-            task.completed
-              ? `Mark ${task.title} as open`
-              : `Complete ${task.title}`
-          }
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: task.completed }}
-          disabled={!canComplete}
-          hitSlop={9}
-          onPress={() => {
-            Keyboard.dismiss();
-            onToggle();
-          }}
-          style={({ pressed }) => [
-            styles.checkButton,
-            {
-              backgroundColor: task.completed ? theme.success : 'transparent',
-              borderColor: task.completed ? theme.success : theme.textTertiary,
-              opacity: canComplete ? 1 : 0.35,
-              transform: [{ scale: pressed ? 0.88 : 1 }],
-            },
-          ]}>
-          {task.completed ? (
-            <Symbol name="check" size={15} color={theme.textOnAccent} />
-          ) : null}
-        </Pressable>
-      )}
-
-      <View style={styles.taskCopy}>
-        {listOwner && !editMode ? (
-          <TextInput
-            accessibilityLabel={`Edit ${task.title}`}
-            blurOnSubmit
-            maxLength={160}
-            multiline
-            onBlur={commitEdit}
-            onChangeText={setDraft}
-            onFocus={onStartEdit}
-            onSubmitEditing={Keyboard.dismiss}
-            returnKeyType="done"
-            scrollEnabled={false}
-            selectionColor={theme.accentPrimary}
-            underlineColorAndroid="transparent"
-            style={[
-              styles.editInput,
-              {
-                color: task.completed ? theme.textTertiary : theme.textPrimary,
-                borderColor: editing ? theme.accentPrimary : 'transparent',
-              },
-              task.completed ? styles.completedTitle : undefined,
-            ]}
-            value={draft}
-          />
-        ) : (
-          <AppText
-            variant="bodyMedium"
-            color={task.completed ? 'tertiary' : 'primary'}
-            numberOfLines={2}
-            style={task.completed ? styles.completedTitle : undefined}
-          >
-            {task.title}
-          </AppText>
-        )}
-        {task.important && !task.completed ? (
-          <AppText variant="overline" color="accent">
-            Focus
-          </AppText>
-        ) : null}
-        {members.length > 1 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Assignment for ${task.title}`}
-            disabled={!listOwner || editMode}
-            onPress={() => {
-              Keyboard.dismiss();
-              onCycleAssignee();
-            }}>
-            <AppText variant="caption" color="secondary">
-              {task.assigneeUserId
-                ? members.find((member) => member.userId === task.assigneeUserId)
-                    ?.displayName ?? 'Member'
-                : 'Anyone'}
-              {listOwner && !editMode ? ' · tap to change' : ''}
-            </AppText>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {listOwner ? (
-        editMode ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Drag to reorder ${task.title}`}
-            accessibilityHint="Long press and drag to move this item"
-            disabled={isActive}
-            delayLongPress={180}
-            onLongPress={onDragStart}
-            style={({ pressed }) => [
-              styles.rowAction,
-              (pressed || isActive) && styles.pressed,
-            ]}>
-            <DragHandle
-              size={20}
-              color={
-                theme.name === 'dark'
-                  ? theme.textOnAccent
-                  : theme.textSecondary
-              }
-            />
-          </Pressable>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              task.important
-                ? `Remove ${task.title} from focus`
-                : `Mark ${task.title} as focus`
-            }
-            accessibilityState={{ selected: task.important }}
-            hitSlop={2}
-            onPress={() => {
-              Keyboard.dismiss();
-              onToggleImportant();
-            }}
-            style={({ pressed }) => [
-              styles.rowAction,
-              task.important && { backgroundColor: theme.accentFaint },
-              pressed && styles.pressed,
-            ]}>
-            <Symbol
-              name={task.important ? 'important-filled' : 'important'}
-              size={19}
-              color={task.important ? theme.accentPrimary : theme.textTertiary}
-            />
-          </Pressable>
-        )
-      ) : null}
-    </Pressable>
-  );
-}
-
-function ChecklistItemSeparator() {
-  return (
-    <Pressable
-      accessible={false}
-      onPress={Keyboard.dismiss}
-      style={styles.listSeparator}
-    />
-  );
-}
-
-function TodoEmptyState({
-  filter,
-  hasTasks,
-  onAddSuggestion,
-  onFocusComposer,
-  onShowCompleted,
-}: {
-  filter: TodoFilter;
-  hasTasks: boolean;
-  onAddSuggestion: (title: string) => void;
-  onFocusComposer: () => void;
-  onShowCompleted: () => void;
-}) {
-  const theme = useTheme();
-
-  if (filter === 'completed') {
-    return (
-      <View style={styles.empty}>
-        <View
-          style={[
-            styles.emptyIcon,
-            { backgroundColor: theme.backgroundSunken },
-          ]}
-        >
-          <Symbol
-            name="status-completed"
-            size={24}
-            color={theme.textTertiary}
-          />
-        </View>
-        <AppText variant="heading" style={styles.emptyTitle}>
-          A clean slate
-        </AppText>
-        <AppText
-          variant="body"
-          color="secondary"
-          align="center"
-          style={styles.emptyBody}>
-          Completed tasks will collect here when you’re ready to look back.
-        </AppText>
-      </View>
-    );
-  }
-
-  if (hasTasks) {
-    return (
-      <View style={styles.empty}>
-        <View
-          style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}
-        >
-          <Symbol name="status-completed" size={24} color={theme.success} />
-        </View>
-        <AppText variant="heading" style={styles.emptyTitle}>
-          All caught up
-        </AppText>
-        <AppText
-          variant="body"
-          color="secondary"
-          align="center"
-          style={styles.emptyBody}>
-          Enjoy the space you made—or add the next small thing.
-        </AppText>
-        <View style={styles.emptyActions}>
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={2}
-            onPress={onShowCompleted}
-            style={({ pressed }) => [
-              styles.emptyAction,
-              { backgroundColor: theme.backgroundSunken },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText variant="callout">View completed</AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={2}
-            onPress={onFocusComposer}
-            style={({ pressed }) => [
-              styles.emptyAction,
-              { backgroundColor: theme.accentPrimary },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText variant="callout" color="onAccent">
-              Add another
-            </AppText>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.empty}>
-      <View style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}>
-        <Symbol name="tasks" size={24} color={theme.accentPrimary} />
-      </View>
-      <AppText variant="heading" style={styles.emptyTitle}>
-        Your list is wide open
-      </AppText>
-      <AppText
-        variant="body"
-        color="secondary"
-        align="center"
-        style={styles.emptyBody}>
-        Start with one clear, kind commitment to yourself.
-      </AppText>
-      <View style={styles.suggestions}>
-        {QUICK_START_TASKS.map((suggestion) => (
-          <Pressable
-            key={suggestion}
-            accessibilityRole="button"
-            accessibilityLabel={`Add ${suggestion}`}
-            onPress={() => onAddSuggestion(suggestion)}
-            style={({ pressed }) => [
-              styles.suggestion,
-              {
-                backgroundColor: theme.backgroundSunken,
-                borderColor: theme.separator,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Symbol name="add" size={15} color={theme.accentPrimary} />
-            <AppText variant="caption">{suggestion}</AppText>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screenContent: {
@@ -1136,15 +660,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.65,
   },
-  openPill: {
-    minHeight: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-  },
-  openDot: { width: 7, height: 7, borderRadius: radii.pill },
   hero: {
     minHeight: 84,
     flexDirection: 'row',
@@ -1215,9 +730,20 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: radii.pill,
   },
+  taskStatusLabel: {
+    lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  taskStatusCount: {
+    fontSize: 17,
+    lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
   taskStatusDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 16,
+    height: 14,
   },
   toolbarMenus: {
     flexDirection: 'row',
@@ -1243,20 +769,7 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { flexGrow: 1 },
   listEmptyContent: { flexGrow: 1 },
-  listSeparator: { height: spacing.sm },
   listDismissFooter: { minHeight: spacing.xxl * 3, flexGrow: 1 },
-  taskRow: {
-    minHeight: 68,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    paddingVertical: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-  },
   activeTaskRow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -1264,86 +777,12 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  checkButton: {
-    width: 27,
-    height: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: radii.pill,
-  },
-  taskCopy: { flex: 1, gap: spacing.xxs },
-  completedTitle: { textDecorationLine: 'line-through' },
-  editInput: {
-    ...typography.bodyMedium,
-    margin: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    borderBottomWidth: 1,
-    includeFontPadding: false,
-    textAlignVertical: 'top',
-  },
-  rowAction: {
-    width: layout.minTapTarget,
-    height: layout.minTapTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  empty: {
+  missingList: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.lg,
-  },
-  emptyIcon: {
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.xl,
-    borderCurve: 'continuous',
-  },
-  emptyTitle: {
-    fontSize: 21,
-    lineHeight: 26,
-  },
-  emptyBody: {
-    maxWidth: 340,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  suggestions: {
-    width: '100%',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-  },
-  suggestion: {
-    minHeight: layout.minTapTarget,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-  },
-  emptyActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-  },
-  emptyAction: {
-    minHeight: layout.minTapTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    borderRadius: radii.pill,
   },
   pressed: { opacity: 0.62 },
 });

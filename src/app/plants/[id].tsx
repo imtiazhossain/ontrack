@@ -12,7 +12,8 @@ import {
     undoPlantWatering,
 } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
-import { formatDateLong, formatMinutes, toDateKey, todayKey } from '@/utils/date';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { formatDueLabel, formatMinutes, toDateKey, todayKey } from '@/utils/date';
 import { openHttpsUrl } from '@/utils/safe-url';
 
 export default function PlantDetailScreen() {
@@ -26,13 +27,15 @@ export default function PlantDetailScreen() {
   }
 
   const dueKey = toDateKey(new Date(plant.nextWateringAt));
-  const due = dueKey < todayKey() ? `Overdue since ${formatDateLong(dueKey)}` : dueKey === todayKey() ? 'Due today' : `Due ${formatDateLong(dueKey)}`;
+  const due = formatDueLabel(dueKey, { overduePrefix: 'Overdue since' });
   const latestLog = plant.wateringLogs.at(-1);
 
-  const remove = () => appPrompt.alert('Delete plant', `Remove ${plant.nickname}, its care tasks, and locally saved photos?`, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/plants')) },
-  ]);
+  const remove = () =>
+    confirmDestructiveAction({
+      title: 'Delete plant',
+      message: `Remove ${plant.nickname}, its care tasks, and locally saved photos?`,
+      onConfirm: () => void deletePlant(plant.id).then(() => router.replace('/plants')),
+    });
 
   return (
     <Screen contentStyle={styles.content}>
