@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -50,12 +49,6 @@ const SELECTION_SPRING = {
   stiffness: 205,
   mass: 0.72,
 } as const;
-const COLLAPSE_SPRING = {
-  damping: 20,
-  stiffness: 240,
-  mass: 0.72,
-} as const;
-
 function canonicalPositionForRoute(index: number, routeCount: number) {
   'worklet';
   const signedIndex = index > routeCount / 2 ? index - routeCount : index;
@@ -179,13 +172,8 @@ export function FloatingTabBar({
   const expandMenu = () => {
     setSwipeClaimed(true);
     setCollapsed(false);
-    collapseProgress.value = withSpring(
-      0,
-      COLLAPSE_SPRING,
-      (finished) => {
-        if (finished) scheduleOnRN(releaseSwipeClaim);
-      },
-    );
+    collapseProgress.value = 0;
+    releaseSwipeClaim();
   };
   const commitBrowse = (routeName: string) => {
     setCarouselBrowse({
@@ -196,11 +184,6 @@ export function FloatingTabBar({
   const finishSelection = (routeName: string) => {
     const ui = useUI.getState();
     if (ui.carouselPendingRouteName !== routeName) return;
-
-    const route = visibleRoutes.find((item) => item.name === routeName);
-    if (route && route.name !== selectedRoute.name) {
-      router.navigate(TAB_META[route.name].href);
-    }
 
     const routeIndex = visibleRoutes.findIndex(
       (item) => item.name === routeName,
@@ -280,21 +263,13 @@ export function FloatingTabBar({
       const shouldCollapse =
         event.translationY >= COLLAPSE_THRESHOLD ||
         event.velocityY >= COLLAPSE_VELOCITY_THRESHOLD;
-      collapseProgress.value = withSpring(
-        shouldCollapse ? 1 : 0,
-        {
-          ...COLLAPSE_SPRING,
-          velocity: event.velocityY / COLLAPSE_DRAG_DISTANCE,
-        },
-        (finished) => {
-          if (!finished) return;
-          if (shouldCollapse) {
-            scheduleOnRN(finishCollapse);
-          } else {
-            scheduleOnRN(releaseSwipeClaim);
-          }
-        },
-      );
+      if (shouldCollapse) {
+        collapseProgress.value = 1;
+        scheduleOnRN(finishCollapse);
+      } else {
+        collapseProgress.value = 0;
+        scheduleOnRN(releaseSwipeClaim);
+      }
     });
   const carouselGesture = Gesture.Race(panGesture, collapseGesture);
   const trackStyle = useAnimatedStyle(() => ({
@@ -350,8 +325,7 @@ export function FloatingTabBar({
         },
       ]}>
       {collapsed ? (
-        <Animated.View
-          entering={FadeInDown.duration(160)}
+        <View
           style={[
             styles.restoreButtonPosition,
             { bottom: Math.max(insets.bottom, spacing.sm) },
@@ -383,7 +357,7 @@ export function FloatingTabBar({
               color={theme.accentPrimary}
             />
           </Pressable>
-        </Animated.View>
+        </View>
       ) : (
         <GestureDetector gesture={carouselGesture}>
           <Animated.View
@@ -432,6 +406,10 @@ export function FloatingTabBar({
                 carouselPendingRouteName: route.name,
                 carouselSwipeClaimed: true,
               });
+              // Navigate immediately; menu centering finishes after.
+              if (route.name !== selectedRoute.name) {
+                router.navigate(TAB_META[route.name].href);
+              }
               const targetItems = centerSlot - slotIndex;
               positionItems.value = withSpring(
                 targetItems,
