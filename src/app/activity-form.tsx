@@ -120,6 +120,7 @@ export default function ActivityFormScreen() {
   const [error, setError] = useState<string>();
   const [analysisError, setAnalysisError] = useState<string>();
   const [analyzing, setAnalyzing] = useState(false);
+  const analysisRequestRef = useRef(0);
 
   const category = categories.find((item) => item.id === categoryId) ?? (editId ? categories[0] : undefined);
   const availableCategories = categories.filter((item) => isCategoryEnabled(item.id, enabledAddons));
@@ -210,10 +211,12 @@ export default function ActivityFormScreen() {
   const analyzePhoto = async (selectedPhoto?: string) => {
     const photoUri = selectedPhoto ?? (typeof photo === 'string' ? photo : undefined);
     if (!photoUri) return;
+    const requestId = ++analysisRequestRef.current;
     setAnalyzing(true);
     setAnalysisError(undefined);
     try {
       const { analysis, processedPhotoUri, photoProcessingVersion } = await analyzeMealPhoto(photoUri, title);
+      if (requestId !== analysisRequestRef.current) return;
       const displayPhoto = processedPhotoUri ?? photoUri;
       setPhoto(displayPhoto);
       setMeal((current) => ({
@@ -226,9 +229,10 @@ export default function ActivityFormScreen() {
         items: analysis.items,
       }));
     } catch (caught) {
+      if (requestId !== analysisRequestRef.current) return;
       setAnalysisError(caught instanceof NutritionServiceError ? caught.message : 'Meal analysis failed. You can try again or enter the foods manually.');
     } finally {
-      setAnalyzing(false);
+      if (requestId === analysisRequestRef.current) setAnalyzing(false);
     }
   };
 

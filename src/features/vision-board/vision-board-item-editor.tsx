@@ -6,12 +6,14 @@ import {
   AppText,
   Button,
   ErrorMessage,
+  IconButton,
   Input,
   Screen,
 } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
 import { initialCanvasFrame } from '@/features/vision-board/canvas';
 import type { VisionBoardItemKind } from '@/features/vision-board/types';
+import { useTheme } from '@/hooks/use-theme';
 import { newVisionBoardId, useVisionBoard } from '@/store/vision-board';
 
 function param(value: string | string[] | undefined) {
@@ -20,6 +22,7 @@ function param(value: string | string[] | undefined) {
 
 export function VisionBoardItemEditor() {
   const router = useRouter();
+  const theme = useTheme();
   const params = useLocalSearchParams<{
     id?: string | string[];
     categoryId?: string | string[];
@@ -54,6 +57,7 @@ export function VisionBoardItemEditor() {
         : '',
   );
   const [error, setError] = useState<string>();
+  const close = () => router.back();
 
   const save = () => {
     if (!category) {
@@ -74,7 +78,7 @@ export function VisionBoardItemEditor() {
       if (existing.kind === 'goal') {
         updateItem(existing.id, { title: first, note: second || undefined });
       }
-      router.back();
+      close();
       return;
     }
     if (type === 'image') {
@@ -99,7 +103,7 @@ export function VisionBoardItemEditor() {
     } else {
       addItem({ ...base, kind: 'goal', title: first, note: second || undefined });
     }
-    router.back();
+    close();
   };
 
   if (Platform.OS === 'web') {
@@ -109,7 +113,7 @@ export function VisionBoardItemEditor() {
         <AppText color="secondary">
           Board editing is available in the onTrack iOS and Android apps.
         </AppText>
-        <Button onPress={() => router.back()}>Close</Button>
+        <Button onPress={close}>Close</Button>
       </Screen>
     );
   }
@@ -126,14 +130,22 @@ export function VisionBoardItemEditor() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <AppText style={styles.title}>{title}</AppText>
-        <AppText color="secondary">
-          {type === 'image'
-            ? 'Add a few words to anchor this image.'
-            : type === 'goal'
-              ? 'Name the direction you want to move toward.'
-              : 'Write something you want to return to often.'}
-        </AppText>
+        <View style={styles.headerCopy}>
+          <AppText style={styles.title}>{title}</AppText>
+          <AppText color="secondary">
+            {type === 'image'
+              ? 'Add a few words to anchor this image.'
+              : type === 'goal'
+                ? 'Name the direction you want to move toward.'
+                : 'Write something you want to return to often.'}
+          </AppText>
+        </View>
+        <IconButton
+          icon="close"
+          accessibilityLabel="Close"
+          background={theme.backgroundSunken}
+          onPress={close}
+        />
       </View>
       <Input
         label={type === 'image' ? 'Caption' : type === 'goal' ? 'Goal' : 'Affirmation'}
@@ -161,22 +173,18 @@ export function VisionBoardItemEditor() {
         />
       ) : null}
       {error ? <ErrorMessage message={error} /> : null}
-      <View style={styles.actions}>
-        <Button onPress={save} style={styles.flex}>
-          Save
-        </Button>
-        <Button variant="ghost" onPress={() => router.back()} style={styles.flex}>
-          Cancel
-        </Button>
-      </View>
+      <Button onPress={save}>Save</Button>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: spacing.lg },
-  header: { gap: spacing.xs },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: { flex: 1, gap: spacing.xs, minWidth: 0 },
   title: { fontFamily: fontFamilies.serif, fontSize: 32, lineHeight: 38, fontWeight: '400' },
-  actions: { flexDirection: 'row', gap: spacing.md },
-  flex: { flex: 1 },
 });

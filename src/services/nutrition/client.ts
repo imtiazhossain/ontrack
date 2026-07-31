@@ -4,6 +4,7 @@ import { Directory, EncodingType, File, Paths } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
+import { authHeader } from '@/services/cloud/access-token';
 import type { MealAnalysis } from '@/types/models';
 import type {
   ApiErrorBody,
@@ -45,7 +46,7 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
   try {
     response = await fetch(apiUrl(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
       signal,
     });

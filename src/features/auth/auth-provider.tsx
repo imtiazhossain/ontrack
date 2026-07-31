@@ -162,8 +162,19 @@ export function AuthSessionProvider({
           });
         } else if (event === 'SIGNED_OUT' && !explicitSignOutRef.current) {
           initializedUserRef.current = undefined;
-          setSession(null);
-          setPhase(useAuthAccess.getState().guestEnabled ? 'guest' : 'welcome');
+          // Account-owned stores must not survive an expired session: otherwise
+          // a subsequent account could upload retained domains from this user.
+          setPhase('loading');
+          void clearLocalAccountData()
+            .catch((cleanupError: unknown) => {
+              if (active) setError(accessibleAuthError(cleanupError));
+            })
+            .finally(() => {
+              if (!active) return;
+              useAuthAccess.getState().resetAccess();
+              setSession(null);
+              setPhase('welcome');
+            });
         }
       }, 0);
     });
@@ -175,26 +186,24 @@ export function AuthSessionProvider({
 
   useEffect(() => {
     if (!hydrated || phase !== 'guest') return;
-    let unsubscribers: (() => void)[] = [];
-    const timer = setTimeout(() => {
-      const mark = () => {
-        if (!isGuestDirtyTrackingSuppressed()) {
-          useAuthAccess.getState().markGuestDataDirty();
-        }
-      };
-      unsubscribers = [
-        usePreferences.subscribe(mark),
-        useSchedule.subscribe(mark),
-        usePlants.subscribe(mark),
-        useAddons.subscribe(mark),
-        useAgents.subscribe(mark),
-        useTravel.subscribe(mark),
-        useTodos.subscribe(mark),
-        useVisionBoard.subscribe(mark),
-      ];
-    }, 750);
+    // Subscribe immediately so guest edits cannot sneak in before dirty tracking
+    // starts. Seed/migration writes must use withoutGuestDirtyTracking instead.
+    const mark = () => {
+      if (!isGuestDirtyTrackingSuppressed()) {
+        useAuthAccess.getState().markGuestDataDirty();
+      }
+    };
+    const unsubscribers = [
+      usePreferences.subscribe(mark),
+      useSchedule.subscribe(mark),
+      usePlants.subscribe(mark),
+      useAddons.subscribe(mark),
+      useAgents.subscribe(mark),
+      useTravel.subscribe(mark),
+      useTodos.subscribe(mark),
+      useVisionBoard.subscribe(mark),
+    ];
     return () => {
-      clearTimeout(timer);
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
   }, [hydrated, phase]);

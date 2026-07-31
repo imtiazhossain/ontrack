@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, IconButton, Symbol } from '@/components/primitives';
 import {
   fontFamilies,
   radii,
@@ -172,12 +172,21 @@ export function ChecklistPopoverMenu({
               },
             ]}>
             <View style={styles.panelHeader}>
-              <AppText variant="overline" color="accent">
-                Checklist
-              </AppText>
-              <AppText variant="subheading" style={styles.panelTitle}>
-                {title}
-              </AppText>
+              <View style={styles.panelCopy}>
+                <AppText variant="overline" color="accent">
+                  Checklist
+                </AppText>
+                <AppText variant="subheading" style={styles.panelTitle}>
+                  {title}
+                </AppText>
+              </View>
+              <IconButton
+                icon="close"
+                size={36}
+                accessibilityLabel="Close menu"
+                background={theme.backgroundSunken}
+                onPress={close}
+              />
             </View>
 
             <View style={styles.items}>
@@ -290,10 +299,18 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   panelHeader: {
-    height: PANEL_HEADER_HEIGHT,
-    justifyContent: 'center',
-    gap: spacing.xxs,
+    minHeight: PANEL_HEADER_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  panelCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+    justifyContent: 'center',
   },
   panelTitle: {
     fontFamily: fontFamilies.serif,

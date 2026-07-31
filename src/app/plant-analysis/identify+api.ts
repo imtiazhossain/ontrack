@@ -1,5 +1,6 @@
 import {
   assertPlantAnalysisEnabled,
+  assertPlantAuthenticated,
   identifyPlantImage,
   plantCorsHeaders,
   plantError,
@@ -13,6 +14,8 @@ export function OPTIONS() { return plantOptionsResponse(); }
 export async function POST(request: Request) {
   const disabled = assertPlantAnalysisEnabled();
   if (disabled) return disabled;
+  const unauthorized = await assertPlantAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = await request.json().catch(() => undefined) as { imageDataUrl?: unknown } | undefined;
   if (!validImageDataUrl(input?.imageDataUrl)) return plantError('A valid plant image is required.', 'INVALID_IMAGE', 400);
   try {

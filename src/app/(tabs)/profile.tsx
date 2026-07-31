@@ -84,6 +84,9 @@ export default function ProfileSettingsScreen() {
         {name || 'You'} · {goal || 'Living intentionally'}
       </AppText>
 
+      <SectionHeader title="Account & sync" />
+      <CloudAccountCard />
+
       <SectionHeader title="Appearance" />
       <View style={styles.segment}>
         {THEME_OPTIONS.map((opt) => (
@@ -146,9 +149,6 @@ export default function ProfileSettingsScreen() {
         onPress={() => router.push('/agents' as never)}
         accessibilityLabel="Manage agents"
       />
-
-      <SectionHeader title="Account & sync" />
-      <CloudAccountCard />
 
       <SectionHeader title="Nutrition" />
       <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">

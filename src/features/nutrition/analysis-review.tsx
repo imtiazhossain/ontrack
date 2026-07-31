@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Input, SectionHeader } from '@/components/primitives';
 import { MetricDisplay } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import type { FoodItem, MealAnalysis } from '@/types/models';
+import { openHttpsUrl, safeHttpsUrl } from '@/utils/safe-url';
 
 function numberValue(value: string) {
   const parsed = Number(value);
@@ -98,8 +99,8 @@ export function MealAnalysisReview({
       ))}
 
       {analysis.sources.length ? <SectionHeader title="Sources" /> : null}
-      {analysis.sources.map((source) => source.url ? (
-        <Pressable key={source.id} onPress={() => Linking.openURL(source.url!)} accessibilityRole="link">
+      {analysis.sources.map((source) => safeHttpsUrl(source.url) ? (
+        <Pressable key={source.id} onPress={() => void openHttpsUrl(source.url)} accessibilityRole="link">
           <AppText variant="caption" color="accent">{source.title}</AppText>
         </Pressable>
       ) : <AppText key={source.id} variant="caption" color="secondary">{source.title}</AppText>)}

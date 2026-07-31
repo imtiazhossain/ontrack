@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
 import { getNotificationsModule } from '@/services/notifications/runtime';
@@ -39,11 +40,9 @@ export function travelChatAccessCode(plan: TravelPlan): string | undefined {
 }
 
 function randomDeviceId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
-    const random = Math.floor(Math.random() * 16);
-    const value = character === 'x' ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
+  // Cryptographically random so the device id (also the chat rate-limit key)
+  // cannot be predicted or ground down by an attacker.
+  return Crypto.randomUUID();
 }
 
 export async function getTravelChatDeviceId(): Promise<string> {

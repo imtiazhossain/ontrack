@@ -112,10 +112,6 @@ export function VisionBoardDashboard() {
         : `Remove “${name}” and its ${categoryItems.length} board ${
             categoryItems.length === 1 ? 'item' : 'items'
           }?`;
-    if (Platform.OS === 'web') {
-      if (globalThis.confirm(message)) perform();
-      return;
-    }
     appPrompt.alert('Delete category?', message, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: perform },
@@ -498,7 +494,7 @@ const styles = StyleSheet.create({
     lineHeight: 37,
     fontWeight: '400',
   },
-  subtitle: { fontFamily: fontFamilies.sans, fontWeight: '400' },
+  subtitle: { fontFamily: fontFamilies.serif, fontWeight: '400' },
   webNotice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -542,7 +538,7 @@ const styles = StyleSheet.create({
   },
   heroPillText: {
     color: '#FFFFFF',
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 11.5,
     lineHeight: 14,
     fontWeight: '400',
@@ -563,7 +559,7 @@ const styles = StyleSheet.create({
   },
   heroSupport: {
     color: 'rgba(255,255,255,0.86)',
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '400',
@@ -588,7 +584,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionTitle: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 16,
     lineHeight: 21,
     fontWeight: '400',
@@ -607,7 +603,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   sectionButtonText: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '400',
@@ -654,7 +650,7 @@ const styles = StyleSheet.create({
   },
   categoryName: { fontSize: 18, lineHeight: 21, fontWeight: '400' },
   categoryIntention: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: '400',
@@ -677,7 +673,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     minWidth: 30,
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '400',

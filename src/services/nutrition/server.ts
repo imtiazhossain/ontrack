@@ -1,11 +1,12 @@
-import { resolve4, resolve6 } from 'node:dns/promises';
-
 import { AI_DISCLAIMER } from '@/services/ai';
 import { validateMealAnalysis } from '@/services/ai/validate';
+import { gatePaidApiRequest } from '@/services/http/api-gate';
+import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
 import type { FoodItem, MealAnalysis, NutrientValue, NutritionSource } from '@/types/models';
 import type { MealLinkCandidate, MealLinkResolution, NutritionErrorCode } from './types';
-import { isPrivateHostname, sanitizeMealUrl } from './url-safety';
+import { sanitizeMealUrl } from './url-safety';
+import { assertPublicDns } from './url-safety.server';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
@@ -18,19 +19,25 @@ function mealAIProvider(): MealAIProvider {
   return process.env.MEAL_AI_PROVIDER === 'ollama' ? 'ollama' : 'openai';
 }
 
-export const nutritionCorsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Cache-Control': 'no-store',
-};
+export const nutritionCorsHeaders = apiCorsHeaders();
 
-export function nutritionOptionsResponse() {
-  return new Response(null, { status: 204, headers: nutritionCorsHeaders });
+export function nutritionOptionsResponse(request?: Request) {
+  return new Response(null, { status: 204, headers: apiCorsHeaders(request) });
 }
 
 export function nutritionError(error: string, code: NutritionErrorCode, status: number) {
   return Response.json({ error, code }, { status, headers: nutritionCorsHeaders });
+}
+
+export async function assertNutritionAuthenticated(request: Request) {
+  const gate = await gatePaidApiRequest(request, 'nutrition');
+  if (gate === 'unauthenticated') {
+    return nutritionError('Sign in to use meal analysis.', 'PERMISSION_DENIED', 401);
+  }
+  if (gate === 'rate_limited') {
+    return nutritionError('Too many meal analysis requests. Try again later.', 'RATE_LIMITED', 429);
+  }
+  return undefined;
 }
 
 export function assertAnalysisEnabled(operation: 'photo' | 'cloud' = 'cloud') {
@@ -476,18 +483,11 @@ export async function analyzeLinkCandidate(candidate: MealLinkCandidate): Promis
   return assembleAnalysis(JSON.parse(text) as VisionOutput, candidate.sources);
 }
 
-async function assertPublicDns(url: URL) {
-  if (isPrivateHostname(url.hostname)) throw new Error('BLOCKED_LINK');
-  const addresses = await Promise.allSettled([resolve4(url.hostname), resolve6(url.hostname)]);
-  const resolved = addresses.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
-  if (!resolved.length || resolved.some(isPrivateHostname)) throw new Error('BLOCKED_LINK');
-}
-
 async function fetchPublicPage(rawUrl: string): Promise<{ sanitizedUrl: string; text: string }> {
   let current = sanitizeMealUrl(rawUrl);
   for (let redirect = 0; redirect <= 3; redirect += 1) {
     const url = new URL(current);
-    await assertPublicDns(url);
+    await assertPublicDns(url.hostname);
     const response = await guardedFetch('meal-link-fetch', current, {
       redirect: 'manual',
       headers: { 'User-Agent': 'onTrack meal-link resolver/1.0', Accept: 'text/html,application/json' },

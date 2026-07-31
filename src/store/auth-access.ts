@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
+import { isSafeAuthReturnTo } from '@/utils/auth-return-to';
 
 interface AuthAccessState {
   guestEnabled: boolean;
@@ -35,8 +36,7 @@ export const useAuthAccess = create<AuthAccessState>()(
       startAuthUpgrade: () => set({ authUpgradePending: true }),
       setAuthReturnTo: (path) =>
         set({
-          pendingAuthReturnTo:
-            typeof path === 'string' && path.startsWith('/') ? path : undefined,
+          pendingAuthReturnTo: isSafeAuthReturnTo(path) ? path : undefined,
         }),
       takeAuthReturnTo: () => {
         const path = get().pendingAuthReturnTo;

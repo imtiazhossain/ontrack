@@ -1,7 +1,9 @@
-import { hasConfidentPlantIdentity, validatePlantCarePlan, validatePlantHealth, validatePlantIdentity } from './validate';
+import { gatePaidApiRequest } from '@/services/http/api-gate';
+import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
 import type { PlantCarePlan, PlantHealthAssessment, PlantIdentity, RoomProfile } from '@/types/models';
 import type { PlantServiceErrorCode } from './types';
+import { hasConfidentPlantIdentity, validatePlantCarePlan, validatePlantHealth, validatePlantIdentity } from './validate';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const MAX_IMAGE_LENGTH = 5_500_000;
@@ -17,19 +19,25 @@ function plantAIProvider(): PlantAIProvider {
   return configured === 'openai' ? 'openai' : 'ollama';
 }
 
-export const plantCorsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'no-store',
-};
+export const plantCorsHeaders = apiCorsHeaders();
 
-export function plantOptionsResponse() {
-  return new Response(null, { status: 204, headers: plantCorsHeaders });
+export function plantOptionsResponse(request?: Request) {
+  return new Response(null, { status: 204, headers: apiCorsHeaders(request) });
 }
 
 export function plantError(error: string, code: PlantServiceErrorCode, status: number) {
   return Response.json({ error, code }, { status, headers: plantCorsHeaders });
+}
+
+export async function assertPlantAuthenticated(request: Request) {
+  const gate = await gatePaidApiRequest(request, 'plant');
+  if (gate === 'unauthenticated') {
+    return plantError('Sign in to use plant analysis.', 'PERMISSION_DENIED', 401);
+  }
+  if (gate === 'rate_limited') {
+    return plantError('Too many plant analysis requests. Try again later.', 'RATE_LIMITED', 429);
+  }
+  return undefined;
 }
 
 export function assertPlantAnalysisEnabled() {

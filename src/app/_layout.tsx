@@ -1,6 +1,6 @@
-import { getSharedPayloads } from 'expo-sharing';
 import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
+import { getSharedPayloads } from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
@@ -8,23 +8,23 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import {
-  AppPromptHost,
-  AppSafeArea,
-  HeaderBackButton,
+    AppPromptHost,
+    AppSafeArea,
+    HeaderBackButton,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
-import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
 import { useTheme } from '@/hooks/use-theme';
+import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
 import { getNotificationsModule } from '@/services/notifications/runtime';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
+import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
-import { useAuthAccess } from '@/store/auth-access';
 import { useTravel } from '@/store/travel';
 
 export default function RootLayout() {
@@ -92,12 +92,15 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         router.push(url as never);
         return;
       }
-      const chatCode = response?.notification.request.content.data?.chatCode;
-      if (url === '/travel-chat' && typeof chatCode === 'string') {
-        const plan = useTravel.getState().plans.find(
-          (item) =>
-            item.chatAccessCode === chatCode ||
-            item.participants.some((person) => person.inviteCode === chatCode),
+      // Prefer tripId (capability tokens are no longer sent in push payloads).
+      const tripId = response?.notification.request.content.data?.tripId;
+      const legacyChatCode = response?.notification.request.content.data?.chatCode;
+      if (url === '/travel-chat') {
+        const plan = useTravel.getState().plans.find((item) =>
+          (typeof tripId === 'string' && item.id === tripId) ||
+          (typeof legacyChatCode === 'string' &&
+            (item.chatAccessCode === legacyChatCode ||
+              item.participants.some((person) => person.inviteCode === legacyChatCode))),
         );
         if (plan) router.push(`/travel/${plan.id}/chat` as never);
       }
@@ -209,7 +212,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           options={{ presentation: 'modal' }}
         />
         <Stack.Screen name="agents" />
-        <Stack.Screen name="todos/[id]" />
+        <Stack.Screen name="todos/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]/settings" />
         <Stack.Screen name="todos/[id]/recipe-import" />
         <Stack.Screen name="todo-collaborators" />

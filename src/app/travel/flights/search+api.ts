@@ -1,18 +1,22 @@
 import {
-  flightCorsHeaders,
-  flightOptionsResponse,
-  searchFlightOffers,
-  validateFlightSearch,
+    assertFlightsAuthenticated,
+    flightCorsHeaders,
+    flightOptionsResponse,
+    searchFlightOffers,
+    validateFlightSearch,
 } from '@/features/travel/flights/server';
 import { compressResponse } from '@/services/http/compression';
 
 const searchesByClient = new Map<string, { count: number; resetsAt: number }>();
 
-export function OPTIONS() {
-  return flightOptionsResponse();
+export function OPTIONS(request: Request) {
+  return flightOptionsResponse(request);
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await assertFlightsAuthenticated(request);
+  if (unauthorized) return unauthorized;
+
   const now = Date.now();
   const client = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
   const existing = searchesByClient.get(client);

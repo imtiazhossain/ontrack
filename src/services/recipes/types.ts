@@ -5,6 +5,8 @@ export type RecipeImportErrorCode =
   | 'NO_RECIPE_FOUND'
   | 'OFFLINE'
   | 'PROVIDER_FAILURE'
+  | 'PERMISSION_DENIED'
+  | 'RATE_LIMITED'
   | 'NOT_CONFIGURED';
 
 export type RecipeImportRequest =

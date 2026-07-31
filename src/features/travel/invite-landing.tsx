@@ -14,6 +14,7 @@ import {
   isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
   resolveTravelInvite,
+  travelInviteLocalId,
   travelPlanIdentityKey,
 } from '@/features/travel/share';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
@@ -49,10 +50,19 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const remoteDecoded = currentRemoteResult?.plan;
   const inviteError = currentRemoteResult?.error;
   const decoded = remoteDecoded;
-  const existingPlan = useMemo(
-    () => (decoded ? findMatchingTravelPlan(plans, decoded) : undefined),
-    [decoded, plans],
-  );
+  const existingPlan = useMemo(() => {
+    if (!decoded) return undefined;
+    // Short invites are unique per code / trip_id on the server. Prefer those
+    // keys so two different Paris trips with the same dates cannot merge.
+    if (isShortInvite && invite) {
+      const code = invite.slice(2);
+      return (
+        plans.find((plan) => plan.chatAccessCode === code) ??
+        plans.find((plan) => plan.id === travelInviteLocalId(code))
+      );
+    }
+    return findMatchingTravelPlan(plans, decoded);
+  }, [decoded, invite, isShortInvite, plans]);
   const isWeb = process.env.EXPO_OS === 'web';
   const resolving = !isWeb && Boolean(user) && isShortInvite && !decoded && !inviteError;
   const nativeError =
@@ -123,7 +133,10 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     const now = new Date().toISOString();
     const plan = {
       ...decoded,
-      id: `trip-invite-${travelPlanIdentityKey(decoded)}`,
+      id:
+        isShortInvite && invite
+          ? travelInviteLocalId(invite.slice(2))
+          : `trip-invite-${travelPlanIdentityKey(decoded)}`,
       chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
       createdAt: now,
       updatedAt: now,

@@ -2,17 +2,18 @@ import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
 import { Platform } from 'react-native';
 
+import { authHeader } from '@/services/cloud/access-token';
 import type { PlantCarePlan, PlantHealthAssessment, PlantIdentity, RoomProfile } from '@/types/models';
 import { PlantServiceError } from './client-error';
 import { preparePlantImage } from './media';
-import type {
-  PlantApiErrorBody,
-  PlantCareResponse,
-  PlantCheckInResponse,
-  PlantIdentificationResponse,
-  PlantServiceErrorCode,
-} from './types';
 import type { PlantTaxonSearchResult } from './taxonomy';
+import type {
+    PlantApiErrorBody,
+    PlantCareResponse,
+    PlantCheckInResponse,
+    PlantIdentificationResponse,
+    PlantServiceErrorCode,
+} from './types';
 
 export function plantApiUrl(path: string): string {
   if (Platform.OS === 'web') return path;
@@ -29,7 +30,7 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
   try {
     response = await fetch(plantApiUrl(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
       signal,
     });
@@ -57,7 +58,10 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
 export async function searchPlants(query: string, signal?: AbortSignal): Promise<PlantTaxonSearchResult[]> {
   let response: Response;
   try {
-    response = await fetch(plantApiUrl(`/plant-analysis/search?q=${encodeURIComponent(query.trim())}`), { signal });
+    response = await fetch(plantApiUrl(`/plant-analysis/search?q=${encodeURIComponent(query.trim())}`), {
+      signal,
+      headers: await authHeader(),
+    });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new PlantServiceError('Plant search is unavailable. You can still enter the name manually.', 'OFFLINE');

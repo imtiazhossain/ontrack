@@ -1,6 +1,7 @@
 import {
   analyzeLinkCandidate,
   assertAnalysisEnabled,
+  assertNutritionAuthenticated,
   nutritionCorsHeaders,
   nutritionError,
   nutritionOptionsResponse,
@@ -13,6 +14,8 @@ export function OPTIONS() { return nutritionOptionsResponse(); }
 export async function POST(request: Request) {
   const disabled = assertAnalysisEnabled();
   if (disabled) return disabled;
+  const unauthorized = await assertNutritionAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = await request.json().catch(() => undefined) as { candidate?: MealLinkCandidate } | undefined;
   if (!input?.candidate?.itemName) return nutritionError('Choose a meal candidate first.', 'AMBIGUOUS_MEAL', 400);
   try {

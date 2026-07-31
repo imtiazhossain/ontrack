@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 
 import { AppText, appPrompt, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
@@ -23,6 +23,7 @@ export default function PlantCheckInScreen() {
   const [result, setResult] = useState<PlantCheckInResponse>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const saveInFlightRef = useRef(false);
 
   if (!plant) return <Screen><AppText variant="title">Plant not found</AppText></Screen>;
 
@@ -57,7 +58,8 @@ export default function PlantCheckInScreen() {
   };
 
   const save = async (acceptPlan: boolean) => {
-    if (!photo || !result) return;
+    if (!photo || !result || busy || saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setBusy(true);
     try {
       const checkInId = newId('checkin');
@@ -73,7 +75,10 @@ export default function PlantCheckInScreen() {
       }
       router.back();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'The check-in could not be saved.'); }
-    finally { setBusy(false); }
+    finally {
+      saveInFlightRef.current = false;
+      setBusy(false);
+    }
   };
 
   return (
@@ -81,7 +86,7 @@ export default function PlantCheckInScreen() {
       <AppText variant="title">Check in on {plant.nickname}</AppText>
       <AppText color="secondary">Use similar lighting and framing when possible. The assessment compares only visible changes.</AppText>
       {photo ? <Image source={photo} style={styles.hero} contentFit="cover" /> : null}
-      <View style={styles.row}><View style={styles.flex}><Button onPress={() => void camera()} icon="camera">Camera</Button></View><View style={styles.flex}><Button variant="secondary" onPress={() => void library()} icon="photo">Library</Button></View></View>
+      <View style={styles.row}><View style={styles.flex}><Button onPress={() => void camera()} icon="camera" disabled={busy}>Camera</Button></View><View style={styles.flex}><Button variant="secondary" onPress={() => void library()} icon="photo" disabled={busy}>Library</Button></View></View>
       <Button onPress={() => void analyze()} disabled={!photo || busy}>{busy ? 'Analyzing…' : 'Analyze check-in'}</Button>
       {result ? (
         <>
@@ -91,10 +96,10 @@ export default function PlantCheckInScreen() {
             <Card style={styles.card}>
               <AppText variant="heading">Care-plan update suggested</AppText>
               <AppText color="secondary">Check every {result.proposedCarePlan.watering.intervalDays} days, starting with {result.proposedCarePlan.watering.minMl}–{result.proposedCarePlan.watering.maxMl} mL after the soil check.</AppText>
-              <Button onPress={() => void save(true)}>Save and update care plan</Button>
-              <Button variant="secondary" onPress={() => void save(false)}>Save check-in, keep current plan</Button>
+              <Button onPress={() => void save(true)} disabled={busy}>Save and update care plan</Button>
+              <Button variant="secondary" onPress={() => void save(false)} disabled={busy}>Save check-in, keep current plan</Button>
             </Card>
-          ) : <Button onPress={() => void save(false)}>Save check-in</Button>}
+          ) : <Button onPress={() => void save(false)} disabled={busy}>Save check-in</Button>}
         </>
       ) : null}
       {busy ? <ActivityIndicator /> : null}

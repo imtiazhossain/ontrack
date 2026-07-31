@@ -1094,7 +1094,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.9,
   },
   subtitle: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: '400',
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flex: 1,
     paddingVertical: 0,
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 15,
     lineHeight: 20,
   },
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   filterLabel: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 10,
     lineHeight: 13,
     fontWeight: '400',
@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   quoteAttribution: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 9.5,
     lineHeight: 13,
     fontWeight: '400',
@@ -1213,7 +1213,7 @@ const styles = StyleSheet.create({
   },
   goalEyebrowText: {
     flexShrink: 1,
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 9,
     lineHeight: 11,
     fontWeight: '600',
@@ -1225,13 +1225,13 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   goalNote: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 10,
     lineHeight: 13,
     fontWeight: '400',
   },
   goalSupport: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 9.5,
     lineHeight: 12,
     fontWeight: '400',
@@ -1251,7 +1251,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   progressLabel: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '400',

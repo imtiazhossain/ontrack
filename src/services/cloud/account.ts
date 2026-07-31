@@ -58,6 +58,12 @@ export function accessibleAuthError(error: unknown) {
   if (/malformed|valid code|match this device|not started from this device/i.test(message)) {
     return 'That sign-in link is invalid or expired. Start again from this device.';
   }
+  if (/app_state_domain_check|addon_entitlements_addon_id_check/i.test(message)) {
+    return 'Cloud sync needs a database update before this account can finish signing in. Apply the latest Supabase migrations, then try again.';
+  }
+  if (/violates check constraint|duplicate key value|permission denied for/i.test(message)) {
+    return 'Cloud sync could not save your account data. Try again in a moment, or continue as a guest.';
+  }
   return message || fallback;
 }
 

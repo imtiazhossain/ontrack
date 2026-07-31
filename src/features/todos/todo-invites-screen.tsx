@@ -87,7 +87,7 @@ export function TodoInvitesScreen() {
                 setWorking(invite.id);
                 setError(undefined);
                 void acceptTodoEmailInvite(invite.id)
-                  .then((listId) => router.replace(`/todos/${listId}` as never))
+                  .then((listId) => router.replace(`/(tabs)/to-do/${listId}` as never))
                   .catch((caught: unknown) => {
                     setError(caught instanceof Error ? caught.message : 'The invitation could not be accepted.');
                   })

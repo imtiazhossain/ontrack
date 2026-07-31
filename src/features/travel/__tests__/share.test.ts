@@ -1,13 +1,13 @@
 import {
-  createTravelInviteUrl,
-  createInstalledTravelInviteUrl,
-  decodeTravelInvite,
-  encodeTravelInvite,
-  findMatchingTravelPlan,
-  isShortTravelInvite,
-  resolveTravelInvite,
-  travelPlanIdentityKey,
-  travelInviteKey,
+    createInstalledTravelInviteUrl,
+    createTravelInviteUrl,
+    decodeTravelInvite,
+    encodeTravelInvite,
+    findMatchingTravelPlan,
+    isShortTravelInvite,
+    resolveTravelInvite,
+    travelInviteKey,
+    travelPlanIdentityKey,
 } from '../share';
 import type { TravelPlan } from '../types';
 
@@ -42,14 +42,25 @@ const plan: TravelPlan = {
 };
 
 describe('travel invites', () => {
-  it('round-trips an encoded trip without copying its local id', () => {
+  it('round-trips an encoded trip without copying its local id or sensitive fields', () => {
     expect(decodeTravelInvite(encodeTravelInvite(plan))).toEqual({
       title: plan.title,
       destination: plan.destination,
       startDate: plan.startDate,
       endDate: plan.endDate,
       notes: plan.notes,
-      itinerary: plan.itinerary,
+      itinerary: [
+        {
+          ...plan.itinerary[0],
+          bookingUrl: undefined,
+          flight: {
+            airline: 'Air Canada',
+            flightNumber: 'AC 421',
+            departureAirport: 'JFK',
+            arrivalAirport: 'YUL',
+          },
+        },
+      ],
       participants: [],
     });
   });

@@ -41,9 +41,21 @@ export function useTodoCollaboration(enabled: boolean) {
     if (!enabled) return;
     const channels = sharedLists.flatMap((list) => {
       const channel = subscribeToTodoList(list, () => {
-        void loadTodoListSnapshot(list.id).catch(() => {
-          useTodos.getState().removeSharedList(list.id);
-        });
+        void (async () => {
+          const hasPending = () =>
+            useTodos
+              .getState()
+              .pendingMutations.some((mutation) => mutation.listId === list.id);
+          if (hasPending()) {
+            await flushTodoMutations().catch(() => undefined);
+            // Keep optimistic local state until pending mutations land; a
+            // remote snapshot would otherwise wipe unsynced edits.
+            if (hasPending()) return;
+          }
+          await loadTodoListSnapshot(list.id).catch(() => {
+            useTodos.getState().removeSharedList(list.id);
+          });
+        })();
       });
       return channel ? [channel] : [];
     });

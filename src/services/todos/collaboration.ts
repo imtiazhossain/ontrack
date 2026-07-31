@@ -2,17 +2,17 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import {
-  prepareRecipeMutationMedia,
-  removeSharedRecipeImages,
-  resolveSharedRecipeMedia,
-  uploadSharedRecipeImage,
+    prepareRecipeMutationMedia,
+    removeSharedRecipeImages,
+    resolveSharedRecipeMedia,
+    uploadSharedRecipeImage,
 } from '@/services/todos/recipe-media';
 import {
-  normalizeTodoState,
-  type TodoInvite,
-  type TodoList,
-  type TodoSharedSnapshot,
-  useTodos,
+    normalizeTodoState,
+    type TodoInvite,
+    type TodoList,
+    type TodoSharedSnapshot,
+    useTodos,
 } from '@/store/todos';
 
 export class TodoCollaborationError extends Error {
@@ -414,6 +414,18 @@ export async function createTodoCollaboratorLink(listIds: string[]): Promise<str
   return data;
 }
 
+export async function revokeTodoCollaboratorLink(code: string): Promise<void> {
+  const client = await authenticatedClient();
+  const { error } = await client.rpc('revoke_todo_collaborator_link', {
+    link_code: code,
+  });
+  if (error) {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'The collaborator link could not be revoked.'),
+    );
+  }
+}
+
 export async function resolveTodoCollaboratorLink(
   code: string,
 ): Promise<{ inviterName: string; listNames: string[] } | undefined> {
@@ -503,11 +515,9 @@ export async function deleteSharedTodoList(listId: string) {
       }
     : undefined;
   useTodos.getState().removeSharedList(listId);
+  let client: Awaited<ReturnType<typeof authenticatedClient>>;
   try {
-    const client = await authenticatedClient();
-    if (rollback?.recipes?.length) {
-      await removeSharedRecipeImages(client, rollback.recipes);
-    }
+    client = await authenticatedClient();
     const { error } = await client.rpc('delete_todo_list', {
       requested_list_id: listId,
     });
@@ -515,6 +525,11 @@ export async function deleteSharedTodoList(listId: string) {
   } catch (error) {
     if (rollback) useTodos.getState().replaceSharedSnapshot(rollback);
     throw error;
+  }
+  // The list is permanently gone after the RPC succeeds. Storage cleanup is
+  // best-effort and must never restore a local ghost list on failure.
+  if (rollback?.recipes?.length) {
+    await removeSharedRecipeImages(client, rollback.recipes).catch(() => undefined);
   }
 }
 

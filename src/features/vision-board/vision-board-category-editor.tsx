@@ -6,6 +6,7 @@ import {
   AppText,
   Button,
   ErrorMessage,
+  IconButton,
   Input,
   Screen,
   Symbol,
@@ -48,6 +49,7 @@ export function VisionBoardCategoryEditor() {
     existing?.background ?? 'linen',
   );
   const [error, setError] = useState<string>();
+  const close = () => router.back();
 
   const save = () => {
     const trimmedName = name.trim();
@@ -80,7 +82,7 @@ export function VisionBoardCategoryEditor() {
         updatedAt: now,
       });
     }
-    router.back();
+    close();
   };
 
   if (Platform.OS === 'web') {
@@ -90,7 +92,7 @@ export function VisionBoardCategoryEditor() {
         <AppText color="secondary">
           Category editing is available in the onTrack iOS and Android apps.
         </AppText>
-        <Button onPress={() => router.back()}>Close</Button>
+        <Button onPress={close}>Close</Button>
       </Screen>
     );
   }
@@ -98,10 +100,18 @@ export function VisionBoardCategoryEditor() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <AppText style={styles.title}>{existing ? 'Edit category' : 'New category'}</AppText>
-        <AppText color="secondary">
-          Shape a clear space for one part of your future.
-        </AppText>
+        <View style={styles.headerCopy}>
+          <AppText style={styles.title}>{existing ? 'Edit category' : 'New category'}</AppText>
+          <AppText color="secondary">
+            Shape a clear space for one part of your future.
+          </AppText>
+        </View>
+        <IconButton
+          icon="close"
+          accessibilityLabel="Close"
+          background={theme.backgroundSunken}
+          onPress={close}
+        />
       </View>
       <Input
         label="Category name"
@@ -208,21 +218,21 @@ export function VisionBoardCategoryEditor() {
       </View>
 
       {error ? <ErrorMessage message={error} /> : null}
-      <View style={styles.actions}>
-        <Button onPress={save} style={styles.flex}>
-          {existing ? 'Save changes' : 'Create category'}
-        </Button>
-        <Button variant="ghost" onPress={() => router.back()} style={styles.flex}>
-          Cancel
-        </Button>
-      </View>
+      <Button onPress={save}>
+        {existing ? 'Save changes' : 'Create category'}
+      </Button>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: spacing.lg },
-  header: { gap: spacing.xs },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: { flex: 1, gap: spacing.xs, minWidth: 0 },
   title: { fontFamily: fontFamilies.serif, fontSize: 32, lineHeight: 38, fontWeight: '400' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   iconChoice: {
@@ -250,6 +260,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderCurve: 'continuous',
   },
-  actions: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm },
-  flex: { flex: 1 },
 });

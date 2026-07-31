@@ -4,28 +4,29 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, appPrompt, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { appPrompt, AppText, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import {
-  createPlantCarePlan,
-  identifyPlant,
-  persistPlantPhoto,
-  PlantServiceError,
-  searchPlants,
-  type PlantTaxonSearchResult,
+    createPlantCarePlan,
+    identifyPlant,
+    persistPlantPhoto,
+    PlantServiceError,
+    searchPlants,
+    type PlantTaxonSearchResult,
 } from '@/services/plants';
 import { activatePlantSchedule, wateringDueAt } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
 import { newId } from '@/store/schedule';
 import type {
-  Plant,
-  PlantCarePlan,
-  PlantHealthAssessment,
-  PlantIdentity,
-  RoomProfile,
+    Plant,
+    PlantCarePlan,
+    PlantHealthAssessment,
+    PlantIdentity,
+    RoomProfile,
 } from '@/types/models';
 import { fromDateKey, todayKey } from '@/utils/date';
+import { openHttpsUrl } from '@/utils/safe-url';
 
 type Step = 'photo' | 'details' | 'review';
 type PhotoTarget = 'plant' | 'room';
@@ -383,7 +384,15 @@ export default function NewPlantScreen() {
           <AppText>{carePlan.pruning.reason}</AppText>
           {carePlan.pruning.steps.map((item) => <AppText key={item} color="secondary">• {item}</AppText>)}
           <SectionHeader title="Sources" />
-          {carePlan.sources.map((source) => <AppText key={source.url} variant="caption" color="accent" onPress={() => Linking.openURL(source.url)}>{source.title}</AppText>)}
+          {carePlan.sources.map((source) => (
+            <AppText
+              key={source.url}
+              variant="caption"
+              color="accent"
+              onPress={() => void openHttpsUrl(source.url)}>
+              {source.title}
+            </AppText>
+          ))}
           <AppText variant="caption" color="tertiary">{carePlan.disclaimer}</AppText>
           <Button size="lg" onPress={() => void savePlant()} disabled={busy}>{busy ? 'Saving…' : 'Confirm and schedule'}</Button>
         </>

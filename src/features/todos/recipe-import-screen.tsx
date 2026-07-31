@@ -207,7 +207,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
       if (sharedImport) clearSharedPayloads();
       allowLeave.current = true;
       if (action) navigation.dispatch(action);
-      else router.replace(sharedImport ? '/(tabs)/to-do' : `/todos/${listId}` as never);
+      else router.replace(sharedImport ? '/(tabs)/to-do' : `/(tabs)/to-do/${listId}` as never);
     },
     [listId, navigation, router, sharedImport],
   );
@@ -403,7 +403,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
       if (sharedImport) clearSharedPayloads();
       allowLeave.current = true;
       haptics.success();
-      router.replace(`/todos/${listId}` as never);
+      router.replace(`/(tabs)/to-do/${listId}` as never);
     } catch (caught) {
       setError(
         caught instanceof Error

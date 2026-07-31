@@ -1,7 +1,8 @@
-import { fetch } from 'expo/fetch';
 import Constants from 'expo-constants';
+import { fetch } from 'expo/fetch';
 import { Platform } from 'react-native';
 
+import { authHeader } from '@/services/cloud/access-token';
 import type { MovieDetails, MovieSearchResponse } from './types';
 
 export type { MovieDetails, MovieSearchResult } from './types';
@@ -26,7 +27,10 @@ function apiUrl(path: string): string {
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(apiUrl(path), { signal });
+    response = await fetch(apiUrl(path), {
+      signal,
+      headers: await authHeader(),
+    });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
     if (error instanceof MovieServiceError) throw error;

@@ -1,49 +1,52 @@
-import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import Animated, {
-  FadeInDown,
-  FadeOutLeft,
-  LinearTransition,
+    FadeInDown,
+    FadeOutLeft,
+    LinearTransition,
 } from 'react-native-reanimated';
 
 import {
-  AppText,
-  appPrompt,
-  DragHandle,
-  ErrorMessage,
-  ProgressRing,
-  Screen,
-  Symbol,
+    appPrompt,
+    AppText,
+    DragHandle,
+    ErrorMessage,
+    IconButton,
+    ProgressRing,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import {
-  fontFamilies,
-  layout,
-  radii,
-  spacing,
-  typography,
+    fontFamilies,
+    layout,
+    radii,
+    spacing,
+    typography,
 } from '@/design-system';
-import { useTheme } from '@/hooks/use-theme';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
-  canCompleteTodo,
-  useTodos,
-  type TodoMember,
-  type TodoTask,
+    canCompleteTodo,
+    useTodos,
+    type TodoMember,
+    type TodoTask,
 } from '@/store/todos';
+import { useUI } from '@/store/ui';
 import { haptics } from '@/utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TodoFilter = 'open' | 'completed';
 type TodoSort = 'manual' | 'smart' | 'newest' | 'oldest' | 'alphabetical';
@@ -106,11 +109,6 @@ function confirmDestructiveAction({
   actionLabel: string;
   onConfirm: () => void;
 }) {
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm(`${title}\n\n${message}`)) onConfirm();
-    return;
-  }
-
   appPrompt.alert(title, message, [
     { text: 'Cancel', style: 'cancel' },
     {
@@ -124,6 +122,11 @@ function confirmDestructiveAction({
 export function TodoListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
+  const tabBarHeight =
+    measuredTabBarHeight ||
+    layout.floatingTabBarBaseHeight + insets.bottom;
   const { user } = useAuthSession();
   const dateLocale = usePreferences((state) => state.dateLocale);
   const list = useTodos((state) => state.lists.find((item) => item.id === listId));
@@ -153,6 +156,9 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const [sort, setSort] = useState<TodoSort>('smart');
   const [editingTaskIds, setEditingTaskIds] =
     useState<ReadonlySet<string> | null>(null);
+  const [inlineEditingTaskId, setInlineEditingTaskId] = useState<string | null>(
+    null,
+  );
 
   const openTasks = useMemo(
     () => sortTodoTasks(tasks.filter((task) => !task.completed), sort, 'open'),
@@ -183,6 +189,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
     const task = addTask(listId, title);
     if (!task) return;
     setEditingTaskIds(null);
+    setInlineEditingTaskId(null);
     setDraft('');
     setFilter('open');
     haptics.success();
@@ -229,7 +236,10 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const owner = list.role === 'owner';
 
   return (
-    <Screen scroll={false} contentStyle={styles.screenContent}>
+    <Screen
+      scroll={false}
+      bottomInset={false}
+      contentStyle={styles.screenContent}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
@@ -242,6 +252,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
             containerStyle={styles.list}
             contentContainerStyle={[
               styles.listContent,
+              { paddingBottom: tabBarHeight + spacing.lg },
               visibleTasks.length === 0 && styles.listEmptyContent,
             ]}
             contentInsetAdjustmentBehavior="never"
@@ -251,10 +262,37 @@ export function TodoListScreen({ listId }: { listId: string }) {
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'
             }
             keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={Keyboard.dismiss}
             keyExtractor={(item) => item.id}
+            ItemSeparatorComponent={ChecklistItemSeparator}
+            ListFooterComponent={
+              <Pressable
+                accessible={!!inlineEditingTaskId}
+                accessibilityRole={inlineEditingTaskId ? 'button' : undefined}
+                accessibilityLabel={
+                  inlineEditingTaskId ? 'Finish editing' : undefined
+                }
+                onPress={Keyboard.dismiss}
+                style={styles.listDismissFooter}
+              />
+            }
             ListHeaderComponent={
-              <View style={styles.listHeader}>
+              <Pressable
+                accessible={false}
+                onPress={Keyboard.dismiss}
+                style={styles.listHeader}
+              >
                 <View style={styles.heading}>
+                  <IconButton
+                    icon="chevron-left"
+                    size={40}
+                    background="transparent"
+                    accessibilityLabel="Back to checklists"
+                    onPress={() => {
+                      if (router.canGoBack()) router.back();
+                      else router.replace('/(tabs)/to-do' as never);
+                    }}
+                  />
                   <View style={styles.headingCopy}>
                     <AppText variant="overline" color="accent">
                       {dateLabel}
@@ -411,7 +449,9 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     accessibilityHint="Toggles between open and closed tasks"
                     hitSlop={4}
                     onPress={() => {
+                      Keyboard.dismiss();
                       setEditingTaskIds(null);
+                      setInlineEditingTaskId(null);
                       setFilter(filter === 'open' ? 'completed' : 'open');
                       haptics.select();
                     }}
@@ -463,6 +503,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                         }
                         onPress={() => {
                           Keyboard.dismiss();
+                          setInlineEditingTaskId(null);
                           if (editMode) {
                             setEditingTaskIds(null);
                           } else {
@@ -601,7 +642,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     />
                   </View>
                 </View>
-              </View>
+              </Pressable>
             }
             ListEmptyComponent={
               <TodoEmptyState
@@ -634,6 +675,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   task={item}
                   canComplete={canCompleteTodo(list, item, user?.id)}
                   editMode={editMode}
+                  editing={inlineEditingTaskId === item.id}
                   isActive={isActive}
                   listOwner={owner}
                   members={members}
@@ -662,6 +704,12 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     setAssignee(item.id, choices[(index + 1) % choices.length]);
                     haptics.select();
                   }}
+                  onStartEdit={() => setInlineEditingTaskId(item.id)}
+                  onEndEdit={() =>
+                    setInlineEditingTaskId((id) =>
+                      id === item.id ? null : id,
+                    )
+                  }
                   onUpdate={(title) => updateTask(item.id, title)}
                 />
               </Animated.View>
@@ -679,12 +727,15 @@ function TodoRow({
   task,
   canComplete,
   editMode,
+  editing,
   isActive,
   listOwner,
   members,
   onDelete,
   onDragStart,
   onCycleAssignee,
+  onStartEdit,
+  onEndEdit,
   onToggle,
   onToggleImportant,
   onUpdate,
@@ -692,25 +743,31 @@ function TodoRow({
   task: TodoTask;
   canComplete: boolean;
   editMode: boolean;
+  editing: boolean;
   isActive: boolean;
   listOwner: boolean;
   members: TodoMember[];
   onDelete: () => void;
   onDragStart: () => void;
   onCycleAssignee: () => void;
+  onStartEdit: () => void;
+  onEndEdit: () => void;
   onToggle: () => void;
   onToggleImportant: () => void;
   onUpdate: (title: string) => void;
 }) {
   const theme = useTheme();
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
+
+  useEffect(() => {
+    if (!editing) setDraft(task.title);
+  }, [editing, task.title]);
 
   const commitEdit = () => {
     const title = draft.trim();
     if (title) onUpdate(title);
     else setDraft(task.title);
-    setEditing(false);
+    onEndEdit();
   };
 
   const confirmDelete = () => {
@@ -724,7 +781,8 @@ function TodoRow({
   };
 
   return (
-    <View
+    <Pressable
+      accessible={false}
       accessibilityActions={
         listOwner && editMode
           ? [{ name: 'delete', label: `Delete ${task.title}` }]
@@ -739,6 +797,7 @@ function TodoRow({
           confirmDelete();
         }
       }}
+      onPress={Keyboard.dismiss}
       style={[
         styles.taskRow,
         {
@@ -795,43 +854,39 @@ function TodoRow({
       )}
 
       <View style={styles.taskCopy}>
-        {editing && listOwner && !editMode ? (
+        {listOwner && !editMode ? (
           <TextInput
             accessibilityLabel={`Edit ${task.title}`}
-            autoFocus
             blurOnSubmit
             maxLength={160}
+            multiline
             onBlur={commitEdit}
             onChangeText={setDraft}
+            onFocus={onStartEdit}
             onSubmitEditing={Keyboard.dismiss}
             returnKeyType="done"
+            scrollEnabled={false}
             selectionColor={theme.accentPrimary}
+            underlineColorAndroid="transparent"
             style={[
               styles.editInput,
-              { color: theme.textPrimary, borderColor: theme.accentPrimary },
+              {
+                color: task.completed ? theme.textTertiary : theme.textPrimary,
+                borderColor: editing ? theme.accentPrimary : 'transparent',
+              },
+              task.completed ? styles.completedTitle : undefined,
             ]}
             value={draft}
           />
         ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Edit ${task.title}`}
-            disabled={!listOwner || editMode}
-            onPress={() => {
-              Keyboard.dismiss();
-              setEditing(true);
-            }}
-            style={({ pressed }) => pressed && styles.pressed}
+          <AppText
+            variant="bodyMedium"
+            color={task.completed ? 'tertiary' : 'primary'}
+            numberOfLines={2}
+            style={task.completed ? styles.completedTitle : undefined}
           >
-            <AppText
-              variant="bodyMedium"
-              color={task.completed ? 'tertiary' : 'primary'}
-              numberOfLines={2}
-              style={task.completed ? styles.completedTitle : undefined}
-            >
-              {task.title}
-            </AppText>
-          </Pressable>
+            {task.title}
+          </AppText>
         )}
         {task.important && !task.completed ? (
           <AppText variant="overline" color="accent">
@@ -843,7 +898,10 @@ function TodoRow({
             accessibilityRole="button"
             accessibilityLabel={`Assignment for ${task.title}`}
             disabled={!listOwner || editMode}
-            onPress={onCycleAssignee}>
+            onPress={() => {
+              Keyboard.dismiss();
+              onCycleAssignee();
+            }}>
             <AppText variant="caption" color="secondary">
               {task.assigneeUserId
                 ? members.find((member) => member.userId === task.assigneeUserId)
@@ -904,7 +962,17 @@ function TodoRow({
           </Pressable>
         )
       ) : null}
-    </View>
+    </Pressable>
+  );
+}
+
+function ChecklistItemSeparator() {
+  return (
+    <Pressable
+      accessible={false}
+      onPress={Keyboard.dismiss}
+      style={styles.listSeparator}
+    />
   );
 }
 
@@ -1058,9 +1126,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  headingCopy: { gap: spacing.xs },
+  headingCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
   title: {
     fontFamily: fontFamilies.serif,
     fontSize: 34,
@@ -1173,8 +1241,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   list: { flex: 1 },
-  listContent: { gap: spacing.sm, paddingBottom: spacing.md },
+  listContent: { flexGrow: 1 },
   listEmptyContent: { flexGrow: 1 },
+  listSeparator: { height: spacing.sm },
+  listDismissFooter: { minHeight: spacing.xxl * 3, flexGrow: 1 },
   taskRow: {
     minHeight: 68,
     flexDirection: 'row',
@@ -1206,10 +1276,12 @@ const styles = StyleSheet.create({
   completedTitle: { textDecorationLine: 'line-through' },
   editInput: {
     ...typography.bodyMedium,
-    minHeight: 36,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    margin: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     borderBottomWidth: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'top',
   },
   rowAction: {
     width: layout.minTapTarget,

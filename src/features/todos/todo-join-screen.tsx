@@ -137,7 +137,7 @@ export function TodoJoinScreen({ code }: { code: string }) {
             setJoining(true);
             setError(undefined);
             void acceptTodoShareLink(code)
-              .then((listId) => router.replace(`/todos/${listId}` as never))
+              .then((listId) => router.replace(`/(tabs)/to-do/${listId}` as never))
               .catch((caught: unknown) => {
                 setError(caught instanceof Error ? caught.message : 'The list could not be joined.');
               })

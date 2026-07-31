@@ -1,16 +1,14 @@
-import { resolve4, resolve6 } from 'node:dns/promises';
-
+import { gatePaidApiRequest } from '@/services/http/api-gate';
+import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
-import {
-  isPrivateHostname,
-  sanitizeMealUrl,
-} from '@/services/nutrition/url-safety';
+import { sanitizeMealUrl } from '@/services/nutrition/url-safety';
+import { assertPublicDns } from '@/services/nutrition/url-safety.server';
 
 import type {
-  RecipeImportDraft,
-  RecipeImportErrorCode,
-  RecipeImportIngredient,
-  RecipeImportRequest,
+    RecipeImportDraft,
+    RecipeImportErrorCode,
+    RecipeImportIngredient,
+    RecipeImportRequest,
 } from './types';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
@@ -31,15 +29,10 @@ export function recipeAIProvider(): RecipeAIProvider {
   return 'openai';
 }
 
-export const recipeCorsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Cache-Control': 'no-store',
-};
+export const recipeCorsHeaders = apiCorsHeaders();
 
-export function recipeOptionsResponse() {
-  return new Response(null, { status: 204, headers: recipeCorsHeaders });
+export function recipeOptionsResponse(request?: Request) {
+  return new Response(null, { status: 204, headers: apiCorsHeaders(request) });
 }
 
 export function recipeError(
@@ -48,6 +41,17 @@ export function recipeError(
   status: number,
 ) {
   return Response.json({ error, code }, { status, headers: recipeCorsHeaders });
+}
+
+export async function assertRecipeAuthenticated(request: Request) {
+  const gate = await gatePaidApiRequest(request, 'recipe');
+  if (gate === 'unauthenticated') {
+    return recipeError('Sign in to import recipes.', 'PERMISSION_DENIED', 401);
+  }
+  if (gate === 'rate_limited') {
+    return recipeError('Too many recipe import requests. Try again later.', 'RATE_LIMITED', 429);
+  }
+  return undefined;
 }
 
 export function assertRecipeAnalysisEnabled() {
@@ -407,20 +411,6 @@ function visiblePageText(html: string) {
     .slice(0, MAX_PROMPT_TEXT);
 }
 
-async function assertPublicDns(url: URL) {
-  if (isPrivateHostname(url.hostname)) throw new Error('BLOCKED_URL');
-  const addresses = await Promise.allSettled([
-    resolve4(url.hostname),
-    resolve6(url.hostname),
-  ]);
-  const resolved = addresses.flatMap((result) =>
-    result.status === 'fulfilled' ? result.value : [],
-  );
-  if (!resolved.length || resolved.some(isPrivateHostname)) {
-    throw new Error('BLOCKED_URL');
-  }
-}
-
 export async function fetchRecipePage(rawUrl: string) {
   let current: string;
   try {
@@ -434,7 +424,11 @@ export async function fetchRecipePage(rawUrl: string) {
   }
   for (let redirect = 0; redirect <= 3; redirect += 1) {
     const url = new URL(current);
-    await assertPublicDns(url);
+    try {
+      await assertPublicDns(url.hostname);
+    } catch {
+      throw new Error('BLOCKED_URL');
+    }
     const response = await guardedFetch(
       'recipe-link-fetch',
       current,

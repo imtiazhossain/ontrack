@@ -1,11 +1,19 @@
 import { compressResponse } from '@/services/http/compression';
-import { nutritionCorsHeaders, nutritionError, nutritionOptionsResponse } from '@/services/nutrition/server';
+import {
+    assertNutritionAuthenticated,
+    nutritionCorsHeaders,
+    nutritionError,
+    nutritionOptionsResponse,
+} from '@/services/nutrition/server';
 import type { NutritionProfile } from '@/types/models';
 import { calculateNutritionTargets, NutritionTargetError } from '@/utils/nutrition';
 
 export function OPTIONS() { return nutritionOptionsResponse(); }
 
 export async function POST(request: Request) {
+  const unauthorized = await assertNutritionAuthenticated(request);
+  if (unauthorized) return unauthorized;
+
   const input = await request.json().catch(() => undefined) as { profile?: NutritionProfile } | undefined;
   if (!input?.profile) return nutritionError('A nutrition profile is required.', 'PROVIDER_FAILURE', 400);
   try {

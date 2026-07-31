@@ -166,7 +166,7 @@ export function TodoCollaboratorJoinScreen({ code }: { code: string }) {
             void acceptTodoCollaboratorLink(code)
               .then((listIds) => {
                 const destination =
-                  listIds.length === 1 ? `/todos/${listIds[0]}` : '/(tabs)/to-do';
+                  listIds.length === 1 ? `/(tabs)/to-do/${listIds[0]}` : '/(tabs)/to-do';
                 router.replace(destination as never);
               })
               .catch((caught: unknown) => {
