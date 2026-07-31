@@ -13,9 +13,10 @@ import {
   SectionHeader,
   Symbol,
 } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { radii } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { shareTodoInvite } from '@/features/todos/share';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
   createTodoEmailInvite,
@@ -27,21 +28,27 @@ import {
   removeTodoMember,
   revokeTodoEmailInvite,
   revokeTodoShareLink,
+  transferTodoListOwnership,
   type PendingTodoEmailInvite,
 } from '@/services/todos/collaboration';
 import { deletePersistedRecipeImage } from '@/services/recipes';
-import { useTodos } from '@/store/todos';
+import { useTodos, type TodoMember } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
+  const { spacing, s } = useResponsive();
   const { user } = useAuthSession();
   const list = useTodos((state) => state.lists.find((item) => item.id === listId));
   const allMembers = useTodos((state) => state.members);
   const members = useMemo(
     () => allMembers.filter((member) => member.listId === listId),
     [allMembers, listId],
+  );
+  const otherMembers = useMemo(
+    () => members.filter((member) => member.role === 'member'),
+    [members],
   );
   const renameList = useTodos((state) => state.renameList);
   const setListKind = useTodos((state) => state.setListKind);
@@ -66,7 +73,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
   if (!list) {
     return (
-      <Screen contentStyle={styles.center}>
+      <Screen contentStyle={{ ...styles.center, gap: spacing.lg }}>
         <Symbol name="tasks" size={40} color={theme.textTertiary} />
         <AppText variant="heading">List Unavailable</AppText>
         <Button onPress={() => router.replace('/(tabs)/to-do' as never)}>
@@ -113,6 +120,53 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     });
   };
 
+  const leaveList = () => {
+    confirmDestructiveAction({
+      title: 'Leave This List?',
+      message: 'It will disappear from your account.',
+      actionLabel: 'Leave',
+      onConfirm: () =>
+        void run('leave', async () => {
+          await leaveTodoList(list.id);
+          router.replace('/(tabs)/to-do' as never);
+        }),
+    });
+  };
+
+  const transferOwnership = (member: TodoMember, leaveAfter: boolean) => {
+    void run(`transfer-${member.userId}`, async () => {
+      await transferTodoListOwnership(list.id, member.userId);
+      if (leaveAfter) {
+        await leaveTodoList(list.id);
+        router.replace('/(tabs)/to-do' as never);
+        return;
+      }
+      appPrompt.alert(
+        'Ownership Transferred',
+        `${member.displayName} is now the owner. You can leave whenever you’re ready.`,
+      );
+    });
+  };
+
+  const promptTransfer = (member: TodoMember) => {
+    appPrompt.alert(
+      'Transfer Ownership?',
+      `${member.displayName} will become the owner and manage this list. You become a member, or you can leave now.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Transfer',
+          onPress: () => transferOwnership(member, false),
+        },
+        {
+          text: 'Transfer & Leave',
+          style: 'destructive',
+          onPress: () => transferOwnership(member, true),
+        },
+      ],
+    );
+  };
+
   const removeList = () => {
     confirmDestructiveAction({
       title: 'Delete This List?',
@@ -136,8 +190,13 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   };
 
   return (
-    <Screen contentStyle={styles.container}>
-      <View style={styles.heading}>
+    <Screen
+      contentStyle={{
+        ...styles.container,
+        gap: spacing.md,
+        paddingBottom: spacing.xxxl,
+      }}>
+      <View style={{ gap: spacing.xs }}>
         <AppText variant="overline" color="accent">
           {list.mode === 'shared' ? 'Collaborative List' : 'Private List'}
         </AppText>
@@ -145,7 +204,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
       </View>
 
       {owner ? (
-        <Card style={styles.card}>
+        <Card style={{ gap: spacing.md }}>
           <AppText variant="heading">List Details</AppText>
           <Input
             label="List Name"
@@ -161,7 +220,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           <AppText variant="overline" color="tertiary">
             List type
           </AppText>
-          <View style={styles.kindChoices}>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Pressable
               accessibilityRole="radio"
               accessibilityState={{ checked: list.kind === 'checklist' }}
@@ -170,6 +229,8 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
               style={[
                 styles.kindChoice,
                 {
+                  minHeight: Math.max(44, s(48)),
+                  gap: spacing.sm,
                   borderColor:
                     list.kind === 'checklist'
                       ? theme.accentPrimary
@@ -183,7 +244,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                 },
               ]}>
               <Symbol name="tasks" size={18} color={theme.textSecondary} />
-              <AppText variant="caption">Checklist</AppText>
+              <AppText variant="caption" fit>
+                Checklist
+              </AppText>
             </Pressable>
             <Pressable
               accessibilityRole="radio"
@@ -192,6 +255,8 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
               style={[
                 styles.kindChoice,
                 {
+                  minHeight: Math.max(44, s(48)),
+                  gap: spacing.sm,
                   borderColor:
                     list.kind === 'grocery'
                       ? theme.accentPrimary
@@ -203,7 +268,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                 },
               ]}>
               <Symbol name="groceries" size={18} color={theme.textSecondary} />
-              <AppText variant="caption">Grocery</AppText>
+              <AppText variant="caption" fit>
+                Grocery
+              </AppText>
             </Pressable>
           </View>
           {list.kind === 'grocery' && recipeCount > 0 ? (
@@ -214,7 +281,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           ) : null}
         </Card>
       ) : (
-        <Card variant="sunken" style={styles.card}>
+        <Card variant="sunken" style={{ gap: spacing.md }}>
           <AppText variant="heading">Shared with You</AppText>
           <AppText variant="body" color="secondary">
             {list.ownerName ?? 'The owner'} manages items, assignments, and membership.
@@ -226,7 +293,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
         <>
           <SectionHeader title="Sharing" />
           {list.mode === 'private' ? (
-            <Card style={styles.card}>
+            <Card style={{ gap: spacing.md }}>
               <AppText variant="subheading">Work Together Live</AppText>
               <AppText variant="body" color="secondary">
                 Sharing moves this list to its protected collaborative space. You remain the owner.
@@ -240,7 +307,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
             </Card>
           ) : (
             <>
-              <Card style={styles.card}>
+              <Card style={{ gap: spacing.md }}>
                 <AppText variant="subheading">Secure Join Link</AppText>
                 <AppText variant="body" color="secondary">
                   Any signed-in onTrack user with the link can join until you revoke it.
@@ -260,7 +327,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                 ) : null}
               </Card>
 
-              <Card style={styles.card}>
+              <Card style={{ gap: spacing.md }}>
                 <AppText variant="subheading">Invite an Account</AppText>
                 <Input
                   label="onTrack account email"
@@ -285,11 +352,22 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                   {working === 'email' ? 'Inviting…' : 'Send In-App Invite'}
                 </Button>
                 {pendingInvites.length > 0 ? (
-                  <View style={styles.pendingInvites}>
-                    <AppText variant="overline" color="secondary">Pending</AppText>
+                  <View style={{ gap: spacing.sm, paddingTop: spacing.sm }}>
+                    <AppText variant="overline" color="secondary" fit>
+                      Pending
+                    </AppText>
                     {pendingInvites.map((invite) => (
-                      <View key={invite.id} style={styles.pendingRow}>
-                        <AppText variant="caption" color="secondary" style={styles.memberCopy}>
+                      <View
+                        key={invite.id}
+                        style={[
+                          styles.pendingRow,
+                          { minHeight: Math.max(38, s(40)), gap: spacing.md },
+                        ]}>
+                        <AppText
+                          variant="caption"
+                          color="secondary"
+                          style={styles.memberCopy}
+                          fit>
                           {invite.email}
                         </AppText>
                         <Pressable
@@ -302,7 +380,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                               await refreshPending();
                             })
                           }>
-                          <AppText variant="caption" color="danger">Revoke</AppText>
+                          <AppText variant="caption" color="danger" fit>
+                            Revoke
+                          </AppText>
                         </Pressable>
                       </View>
                     ))}
@@ -317,45 +397,74 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
       {list.mode === 'shared' ? (
         <>
           <SectionHeader title="Members" detail={`${members.length}`} />
-          <Card variant="sunken" style={styles.memberList}>
+          <Card variant="sunken" style={{ gap: spacing.sm }}>
             {members.map((member) => (
-              <View key={member.userId} style={styles.memberRow}>
+              <View
+                key={member.userId}
+                style={[
+                  styles.memberRow,
+                  { minHeight: Math.max(58, s(56)), gap: spacing.md },
+                ]}>
                 <View
-                  style={[styles.avatar, { backgroundColor: theme.accentFaint }]}>
+                  style={[
+                    styles.avatar,
+                    {
+                      width: s(42),
+                      height: s(42),
+                      backgroundColor: theme.accentFaint,
+                    },
+                  ]}>
                   <AppText variant="callout" color="accent">
                     {member.displayName.slice(0, 1).toUpperCase()}
                   </AppText>
                 </View>
                 <View style={styles.memberCopy}>
-                  <AppText variant="subheading">{member.displayName}</AppText>
-                  <AppText variant="caption" color="secondary">
+                  <AppText variant="subheading" fit>
+                    {member.displayName}
+                  </AppText>
+                  <AppText variant="caption" color="secondary" fit>
                     {member.role === 'owner' ? 'Owner' : 'Member'}
                   </AppText>
                 </View>
                 {owner && member.role === 'member' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ${member.displayName}`}
-                    disabled={Boolean(working)}
-                    onPress={() =>
-                      appPrompt.alert(
-                        'Remove Member?',
-                        `${member.displayName} will lose access. Their assigned items become available to anyone.`,
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Remove',
-                            style: 'destructive',
-                            onPress: () =>
-                              void run(`member-${member.userId}`, () =>
-                                removeTodoMember(list.id, member.userId),
-                              ),
-                          },
-                        ],
-                      )
-                    }>
-                    <AppText variant="caption" color="danger">Remove</AppText>
-                  </Pressable>
+                  <View style={[styles.memberActions, { gap: spacing.sm }]}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Make ${member.displayName} the owner`}
+                      disabled={Boolean(working)}
+                      hitSlop={8}
+                      onPress={() => promptTransfer(member)}>
+                      <AppText variant="caption" color="accent" fit>
+                        Make owner
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${member.displayName}`}
+                      disabled={Boolean(working)}
+                      hitSlop={8}
+                      onPress={() =>
+                        appPrompt.alert(
+                          'Remove Member?',
+                          `${member.displayName} will lose access. Their assigned items become available to anyone.`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Remove',
+                              style: 'destructive',
+                              onPress: () =>
+                                void run(`member-${member.userId}`, () =>
+                                  removeTodoMember(list.id, member.userId),
+                                ),
+                            },
+                          ],
+                        )
+                      }>
+                      <AppText variant="caption" color="danger" fit>
+                        Remove
+                      </AppText>
+                    </Pressable>
+                  </View>
                 ) : null}
               </View>
             ))}
@@ -367,28 +476,24 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
       <SectionHeader title="List Access" />
       {owner ? (
-        <Button
-          variant="danger"
-          disabled={Boolean(working)}
-          onPress={removeList}>
-          Delete list
-        </Button>
+        <>
+          {list.mode === 'shared' && otherMembers.length > 0 ? (
+            <AppText variant="caption" color="secondary">
+              To leave without deleting, transfer ownership to another member first.
+            </AppText>
+          ) : null}
+          <Button
+            variant="danger"
+            disabled={Boolean(working)}
+            onPress={removeList}>
+            Delete list
+          </Button>
+        </>
       ) : (
         <Button
           variant="danger"
           disabled={Boolean(working)}
-          onPress={() =>
-            confirmDestructiveAction({
-              title: 'Leave This List?',
-              message: 'It will disappear from your account.',
-              actionLabel: 'Leave',
-              onConfirm: () =>
-                void run('leave', async () => {
-                  await leaveTodoList(list.id);
-                  router.replace('/(tabs)/to-do' as never);
-                }),
-            })
-          }>
+          onPress={leaveList}>
           Leave list
         </Button>
       )}
@@ -401,48 +506,37 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 680,
     alignSelf: 'center',
-    gap: spacing.md,
-    paddingBottom: spacing.xxxl,
   },
   center: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
   },
-  heading: { gap: spacing.xs },
-  card: { gap: spacing.md },
-  kindChoices: { flexDirection: 'row', gap: spacing.sm },
   kindChoice: {
-    minHeight: 44,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
   },
-  memberList: { gap: spacing.sm },
   memberRow: {
-    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
   },
   avatar: {
-    width: 42,
-    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
   },
-  memberCopy: { flex: 1, gap: spacing.xxs },
-  pendingInvites: { gap: spacing.sm, paddingTop: spacing.sm },
+  memberCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: 2 },
+  memberActions: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   pendingRow: {
-    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
   },
 });

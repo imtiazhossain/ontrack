@@ -479,6 +479,19 @@ export async function removeTodoMember(listId: string, userId: string) {
   await loadTodoListSnapshot(listId);
 }
 
+export async function transferTodoListOwnership(
+  listId: string,
+  newOwnerUserId: string,
+) {
+  const client = await authenticatedClient();
+  const { error } = await client.rpc('transfer_todo_list_ownership', {
+    requested_list_id: listId,
+    new_owner_user_id: newOwnerUserId,
+  });
+  if (error) throw new TodoCollaborationError(error.message);
+  await loadTodoListSnapshot(listId);
+}
+
 export async function leaveTodoList(listId: string) {
   const state = useTodos.getState();
   const list = state.lists.find((item) => item.id === listId);
