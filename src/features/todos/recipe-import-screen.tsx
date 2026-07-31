@@ -213,10 +213,10 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
         return;
       }
       appPrompt.alert(
-        'Discard shared recipe?',
+        'Discard Shared Recipe?',
         'The shared URL or image will be cleared without being saved.',
         [
-          { text: 'Keep reviewing', style: 'cancel' },
+          { text: 'Keep Reviewing', style: 'cancel' },
           {
             text: 'Discard',
             style: 'destructive',
@@ -242,12 +242,12 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
     return (
       <Screen contentStyle={styles.center}>
         <Symbol name="groceries" size={40} color={theme.textTertiary} />
-        <AppText variant="heading">Recipe import unavailable</AppText>
+        <AppText variant="heading">Recipe Import Unavailable</AppText>
         <AppText variant="body" color="secondary" align="center">
           Only the owner of a Grocery list can add recipes.
         </AppText>
         <Button onPress={() => router.replace('/(tabs)/to-do' as never)}>
-          Back to lists
+          Back to Lists
         </Button>
       </Screen>
     );
@@ -390,10 +390,10 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <AppText variant="overline" color="accent">
-            {draft ? 'Review before saving' : 'Grocery recipe import'}
+            {draft ? 'Review Before Saving' : 'Grocery Recipe Import'}
           </AppText>
           <AppText variant="display">
-            {draft ? 'Review recipe' : 'Add a recipe'}
+            {draft ? 'Review Recipe' : 'Add a Recipe'}
           </AppText>
           <AppText variant="body" color="secondary">
             {draft
@@ -475,7 +475,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
         <>
           <Card style={styles.detailsCard}>
             <Input
-              label="Meal name"
+              label="Meal Name"
               value={name}
               maxLength={80}
               onChangeText={setName}
@@ -501,7 +501,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
             <View style={styles.servingRow}>
               <View style={styles.flex}>
                 <Input
-                  label="Source servings"
+                  label="Source Servings"
                   value={sourceServings}
                   keyboardType="decimal-pad"
                   onChangeText={(value) => {
@@ -513,7 +513,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
               <Symbol name="chevron-right" size={18} color={theme.textTertiary} />
               <View style={styles.flex}>
                 <Input
-                  label="Target servings"
+                  label="Target Servings"
                   value={targetServings}
                   keyboardType="decimal-pad"
                   onChangeText={(value) => {

@@ -2,6 +2,15 @@ export { palette, categoryPalette, type CategoryColorKey } from './colors';
 export { appIcons, resolveAppIcon, type AppIconName, type PlatformIconNames } from './icons';
 export { typography, fontFamilies, type TypeVariant } from './typography';
 export { spacing, layout, iconSizes } from './spacing';
+export {
+  BASE_WIDTH,
+  MIN_SCALE,
+  MAX_SCALE,
+  windowScale,
+  scaleSize,
+  moderateScale,
+  scaleTypographyToken,
+} from './responsive';
 export { radii, borders } from './radii';
 export { shadows } from './shadows';
 export { durations, easings, springs } from './motion';
@@ -10,6 +19,8 @@ export {
   darkTheme,
   lightTravelTheme,
   darkTravelTheme,
+  lightPlantTheme,
+  darkPlantTheme,
   categoryColors,
   timeOfDayGradient,
   type Theme,

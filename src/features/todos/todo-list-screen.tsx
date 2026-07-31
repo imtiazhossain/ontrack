@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
     Keyboard,
     KeyboardAvoidingView,
@@ -33,21 +33,20 @@ import {
 } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
+import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { TodoEmptyState } from '@/features/todos/todo-empty-state';
 import { ChecklistItemSeparator, TodoRow } from '@/features/todos/todo-row';
 import { sortTodoTasks, type TodoFilter, type TodoSort } from '@/features/todos/todo-sort';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
-import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
     canCompleteTodo,
     useTodos,
-    type TodoMember,
-    type TodoTask,
 } from '@/store/todos';
 import { useUI } from '@/store/ui';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { haptics } from '@/utils/haptics';
+import { listReferenceEquality } from '@/utils/list-equality';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function TodoListScreen({ listId }: { listId: string }) {
@@ -61,15 +60,13 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const { user } = useAuthSession();
   const dateLocale = usePreferences((state) => state.dateLocale);
   const list = useTodos((state) => state.lists.find((item) => item.id === listId));
-  const allTasks = useTodos((state) => state.tasks);
-  const allMembers = useTodos((state) => state.members);
-  const tasks = useMemo(
-    () => allTasks.filter((task) => task.listId === listId),
-    [allTasks, listId],
+  const tasks = useTodos(
+    (state) => state.tasks.filter((task) => task.listId === listId),
+    listReferenceEquality,
   );
-  const members = useMemo(
-    () => allMembers.filter((member) => member.listId === listId),
-    [allMembers, listId],
+  const members = useTodos(
+    (state) => state.members.filter((member) => member.listId === listId),
+    listReferenceEquality,
   );
   const addTask = useTodos((state) => state.addTask);
   const toggleTask = useTodos((state) => state.toggleTask);
@@ -128,7 +125,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
 
   const clearDone = () => {
     confirmDestructiveAction({
-      title: 'Clear completed tasks?',
+      title: 'Clear Completed Tasks?',
       message: 'This removes every completed task from your list.',
       actionLabel: 'Clear',
       onConfirm: () => {
@@ -151,14 +148,14 @@ export function TodoListScreen({ listId }: { listId: string }) {
     return (
       <Screen contentStyle={styles.missingList}>
         <Symbol name="tasks" size={40} color={theme.textTertiary} />
-        <AppText variant="heading">List unavailable</AppText>
+        <AppText variant="heading">List Unavailable</AppText>
         <AppText variant="body" color="secondary" align="center">
           It may have been deleted, or you may no longer have access.
         </AppText>
         <Pressable
           accessibilityRole="button"
           onPress={() => router.replace('/(tabs)/to-do' as never)}>
-          <AppText variant="callout" color="accent">Back to lists</AppText>
+          <AppText variant="callout" color="accent">Back to Lists</AppText>
         </Pressable>
       </Screen>
     );
@@ -446,7 +443,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     ) : null}
                     <ChecklistPopoverMenu
                       accessibilityLabel="Sort checklist"
-                      title="Sort items"
+                      title="Sort Items"
                       triggerIcon="sort"
                       items={[
                         {
@@ -465,14 +462,14 @@ export function TodoListScreen({ listId }: { listId: string }) {
                         },
                         {
                           id: 'newest',
-                          title: 'Newest first',
+                          title: 'Newest First',
                           description: 'Most recently added at the top',
                           icon: 'arrow-down',
                           selected: sort === 'newest',
                         },
                         {
                           id: 'oldest',
-                          title: 'Oldest first',
+                          title: 'Oldest First',
                           description: 'Longest-standing items at the top',
                           icon: 'arrow-up',
                           selected: sort === 'oldest',
@@ -500,7 +497,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     />
                     <ChecklistPopoverMenu
                       accessibilityLabel={`${list.name} actions`}
-                      title="List actions"
+                      title="List Actions"
                       triggerIcon="more"
                       items={[
                         {
@@ -527,7 +524,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                           ? [
                               {
                                 id: 'clear',
-                                title: 'Clear completed',
+                                title: 'Clear Completed',
                                 description: 'Remove every completed item',
                                 icon: 'delete',
                                 destructive: true,

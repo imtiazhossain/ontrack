@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
-import { spacing, type AppIconName } from '@/design-system';
+import { type AppIconName } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AppText } from './app-text';
 import { Button } from './button';
@@ -16,17 +17,26 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   const theme = useTheme();
+  const { spacing } = useResponsive();
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          gap: spacing.md,
+          paddingVertical: spacing.xxxl,
+          paddingHorizontal: spacing.xl,
+        },
+      ]}>
       <Symbol name={icon} size={40} color={theme.textTertiary} />
-      <AppText variant="heading" align="center">
+      <AppText variant="heading" align="center" numberOfLines={2} adjustsFontSizeToFit>
         {title}
       </AppText>
-      <AppText variant="callout" color="secondary" align="center">
+      <AppText variant="callout" color="secondary" align="center" numberOfLines={4}>
         {message}
       </AppText>
       {actionLabel && onAction ? (
-        <Button variant="secondary" onPress={onAction} style={styles.action}>
+        <Button variant="secondary" onPress={onAction} style={{ marginTop: spacing.sm }}>
           {actionLabel}
         </Button>
       ) : null}
@@ -37,11 +47,5 @@ export function EmptyState({ icon, title, message, actionLabel, onAction }: Empt
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.xl,
-  },
-  action: {
-    marginTop: spacing.sm,
   },
 });

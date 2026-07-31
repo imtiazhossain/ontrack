@@ -193,8 +193,8 @@ export function TodoListCard({
           </Pressable>
           <Pressable
             accessibilityActions={[
-              ...(canMoveUp ? [{ name: 'moveUp', label: 'Move up' }] : []),
-              ...(canMoveDown ? [{ name: 'moveDown', label: 'Move down' }] : []),
+              ...(canMoveUp ? [{ name: 'moveUp', label: 'Move Up' }] : []),
+              ...(canMoveDown ? [{ name: 'moveDown', label: 'Move Down' }] : []),
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Drag to reorder ${list.name}`}

@@ -17,8 +17,48 @@ describe('travel plan normalization', () => {
       notes: undefined,
       itinerary: [],
       participants: [],
+      baseCurrency: 'USD',
+      expenses: [],
     });
   });
+
+  it('keeps valid expenses and drops malformed ones', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        baseCurrency: 'eur',
+        expenses: [
+          {
+            id: 'expense-1',
+            title: 'Dinner',
+            amount: 4500,
+            currency: 'isk',
+            date: '2026-09-09',
+            category: 'food',
+            paidById: 'self',
+            splitWithIds: ['self'],
+            createdAt: '2026-07-01T12:00:00.000Z',
+            updatedAt: '2026-07-01T12:00:00.000Z',
+          },
+          { id: 'broken', amount: -1 },
+        ],
+      }),
+    ).toMatchObject({
+      baseCurrency: 'EUR',
+      expenses: [
+        {
+          id: 'expense-1',
+          title: 'Dinner',
+          amount: 4500,
+          currency: 'ISK',
+          category: 'food',
+          paidById: 'self',
+          splitWithIds: ['self'],
+        },
+      ],
+    });
+  });
+
 
   it('removes malformed itinerary entries without discarding the trip', () => {
     expect(

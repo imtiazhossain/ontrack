@@ -6,11 +6,11 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AppText,
-  EmptyState,
-  IconButton,
-  Screen,
-  Symbol,
+    AppText,
+    EmptyState,
+    IconButton,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,20 +21,20 @@ import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { VISION_BOARD_ACCENTS } from './defaults';
 import { cleanupOrphanedVisionBoardImages } from './media';
 import {
-  isSampleVisionBoardItem,
-  VISION_BOARD_DASHBOARD_PREVIEWS,
-  visionBoardImageSource,
+    isSampleVisionBoardItem,
+    VISION_BOARD_DASHBOARD_PREVIEWS,
+    visionBoardImageSource,
 } from './sample';
 import {
-  categoryCover,
-  countVisionBoardItems,
-  itemsForCategory,
-  newestVisionBoardItem,
-  orderedVisionBoardCategories,
+    categoryCover,
+    countVisionBoardItems,
+    itemsForCategory,
+    newestVisionBoardItem,
+    orderedVisionBoardCategories,
 } from './selectors';
 import type {
-  VisionBoardAffirmationItem,
-  VisionBoardImageItem,
+    VisionBoardAffirmationItem,
+    VisionBoardImageItem,
 } from './types';
 
 function countLabel(counts: ReturnType<typeof countVisionBoardItems>) {
@@ -113,7 +113,7 @@ export function VisionBoardDashboard() {
             categoryItems.length === 1 ? 'item' : 'items'
           }?`;
     confirmDestructiveAction({
-      title: 'Delete category?',
+      title: 'Delete Category?',
       message,
       onConfirm: perform,
     });
@@ -250,7 +250,7 @@ export function VisionBoardDashboard() {
             ]}>
             <Symbol name="gallery" size={16} color={theme.accentPrimary} />
             <AppText style={[styles.sectionButtonText, { color: theme.accentPrimary }]}>
-              View all
+              View All
             </AppText>
           </Pressable>
           {!isWeb ? (
@@ -285,7 +285,7 @@ export function VisionBoardDashboard() {
           title={
             showPopulatedOnly
               ? 'Your boards are ready for inspiration'
-              : 'Create your first category'
+              : 'Create Your First Category'
           }
           message={
             showPopulatedOnly
@@ -293,7 +293,7 @@ export function VisionBoardDashboard() {
               : 'Give a part of your future its own place to grow.'
           }
           actionLabel={
-            showPopulatedOnly ? 'Show all' : isWeb ? undefined : 'Add category'
+            showPopulatedOnly ? 'Show All' : isWeb ? undefined : 'Add Category'
           }
           onAction={
             showPopulatedOnly

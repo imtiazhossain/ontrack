@@ -18,6 +18,8 @@ export default function TabsLayout() {
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: true,
+        lazy: true,
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
           position: 'absolute',
@@ -41,6 +43,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="plants" />
       <Tabs.Screen name="travel" />
       <Tabs.Screen name="vision-board" />
+      <Tabs.Screen name="games" />
     </Tabs>
   );
 }

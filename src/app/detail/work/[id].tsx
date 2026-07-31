@@ -21,9 +21,9 @@ export default function WorkDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <AppText variant="title">Work session not found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go back">
-          Go back
+        <AppText variant="title">Work Session Not Found</AppText>
+        <Button onPress={() => router.back()} accessibilityLabel="Go Back">
+          Go Back
         </Button>
       </Screen>
     );

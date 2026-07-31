@@ -18,7 +18,7 @@ export async function configurePlantNotifications() {
   });
   if (Platform.OS === 'android') {
     await notifications.setNotificationChannelAsync(PLANT_NOTIFICATION_CHANNEL, {
-      name: 'Plant care',
+      name: 'Plant Care',
       description: 'Watering and plant-care reminders',
       importance: notifications.AndroidImportance.DEFAULT,
     });

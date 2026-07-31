@@ -1,13 +1,21 @@
 import { forwardRef } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
-import { typography, type TypeVariant } from '@/design-system';
+import { type TypeVariant } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
 export interface AppTextProps extends TextProps {
   variant?: TypeVariant;
   color?: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'danger' | 'success';
   align?: TextStyle['textAlign'];
+  /**
+   * Single-line chrome: shrinks to fit width instead of wrapping.
+   * Use for button labels, tab labels, headers in tight rows, chips.
+   */
+  fit?: boolean;
+  /** Floor when `fit` is set (default 0.72). */
+  fitMinimumScale?: number;
 }
 
 export const AppText = forwardRef<Text, AppTextProps>(function AppText(
@@ -15,12 +23,19 @@ export const AppText = forwardRef<Text, AppTextProps>(function AppText(
     variant = 'body',
     color = 'primary',
     align,
+    fit = false,
+    fitMinimumScale = 0.72,
     style,
+    numberOfLines,
+    adjustsFontSizeToFit,
+    minimumFontScale,
+    maxFontSizeMultiplier,
     ...rest
   },
   ref,
 ) {
   const theme = useTheme();
+  const { typography } = useResponsive();
   const colorValue = {
     primary: theme.textPrimary,
     secondary: theme.textSecondary,
@@ -31,12 +46,23 @@ export const AppText = forwardRef<Text, AppTextProps>(function AppText(
     success: theme.success,
   }[color];
 
+  const shouldFit = fit || adjustsFontSizeToFit === true;
+
   return (
     <Text
       ref={ref}
       allowFontScaling
-      maxFontSizeMultiplier={1.4}
-      style={[typography[variant] as TextStyle, { color: colorValue }, align && { textAlign: align }, style]}
+      maxFontSizeMultiplier={maxFontSizeMultiplier ?? (shouldFit ? 1.15 : 1.3)}
+      numberOfLines={numberOfLines ?? (shouldFit ? 1 : undefined)}
+      adjustsFontSizeToFit={shouldFit}
+      minimumFontScale={minimumFontScale ?? (shouldFit ? fitMinimumScale : undefined)}
+      style={[
+        typography[variant] as TextStyle,
+        { color: colorValue },
+        align && { textAlign: align },
+        shouldFit && { flexShrink: 1, minWidth: 0 },
+        style,
+      ]}
       {...rest}
     />
   );

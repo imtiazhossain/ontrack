@@ -73,7 +73,7 @@ export function TravelItineraryForm({
 }) {
   return (
     <>
-      <SectionHeader title="Add to the plan" />
+      <SectionHeader title="Add to the Plan" />
       <ChipRow options={ITEM_KINDS} selected={kind} onSelect={onKindChange} />
       <Input
         label="Name"
@@ -129,7 +129,7 @@ export function TravelItineraryForm({
         multiline
       />
       <Input
-        label="Booking link (optional)"
+        label="Booking Link (Optional)"
         value={bookingUrl}
         onChangeText={onBookingUrlChange}
         placeholder="https://…"
@@ -138,7 +138,7 @@ export function TravelItineraryForm({
         autoCorrect={false}
       />
       {error ? <ErrorMessage message={error} selectable /> : null}
-      <Button onPress={onAdd}>Add itinerary item</Button>
+      <Button onPress={onAdd}>Add Itinerary Item</Button>
     </>
   );
 }

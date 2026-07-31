@@ -53,7 +53,7 @@ export default function OnboardingScreen() {
           <View style={[styles.form, { paddingBottom: insets.bottom + spacing.xl }]}> 
             <Input label="What should we call you?" value={name} onChangeText={setName} placeholder="Your name" />
             <Input
-              label="Primary goal"
+              label="Primary Goal"
               value={goal}
               onChangeText={setGoal}
               placeholder="e.g. Build strength, stay consistent"

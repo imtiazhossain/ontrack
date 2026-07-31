@@ -7,6 +7,8 @@ import { AppText, appPrompt, Button, Card, ErrorMessage, Input, Screen, Symbol }
 import { radii, spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
+import { currencyFromLocale } from '@/features/travel/expenses/format-money';
+import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
@@ -55,10 +57,12 @@ function TravelScreenContent() {
   const [editDestination, setEditDestination] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [detailsError, setDetailsError] = useState<string>();
+  const [expensesPlanId, setExpensesPlanId] = useState<string>();
   const sortedPlans = useMemo(
     () => [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate)),
     [plans],
   );
+  const expensesPlan = sortedPlans.find((plan) => plan.id === expensesPlanId);
 
   const createPlan = () => {
     setError(undefined);
@@ -74,6 +78,8 @@ function TravelScreenContent() {
       endDate,
       itinerary: [],
       participants: [],
+      baseCurrency: currencyFromLocale(dateLocale),
+      expenses: [],
       createdAt: now,
       updatedAt: now,
     });
@@ -168,7 +174,7 @@ function TravelScreenContent() {
       {showForm ? (
         <View style={[styles.formCard, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
           <AppText variant="subheading">Start the group chat’s favorite trip</AppText>
-          <Input label="Trip name" value={title} onChangeText={setTitle} placeholder="Birthday in Lisbon" />
+          <Input label="Trip Name" value={title} onChangeText={setTitle} placeholder="Birthday in Lisbon" />
           <Input label="Destination" value={destination} onChangeText={setDestination} placeholder="Lisbon, Portugal" />
           <TravelDateRangeEditor
             startDate={startDate}
@@ -191,7 +197,7 @@ function TravelScreenContent() {
 
       {sortedPlans.length > 0 ? (
         <View style={styles.tripsHeader}>
-          <AppText variant="overline" color="tertiary">Your trips</AppText>
+          <AppText variant="overline" color="tertiary">Your Trips</AppText>
           <AppText variant="caption" color="secondary">
             {sortedPlans.length} {sortedPlans.length === 1 ? 'trip' : 'trips'}
           </AppText>
@@ -245,7 +251,7 @@ function TravelScreenContent() {
                 <Symbol name="calendar" size="md" color={theme.accentPrimary} />
               </View>
               <View style={styles.dateCopy}>
-                <AppText variant="overline" color="tertiary">Trip dates</AppText>
+                <AppText variant="overline" color="tertiary">Trip Dates</AppText>
                 <AppText variant="callout" color="accent">
                   {formatDateKey(plan.startDate, dateDisplayFormat)} → {formatDateKey(plan.endDate, dateDisplayFormat)}
                 </AppText>
@@ -266,7 +272,7 @@ function TravelScreenContent() {
               />
               {editError ? <ErrorMessage message={editError} /> : null}
               <View style={styles.row}>
-                <Button onPress={() => saveEditedDates(plan)} style={styles.flex}>Save dates</Button>
+                <Button onPress={() => saveEditedDates(plan)} style={styles.flex}>Save Dates</Button>
                 <Button variant="ghost" onPress={() => setEditingPlanId(undefined)} style={styles.flex}>
                   Cancel
                 </Button>
@@ -338,6 +344,17 @@ function TravelScreenContent() {
             </Button>
           </View>
           <Button
+            variant="secondary"
+            icon="receipt"
+            style={styles.inviteButton}
+            onPress={() => setExpensesPlanId(plan.id)}
+            accessibilityLabel={`Open expenses for ${plan.title}`}>
+            Expenses
+            {plan.expenses.length > 0
+              ? ` · ${plan.expenses.length}`
+              : ''}
+          </Button>
+          <Button
             icon="people"
             style={styles.inviteButton}
             onPress={() =>
@@ -353,7 +370,7 @@ function TravelScreenContent() {
               hitSlop={8}
               onPress={() =>
                 confirmDestructiveAction({
-                  title: 'Delete trip?',
+                  title: 'Delete Trip?',
                   message: `Remove “${plan.title}”?`,
                   onConfirm: () => removePlan(plan.id),
                 })
@@ -363,11 +380,19 @@ function TravelScreenContent() {
                 pressed ? styles.pressed : undefined,
               ]}>
               <Symbol name="trash" size="sm" color={theme.accentPrimary} />
-              <AppText variant="caption" color="accent">Delete trip</AppText>
+              <AppText variant="caption" color="accent">Delete Trip</AppText>
             </Pressable>
           </View>
         </Card>
       ))}
+      {expensesPlan ? (
+        <TravelExpensesSheet
+          plan={expensesPlan}
+          visible
+          onClose={() => setExpensesPlanId(undefined)}
+          onSavePlan={(next) => savePlan(next)}
+        />
+      ) : null}
     </Screen>
   );
 }

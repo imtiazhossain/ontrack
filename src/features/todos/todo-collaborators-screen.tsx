@@ -84,7 +84,7 @@ export function TodoCollaboratorsScreen() {
     <Screen contentStyle={styles.container}>
       <View style={styles.heading}>
         <AppText variant="overline" color="accent">Checklist access</AppText>
-        <AppText variant="display">Add collaborators</AppText>
+        <AppText variant="display">Add Collaborators</AppText>
         <AppText variant="body" color="secondary">
           Choose exactly which checklists this link can open. Anyone who joins can collaborate live.
         </AppText>
@@ -111,7 +111,7 @@ export function TodoCollaboratorsScreen() {
                 : new Set<string>(ownedLists.map((list) => list.id)),
             )
           }>
-          {allSelected ? 'Clear all' : 'Select all'}
+          {allSelected ? 'Clear All' : 'Select All'}
         </Button>
       </View>
 

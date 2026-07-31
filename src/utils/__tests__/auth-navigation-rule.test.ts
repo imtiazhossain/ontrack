@@ -41,6 +41,7 @@ describe('authentication navigation invariants', () => {
       'plants',
       'travel',
       'vision-board',
+      'games',
     ]) {
       expect(tabsLayout).toContain(`<Tabs.Screen name="${route}"`);
     }
@@ -48,6 +49,8 @@ describe('authentication navigation invariants', () => {
 
   it('holds the static loading shell until hydration and account resolution finish', () => {
     expect(rootLayout).toContain("if (!hydrated || phase === 'loading')");
+    expect(rootLayout).toContain('LoadingBlock');
+    expect(rootLayout).toContain('SplashScreen');
     expect(rootLayout.indexOf("if (!hydrated || phase === 'loading')")).toBeLessThan(
       rootLayout.indexOf('<Stack'),
     );
@@ -60,5 +63,6 @@ describe('authentication navigation invariants', () => {
     );
     expect(hydrated).toContain("from '@/store/vision-board'");
     expect(hydrated).toContain('useVisionBoard.persist.rehydrate()');
+    expect(hydrated).toContain('HYDRATION_TIMEOUT_MS');
   });
 });

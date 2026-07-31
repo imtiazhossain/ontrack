@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layout, spacing } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 
@@ -28,6 +28,7 @@ export function Screen({
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { spacing, layout } = useResponsive();
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
 
   const paddingStyle: ViewStyle = {

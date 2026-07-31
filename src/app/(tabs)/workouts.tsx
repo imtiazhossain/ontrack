@@ -1,36 +1,80 @@
-import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, Button, Screen, SectionHeader, Symbol } from '@/components/primitives';
-import { categoryColors, layout, radii, spacing } from '@/design-system';
-import { ExerciseAnatomyDemo } from '@/features/workouts/exercise-anatomy-demo';
-import { HumanBodyMap } from '@/features/workouts/human-body-map';
+import { AppText, LoadingBlock, Screen, Symbol } from '@/components/primitives';
+import { categoryColors, fontFamilies, layout, radii, spacing } from '@/design-system';
+import { resolveAtlasWorkoutSelection } from '@/features/workouts/atlas-workout-selection';
+import type { ExerciseLoadKind } from '@/features/workouts/exercise-load';
+import { ANATOMY_BEIGE } from '@/features/workouts/anatomy-art';
+import { formatMuscleLabel } from '@/features/workouts/format-muscle-label';
 import {
-  EXERCISES_BY_ID,
-  MUSCLE_GROUPS,
-  MUSCLE_GROUPS_BY_KEY,
-  MUSCLE_TARGETS_BY_GROUP,
-  type BodyView,
-  type ExerciseTemplate,
-  type MuscleKey,
-  type MuscleTarget,
+    MUSCLE_ATLAS,
+    MUSCLE_ATLAS_BY_ID,
+    musclesInCategory,
+    type MuscleAtlasCategoryId,
+    type MuscleAtlasEntry,
+} from '@/features/workouts/muscle-atlas';
+import { MuscleAtlasDropdowns } from '@/features/workouts/muscle-atlas-dropdowns';
+import {
+    EXERCISES_BY_ID,
+    MUSCLE_GROUPS,
+    MUSCLE_GROUPS_BY_KEY,
+    MUSCLE_TARGETS_BY_GROUP,
+    type AnatomySex,
+    type BodyView,
+    type ExerciseTemplate,
+    type MuscleKey,
+    type MuscleTarget,
 } from '@/features/workouts/muscle-data';
+import { MuscleFocusExercises } from '@/features/workouts/muscle-focus-exercises';
+import { MUSCLE_HIGHLIGHT_VIEW } from '@/features/workouts/muscle-highlight-images';
 import { WorkoutSessionBuilder } from '@/features/workouts/workout-session-builder';
 import { WorkoutTodayPlan } from '@/features/workouts/workout-today-plan';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { newId, useSchedule } from '@/store/schedule';
 import type { WorkoutExercise } from '@/types/models';
 import { nowMinutes, todayKey } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
+const DEFAULT_ATLAS_MUSCLE =
+  MUSCLE_ATLAS_BY_ID['biceps-brachii'] ?? MUSCLE_ATLAS[0];
+
+const HumanBodyMap = lazy(() =>
+  import('@/features/workouts/human-body-map').then((mod) => ({ default: mod.HumanBodyMap })),
+);
+const ExerciseAnatomyDemo = lazy(() =>
+  import('@/features/workouts/exercise-anatomy-demo').then((mod) => ({
+    default: mod.ExerciseAnatomyDemo,
+  })),
+);
+
 const DEFAULT_MUSCLE: Record<BodyView, MuscleKey> = {
   front: 'chest',
   back: 'upper-back',
+  side: 'glutes',
 };
 
-const HIGHLIGHT_COLOR = '#FFB266';
+const BODY_VIEW_TABS: { view: BodyView; label: string }[] = [
+  { view: 'front', label: 'Front' },
+  { view: 'side', label: 'Side' },
+  { view: 'back', label: 'Back' },
+];
+
+function bodyViewLabel(view: BodyView) {
+  switch (view) {
+    case 'front':
+      return 'Anterior';
+    case 'back':
+      return 'Posterior';
+    case 'side':
+      return 'Side';
+  }
+}
+
+const HIGHLIGHT_COLOR = '#FF7A1F';
 
 interface ExerciseSource {
   targetId: string;
@@ -48,16 +92,28 @@ interface ExercisePreview {
 export default function WorkoutsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { s } = useResponsive();
+  const titleSize = s(34);
+  const titleControlSize = s(30);
   const date = todayKey();
   const [bodyView, setBodyView] = useState<BodyView>('front');
-  const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>('chest');
-  const [selectedTargetId, setSelectedTargetId] = useState(
-    MUSCLE_TARGETS_BY_GROUP.chest[0].id,
+  const [anatomySex, setAnatomySex] = useState<AnatomySex>('male');
+  const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>(
+    DEFAULT_ATLAS_MUSCLE.workoutGroup ?? 'biceps',
   );
+  const [selectedTargetId, setSelectedTargetId] = useState(
+    DEFAULT_ATLAS_MUSCLE.highlightId ??
+      MUSCLE_TARGETS_BY_GROUP.biceps[0].id,
+  );
+  const [atlasCategoryId, setAtlasCategoryId] = useState<MuscleAtlasCategoryId>(
+    DEFAULT_ATLAS_MUSCLE.categoryId,
+  );
+  const [atlasMuscleId, setAtlasMuscleId] = useState(DEFAULT_ATLAS_MUSCLE.id);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [selectedExerciseSources, setSelectedExerciseSources] = useState<
     Record<string, ExerciseSource>
   >({});
+  const [exerciseLoadKind, setExerciseLoadKind] = useState<ExerciseLoadKind>('weighted');
   const [exercisePreview, setExercisePreview] = useState<ExercisePreview>();
   const [savedMessage, setSavedMessage] = useState<string>();
 
@@ -68,11 +124,36 @@ export default function WorkoutsScreen() {
 
   const gymCategory = categories.find((category) => category.detailKind === 'gym');
   const gymColors = categoryColors(theme, 'gym');
-  const muscleGroup = MUSCLE_GROUPS_BY_KEY[selectedMuscle];
   const muscleTargets = MUSCLE_TARGETS_BY_GROUP[selectedMuscle];
   const selectedTarget =
     muscleTargets.find((target) => target.id === selectedTargetId) ?? muscleTargets[0];
-  const visibleMuscles = MUSCLE_GROUPS.filter((group) => group.view === bodyView);
+  const atlasMuscle = MUSCLE_ATLAS_BY_ID[atlasMuscleId] ?? DEFAULT_ATLAS_MUSCLE;
+  const atlasSelection = useMemo(
+    () => resolveAtlasWorkoutSelection(atlasMuscle),
+    [atlasMuscle],
+  );
+  const focusExercises = atlasSelection.exercises.length
+    ? atlasSelection.exercises
+    : selectedTarget.exercises;
+  const visibleMuscles = MUSCLE_GROUPS.filter((group) => {
+    if (bodyView === 'side') {
+      // Side plate: groups that have side hit targets.
+      return (
+        group.key === 'chest' ||
+        group.key === 'biceps' ||
+        group.key === 'glutes' ||
+        group.key === 'quadriceps' ||
+        group.key === 'hamstrings'
+      );
+    }
+    return group.view === bodyView;
+  });
+
+  const changeAnatomySex = (next: AnatomySex) => {
+    if (next === anatomySex) return;
+    haptics.select();
+    setAnatomySex(next);
+  };
   const selectedExercises = selectedExerciseIds
     .map((id) => EXERCISES_BY_ID[id])
     .filter((exercise): exercise is ExerciseTemplate => Boolean(exercise));
@@ -87,6 +168,39 @@ export default function WorkoutsScreen() {
       .map((activity) => ({ activity, workout: workoutsByActivityId.get(activity.id)! }));
   }, [activities, date, workouts]);
 
+  const applyAtlasMuscle = (muscle: MuscleAtlasEntry) => {
+    setAtlasCategoryId(muscle.categoryId);
+    setAtlasMuscleId(muscle.id);
+    const selection = resolveAtlasWorkoutSelection(muscle);
+    const highlightView =
+      (selection.highlightMuscleId
+        ? MUSCLE_HIGHLIGHT_VIEW[selection.highlightMuscleId]
+        : undefined) ??
+      (muscle.highlightId ? MUSCLE_HIGHLIGHT_VIEW[muscle.highlightId] : undefined) ??
+      MUSCLE_HIGHLIGHT_VIEW[muscle.id];
+    if (highlightView) {
+      setBodyView(highlightView);
+    } else if (muscle.visibility === 'front' || muscle.visibility === 'back') {
+      setBodyView(muscle.visibility);
+    } else if (muscle.workoutGroup) {
+      setBodyView(MUSCLE_GROUPS_BY_KEY[muscle.workoutGroup].view);
+    }
+    if (muscle.workoutGroup) {
+      setSelectedMuscle(muscle.workoutGroup);
+      const targets = MUSCLE_TARGETS_BY_GROUP[muscle.workoutGroup];
+      const matched =
+        (selection.highlightMuscleId
+          ? targets.find((target) => target.id === selection.highlightMuscleId)
+          : undefined) ??
+        (muscle.highlightId
+          ? targets.find((target) => target.id === muscle.highlightId)
+          : undefined) ??
+        targets[0];
+      if (matched) setSelectedTargetId(matched.id);
+    }
+    setSavedMessage(undefined);
+  };
+
   const changeBodyView = (nextView: BodyView) => {
     if (nextView === bodyView) return;
     haptics.select();
@@ -94,6 +208,14 @@ export default function WorkoutsScreen() {
     setBodyView(nextView);
     setSelectedMuscle(nextMuscle);
     setSelectedTargetId(MUSCLE_TARGETS_BY_GROUP[nextMuscle][0].id);
+    const atlasMatch =
+      MUSCLE_ATLAS.find(
+        (entry) => entry.workoutGroup === nextMuscle && entry.visibility === nextView,
+      ) ?? MUSCLE_ATLAS.find((entry) => entry.workoutGroup === nextMuscle);
+    if (atlasMatch) {
+      setAtlasCategoryId(atlasMatch.categoryId);
+      setAtlasMuscleId(atlasMatch.id);
+    }
     setSavedMessage(undefined);
   };
 
@@ -102,6 +224,33 @@ export default function WorkoutsScreen() {
     haptics.select();
     setSelectedMuscle(key);
     setSelectedTargetId(MUSCLE_TARGETS_BY_GROUP[key][0].id);
+    const atlasMatch =
+      MUSCLE_ATLAS.find(
+        (entry) => entry.workoutGroup === key && entry.visibility === bodyView,
+      ) ?? MUSCLE_ATLAS.find((entry) => entry.workoutGroup === key);
+    if (atlasMatch) {
+      setAtlasCategoryId(atlasMatch.categoryId);
+      setAtlasMuscleId(atlasMatch.id);
+    }
+    setSavedMessage(undefined);
+  };
+
+  /** Invisible hit-box tap on the anatomy JPG → show that plate + atlas row. */
+  const selectMapHit = (hit: { key: MuscleKey; highlightId: string }) => {
+    haptics.select();
+    setSelectedMuscle(hit.key);
+    setSelectedTargetId(hit.highlightId);
+    const atlasMatch =
+      MUSCLE_ATLAS.find((entry) => entry.highlightId === hit.highlightId) ??
+      MUSCLE_ATLAS.find((entry) => entry.id === hit.highlightId) ??
+      MUSCLE_ATLAS.find(
+        (entry) => entry.workoutGroup === hit.key && entry.visibility === bodyView,
+      ) ??
+      MUSCLE_ATLAS.find((entry) => entry.workoutGroup === hit.key);
+    if (atlasMatch) {
+      setAtlasCategoryId(atlasMatch.categoryId);
+      setAtlasMuscleId(atlasMatch.id);
+    }
     setSavedMessage(undefined);
   };
 
@@ -109,7 +258,28 @@ export default function WorkoutsScreen() {
     if (targetId === selectedTarget.id) return;
     haptics.select();
     setSelectedTargetId(targetId);
+    const atlasMatch =
+      MUSCLE_ATLAS.find((entry) => entry.highlightId === targetId) ??
+      MUSCLE_ATLAS.find((entry) => entry.id === targetId);
+    if (atlasMatch) {
+      setAtlasCategoryId(atlasMatch.categoryId);
+      setAtlasMuscleId(atlasMatch.id);
+    }
     setSavedMessage(undefined);
+  };
+
+  const selectAtlasCategory = (categoryId: MuscleAtlasCategoryId) => {
+    if (categoryId === atlasCategoryId) return;
+    haptics.select();
+    const first = musclesInCategory(categoryId)[0];
+    if (!first) return;
+    applyAtlasMuscle(first);
+  };
+
+  const selectAtlasMuscle = (muscle: MuscleAtlasEntry) => {
+    if (muscle.id === atlasMuscleId) return;
+    haptics.select();
+    applyAtlasMuscle(muscle);
   };
 
   const toggleExercise = (exerciseId: string, source?: ExerciseSource) => {
@@ -130,9 +300,9 @@ export default function WorkoutsScreen() {
       return {
         ...current,
         [exerciseId]: source ?? {
-          targetId: selectedTarget.id,
-          targetLabel: selectedTarget.label,
-          groupLabel: muscleGroup.label,
+          targetId: atlasMuscle.id,
+          targetLabel: atlasMuscle.name,
+          groupLabel: atlasSelection.groupLabel,
         },
       };
     });
@@ -142,8 +312,8 @@ export default function WorkoutsScreen() {
     haptics.tap();
     setExercisePreview({
       exercise,
-      primaryGroup: selectedMuscle,
-      primaryTarget: selectedTarget,
+      primaryGroup: atlasSelection.groupKey ?? selectedMuscle,
+      primaryTarget: atlasSelection.target ?? selectedTarget,
     });
   };
 
@@ -214,33 +384,72 @@ export default function WorkoutsScreen() {
       <View style={styles.pagePadding}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <View style={styles.eyebrowRow}>
-              <AppText variant="overline" color="accent">Strength studio</AppText>
-              <View style={[styles.schedulePill, { backgroundColor: gymColors.tint }]}>
-                <View style={[styles.scheduleDot, { backgroundColor: gymColors.main }]} />
-                <AppText variant="caption" color="secondary">
-                  {todaysWorkouts.length === 0 ? 'Plan is open' : `${todaysWorkouts.length} today`}
+            <View style={[styles.eyebrowRow, { height: titleControlSize }]}>
+              <View style={[styles.eyebrowLabelWrap, { height: titleControlSize }]}>
+                <AppText
+                  variant="overline"
+                  color="accent"
+                  fit
+                  style={[
+                    styles.eyebrowLabel,
+                    {
+                      fontSize: s(11),
+                      lineHeight: s(13),
+                      // Optical top-align with the pill/button.
+                      marginTop: s(-1),
+                    },
+                  ]}>
+                  Strength Studio
                 </AppText>
               </View>
+              <View style={styles.eyebrowActions}>
+                <View
+                  style={[
+                    styles.schedulePill,
+                    {
+                      backgroundColor: gymColors.tint,
+                      height: titleControlSize,
+                    },
+                  ]}>
+                  <View style={[styles.scheduleDot, { backgroundColor: gymColors.main }]} />
+                  <AppText variant="caption" color="secondary" fit>
+                    {todaysWorkouts.length === 0 ? 'Plan is open' : `${todaysWorkouts.length} today`}
+                  </AppText>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Plan a custom workout"
+                  hitSlop={8}
+                  onPress={openCustomPlanner}
+                  style={({ pressed }) => [
+                    styles.headerAction,
+                    {
+                      width: titleControlSize,
+                      height: titleControlSize,
+                      borderRadius: titleControlSize / 2,
+                      backgroundColor: theme.backgroundElevated,
+                      borderColor: theme.separator,
+                      opacity: pressed ? 0.72 : 1,
+                    },
+                  ]}>
+                  <Symbol name="slider.horizontal.3" size="sm" color={theme.textPrimary} />
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.titleRow}>
-              <AppText variant="title" style={styles.title}>Build around your body.</AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Plan a custom workout"
-                hitSlop={8}
-                onPress={openCustomPlanner}
-                style={({ pressed }) => [
-                  styles.headerAction,
-                  {
-                    backgroundColor: theme.backgroundElevated,
-                    borderColor: theme.separator,
-                    opacity: pressed ? 0.72 : 1,
-                  },
-                ]}>
-                <Symbol name="slider.horizontal.3" size="md" color={theme.textPrimary} />
-              </Pressable>
-            </View>
+            <Text
+              accessibilityRole="header"
+              allowFontScaling={false}
+              numberOfLines={2}
+              style={[
+                styles.titleText,
+                {
+                  color: theme.textPrimary,
+                  fontSize: titleSize,
+                  lineHeight: Math.round(titleSize * 1.12),
+                },
+              ]}>
+              Build around your body.
+            </Text>
             <AppText variant="body" color="secondary" style={styles.headerBody}>
               Explore the anatomy, choose a focus, and shape a session that feels intentional.
             </AppText>
@@ -250,54 +459,114 @@ export default function WorkoutsScreen() {
 
       <View style={styles.pagePadding}>
         <View style={styles.sectionIntro}>
-          <View style={styles.flex}>
-            <AppText variant="overline" color="tertiary">Interactive anatomy</AppText>
-            <AppText variant="heading">Muscle explorer</AppText>
-          </View>
-          <View style={[styles.livePill, { borderColor: theme.separator }]}>
-            <View style={[styles.liveDot, { backgroundColor: gymColors.main }]} />
-            <AppText variant="caption" color="secondary">Tap to focus</AppText>
-          </View>
+          <AppText variant="overline" color="tertiary">Interactive Anatomy</AppText>
+          <AppText variant="heading">Muscle Explorer</AppText>
         </View>
 
         <View
           style={[
             styles.bodyExperience,
-            { backgroundColor: theme.backgroundSunken, borderColor: theme.separator },
+            { backgroundColor: ANATOMY_BEIGE, borderColor: theme.separator },
           ]}>
-          <View style={[styles.bodyToolbar, { backgroundColor: theme.backgroundElevated }]}>
-            {(['front', 'back'] as const).map((view) => {
-              const selected = bodyView === view;
-              return (
-                <Pressable
-                  key={view}
-                  accessibilityRole="tab"
-                  accessibilityLabel={`${view} body view`}
-                  accessibilityState={{ selected }}
-                  onPress={() => changeBodyView(view)}
-                  style={[
-                    styles.bodyTab,
-                    selected && { backgroundColor: theme.backgroundSunken },
-                  ]}>
-                  <Symbol
-                    name={view === 'front' ? 'person.fill' : 'arrow.triangle.2.circlepath'}
-                    size="sm"
-                    color={selected ? theme.textPrimary : theme.textTertiary}
-                  />
-                  <AppText variant="callout" color={selected ? 'primary' : 'secondary'}>
-                    {view === 'front' ? 'Anterior' : 'Posterior'}
-                  </AppText>
-                </Pressable>
-              );
-            })}
+          <View
+            style={[
+              styles.bodyChromeBar,
+              {
+                backgroundColor: ANATOMY_BEIGE,
+              },
+            ]}>
+            <View style={styles.bodyChromeTopRow}>
+              <View
+                style={[
+                  styles.sexToggle,
+                  {
+                    backgroundColor: theme.backgroundElevated,
+                    borderColor: theme.separator,
+                  },
+                ]}>
+                {([
+                  { id: 'male' as const, label: 'Male' },
+                  { id: 'female' as const, label: 'Female' },
+                ]).map((option) => {
+                  const selected = anatomySex === option.id;
+                  return (
+                    <Pressable
+                      key={option.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${option.label} anatomy`}
+                      accessibilityState={{ selected }}
+                      hitSlop={4}
+                      onPress={() => changeAnatomySex(option.id)}
+                      style={[
+                        styles.sexToggleTab,
+                        selected && { backgroundColor: theme.backgroundSunken },
+                      ]}>
+                      <AppText
+                        variant="caption"
+                        color={selected ? 'primary' : 'secondary'}
+                        fit>
+                        {option.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View
+                style={[
+                  styles.bodyViewDock,
+                  {
+                    backgroundColor: theme.backgroundElevated,
+                    borderColor: theme.separator,
+                  },
+                ]}>
+                {BODY_VIEW_TABS.map((tab) => {
+                  const selected = bodyView === tab.view;
+                  return (
+                    <Pressable
+                      key={tab.view}
+                      accessibilityRole="tab"
+                      accessibilityLabel={`${tab.label} body view`}
+                      accessibilityState={{ selected }}
+                      onPress={() => changeBodyView(tab.view)}
+                      style={[
+                        styles.bodyTab,
+                        selected && { backgroundColor: theme.backgroundSunken },
+                      ]}>
+                      <AppText
+                        variant="caption"
+                        color={selected ? 'primary' : 'secondary'}
+                        fit>
+                        {tab.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.atlasControlsInline}>
+              <MuscleAtlasDropdowns
+                categoryId={atlasCategoryId}
+                muscle={atlasMuscle}
+                onSelectCategory={selectAtlasCategory}
+                onSelectMuscle={selectAtlasMuscle}
+              />
+            </View>
           </View>
 
-          <HumanBodyMap
-            bodyView={bodyView}
-            selectedMuscle={selectedMuscle}
-            selectedTarget={selectedTarget}
-            onSelectMuscle={selectMuscle}
-          />
+          <View style={styles.bodyMapStage}>
+            <Suspense fallback={<LoadingBlock label="Loading anatomy…" />}>
+              <HumanBodyMap
+                anatomySex={anatomySex}
+                bodyView={bodyView}
+                selectedMuscle={selectedMuscle}
+                selectedTarget={selectedTarget}
+                highlightMuscleId={atlasSelection.highlightMuscleId}
+                onSelectHit={selectMapHit}
+              />
+            </Suspense>
+          </View>
 
           <View
             style={[
@@ -310,12 +579,17 @@ export default function WorkoutsScreen() {
             <View style={styles.bodyCaptionCopy}>
               <View style={styles.focusIndicator} />
               <View style={styles.flex}>
-                <AppText variant="overline" color="tertiary">{muscleGroup.label}</AppText>
-                <AppText variant="subheading">{selectedTarget.label}</AppText>
+                <AppText variant="overline" color="tertiary">
+                  {atlasSelection.groupLabel}
+                </AppText>
+                <AppText variant="subheading" numberOfLines={2}>
+                  {formatMuscleLabel(atlasMuscle.name)}
+                </AppText>
               </View>
             </View>
             <AppText variant="caption" color="tertiary">
-              {bodyView === 'front' ? 'Anterior' : 'Posterior'} · {visibleMuscles.length} regions
+              {bodyViewLabel(bodyView)} · {anatomySex === 'female' ? 'Female' : 'Male'}
+              {atlasMuscle.visibility === 'deep' ? ' · Deep' : ''}
             </AppText>
           </View>
         </View>
@@ -350,7 +624,7 @@ export default function WorkoutsScreen() {
       </View>
 
       <Animated.View
-        key={selectedMuscle}
+        key={atlasMuscle.id}
         entering={FadeInDown.duration(260)}
         style={styles.pagePadding}>
         <View
@@ -361,24 +635,37 @@ export default function WorkoutsScreen() {
               borderColor: theme.separator,
             },
           ]}>
-          <View style={styles.summaryHeader}>
+            <View style={styles.summaryHeader}>
             <View style={[styles.focusIcon, { backgroundColor: gymColors.tint }]}>
               <Symbol name="scope" size="lg" color={gymColors.main} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="overline" color="accent">Selected muscle group</AppText>
-              <AppText variant="heading">{muscleGroup.label}</AppText>
+              <AppText variant="overline" color="accent">Selected Muscle</AppText>
+              <AppText variant="heading" numberOfLines={2}>
+                {formatMuscleLabel(atlasMuscle.name)}
+              </AppText>
             </View>
             <View style={[styles.exerciseCount, { backgroundColor: theme.backgroundSunken }]}>
               <AppText variant="caption" color="secondary">
-                {muscleTargets.length} muscle{muscleTargets.length === 1 ? '' : 's'}
+                {focusExercises.length} Workout{focusExercises.length === 1 ? '' : 's'}
+              </AppText>
+            </View>
+          </View>
+
+          <View style={[styles.coachingCue, { backgroundColor: gymColors.tint }]}>
+            <Symbol name="text.book.closed.fill" size="md" color={gymColors.main} />
+            <View style={styles.flex}>
+              <AppText variant="overline" color="accent">What It Does</AppText>
+              <AppText variant="callout" color="secondary">
+                {atlasSelection.functionText}
               </AppText>
             </View>
           </View>
 
           <View style={styles.targetPickerHeader}>
-            <AppText variant="overline" color="tertiary">Muscles in this group</AppText>
-            <AppText variant="caption" color="secondary">Choose one to isolate</AppText>
+            <AppText variant="overline" color="tertiary">
+              Related Training Targets
+            </AppText>
           </View>
           <View style={styles.anatomyTags}>
             {muscleTargets.map((target) => {
@@ -387,7 +674,7 @@ export default function WorkoutsScreen() {
                 <Pressable
                   key={target.id}
                   accessibilityRole="radio"
-                  accessibilityLabel={`Target ${target.label}`}
+                  accessibilityLabel={`Target ${formatMuscleLabel(target.label)}`}
                   accessibilityState={{ checked: selected }}
                   onPress={() => selectTarget(target.id)}
                   style={[
@@ -409,136 +696,41 @@ export default function WorkoutsScreen() {
                       <Symbol name="checkmark" size={10} color={theme.textOnAccent} />
                     ) : null}
                   </View>
-                  <AppText variant="caption" color={selected ? 'primary' : 'secondary'}>
-                    {target.label}
+                  <AppText
+                    variant="caption"
+                    color={selected ? 'primary' : 'secondary'}
+                    numberOfLines={2}
+                    style={styles.anatomyTagLabel}>
+                    {formatMuscleLabel(target.label)}
                   </AppText>
                 </Pressable>
               );
             })}
           </View>
 
-          <Animated.View
-            key={selectedTarget.id}
-            entering={FadeInDown.duration(220)}
-            style={styles.targetDetail}>
-            <View style={styles.targetDetailHeader}>
-              <View style={[styles.targetMarker, { backgroundColor: gymColors.main }]} />
-              <View style={styles.flex}>
-                <AppText variant="overline" color="accent">Targeting now</AppText>
-                <AppText variant="subheading">{selectedTarget.label}</AppText>
-              </View>
-            </View>
-            <AppText variant="callout" color="secondary">
-              {selectedTarget.description}
-            </AppText>
-            <View style={[styles.coachingCue, { backgroundColor: gymColors.tint }]}>
+          {selectedTarget.cue ? (
+            <View style={[styles.coachingCue, { backgroundColor: theme.backgroundSunken }]}>
               <Symbol name="lightbulb.max.fill" size="md" color={gymColors.main} />
               <View style={styles.flex}>
-                <AppText variant="overline" color="accent">Coach’s cue</AppText>
+                <AppText variant="overline" color="accent">Coach’s Cue</AppText>
                 <AppText variant="callout" color="secondary">{selectedTarget.cue}</AppText>
               </View>
             </View>
-          </Animated.View>
+          ) : null}
         </View>
       </Animated.View>
 
-      <View style={styles.pagePadding}>
-        <SectionHeader
-          title={`Target ${selectedTarget.label}`}
-          detail={`${selectedTarget.exercises.length} focused exercises`}
-        />
-        <View style={styles.exerciseList}>
-          {selectedTarget.exercises.map((exercise, index) => {
-            const selected = selectedExerciseIds.includes(exercise.id);
-            return (
-              <View
-                key={exercise.id}
-                style={[
-                  styles.exerciseCard,
-                  {
-                    backgroundColor: selected ? gymColors.tint : theme.backgroundElevated,
-                    borderColor: selected ? gymColors.main : theme.separator,
-                  },
-                ]}>
-                <View style={styles.exerciseTopRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Watch ${exercise.name} anatomy animation`}
-                    onPress={() => openExercisePreview(exercise)}
-                    style={({ pressed }) => [
-                      styles.exercisePreviewButton,
-                      { opacity: pressed ? 0.72 : 1 },
-                    ]}>
-                    <View
-                      style={[
-                        styles.exerciseIndex,
-                        { backgroundColor: selected ? gymColors.main : theme.backgroundSunken },
-                      ]}>
-                      {selected ? (
-                        <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
-                      ) : (
-                        <AppText variant="mono" color="secondary">0{index + 1}</AppText>
-                      )}
-                    </View>
-                    <View style={styles.flex}>
-                      <AppText variant="subheading">{exercise.name}</AppText>
-                      <AppText variant="caption" color="secondary">{exercise.equipment}</AppText>
-                    </View>
-                    <View style={[styles.previewControl, { backgroundColor: theme.backgroundSunken }]}>
-                      <Symbol name="play.fill" size={10} color={gymColors.main} />
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${exercise.name}`}
-                    accessibilityState={{ checked: selected }}
-                    hitSlop={6}
-                    onPress={() => toggleExercise(exercise.id)}
-                    style={({ pressed }) => [
-                      styles.addControl,
-                      {
-                        backgroundColor: selected ? gymColors.main : theme.backgroundPrimary,
-                        borderColor: selected ? gymColors.main : theme.separator,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}>
-                    <Symbol
-                      name={selected ? 'minus' : 'plus'}
-                      size="sm"
-                      color={selected ? theme.textOnAccent : theme.textPrimary}
-                    />
-                  </Pressable>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`View muscles worked by ${exercise.name}`}
-                  onPress={() => openExercisePreview(exercise)}
-                  style={({ pressed }) => [
-                    styles.exerciseMeta,
-                    { borderTopColor: theme.separator, opacity: pressed ? 0.72 : 1 },
-                  ]}>
-                  <View style={styles.metaItem}>
-                    <Symbol name="square.stack.3d.up" size="sm" color={theme.textTertiary} />
-                    <AppText variant="caption" color="secondary">{exercise.sets} sets</AppText>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Symbol name="repeat" size="sm" color={theme.textTertiary} />
-                    <AppText variant="caption" color="secondary">{exercise.reps} reps</AppText>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Symbol name="timer" size="sm" color={theme.textTertiary} />
-                    <AppText variant="caption" color="secondary">{exercise.restSeconds}s rest</AppText>
-                  </View>
-                  <View style={styles.watchHint}>
-                    <AppText variant="caption" color="accent">Watch anatomy</AppText>
-                    <Symbol name="chevron.right" size={10} color={gymColors.main} />
-                  </View>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      <MuscleFocusExercises
+        muscleLabel={formatMuscleLabel(atlasMuscle.name)}
+        exercises={focusExercises}
+        loadKind={exerciseLoadKind}
+        selectedExerciseIds={selectedExerciseIds}
+        accentTint={gymColors.tint}
+        accentMain={gymColors.main}
+        onChangeLoadKind={setExerciseLoadKind}
+        onPreview={openExercisePreview}
+        onToggle={(exerciseId) => toggleExercise(exerciseId)}
+      />
 
       <WorkoutSessionBuilder
         selectedExercises={selectedExercises}
@@ -555,24 +747,27 @@ export default function WorkoutsScreen() {
         onOpenCustomPlanner={openCustomPlanner}
       />
 
-      <ExerciseAnatomyDemo
-        exercise={exercisePreview?.exercise}
-        primaryGroup={exercisePreview?.primaryGroup ?? selectedMuscle}
-        primaryTarget={exercisePreview?.primaryTarget ?? selectedTarget}
-        selected={exercisePreview
-          ? selectedExerciseIds.includes(exercisePreview.exercise.id)
-          : false}
-        visible={Boolean(exercisePreview)}
-        onClose={() => setExercisePreview(undefined)}
-        onToggleSelected={() => {
-          if (!exercisePreview) return;
-          toggleExercise(exercisePreview.exercise.id, {
-            targetId: exercisePreview.primaryTarget.id,
-            targetLabel: exercisePreview.primaryTarget.label,
-            groupLabel: MUSCLE_GROUPS_BY_KEY[exercisePreview.primaryGroup].label,
-          });
-        }}
-      />
+      <Suspense fallback={null}>
+        <ExerciseAnatomyDemo
+          anatomySex={anatomySex}
+          exercise={exercisePreview?.exercise}
+          primaryGroup={exercisePreview?.primaryGroup ?? selectedMuscle}
+          primaryTarget={exercisePreview?.primaryTarget ?? selectedTarget}
+          selected={exercisePreview
+            ? selectedExerciseIds.includes(exercisePreview.exercise.id)
+            : false}
+          visible={Boolean(exercisePreview)}
+          onClose={() => setExercisePreview(undefined)}
+          onToggleSelected={() => {
+            if (!exercisePreview) return;
+            toggleExercise(exercisePreview.exercise.id, {
+              targetId: exercisePreview.primaryTarget.id,
+              targetLabel: exercisePreview.primaryTarget.label,
+              groupLabel: MUSCLE_GROUPS_BY_KEY[exercisePreview.primaryGroup].label,
+            });
+          }}
+        />
+      </Suspense>
     </Screen>
   );
 }
@@ -594,21 +789,34 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   headerCopy: {
     flex: 1,
     gap: spacing.sm,
   },
   eyebrowRow: {
-    minHeight: 30,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
+  eyebrowActions: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexShrink: 0,
+    gap: spacing.sm,
+  },
+  eyebrowLabelWrap: {
+    flexShrink: 1,
+    minWidth: 0,
+    justifyContent: 'flex-start',
+  },
+  eyebrowLabel: {
+    includeFontPadding: false,
+    letterSpacing: 1.2,
+  },
   schedulePill: {
-    minHeight: 28,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -620,64 +828,81 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  title: {
-    flex: 1,
+  titleText: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    letterSpacing: -0.6,
+    includeFontPadding: false,
   },
   headerBody: {
     maxWidth: 500,
   },
   headerAction: {
-    width: 46,
-    height: 46,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: 23,
     boxShadow: '0 4px 16px rgba(27, 24, 21, 0.08)',
   },
   sectionIntro: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.md,
+    gap: spacing.xxs,
   },
-  livePill: {
-    minHeight: 34,
+  bodyMapStage: {
+    position: 'relative',
+    width: '100%',
+  },
+  bodyChromeBar: {
+    gap: spacing.sm,
+    borderBottomWidth: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  bodyChromeTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  sexToggle: {
+    flexDirection: 'row',
+    gap: 2,
     borderWidth: 1,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
+    padding: 2,
   },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  sexToggleTab: {
+    minHeight: 30,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+  },
+  bodyViewDock: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 2,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    padding: 2,
+  },
+  atlasControlsInline: {
+    gap: spacing.sm,
   },
   bodyExperience: {
     overflow: 'hidden',
+    marginTop: spacing.md,
     borderWidth: 1,
     borderRadius: radii.xl,
     boxShadow: '0 18px 45px rgba(54, 28, 20, 0.22)',
   },
-  bodyToolbar: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
   bodyTab: {
-    minHeight: 42,
+    minHeight: 30,
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     borderRadius: radii.pill,
+    paddingHorizontal: spacing.xs,
   },
   bodyCaption: {
     minHeight: 68,
@@ -700,7 +925,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: HIGHLIGHT_COLOR,
-    boxShadow: '0 0 12px rgba(255, 178, 102, 0.85)',
+    boxShadow: '0 0 12px rgba(255, 122, 31, 0.85)',
   },
   muscleChips: {
     gap: spacing.sm,
@@ -742,8 +967,6 @@ const styles = StyleSheet.create({
   targetPickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
   },
   anatomyTags: {
     flexDirection: 'row',
@@ -751,6 +974,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   anatomyTag: {
+    maxWidth: '100%',
     minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
@@ -759,6 +983,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  anatomyTagLabel: {
+    flexShrink: 1,
   },
   targetRadio: {
     width: 18,
@@ -788,70 +1016,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderRadius: radii.lg,
     padding: spacing.md,
-  },
-  exerciseList: {
-    gap: spacing.md,
-  },
-  exerciseCard: {
-    gap: spacing.md,
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    boxShadow: '0 4px 18px rgba(27, 24, 21, 0.045)',
-  },
-  exerciseTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  exercisePreviewButton: {
-    minHeight: layout.minTapTarget,
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  exerciseIndex: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-  },
-  addControl: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: 20,
-  },
-  previewControl: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-  },
-  exerciseMeta: {
-    minHeight: layout.minTapTarget,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-    borderTopWidth: 1,
-    paddingTop: spacing.md,
-    paddingLeft: 54,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  watchHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginLeft: 'auto',
   },
 });

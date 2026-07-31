@@ -47,7 +47,7 @@ export function MealAnalysisReview({
         </View>
       ) : null}
 
-      <SectionHeader title="Nutrition estimate" />
+      <SectionHeader title="Nutrition Estimate" />
       <View style={styles.metrics}>
         <MetricDisplay label="Calories" value={`${analysis.totalCalories}`} />
         <MetricDisplay label="Protein" value={`${analysis.proteinG}g`} />
@@ -61,7 +61,7 @@ export function MealAnalysisReview({
         <MetricDisplay label="Sodium" value={analysis.sodiumMg === undefined ? 'Unknown' : `${analysis.sodiumMg}mg`} />
       </View>
 
-      <SectionHeader title="Detected items" />
+      <SectionHeader title="Detected Items" />
       {analysis.items.map((item) => (
         <View key={item.id} style={styles.itemCard}>
           <Input editable={editable} label="Item" value={item.name} onChangeText={(name) => updateItem(item.id, { name })} />
@@ -71,7 +71,7 @@ export function MealAnalysisReview({
             <View style={styles.flex}><Input editable={editable} label="Protein (g)" keyboardType="decimal-pad" value={String(item.proteinG)} onChangeText={(value) => updateItem(item.id, { proteinG: numberValue(value) })} /></View>
           </View>
           <AppText variant="caption" color={(item.confidence ?? 1) < 0.7 ? 'danger' : 'secondary'}>
-            {item.confidence === undefined ? 'Manual value' : `${Math.round(item.confidence * 100)}% identification confidence`}
+            {item.confidence === undefined ? 'Manual Value' : `${Math.round(item.confidence * 100)}% identification confidence`}
           </AppText>
         </View>
       ))}

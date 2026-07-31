@@ -1,3 +1,4 @@
+import { defaultSoilRecommendation } from '@/services/plants/soil';
 import type {
   PlacementRecommendation,
   PlantCarePlan,
@@ -5,6 +6,7 @@ import type {
   PlantHealthAssessment,
   PlantIdentity,
   PruningRecommendation,
+  SoilRecommendation,
   WateringRecommendation,
 } from '@/types/models';
 
@@ -82,6 +84,21 @@ function validatePlacement(value: unknown): PlacementRecommendation | null {
   return item as unknown as PlacementRecommendation;
 }
 
+function validateSoil(value: unknown): SoilRecommendation | null {
+  const item = object(value);
+  if (!item || !text(item.soilType) || !text(item.mixNotes) || !text(item.drainageNotes)) return null;
+  if (!number(item.phMin, 3, 9) || !number(item.phMax, 3, 9) || item.phMax < item.phMin) return null;
+  if (!strings(item.amendments, 8)) return null;
+  return {
+    soilType: item.soilType.trim(),
+    phMin: item.phMin,
+    phMax: item.phMax,
+    mixNotes: item.mixNotes.trim(),
+    drainageNotes: item.drainageNotes.trim(),
+    amendments: item.amendments.map((entry) => entry.trim()),
+  };
+}
+
 function validateSources(value: unknown): PlantCareSource[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > 6) return null;
   const sources = value.flatMap((candidate): PlantCareSource[] => {
@@ -104,7 +121,8 @@ export function validatePlantCarePlan(value: unknown, generatedAt = new Date().t
   const watering = validateWatering(item.watering);
   const pruning = validatePruning(item.pruning);
   const placement = validatePlacement(item.placement);
+  const soil = item.soil === undefined ? defaultSoilRecommendation() : validateSoil(item.soil);
   const sources = validateSources(item.sources);
-  if (!watering || !pruning || !placement || !sources || !text(item.disclaimer)) return null;
-  return { watering, pruning, placement, sources, disclaimer: item.disclaimer, generatedAt };
+  if (!watering || !pruning || !placement || !soil || !sources || !text(item.disclaimer)) return null;
+  return { watering, pruning, placement, soil, sources, disclaimer: item.disclaimer, generatedAt };
 }

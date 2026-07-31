@@ -166,6 +166,8 @@ function decodeCompactTravelInvite(
       Array.isArray(compact[5]) ? compact[5].map(expandItineraryItem) : [],
     ),
     participants: [],
+    baseCurrency: 'USD',
+    expenses: [],
   };
 }
 
@@ -205,6 +207,8 @@ export function decodeTravelInvite(value: string): Omit<TravelPlan, 'id' | 'crea
         notes: typeof plan.notes === 'string' ? plan.notes : undefined,
         itinerary: normalizeTravelItinerary(plan.itinerary),
         participants: [],
+        baseCurrency: 'USD',
+        expenses: [],
       };
     } catch {
       // Try the other encoded/decoded representation.

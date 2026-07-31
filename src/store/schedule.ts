@@ -1,17 +1,17 @@
-import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import { DEFAULT_CATEGORIES } from '@/constants/categories';
 import { buildSeedData } from '@/constants/seed';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import type {
-  Activity,
-  ActivityCategory,
-  ActivityStatus,
-  Meal,
-  Movie,
-  Workout,
-  WorkSession,
+    Activity,
+    ActivityCategory,
+    ActivityStatus,
+    Meal,
+    Movie,
+    Workout,
+    WorkSession,
 } from '@/types/models';
 import { isDateKey } from '@/utils/date';
 import { newId } from '@/utils/id';

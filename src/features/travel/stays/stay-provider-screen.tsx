@@ -36,7 +36,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
       <Screen>
         <EmptyState
           icon="lodging"
-          title="Trip not found"
+          title="Trip Not Found"
           message="This trip may have been removed."
         />
       </Screen>
@@ -49,7 +49,7 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.heading}>
-        <AppText variant="overline" color="accent">Stay search</AppText>
+        <AppText variant="overline" color="accent">Stay Search</AppText>
         <AppText variant="title">Where do you want to check?</AppText>
         <AppText variant="body" color="secondary">
           Choose a provider. Your destination, dates, and travelers are ready to go.

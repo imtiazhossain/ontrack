@@ -8,12 +8,13 @@ import type { AgentConversations, AgentInstallations } from '@/agents/types';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import {
-  hasCustomizedVisionBoardCategories,
-  hasCustomizedVisionBoardItems,
+    hasCustomizedVisionBoardCategories,
+    hasCustomizedVisionBoardItems,
 } from '@/features/vision-board/selectors';
+import { ensurePlantSample } from '@/features/plants/sample';
 import type {
-  VisionBoardCategory,
-  VisionBoardItem,
+    VisionBoardCategory,
+    VisionBoardItem,
 } from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
 import { useAddons } from '@/store/addons';
@@ -22,12 +23,14 @@ import { useNutrition } from '@/store/nutrition';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
-import { useTravel } from '@/store/travel';
 import { privateTodoPayload, useTodos } from '@/store/todos';
+import { useTravel } from '@/store/travel';
+import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
+import type { Plant } from '@/types/models';
 
-import { loadEntitlements } from './entitlements';
 import { decideAccountData } from './data-ownership';
+import { loadEntitlements } from './entitlements';
 import { prepareCloudMedia, resolveCloudMedia } from './media';
 import { getSupabaseClient } from './supabase';
 
@@ -178,9 +181,30 @@ const domains: {
   },
   {
     name: 'plants',
-    read: () => ({ plants: usePlants.getState().plants }),
+    read: () => {
+      const state = usePlants.getState();
+      return {
+        plants: state.plants,
+        sampleVersion: state.sampleVersion,
+        sampleDismissed: state.sampleDismissed,
+      };
+    },
     write: (payload) => {
-      if (Array.isArray(payload.plants)) usePlants.setState({ plants: payload.plants });
+      if (!Array.isArray(payload.plants)) return;
+      const upgraded = ensurePlantSample(
+        payload.plants as Plant[],
+        typeof payload.sampleVersion === 'number'
+          ? payload.sampleVersion
+          : usePlants.getState().sampleVersion,
+        typeof payload.sampleDismissed === 'boolean'
+          ? payload.sampleDismissed
+          : usePlants.getState().sampleDismissed,
+      );
+      usePlants.setState({
+        plants: upgraded.plants,
+        sampleVersion: upgraded.sampleVersion,
+        sampleDismissed: upgraded.sampleDismissed,
+      });
     },
     reset: () => usePlants.getState().reset(),
     subscribe: (onChange) => usePlants.subscribe(onChange),
@@ -286,38 +310,53 @@ function enqueueDomainPush(userId: string, domain: (typeof domains)[number]) {
   return next;
 }
 
+const SYNC_DEBOUNCE_MS = 1200;
+/** Hold pushes while the user is mid-interaction so sync JS doesn't fight gestures. */
+const SYNC_INTERACTION_COOLDOWN_MS = 1800;
+
 function startSubscriptions(userId: string, email?: string) {
   stopSubscriptions?.();
   const timers = new Map<SyncDomainName, ReturnType<typeof setTimeout>>();
-  const unsubscribers = domains.map((domain) =>
-    domain.subscribe(() => {
-      const current = timers.get(domain.name);
-      if (current) clearTimeout(current);
-      timers.set(
-        domain.name,
-        setTimeout(() => {
-          timers.delete(domain.name);
-          void enqueueDomainPush(userId, domain)
-            .then(() => {
-              if (activeUserId !== userId) return;
-              useCloudSyncStatus.setState({
-                state: 'synced',
-                email,
-                lastSyncedAt: new Date().toISOString(),
-                message: undefined,
-              });
-            })
-            .catch((error: unknown) => {
-              if (activeUserId !== userId) return;
-              useCloudSyncStatus.setState({
-                state: 'error',
-                email,
-                message: errorMessage(error),
-              });
+
+  const armPush = (domain: (typeof domains)[number]) => {
+    const current = timers.get(domain.name);
+    if (current) clearTimeout(current);
+    timers.set(
+      domain.name,
+      setTimeout(() => {
+        timers.delete(domain.name);
+        const lastInteraction = useUI.getState().lastPageInteractionAt;
+        if (
+          lastInteraction > 0 &&
+          Date.now() - lastInteraction < SYNC_INTERACTION_COOLDOWN_MS
+        ) {
+          armPush(domain);
+          return;
+        }
+        void enqueueDomainPush(userId, domain)
+          .then(() => {
+            if (activeUserId !== userId) return;
+            useCloudSyncStatus.setState({
+              state: 'synced',
+              email,
+              lastSyncedAt: new Date().toISOString(),
+              message: undefined,
             });
-        }, 1200),
-      );
-    }),
+          })
+          .catch((error: unknown) => {
+            if (activeUserId !== userId) return;
+            useCloudSyncStatus.setState({
+              state: 'error',
+              email,
+              message: errorMessage(error),
+            });
+          });
+      }, SYNC_DEBOUNCE_MS),
+    );
+  };
+
+  const unsubscribers = domains.map((domain) =>
+    domain.subscribe(() => armPush(domain)),
   );
   stopSubscriptions = () => {
     timers.forEach(clearTimeout);

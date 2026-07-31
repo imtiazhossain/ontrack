@@ -1,0 +1,2 @@
+These JPGs are finished Muscle Explorer art (not bake output).
+Do not overwrite with scripts/render-muscle-highlights.py unless intentional.

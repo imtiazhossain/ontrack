@@ -1,30 +1,30 @@
 import type { Session, User } from '@supabase/supabase-js';
-import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
 
 import {
-  beginBrowserSignIn,
-  beginNativeAppleSignIn,
-  accessibleAuthError,
-  CloudAccountError,
-  exchangeOAuthCallback,
-  isProviderCancellation,
-  shouldUseNativeApple,
-  signOutLocalSession,
-  type AuthProvider,
+    accessibleAuthError,
+    beginBrowserSignIn,
+    beginNativeAppleSignIn,
+    CloudAccountError,
+    exchangeOAuthCallback,
+    isProviderCancellation,
+    shouldUseNativeApple,
+    signOutLocalSession,
+    type AuthProvider,
 } from '@/services/cloud/account';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import {
-  cancelAccountSync,
-  clearLocalAccountData,
-  flushCloudSync,
-  hasMeaningfulLocalData,
-  prepareAccountSync,
-  resolveAccountSync,
+    cancelAccountSync,
+    clearLocalAccountData,
+    flushCloudSync,
+    hasMeaningfulLocalData,
+    prepareAccountSync,
+    resolveAccountSync,
 } from '@/services/cloud/sync';
-import { useAuthAccess } from '@/store/auth-access';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
+import { useAuthAccess } from '@/store/auth-access';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -131,25 +131,51 @@ export function AuthSessionProvider({
       };
     }
 
-    void client.auth.getSession().then(({ data, error: sessionError }) => {
-      if (!active) return;
-      if (sessionError) {
+    const SESSION_TIMEOUT_MS = 5_000;
+    let sessionResolved = false;
+    const timeout = setTimeout(() => {
+      if (!active || sessionResolved) return;
+      // Prefer a recoverable welcome/guest shell over an infinite blank load.
+      setPhase(useAuthAccess.getState().guestEnabled ? 'guest' : 'welcome');
+    }, SESSION_TIMEOUT_MS);
+
+    void client.auth
+      .getSession()
+      .then(({ data, error: sessionError }) => {
+        if (!active) return;
+        sessionResolved = true;
+        clearTimeout(timeout);
+        if (sessionError) {
+          setError(accessibleAuthError(sessionError));
+          setPhase('error');
+        } else if (data.session) {
+          const accountTimeout = setTimeout(() => {
+            if (!active) return;
+            setError('Opening your account is taking too long. Please try again.');
+            setPhase('error');
+          }, 12_000);
+          void initializeAccount(data.session)
+            .catch((accountError: unknown) => {
+              if (!active) return;
+              setError(accessibleAuthError(accountError));
+              setPhase('error');
+            })
+            .finally(() => clearTimeout(accountTimeout));
+        } else {
+          const access = useAuthAccess.getState();
+          // A browser back/cancel can return without an OAuth callback. Keep the
+          // persisted pending marker for callback validation, but never strand
+          // the user behind a disabled authentication screen.
+          setPhase(access.guestEnabled ? 'guest' : 'welcome');
+        }
+      })
+      .catch((sessionError: unknown) => {
+        if (!active) return;
+        sessionResolved = true;
+        clearTimeout(timeout);
         setError(accessibleAuthError(sessionError));
         setPhase('error');
-      } else if (data.session) {
-        void initializeAccount(data.session).catch((accountError: unknown) => {
-          if (!active) return;
-          setError(accessibleAuthError(accountError));
-          setPhase('error');
-        });
-      } else {
-        const access = useAuthAccess.getState();
-        // A browser back/cancel can return without an OAuth callback. Keep the
-        // persisted pending marker for callback validation, but never strand
-        // the user behind a disabled authentication screen.
-        setPhase(access.guestEnabled ? 'guest' : 'welcome');
-      }
-    });
+      });
 
     const { data: listener } = client.auth.onAuthStateChange((event, nextSession) => {
       setTimeout(() => {
@@ -180,6 +206,7 @@ export function AuthSessionProvider({
     });
     return () => {
       active = false;
+      clearTimeout(timeout);
       listener.subscription.unsubscribe();
     };
   }, [hydrated, initializeAccount]);

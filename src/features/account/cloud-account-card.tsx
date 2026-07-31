@@ -31,10 +31,10 @@ export function CloudAccountCard() {
           'Changes are not synced',
           `${result.message}\n\nSigning out anyway removes this device’s local data. Cloud data and photos in your system library are not deleted.`,
           [
-            { text: 'Stay signed in', style: 'cancel' },
-            { text: 'Retry sync', onPress: () => void signOut(false) },
+            { text: 'Stay Signed In', style: 'cancel' },
+            { text: 'Retry Sync', onPress: () => void signOut(false) },
             {
-              text: 'Sign out anyway',
+              text: 'Sign Out Anyway',
               style: 'destructive',
               onPress: () => void signOut(true),
             },
@@ -63,8 +63,8 @@ export function CloudAccountCard() {
           </AppText>
           <Button
             onPress={() => router.push('/account' as never)}
-            accessibilityLabel="Create or sign in to an account">
-            Create or sign in
+            accessibilityLabel="Create or Sign In to an account">
+            Create or Sign In
           </Button>
         </>
       ) : (
@@ -91,8 +91,8 @@ export function CloudAccountCard() {
             variant="secondary"
             disabled={working}
             onPress={() => void signOut()}
-            accessibilityLabel="Sign out of this device">
-            {working ? 'Finishing sync…' : 'Sign out of this device'}
+            accessibilityLabel="Sign Out of This Device">
+            {working ? 'Finishing sync…' : 'Sign Out of This Device'}
           </Button>
         </>
       )}

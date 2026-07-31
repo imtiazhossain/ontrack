@@ -116,16 +116,16 @@ export default function FoodDetailScreen() {
     };
     if (Platform.OS === 'ios') {
       appPrompt.actionSheet({
-        options: ['Take photo', 'Choose photo', 'Paste meal link', 'Enter manually', 'Cancel'],
+        options: ['Take Photo', 'Choose Photo', 'Paste Meal Link', 'Enter Manually', 'Cancel'],
         cancelButtonIndex: 4,
-        title: 'Add meal nutrition',
+        title: 'Add Meal Nutrition',
       }, select);
     } else {
-      appPrompt.alert('Add meal nutrition', undefined, [
-        { text: 'Take photo', onPress: takePhoto },
-        { text: 'Choose photo', onPress: choosePhoto },
-        { text: 'Paste meal link', onPress: () => setShowLinkInput(true) },
-        { text: 'Enter manually', onPress: () => activity && router.push({ pathname: '/activity-form', params: { id: activity.id } }) },
+      appPrompt.alert('Add Meal Nutrition', undefined, [
+        { text: 'Take Photo', onPress: takePhoto },
+        { text: 'Choose Photo', onPress: choosePhoto },
+        { text: 'Paste Meal Link', onPress: () => setShowLinkInput(true) },
+        { text: 'Enter Manually', onPress: () => activity && router.push({ pathname: '/activity-form', params: { id: activity.id } }) },
         { text: 'Cancel', style: 'cancel' },
       ]);
     }
@@ -198,7 +198,7 @@ export default function FoodDetailScreen() {
     }
   };
 
-  if (!activity) return <Screen><AppText variant="title">Meal not found</AppText></Screen>;
+  if (!activity) return <Screen><AppText variant="title">Meal Not Found</AppText></Screen>;
   const category = findCategory(categories, activity.categoryId);
 
   return (
@@ -217,23 +217,23 @@ export default function FoodDetailScreen() {
       {!displayAnalysis && !analyzing ? (
         <EmptyState
           icon="camera"
-          title="Analyze this meal"
+          title="Analyze This Meal"
           message="Take a photo, choose one, paste a restaurant link, or enter nutrition manually."
-          actionLabel={aiEnabled ? 'Add meal nutrition' : 'AI disabled in settings'}
+          actionLabel={aiEnabled ? 'Add Meal Nutrition' : 'AI disabled in settings'}
           onAction={aiEnabled ? showMealSources : undefined}
         />
       ) : null}
 
       {showLinkInput ? (
         <View style={styles.linkCard}>
-          <SectionHeader title="Restaurant or delivery link" />
-          <Input label="Meal link" autoCapitalize="none" keyboardType="url" value={linkInput} onChangeText={setLinkInput} placeholder="https://…" />
-          <Button onPress={resolveLink} disabled={!linkInput.trim() || analyzing}>Find meal</Button>
+          <SectionHeader title="Restaurant or Delivery Link" />
+          <Input label="Meal Link" autoCapitalize="none" keyboardType="url" value={linkInput} onChangeText={setLinkInput} placeholder="https://…" />
+          <Button onPress={resolveLink} disabled={!linkInput.trim() || analyzing}>Find Meal</Button>
           <AppText variant="caption" color="secondary">Blocked or ambiguous links will ask you to confirm the item or provide menu text/photo.</AppText>
         </View>
       ) : null}
 
-      {candidates.length ? <SectionHeader title="Confirm the meal" /> : null}
+      {candidates.length ? <SectionHeader title="Confirm the Meal" /> : null}
       {candidates.map((candidate) => (
         <Button key={candidate.id} variant="secondary" onPress={() => chooseCandidate(candidate)} accessibilityLabel={`Choose ${candidate.itemName}`}>
           {[candidate.restaurant, candidate.itemName, candidate.size].filter(Boolean).join(' · ')}
@@ -251,9 +251,9 @@ export default function FoodDetailScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        {pendingAnalysis ? <Button onPress={saveAnalysis} disabled={analyzing}>Confirm and save</Button> : null}
-        {aiEnabled && displayAnalysis ? <Button variant="secondary" onPress={showMealSources}>Analyze another source</Button> : null}
-        <Button variant="secondary" icon="edit" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit meal manually</Button>
+        {pendingAnalysis ? <Button onPress={saveAnalysis} disabled={analyzing}>Confirm and Save</Button> : null}
+        {aiEnabled && displayAnalysis ? <Button variant="secondary" onPress={showMealSources}>Analyze Another Source</Button> : null}
+        <Button variant="secondary" icon="edit" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit Meal Manually</Button>
         <Button variant="ghost" onPress={() => router.back()}>Close</Button>
       </View>
     </Screen>

@@ -1,8 +1,9 @@
 import {
-  EXERCISES_BY_ID,
-  MUSCLE_GROUPS,
-  MUSCLE_TARGETS_BY_GROUP,
+    EXERCISES_BY_ID,
+    MUSCLE_GROUPS,
+    MUSCLE_TARGETS_BY_GROUP,
 } from '../muscle-data';
+import { highlightPathsForMuscle } from '../muscle-highlight-map';
 
 describe('muscle map data', () => {
   it('provides unique body regions with detailed muscles and exercise options', () => {
@@ -19,7 +20,11 @@ describe('muscle map data', () => {
       const targets = MUSCLE_TARGETS_BY_GROUP[group.key];
       expect(targets.length).toBeGreaterThan(0);
       for (const target of targets) {
-        expect(target.highlightAreas.length).toBeGreaterThan(0);
+        expect(target.highlightPaths.length).toBeGreaterThan(0);
+        expect(highlightPathsForMuscle(target.id).length).toBeGreaterThan(0);
+        for (const path of target.highlightPaths) {
+          expect(path.startsWith('M')).toBe(true);
+        }
         expect(target.exercises).toHaveLength(3);
         expect(target.description.length).toBeGreaterThan(20);
         expect(target.cue.length).toBeGreaterThan(20);

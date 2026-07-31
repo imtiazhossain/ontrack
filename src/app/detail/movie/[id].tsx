@@ -21,8 +21,8 @@ export default function MovieDetailScreen() {
   if (!activity || !movie) {
     return (
       <Screen>
-        <AppText variant="title">Movie event not found</AppText>
-        <Button onPress={() => router.back()}>Go back</Button>
+        <AppText variant="title">Movie Event Not Found</AppText>
+        <Button onPress={() => router.back()}>Go Back</Button>
       </Screen>
     );
   }
@@ -62,7 +62,7 @@ export default function MovieDetailScreen() {
           Edit event
         </Button>
         <Button onPress={() => setStatus(activity.id, activity.status === 'completed' ? 'upcoming' : 'completed')}>
-          {activity.status === 'completed' ? 'Mark incomplete' : 'Mark complete'}
+          {activity.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
         </Button>
         <Button variant="ghost" onPress={() => router.back()}>Close</Button>
       </View>

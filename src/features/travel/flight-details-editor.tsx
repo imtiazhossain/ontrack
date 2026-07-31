@@ -29,7 +29,7 @@ export function FlightDetailsEditor({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AppText variant="overline" color="accent">Flight details</AppText>
+        <AppText variant="overline" color="accent">Flight Details</AppText>
         {onImport ? (
           <Button
             variant="secondary"
@@ -37,7 +37,7 @@ export function FlightDetailsEditor({
             disabled={importing}
             onPress={onImport}
             accessibilityLabel="Import flight confirmation document or screenshots">
-            {importing ? 'Reading…' : 'Import confirmation'}
+            {importing ? 'Reading…' : 'Import Confirmation'}
           </Button>
         ) : null}
       </View>
@@ -57,7 +57,7 @@ export function FlightDetailsEditor({
         </View>
         <View style={styles.flex}>
           <Input
-            label="Flight number"
+            label="Flight Number"
             value={value.flightNumber}
             onChangeText={(nextValue) => update('flightNumber', nextValue)}
             placeholder="FI 614"
@@ -90,7 +90,7 @@ export function FlightDetailsEditor({
       <View style={styles.twoColumns}>
         <View style={styles.flex}>
           <Input
-            label="Confirmation code"
+            label="Confirmation Code"
             value={value.confirmationCode}
             onChangeText={(nextValue) => update('confirmationCode', nextValue)}
             placeholder="ABC123"

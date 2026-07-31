@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layout, radii, spacing } from '@/design-system';
+import { radii } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
@@ -49,6 +50,7 @@ export function DateField({
 }: DateFieldProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { spacing, layout, s } = useResponsive();
   const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [showPicker, setShowPicker] = useState(false);
@@ -63,8 +65,8 @@ export function DateField({
   };
 
   return (
-    <View style={styles.wrapper}>
-      <AppText variant="overline" color="tertiary">
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="overline" color="tertiary" fit>
         {label}
       </AppText>
       <Pressable
@@ -74,14 +76,19 @@ export function DateField({
         disabled={disabled}
         onPress={() => setShowPicker(true)}
         style={({ pressed }) => [
-          styles.field,
           {
+            minHeight: Math.max(44, s(48)),
+            borderRadius: radii.md,
+            paddingHorizontal: spacing.md,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
             backgroundColor: theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
           },
         ]}>
         <Symbol name="calendar" size="sm" color={theme.textSecondary} />
-        <AppText variant="body" style={styles.dateText}>
+        <AppText variant="body" fit style={{ flex: 1, minWidth: 0 }}>
           {displayValue}
         </AppText>
       </Pressable>
@@ -117,6 +124,7 @@ export function DateField({
                 backgroundColor: theme.overlayScrim,
                 paddingTop: insets.top,
                 paddingBottom: insets.bottom,
+                paddingHorizontal: layout.screenPadding,
               },
             ]}>
             <Pressable
@@ -124,14 +132,23 @@ export function DateField({
               onPress={() => setShowPicker(false)}
               style={StyleSheet.absoluteFill}
             />
-            <View style={[styles.calendarSheet, { backgroundColor: theme.backgroundElevated }]}>
-              <View style={styles.calendarHeader}>
-                <AppText variant="subheading" style={styles.calendarTitle}>
+            <View
+              style={[
+                styles.calendarSheet,
+                {
+                  backgroundColor: theme.backgroundElevated,
+                  maxWidth: layout.maxContentWidth,
+                  padding: spacing.lg,
+                  gap: spacing.sm,
+                },
+              ]}>
+              <View style={[styles.calendarHeader, { gap: spacing.md }]}>
+                <AppText variant="subheading" fit style={styles.calendarTitle}>
                   {label}
                 </AppText>
                 <IconButton
                   icon="close"
-                  size={36}
+                  size={s(36)}
                   accessibilityLabel="Close calendar"
                   background={theme.backgroundSunken}
                   onPress={() => setShowPicker(false)}
@@ -159,39 +176,20 @@ export function DateField({
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    gap: spacing.sm,
-  },
-  field: {
-    minHeight: 48,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  dateText: {
-    flex: 1,
-  },
   modalRoot: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: layout.screenPadding,
   },
   calendarSheet: {
     width: '100%',
-    maxWidth: layout.maxContentWidth,
     alignSelf: 'center',
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    gap: spacing.sm,
     overflow: 'hidden',
   },
   calendarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
   calendarTitle: {
     flex: 1,

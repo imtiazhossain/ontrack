@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  ErrorMessage,
-  IconButton,
-  Input,
-  Screen,
+    AppText,
+    Button,
+    ErrorMessage,
+    IconButton,
+    Input,
+    Screen,
 } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
 import { initialCanvasFrame } from '@/features/vision-board/canvas';
@@ -109,7 +109,7 @@ export function VisionBoardItemEditor() {
   if (Platform.OS === 'web') {
     return (
       <Screen>
-        <AppText variant="title">Mobile editing</AppText>
+        <AppText variant="title">Mobile Editing</AppText>
         <AppText color="secondary">
           Board editing is available in the onTrack iOS and Android apps.
         </AppText>
@@ -120,12 +120,12 @@ export function VisionBoardItemEditor() {
 
   const title =
     type === 'image'
-      ? 'Image caption'
+      ? 'Image Caption'
       : existing
         ? `Edit ${type}`
         : type === 'goal'
-          ? 'Add goal'
-          : 'Add affirmation';
+          ? 'Add Goal'
+          : 'Add Affirmation';
 
   return (
     <Screen contentStyle={styles.screen}>

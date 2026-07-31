@@ -36,7 +36,7 @@ export function TodoInvitesScreen() {
     return (
       <Screen contentStyle={styles.center}>
         <Symbol name="invite" size={44} />
-        <AppText variant="display" align="center">Your invitation inbox</AppText>
+        <AppText variant="display" align="center">Your Invitation Inbox</AppText>
         <AppText variant="body" color="secondary" align="center">
           Sign in with the email address that was invited.
         </AppText>
@@ -93,7 +93,7 @@ export function TodoInvitesScreen() {
                   })
                   .finally(() => setWorking(undefined));
               }}>
-              {working === invite.id ? 'Joining…' : 'Join list'}
+              {working === invite.id ? 'Joining…' : 'Join List'}
             </Button>
           </Card>
         ))

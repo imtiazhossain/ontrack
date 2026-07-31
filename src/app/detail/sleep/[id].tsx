@@ -21,9 +21,9 @@ export default function SleepDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <AppText variant="title">Sleep activity not found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go back">
-          Go back
+        <AppText variant="title">Sleep Activity Not Found</AppText>
+        <Button onPress={() => router.back()} accessibilityLabel="Go Back">
+          Go Back
         </Button>
       </Screen>
     );
@@ -41,7 +41,7 @@ export default function SleepDetailScreen() {
       </AppText>
 
       <Card variant="sunken" style={styles.healthCard}>
-        <AppText variant="subheading">Your recorded sleep</AppText>
+        <AppText variant="subheading">Your Recorded Sleep</AppText>
         <AppText variant="body" color="secondary">
           Review sleep duration, stages, and trends from your connected devices in {healthAppName}.
         </AppText>
@@ -68,7 +68,7 @@ export default function SleepDetailScreen() {
             setStatus(activity.id, activity.status === 'completed' ? 'upcoming' : 'completed')
           }
           accessibilityLabel="Toggle sleep complete">
-          {activity.status === 'completed' ? 'Mark incomplete' : 'Mark complete'}
+          {activity.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
         </Button>
       </View>
     </Screen>

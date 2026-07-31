@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import { radii, spacing, typography } from '@/design-system';
+import { radii } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AppText } from './app-text';
 
@@ -12,19 +13,27 @@ interface InputProps extends TextInputProps {
 
 export function Input({ label, style, trailing, ...rest }: InputProps) {
   const theme = useTheme();
+  const { typography, spacing, s } = useResponsive();
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { gap: spacing.sm }]}>
       {label ? (
-        <AppText variant="overline" color="tertiary">
+        <AppText variant="overline" color="tertiary" fit>
           {label}
         </AppText>
       ) : null}
       <View style={styles.field}>
         <TextInput
           placeholderTextColor={theme.textTertiary}
+          allowFontScaling
+          maxFontSizeMultiplier={1.3}
           style={[
-            styles.input,
-            trailing ? styles.inputWithTrailing : null,
+            {
+              borderRadius: radii.md,
+              paddingHorizontal: spacing.lg,
+              paddingVertical: spacing.md,
+              minHeight: Math.max(44, s(48)),
+            },
+            trailing ? { paddingRight: s(56) } : null,
             typography.body,
             {
               backgroundColor: theme.backgroundSunken,
@@ -35,31 +44,21 @@ export function Input({ label, style, trailing, ...rest }: InputProps) {
           {...rest}
           underlineColorAndroid="transparent"
         />
-        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        {trailing ? (
+          <View style={[styles.trailing, { right: spacing.xs }]}>{trailing}</View>
+        ) : null}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    gap: spacing.sm,
-  },
+  wrapper: {},
   field: {
     position: 'relative',
   },
-  input: {
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  inputWithTrailing: {
-    paddingRight: 56,
-  },
   trailing: {
     position: 'absolute',
-    right: spacing.xs,
     top: 0,
     bottom: 0,
     justifyContent: 'center',

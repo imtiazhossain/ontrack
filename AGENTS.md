@@ -10,6 +10,7 @@ Keep this repo optimized for future AI-agent token usage. When a change is in sc
 - Prefer editing the smallest feature entry file; extract presentational panels when a touched file would stay **>700 lines**.
 - Update the feature entry table when you add a new module agents should start from.
 - Follow `.cursor/rules/token-optimization.mdc` on every session.
+- Follow `.cursor/rules/responsive-layout.mdc` on every UI change (mandatory for all agents).
 
 ## Stack
 
@@ -40,9 +41,14 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 - `npm test` — Jest (`**/__tests__/**/*.test.ts`)
 - `npm run lint` — ESLint
 
+## Agent close-out (required)
+
+After app-affecting changes, leave Metro healthy and verified (`/status` 200 on LAN + localhost) before ending the turn. See `.cursor/rules/verify-working-app.mdc`.
+
 ## Non-negotiable UI rules
 
 - **Safe area:** Routes stay inside `AppSafeArea`. Never put `insets.top` in scroll content containers. Native `Modal`s must pad a non-scrolling parent with `insets.top` first.
+- **Responsive fit:** Chrome and controls must fit the screen. Use `useResponsive()` / scaled primitives; keep button/tab/field labels on one line with `AppText fit` (shrink, don’t wrap). See `.cursor/rules/responsive-layout.mdc`.
 - **Dates:** Editable calendar dates use design-system `DateField` only. Storage keys are local `YYYY-MM-DD` via `@/utils/date` (`toDateKey`, `todayKey`, `formatDueLabel`, …).
 - **Prompts:** App alerts/sheets use `appPrompt` / `AppPromptHost`. Never RN `Alert` or `ActionSheetIOS` for app UI. Cancel/dismiss = top-right X, not a full-width cancel button.
 
@@ -58,10 +64,11 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 | Today / day timeline | `features/daily-tracking/day-view.tsx` |
 | Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
-| Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`) |
+| Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
+| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`, `expenses/travel-expenses-sheet`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
-| Workouts tab | `app/(tabs)/workouts.tsx` (+ `workout-session-builder`, `workout-today-plan`, `generic-anatomy-figure`) |
+| Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`) |
+| Games tab | `app/(tabs)/games.tsx` (+ `features/games/games-hub`, `balloon-pop/*`) |
 | Auth / guest | `features/auth/` |
 | Cloud sync | `services/cloud/sync.ts` |
 | Design tokens / prompts / DateField | `design-system/`, `components/primitives/` |
@@ -70,12 +77,17 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 
 - **IDs:** `@/utils/id` — `newId(prefix)` for local entities; `newUuid` / `newPrefixedUuid` for synced/collaborative keys. `store/schedule` re-exports `newId` for compatibility.
 - **Parse:** `@/utils/parse` — `asString`, `asTrimmedString`, `asNonEmptyString`, `asFiniteNumber`, `formatCompactNumber`.
+- **Persist:** `@/services/storage` — `createPersistStorage` (MMKV on native with AsyncStorage migration/fallback).
+- **List equality:** `@/utils/list-equality` — `listReferenceEquality` for Zustand selectors that filter arrays.
+- **Idle deferral:** `@/utils/defer-until-idle` for post-paint startup work (migrations, notifications).
+- **Muscle Explorer:** finished highlight JPGs in `assets/images/workouts/highlights/` (`FINISHED_ART.txt`). Male/Female toggle + Front/Side/Back views (`AnatomySex`, `BodyView`). Display via `muscle-highlight-plate`; taps via invisible hit boxes. One side plate (body treated as symmetrical).
 - **API clients:** `@/services/http/api-url` (`resolveExpoApiUrl`) + `api-client` (`apiRequest`). Domain Error classes stay in each service.
 - **Server vision AI:** `@/services/ai/vision-transport` — shared OpenAI Responses + loopback Ollama JSON chat used by `services/nutrition|plants|recipes/server.ts`. Keep domain prompts/schemas in those servers.
 - **Images for APIs/docs:** `@/utils/image-persist` (`prepareJpegDataUrl`, `persistJpegToDocuments`). Domain wrappers remain in nutrition/recipes/plants/vision-board media modules.
 - **Pick camera/library:** `@/utils/pick-image` — `pickCameraImage`, `pickLibraryImage`, `pickLibraryImages` (multi-select). Use `onDenied` when the screen shows its own error UI.
 - **Destructive confirms:** `@/utils/confirm-destructive` (`confirmDestructiveAction`). Activity delete wraps it via `confirmDeleteActivity`.
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
+- **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
 - **Server HTTP:** auth/rate-limit/cors/compression live under `src/services/http/`.
 
 ## State & sync
@@ -88,6 +100,7 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 
 - Prefer focused unit tests next to the module (`__tests__/`).
 - Existing rule tests encode safe-area, DateField, appPrompt, keyboard, and auth navigation constraints — keep them green when touching those surfaces.
+- After UI changes, leave a fully loaded iOS Simulator screenshot of the changed surface (see `.cursor/rules/show-simulator-screenshot.mdc`).
 
 ## Pitfalls
 

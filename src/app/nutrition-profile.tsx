@@ -88,10 +88,10 @@ export default function NutritionProfileScreen() {
 
   return (
     <Screen>
-      <AppText variant="title">Nutrition profiles</AppText>
+      <AppText variant="title">Nutrition Profiles</AppText>
       <AppText variant="body" color="secondary">Targets are wellness estimates. Clinical profiles remain memory-only until the approved cloud is configured.</AppText>
 
-      {profiles.length ? <SectionHeader title="Profiles" actionLabel="Add dependent" onAction={addDependent} /> : null}
+      {profiles.length ? <SectionHeader title="Profiles" actionLabel="Add Dependent" onAction={addDependent} /> : null}
       <View style={styles.profileRow}>
         {profiles.map((profile) => (
           <Pressable key={profile.id} onPress={() => setActiveProfile(profile.id)} style={[styles.profileChip, { backgroundColor: profile.id === activeProfileId ? theme.accentFaint : theme.backgroundSunken }]}>
@@ -100,23 +100,23 @@ export default function NutritionProfileScreen() {
         ))}
       </View>
 
-      <SectionHeader title="Profile details" />
+      <SectionHeader title="Profile Details" />
       <Input label="Name" value={displayName} onChangeText={setDisplayName} />
       <DateField
-        label="Date of birth"
+        label="Date of Birth"
         value={dateOfBirth}
         minimumDate="1900-01-01"
         maximumDate={todayKey()}
         onChange={setDateOfBirth}
       />
-      <ChoiceRow label="Sex used by equation" values={['female', 'male']} value={equationSex} onChange={(value) => setEquationSex(value as EquationSex)} />
+      <ChoiceRow label="Sex Used by Equation" values={['female', 'male']} value={equationSex} onChange={(value) => setEquationSex(value as EquationSex)} />
       <View style={styles.twoColumns}>
         <View style={styles.flex}><Input label="Height (cm)" value={heightCm} onChangeText={setHeightCm} keyboardType="decimal-pad" /></View>
         <View style={styles.flex}><Input label="Weight (kg)" value={weightKg} onChangeText={setWeightKg} keyboardType="decimal-pad" /></View>
       </View>
       <ChoiceRow label="Activity" values={ACTIVITIES} value={activityLevel} onChange={(value) => setActivityLevel(value as ActivityLevel)} />
       <ChoiceRow label="Goal" values={GOALS} value={goal} onChange={(value) => setGoal(value as NutritionGoal)} />
-      <Input label="Dietary preferences" value={preferences} onChangeText={setPreferences} placeholder="vegetarian, halal" />
+      <Input label="Dietary Preferences" value={preferences} onChangeText={setPreferences} placeholder="vegetarian, halal" />
       <Input label="Allergies" value={allergies} onChangeText={setAllergies} placeholder="peanuts, shellfish" />
       {age >= 2 && age < 18 ? (
         <Button variant={guardianAcknowledged ? 'secondary' : 'danger'} onPress={() => setGuardianAcknowledged((value) => !value)}>
@@ -124,17 +124,17 @@ export default function NutritionProfileScreen() {
         </Button>
       ) : null}
       {age < 2 ? <AppText variant="caption" color="danger">Infant targets can only be activated by a verified pediatric clinician.</AppText> : null}
-      <Button onPress={calculate}>Calculate starting targets</Button>
+      <Button onPress={calculate}>Calculate Starting Targets</Button>
 
       {targets ? (
         <>
-          <SectionHeader title="Editable targets" />
+          <SectionHeader title="Editable Targets" />
           <View style={styles.twoColumns}>
             {(['calories', 'proteinG', 'carbsG', 'fatG'] as const).map((key) => (
               <View key={key} style={styles.flex}><Input label={key} value={String(targets[key])} keyboardType="decimal-pad" onChangeText={(value) => setTargets({ ...targets, [key]: Number(value) || 0 })} /></View>
             ))}
           </View>
-          <Button onPress={saveTargets}>Save target version</Button>
+          <Button onPress={saveTargets}>Save Target Version</Button>
         </>
       ) : null}
       {latest ? <AppText variant="caption" color="secondary">Latest version: v{latest.version} · {latest.status}</AppText> : null}

@@ -68,9 +68,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     return (
       <Screen contentStyle={styles.center}>
         <Symbol name="tasks" size={40} color={theme.textTertiary} />
-        <AppText variant="heading">List unavailable</AppText>
+        <AppText variant="heading">List Unavailable</AppText>
         <Button onPress={() => router.replace('/(tabs)/to-do' as never)}>
-          Back to lists
+          Back to Lists
         </Button>
       </Screen>
     );
@@ -115,7 +115,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
   const removeList = () => {
     confirmDestructiveAction({
-      title: 'Delete this list?',
+      title: 'Delete This List?',
       message: 'The list and every item in it will be permanently deleted.',
       onConfirm: () => {
         void run('delete', async () => {
@@ -139,16 +139,16 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     <Screen contentStyle={styles.container}>
       <View style={styles.heading}>
         <AppText variant="overline" color="accent">
-          {list.mode === 'shared' ? 'Collaborative list' : 'Private list'}
+          {list.mode === 'shared' ? 'Collaborative List' : 'Private List'}
         </AppText>
         <AppText variant="display">{list.name}</AppText>
       </View>
 
       {owner ? (
         <Card style={styles.card}>
-          <AppText variant="heading">List details</AppText>
+          <AppText variant="heading">List Details</AppText>
           <Input
-            label="List name"
+            label="List Name"
             value={name}
             onChangeText={setName}
             maxLength={80}
@@ -215,7 +215,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
         </Card>
       ) : (
         <Card variant="sunken" style={styles.card}>
-          <AppText variant="heading">Shared with you</AppText>
+          <AppText variant="heading">Shared with You</AppText>
           <AppText variant="body" color="secondary">
             {list.ownerName ?? 'The owner'} manages items, assignments, and membership.
           </AppText>
@@ -227,7 +227,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           <SectionHeader title="Sharing" />
           {list.mode === 'private' ? (
             <Card style={styles.card}>
-              <AppText variant="subheading">Work together live</AppText>
+              <AppText variant="subheading">Work Together Live</AppText>
               <AppText variant="body" color="secondary">
                 Sharing moves this list to its protected collaborative space. You remain the owner.
               </AppText>
@@ -235,18 +235,18 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                 icon="people"
                 disabled={Boolean(working)}
                 onPress={beginSharing}>
-                {working === 'publish' ? 'Preparing…' : 'Share this list'}
+                {working === 'publish' ? 'Preparing…' : 'Share This List'}
               </Button>
             </Card>
           ) : (
             <>
               <Card style={styles.card}>
-                <AppText variant="subheading">Secure join link</AppText>
+                <AppText variant="subheading">Secure Join Link</AppText>
                 <AppText variant="body" color="secondary">
                   Any signed-in onTrack user with the link can join until you revoke it.
                 </AppText>
                 <Button disabled={Boolean(working)} onPress={shareLink} icon="send">
-                  {working === 'link' ? 'Preparing…' : 'Share join link'}
+                  {working === 'link' ? 'Preparing…' : 'Share Join Link'}
                 </Button>
                 {list.shareCode ? (
                   <Button
@@ -261,7 +261,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
               </Card>
 
               <Card style={styles.card}>
-                <AppText variant="subheading">Invite an account</AppText>
+                <AppText variant="subheading">Invite an Account</AppText>
                 <Input
                   label="onTrack account email"
                   value={email}
@@ -279,10 +279,10 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                       await createTodoEmailInvite(list.id, email);
                       await refreshPending();
                       setEmail('');
-                      appPrompt.alert('Invitation ready', 'It now appears in their onTrack invitation inbox.');
+                      appPrompt.alert('Invitation Ready', 'It now appears in their onTrack invitation inbox.');
                     })
                   }>
-                  {working === 'email' ? 'Inviting…' : 'Send in-app invite'}
+                  {working === 'email' ? 'Inviting…' : 'Send In-App Invite'}
                 </Button>
                 {pendingInvites.length > 0 ? (
                   <View style={styles.pendingInvites}>
@@ -339,7 +339,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                     disabled={Boolean(working)}
                     onPress={() =>
                       appPrompt.alert(
-                        'Remove member?',
+                        'Remove Member?',
                         `${member.displayName} will lose access. Their assigned items become available to anyone.`,
                         [
                           { text: 'Cancel', style: 'cancel' },
@@ -365,7 +365,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
       {error ? <ErrorMessage message={error} selectable /> : null}
 
-      <SectionHeader title="List access" />
+      <SectionHeader title="List Access" />
       {owner ? (
         <Button
           variant="danger"
@@ -379,7 +379,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           disabled={Boolean(working)}
           onPress={() =>
             confirmDestructiveAction({
-              title: 'Leave this list?',
+              title: 'Leave This List?',
               message: 'It will disappear from your account.',
               actionLabel: 'Leave',
               onConfirm: () =>

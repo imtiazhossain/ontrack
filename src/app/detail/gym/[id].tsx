@@ -43,9 +43,9 @@ export default function GymDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <AppText variant="title">Workout not found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go back">
-          Go back
+        <AppText variant="title">Workout Not Found</AppText>
+        <Button onPress={() => router.back()} accessibilityLabel="Go Back">
+          Go Back
         </Button>
       </Screen>
     );
@@ -83,7 +83,7 @@ export default function GymDetailScreen() {
 
       {aiEnabled ? (
         <>
-          <SectionHeader title="AI recommendation" />
+          <SectionHeader title="AI Recommendation" />
           {loadingRec ? (
             <AppText variant="callout" color="secondary">
               Generating a sample recommendation…

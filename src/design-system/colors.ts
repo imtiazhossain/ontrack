@@ -37,6 +37,14 @@ export const palette = {
   travelBlueSoftDark: '#3C85B6',
   travelBlueFaintDark: '#183247',
 
+  // Plants — leaf greens, scoped to the Plants feature
+  plantGreen: '#3F7650',
+  plantGreenSoft: '#5F9470',
+  plantGreenFaint: '#DCEADF',
+  plantGreenDark: '#79AC88',
+  plantGreenSoftDark: '#4E8A60',
+  plantGreenFaintDark: '#1B3021',
+
   // Status
   green: '#4E7A54',
   greenBright: '#6FA276',

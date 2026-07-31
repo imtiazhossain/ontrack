@@ -84,7 +84,7 @@ export default function ProfileSettingsScreen() {
         {name || 'You'} · {goal || 'Living intentionally'}
       </AppText>
 
-      <SectionHeader title="Account & sync" />
+      <SectionHeader title="Account & Sync" />
       <CloudAccountCard />
 
       <SectionHeader title="Appearance" />
@@ -111,13 +111,13 @@ export default function ProfileSettingsScreen() {
 
       <SectionHeader title="Preferences" />
       <SettingsToggleRow
-        label="AI summaries"
+        label="AI Summaries"
         detail="Daily insights, meal analysis, and plant analysis"
         value={aiEnabled}
         onValueChange={setAiEnabled}
       />
       <SettingsToggleRow
-        label="Haptic feedback"
+        label="Haptic Feedback"
         detail="Subtle taps on key actions"
         value={hapticsEnabled}
         onValueChange={setHapticsEnabled}
@@ -139,7 +139,7 @@ export default function ProfileSettingsScreen() {
 
       <SectionHeader title="Agents" />
       <SettingsActionRow
-        label="Manage agents"
+        label="Manage Agents"
         detail={
           installedAgentCount > 0
             ? `${installedAgentCount} installed · permissions and access`
@@ -147,7 +147,7 @@ export default function ProfileSettingsScreen() {
         }
         icon="agents"
         onPress={() => router.push('/agents' as never)}
-        accessibilityLabel="Manage agents"
+        accessibilityLabel="Manage Agents"
       />
 
       <SectionHeader title="Nutrition" />
@@ -159,11 +159,11 @@ export default function ProfileSettingsScreen() {
       </AppText>
 
       <SectionHeader title="Data" />
-      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset all data">
-        Reset all data
+      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset All Data">
+        Reset All Data
       </Button>
 
-      <SectionHeader title="Movie data" />
+      <SectionHeader title="Movie Data" />
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Open The Movie Database"

@@ -2,15 +2,17 @@ import { createContext, createElement, type PropsWithChildren, useContext } from
 import { useColorScheme } from 'react-native';
 
 import {
+  darkPlantTheme,
   darkTheme,
   darkTravelTheme,
+  lightPlantTheme,
   lightTheme,
   lightTravelTheme,
   type Theme,
 } from '@/design-system';
 import { usePreferences } from '@/store/preferences';
 
-type FeatureTheme = 'default' | 'travel';
+type FeatureTheme = 'default' | 'travel' | 'plants';
 
 const FeatureThemeContext = createContext<FeatureTheme>('default');
 
@@ -28,6 +30,9 @@ export function useTheme(): Theme {
   const feature = useContext(FeatureThemeContext);
   if (feature === 'travel') {
     return resolved === 'dark' ? darkTravelTheme : lightTravelTheme;
+  }
+  if (feature === 'plants') {
+    return resolved === 'dark' ? darkPlantTheme : lightPlantTheme;
   }
   return resolved === 'dark' ? darkTheme : lightTheme;
 }

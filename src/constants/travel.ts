@@ -15,6 +15,8 @@ export const ALL_ACCOUNTS_TEST_TRIP: TravelPlan = {
   notes: 'Shared test trip visible to every account.',
   itinerary: [],
   participants: [],
+  baseCurrency: 'USD',
+  expenses: [],
   createdAt: '2026-07-27T00:00:00.000Z',
   updatedAt: '2026-07-27T00:00:00.000Z',
 };

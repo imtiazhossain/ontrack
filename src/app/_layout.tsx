@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { getSharedPayloads } from 'expo-sharing';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
@@ -11,6 +12,8 @@ import {
     AppPromptHost,
     AppSafeArea,
     HeaderBackButton,
+    LoadingBlock,
+    RouteErrorBoundary,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
@@ -26,6 +29,12 @@ import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import { deferUntilIdle } from '@/utils/defer-until-idle';
+
+/** Expo Router catches render failures so the app never sticks on a blank white view. */
+export { RouteErrorBoundary as ErrorBoundary };
+
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const theme = useTheme();
@@ -82,8 +91,8 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
 
   useEffect(() => {
     if (!hydrated || !appAccess) return;
-    void configurePlantNotifications().catch(() => undefined).then(reconcilePlantSchedules);
-    if (Platform.OS === 'web') return;
+    let active = true;
+    let subscription: { remove: () => void } | undefined;
     const redirect = (
       response: import('expo-notifications').NotificationResponse | null,
     ) => {
@@ -105,21 +114,34 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         if (plan) router.push(`/travel/${plan.id}/chat` as never);
       }
     };
-    let active = true;
-    let subscription: { remove: () => void } | undefined;
-    void getNotificationsModule().then((notifications) => {
-      if (!notifications || !active) return;
-      void notifications.getLastNotificationResponseAsync().then(redirect);
-      subscription = notifications.addNotificationResponseReceivedListener(redirect);
+    const cancelIdle = deferUntilIdle(() => {
+      if (!active) return;
+      void configurePlantNotifications().catch(() => undefined).then(reconcilePlantSchedules);
+      if (Platform.OS === 'web') return;
+      void getNotificationsModule().then((notifications) => {
+        if (!notifications || !active) return;
+        void notifications.getLastNotificationResponseAsync().then(redirect);
+        subscription = notifications.addNotificationResponseReceivedListener(redirect);
+      });
     });
     return () => {
       active = false;
+      cancelIdle();
       subscription?.remove();
     };
   }, [appAccess, hydrated, router]);
 
+  useEffect(() => {
+    if (!hydrated || phase === 'loading') return;
+    void SplashScreen.hideAsync().catch(() => undefined);
+  }, [hydrated, phase]);
+
   if (!hydrated || phase === 'loading') {
-    return <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary, justifyContent: 'center' }}>
+        <LoadingBlock label="Loading onTrack…" />
+      </View>
+    );
   }
 
   return (
@@ -229,6 +251,14 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen
           name="detail/gym-active/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="games/balloon-pop"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
         />
         <Stack.Screen name="detail/work/[id]" />
         <Stack.Screen name="detail/movie/[id]" />

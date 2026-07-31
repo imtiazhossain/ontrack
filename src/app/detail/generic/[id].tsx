@@ -20,9 +20,9 @@ export default function GenericDetailScreen() {
   if (!activity) {
     return (
       <Screen>
-        <AppText variant="title">Activity not found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go back">
-          Go back
+        <AppText variant="title">Activity Not Found</AppText>
+        <Button onPress={() => router.back()} accessibilityLabel="Go Back">
+          Go Back
         </Button>
       </Screen>
     );
@@ -69,7 +69,7 @@ export default function GenericDetailScreen() {
             setStatus(activity.id, activity.status === 'completed' ? 'upcoming' : 'completed')
           }
           accessibilityLabel="Toggle complete">
-          {activity.status === 'completed' ? 'Mark incomplete' : 'Mark complete'}
+          {activity.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
         </Button>
         <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Close">
           Close

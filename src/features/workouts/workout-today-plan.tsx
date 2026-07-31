@@ -24,7 +24,7 @@ export function WorkoutTodayPlan({
 
   return (
     <View style={styles.pagePadding}>
-      <SectionHeader title="Today’s plan" detail={`${todaysWorkouts.length} scheduled`} />
+      <SectionHeader title="Today’s Plan" detail={`${todaysWorkouts.length} Scheduled`} />
       {todaysWorkouts.length === 0 ? (
         <Card variant="sunken" style={styles.emptyPlan}>
           <View style={[styles.smallIcon, { backgroundColor: gymColors.tint }]}>

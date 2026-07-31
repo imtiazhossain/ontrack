@@ -71,6 +71,7 @@ export function ActivityCard({
           {activity.photo ? (
             <Image
               source={activity.photo}
+              cachePolicy="memory-disk"
               style={styles.thumb}
               contentFit={activity.photoProcessingVersion ? 'contain' : 'cover'}
               transition={160}
@@ -81,7 +82,7 @@ export function ActivityCard({
             color={completed ? colors.main : skipped ? theme.warning : theme.textTertiary}
             background="transparent"
             accessibilityLabel={
-              completed ? 'Mark incomplete' : skipped ? 'Unskip activity' : 'Mark complete'
+              completed ? 'Mark Incomplete' : skipped ? 'Unskip Activity' : 'Mark Complete'
             }
             onPress={() => {
               if (!completed && !skipped) haptics.success();

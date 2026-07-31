@@ -1,6 +1,6 @@
 import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
     Pressable,
     StyleSheet,
@@ -19,7 +19,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
-import { borders, layout, radii, spacing, typography } from '@/design-system';
+import { borders, radii } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { useTodos } from '@/store/todos';
@@ -34,7 +35,7 @@ const TRACK_REPEAT_COUNT = 5;
 const MAX_CAROUSEL_WIDTH = 720;
 const VELOCITY_PROJECTION_SECONDS = 0.2;
 const MAX_FLING_ITEMS = 5;
-const RESTORE_BUTTON_SIZE = 50;
+const RESTORE_BUTTON_SIZE = 36;
 const COLLAPSE_DRAG_DISTANCE = 72;
 const COLLAPSE_THRESHOLD = 30;
 const COLLAPSE_VELOCITY_THRESHOLD = 420;
@@ -92,6 +93,11 @@ const TAB_META: Record<
     icon: 'vision-board',
     href: '/(tabs)/vision-board',
   },
+  games: {
+    label: 'Games',
+    icon: 'games',
+    href: '/(tabs)/games',
+  },
 };
 
 export function FloatingTabBar({
@@ -99,11 +105,14 @@ export function FloatingTabBar({
   descriptors,
   navigation,
 }: FloatingTabBarProps) {
+  'use no memo';
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [collapsed, setCollapsed] = useState(false);
+  const { spacing, layout, s, typography } = useResponsive();
+  const collapsed = useUI((store) => store.tabBarCollapsed);
+  const setTabBarCollapsed = useUI((store) => store.setTabBarCollapsed);
   const carouselBrowse = useUI((store) => store.carouselBrowse);
   const pendingRouteName = useUI(
     (store) => store.carouselPendingRouteName,
@@ -121,6 +130,7 @@ export function FloatingTabBar({
         if (route.name === 'plants') return enabledAddons.plants;
         if (route.name === 'travel') return enabledAddons.travel;
         if (route.name === 'vision-board') return enabledAddons['vision-board'];
+        if (route.name === 'games') return enabledAddons.games;
         return route.name in TAB_META;
       }),
     [enabledAddons, state.routes],
@@ -166,12 +176,12 @@ export function FloatingTabBar({
     setTimeout(() => setSwipeClaimed(false), 80);
   };
   const finishCollapse = () => {
-    setCollapsed(true);
+    setTabBarCollapsed(true);
     setSwipeClaimed(false);
   };
   const expandMenu = () => {
     setSwipeClaimed(true);
-    setCollapsed(false);
+    setTabBarCollapsed(false);
     collapseProgress.value = 0;
     releaseSwipeClaim();
   };
@@ -320,6 +330,8 @@ export function FloatingTabBar({
             ? RESTORE_BUTTON_SIZE + insets.bottom + spacing.md
             : layout.floatingTabBarBaseHeight + insets.bottom,
           maxWidth: MAX_CAROUSEL_WIDTH + layout.screenPadding * 2,
+          paddingHorizontal: layout.screenPadding,
+          paddingTop: spacing.xs,
           paddingBottom: Math.max(insets.bottom, spacing.sm),
           backgroundColor: 'transparent',
         },
@@ -328,7 +340,11 @@ export function FloatingTabBar({
         <View
           style={[
             styles.restoreButtonPosition,
-            { bottom: Math.max(insets.bottom, spacing.sm) },
+            {
+              left: layout.screenPadding,
+              right: layout.screenPadding,
+              bottom: Math.max(insets.bottom, spacing.sm),
+            },
           ]}>
           <Pressable
             accessibilityRole="button"
@@ -353,7 +369,7 @@ export function FloatingTabBar({
             ]}>
             <Symbol
               name="chevron-up"
-              size={22}
+              size={16}
               color={theme.accentPrimary}
             />
           </Pressable>
@@ -379,13 +395,13 @@ export function FloatingTabBar({
               },
             ]}>
             <View style={styles.capsuleClip}>
-            <Animated.View
-              style={[
-                styles.carouselTrack,
-                { width: itemWidth * trackItemCount },
-                trackStyle,
-              ]}>
-        {displayedRoutes.map((route, slotIndex) => {
+              <Animated.View
+                style={[
+                  styles.carouselTrack,
+                  { width: itemWidth * trackItemCount },
+                  trackStyle,
+                ]}>
+                {displayedRoutes.map((route, slotIndex) => {
           const meta = TAB_META[route.name];
           const focused = selectedRoute?.key === route.key;
           const visuallySelected = pendingRouteName
@@ -440,14 +456,32 @@ export function FloatingTabBar({
               onPress={onPress}
               style={({ pressed }) => [
                 styles.tab,
-                { width: itemWidth },
+                {
+                  width: itemWidth,
+                  minHeight: layout.minTapTarget,
+                  gap: 0,
+                  paddingVertical: spacing.xxs,
+                },
                 pressed && styles.pressed,
               ]}>
               <View>
-                <Symbol name={meta.icon} size={26} color={color} />
+                <Symbol name={meta.icon} size={20} color={color} />
                 {badge > 0 ? (
-                  <View style={[styles.badge, { backgroundColor: theme.danger }]}>
-                    <Text style={styles.badgeText}>
+                  <View
+                    style={[
+                      styles.badge,
+                      {
+                        backgroundColor: theme.danger,
+                        minWidth: s(20),
+                        height: s(18),
+                        paddingHorizontal: s(4),
+                      },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        { fontSize: s(10), lineHeight: s(13) },
+                      ]}>
                       {badge > 99 ? '99+' : String(badge)}
                     </Text>
                   </View>
@@ -455,11 +489,19 @@ export function FloatingTabBar({
               </View>
               <Text
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                maxFontSizeMultiplier={1.1}
                 style={[
-                  styles.label,
+                  typography.caption,
                   {
                     color,
                     fontWeight: visuallySelected ? '600' : '400',
+                    fontSize: s(9.5),
+                    lineHeight: s(11),
+                    maxWidth: '100%',
+                    width: '100%',
+                    textAlign: 'center',
                   },
                 ]}>
                 {meta.label}
@@ -476,8 +518,8 @@ export function FloatingTabBar({
               />
             </Pressable>
           );
-        })}
-            </Animated.View>
+                })}
+              </Animated.View>
             </View>
           </Animated.View>
         </GestureDetector>
@@ -493,8 +535,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 10,
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xs,
     width: '100%',
     alignSelf: 'center',
   },
@@ -514,8 +554,6 @@ const styles = StyleSheet.create({
   },
   restoreButtonPosition: {
     position: 'absolute',
-    left: layout.screenPadding,
-    right: layout.screenPadding,
     alignItems: 'center',
   },
   restoreButton: {
@@ -533,41 +571,30 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tab: {
-    minHeight: layout.minTapTarget,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xxs,
-    paddingTop: spacing.xs,
+    position: 'relative',
   },
   pressed: {
     opacity: 0.58,
   },
-  label: {
-    ...typography.caption,
-    fontSize: 10.5,
-    lineHeight: 14,
-    maxWidth: '100%',
-  },
   indicator: {
-    width: 6,
-    height: 6,
+    position: 'absolute',
+    bottom: 3,
+    width: 4,
+    height: 4,
     borderRadius: radii.pill,
   },
   badge: {
     position: 'absolute',
-    top: -9,
-    right: -17,
-    minWidth: 24,
-    height: 22,
+    top: -6,
+    right: -12,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
-    paddingHorizontal: 6,
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    lineHeight: 15,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },

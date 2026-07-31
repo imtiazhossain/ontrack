@@ -140,7 +140,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <Screen>
-        <EmptyState icon="flight" title="Trip not found" message="This trip may have been removed." />
+        <EmptyState icon="flight" title="Trip Not Found" message="This trip may have been removed." />
       </Screen>
     );
   }
@@ -210,7 +210,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.heading}>
-        <AppText variant="overline" color="accent">Flight search</AppText>
+        <AppText variant="overline" color="accent">Flight Search</AppText>
         <AppText variant="title">Flights for {plan.title}</AppText>
         <AppText variant="body" color="secondary">
           Live availability and total prices without leaving onTrack.
@@ -301,7 +301,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
           <Button
             icon={loading ? 'close' : 'search'}
             onPress={loading ? cancelSearch : () => void runSearch()}>
-            {loading ? 'Cancel live price check' : 'Search flights'}
+            {loading ? 'Cancel Live Price Check' : 'Search Flights'}
           </Button>
         ) : null}
         <Button
@@ -324,7 +324,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
               detail={`${result.offers.length} options`}
             />
             <AppText variant="caption" color={result.dataMode === 'live' ? 'success' : 'secondary'}>
-              {result.dataMode === 'live' ? 'Live prices' : 'Test data'}
+              {result.dataMode === 'live' ? 'Live Prices' : 'Test Data'}
             </AppText>
           </View>
           <AppText variant="caption" color="secondary">
@@ -334,9 +334,9 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
           {result.offers.length === 0 ? (
             <EmptyState
               icon="flight"
-              title="No flights found"
+              title="No Flights Found"
               message="Try nearby airport codes or different dates."
-              actionLabel="Search again"
+              actionLabel="Search Again"
               onAction={() => void runSearch()}
             />
           ) : null}

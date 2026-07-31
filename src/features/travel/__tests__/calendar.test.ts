@@ -27,6 +27,8 @@ const PLAN: TravelPlan = {
     },
   ],
   participants: [],
+  baseCurrency: 'USD',
+  expenses: [],
   createdAt: '2026-07-26T00:00:00.000Z',
   updatedAt: '2026-07-26T00:00:00.000Z',
 };

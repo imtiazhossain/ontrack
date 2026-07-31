@@ -135,7 +135,7 @@ export async function enableTravelChatNotifications(
   }
   if (process.env.EXPO_OS === 'android') {
     await notifications.setNotificationChannelAsync(EVENT_CHAT_NOTIFICATION_CHANNEL, {
-      name: 'Trip chat',
+      name: 'Trip Chat',
       description: 'New messages from members of your trips',
       importance: notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 180],

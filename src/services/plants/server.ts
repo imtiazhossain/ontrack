@@ -127,7 +127,7 @@ const HEALTH_SCHEMA = {
 
 const CARE_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['watering', 'pruning', 'placement', 'sources', 'disclaimer'],
+  required: ['watering', 'pruning', 'placement', 'soil', 'sources', 'disclaimer'],
   properties: {
     watering: {
       type: 'object', additionalProperties: false,
@@ -154,6 +154,18 @@ const CARE_SCHEMA = {
       properties: {
         light: { type: 'string' }, location: { type: 'string' }, windowDistance: { type: 'string' },
         avoid: { type: 'array', maxItems: 6, items: { type: 'string' } },
+      },
+    },
+    soil: {
+      type: 'object', additionalProperties: false,
+      required: ['soilType', 'phMin', 'phMax', 'mixNotes', 'drainageNotes', 'amendments'],
+      properties: {
+        soilType: { type: 'string' },
+        phMin: { type: 'number', minimum: 3, maximum: 9 },
+        phMax: { type: 'number', minimum: 3, maximum: 9 },
+        mixNotes: { type: 'string' },
+        drainageNotes: { type: 'string' },
+        amendments: { type: 'array', maxItems: 8, items: { type: 'string' } },
       },
     },
     sources: {
@@ -224,6 +236,7 @@ function carePrompt(identity: PlantIdentity, health: PlantHealthAssessment, room
     `Visible health summary: ${health.summary}. Pot diameter: ${room.potDiameterCm} cm; drainage: ${room.drainage}; ` +
     `window: ${room.windowDirection}; distance: ${room.windowDistanceM} m; direct sun: ${room.directSunHours} hours. ` +
     'Watering must be an editable starting range plus a soil check, not a guarantee. Placement must be relative to the supplied window. ' +
+    'Include species-appropriate soil type, target pH range, mix notes, drainage notes, and useful amendments. ' +
     'Do not provide pesticide, medical, or pet-toxicity claims. State that conditions vary.';
 }
 

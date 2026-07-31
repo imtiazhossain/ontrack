@@ -190,7 +190,7 @@ export function TravelItineraryItem({
                     icon="flight"
                     style={styles.itineraryAction}
                     onPress={onBeginFlightEdit}>
-                    {item.flight ? 'Edit flight' : 'Add flight details'}
+                    {item.flight ? 'Edit Flight' : 'Add Flight Details'}
                   </Button>
                 ) : null}
                 {item.bookingUrl && validBookingUrl(item.bookingUrl) ? (
