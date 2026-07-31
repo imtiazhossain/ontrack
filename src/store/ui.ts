@@ -20,6 +20,11 @@ interface UIState {
   carouselPendingRouteName: string | null;
   tabBarHeight: number;
   setTabBarHeight: (height: number) => void;
+  /** Collapsed floating menu → small restore chip; expanded on open by default. */
+  tabBarCollapsed: boolean;
+  setTabBarCollapsed: (collapsed: boolean) => void;
+  /** Epoch ms of last user page interaction — used to pause cloud sync briefly. */
+  lastPageInteractionAt: number;
   notifyPageInteraction: () => void;
 }
 
@@ -36,10 +41,15 @@ export const useUI = create<UIState>((set) => ({
   carouselPendingRouteName: null,
   tabBarHeight: 0,
   setTabBarHeight: (tabBarHeight) => set({ tabBarHeight }),
+  tabBarCollapsed: false,
+  setTabBarCollapsed: (tabBarCollapsed) => set({ tabBarCollapsed }),
+  lastPageInteractionAt: 0,
   notifyPageInteraction: () =>
     set({
       carouselBrowse: null,
       carouselSwipeClaimed: false,
       carouselPendingRouteName: null,
+      tabBarCollapsed: true,
+      lastPageInteractionAt: Date.now(),
     }),
 }));

@@ -232,6 +232,10 @@ export default function NewPlantScreen() {
     setCarePlan((current) => current ? { ...current, watering: { ...current.watering, ...patch } } : current);
   };
 
+  const updateSoil = (patch: Partial<PlantCarePlan['soil']>) => {
+    setCarePlan((current) => current ? { ...current, soil: { ...current.soil, ...patch } } : current);
+  };
+
   const savePlant = async () => {
     if (!plantPhoto || !identity || !health || !carePlan) return;
     if (reminderMinutes < 0 || reminderMinutes >= 24 * 60 || carePlan.watering.minMl <= 0 || carePlan.watering.maxMl < carePlan.watering.minMl || carePlan.watering.intervalDays < 1) {
@@ -283,13 +287,13 @@ export default function NewPlantScreen() {
 
       {step === 'photo' ? (
         <>
-          {plantPhoto ? <Image source={plantPhoto} style={styles.hero} contentFit="cover" /> : <View style={styles.photoPlaceholder}><AppText color="secondary">No plant photo yet</AppText></View>}
+          {plantPhoto ? <Image source={plantPhoto} style={styles.hero} contentFit="cover" /> : <View style={styles.photoPlaceholder}><AppText color="secondary">No Plant Photo Yet</AppText></View>}
           <View style={styles.buttonRow}>
             <View style={styles.flex}><Button onPress={() => void capturePhoto('plant')} icon="camera">Camera</Button></View>
             <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('plant')} icon="photo">Library</Button></View>
           </View>
           <Button onPress={() => void analyzeIdentity()} disabled={!plantPhoto || busy}>
-            {busy ? 'Analyzing…' : 'Identify and assess'}
+            {busy ? 'Analyzing…' : 'Identify and Assess'}
           </Button>
         </>
       ) : null}
@@ -307,7 +311,7 @@ export default function NewPlantScreen() {
             AI can confidently choose the wrong plant. Confirm the name below, or replace it with the correct one before care advice is created.
           </AppText>
           <Input
-            label="Search for the correct plant"
+            label="Search for the Correct Plant"
             value={identity.commonName}
             onChangeText={updateCommonName}
             placeholder="Try Ginger, Monstera, or a botanical name"
@@ -331,36 +335,36 @@ export default function NewPlantScreen() {
             </Card>
           ) : null}
           {searchError ? <ErrorMessage message={searchError} variant="caption" selectable /> : null}
-          <Input label="Botanical name" value={identity.scientificName} onChangeText={(scientificName) => updateIdentity({ scientificName })} />
+          <Input label="Botanical Name" value={identity.scientificName} onChangeText={(scientificName) => updateIdentity({ scientificName })} />
           <Button variant="secondary" onPress={confirmIdentity}>
-            {identityConfirmed ? 'Identification confirmed' : 'Confirm identification'}
+            {identityConfirmed ? 'Identification confirmed' : 'Confirm Identification'}
           </Button>
           {identityConfirmed ? (
             <AppText variant="caption" color="success">
               {identity.identificationSource === 'user-corrected' ? 'Using your corrected identification.' : 'Using your confirmed identification.'}
             </AppText>
           ) : null}
-          <Input label="Plant nickname" value={nickname} onChangeText={setNickname} />
+          <Input label="Plant Nickname" value={nickname} onChangeText={setNickname} />
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Input label="Pot diameter (cm)" keyboardType="decimal-pad" value={potDiameter} onChangeText={setPotDiameter} /></View>
-            <View style={styles.flex}><DateField label="Last watered" value={lastWatered} onChange={setLastWatered} maximumDate={todayKey()} /></View>
+            <View style={styles.flex}><Input label="Pot Diameter (cm)" keyboardType="decimal-pad" value={potDiameter} onChangeText={setPotDiameter} /></View>
+            <View style={styles.flex}><DateField label="Last Watered" value={lastWatered} onChange={setLastWatered} maximumDate={todayKey()} /></View>
           </View>
-          <SectionHeader title="Drainage holes" />
+          <SectionHeader title="Drainage Holes" />
           <ChipRow options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'unknown', label: 'Not sure' }]} selected={drainage} onSelect={setDrainage} />
-          <SectionHeader title="Nearest window" />
+          <SectionHeader title="Nearest Window" />
           <ChipRow options={(['north', 'east', 'south', 'west', 'unknown'] as const).map((value) => ({ value, label: value === 'unknown' ? 'Not sure' : value[0].toUpperCase() + value.slice(1) }))} selected={windowDirection} onSelect={setWindowDirection} />
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Input label="Distance from window (m)" keyboardType="decimal-pad" value={windowDistance} onChangeText={setWindowDistance} /></View>
-            <View style={styles.flex}><Input label="Direct sun (hours/day)" keyboardType="decimal-pad" value={sunHours} onChangeText={setSunHours} /></View>
+            <View style={styles.flex}><Input label="Distance from Window (m)" keyboardType="decimal-pad" value={windowDistance} onChangeText={setWindowDistance} /></View>
+            <View style={styles.flex}><Input label="Direct Sun (hours/day)" keyboardType="decimal-pad" value={sunHours} onChangeText={setSunHours} /></View>
           </View>
-          <TimeField label="Reminder time" value={reminderMinutes} onChange={setReminderMinutes} />
-          <SectionHeader title="Optional room photo" detail="Discarded after analysis" />
+          <TimeField label="Reminder Time" value={reminderMinutes} onChange={setReminderMinutes} />
+          <SectionHeader title="Optional Room Photo" detail="Discarded after analysis" />
           {roomPhoto ? <Image source={roomPhoto} style={styles.roomPhoto} contentFit="cover" /> : null}
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Button variant="secondary" onPress={() => void capturePhoto('room')} icon="camera">Room camera</Button></View>
-            <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('room')} icon="photo">Room library</Button></View>
+            <View style={styles.flex}><Button variant="secondary" onPress={() => void capturePhoto('room')} icon="camera">Room Camera</Button></View>
+            <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('room')} icon="photo">Room Library</Button></View>
           </View>
-          <Button onPress={() => void generateCarePlan()} disabled={busy || !identityConfirmed}>{busy ? 'Building care plan…' : 'Build care plan'}</Button>
+          <Button onPress={() => void generateCarePlan()} disabled={busy || !identityConfirmed}>{busy ? 'Building Care Plan…' : 'Build Care Plan'}</Button>
         </>
       ) : null}
 
@@ -371,10 +375,18 @@ export default function NewPlantScreen() {
             <View style={styles.flex}><Input label="Minimum (mL)" keyboardType="decimal-pad" value={String(carePlan.watering.minMl)} onChangeText={(value) => updateWatering({ minMl: numberValue(value) })} /></View>
             <View style={styles.flex}><Input label="Maximum (mL)" keyboardType="decimal-pad" value={String(carePlan.watering.maxMl)} onChangeText={(value) => updateWatering({ maxMl: numberValue(value) })} /></View>
           </View>
-          <Input label="Check every (days)" keyboardType="number-pad" value={String(carePlan.watering.intervalDays)} onChangeText={(value) => updateWatering({ intervalDays: numberValue(value) })} />
-          <Input label="Soil check" value={carePlan.watering.soilCheck} onChangeText={(soilCheck) => updateWatering({ soilCheck })} multiline />
+          <Input label="Check Every (days)" keyboardType="number-pad" value={String(carePlan.watering.intervalDays)} onChangeText={(value) => updateWatering({ intervalDays: numberValue(value) })} />
+          <Input label="Soil Check" value={carePlan.watering.soilCheck} onChangeText={(soilCheck) => updateWatering({ soilCheck })} multiline />
           <AppText variant="caption" color="secondary">About {Math.round(carePlan.watering.minMl / 237 * 10) / 10}–{Math.round(carePlan.watering.maxMl / 237 * 10) / 10} US cups as a starting range.</AppText>
-          <SectionHeader title="Best placement" />
+          <SectionHeader title="Soil" detail={`pH ${carePlan.soil.phMin}–${carePlan.soil.phMax}`} />
+          <Input label="Soil Type" value={carePlan.soil.soilType} onChangeText={(soilType) => updateSoil({ soilType })} />
+          <View style={styles.buttonRow}>
+            <View style={styles.flex}><Input label="pH Min" keyboardType="decimal-pad" value={String(carePlan.soil.phMin)} onChangeText={(value) => updateSoil({ phMin: numberValue(value) })} /></View>
+            <View style={styles.flex}><Input label="pH Max" keyboardType="decimal-pad" value={String(carePlan.soil.phMax)} onChangeText={(value) => updateSoil({ phMax: numberValue(value) })} /></View>
+          </View>
+          <Input label="Mix Notes" value={carePlan.soil.mixNotes} onChangeText={(mixNotes) => updateSoil({ mixNotes })} multiline />
+          <Input label="Drainage Notes" value={carePlan.soil.drainageNotes} onChangeText={(drainageNotes) => updateSoil({ drainageNotes })} multiline />
+          <SectionHeader title="Best Placement" />
           <Card><AppText variant="heading">{carePlan.placement.location}</AppText><AppText color="secondary">{carePlan.placement.windowDistance}</AppText><AppText>{carePlan.placement.light}</AppText></Card>
           <SectionHeader title="Pruning" detail={carePlan.pruning.urgency.replace('-', ' ')} />
           <AppText>{carePlan.pruning.reason}</AppText>
@@ -390,7 +402,7 @@ export default function NewPlantScreen() {
             </AppText>
           ))}
           <AppText variant="caption" color="tertiary">{carePlan.disclaimer}</AppText>
-          <Button size="lg" onPress={() => void savePlant()} disabled={busy}>{busy ? 'Saving…' : 'Confirm and schedule'}</Button>
+          <Button size="lg" onPress={() => void savePlant()} disabled={busy}>{busy ? 'Saving…' : 'Confirm and Schedule'}</Button>
         </>
       ) : null}
 

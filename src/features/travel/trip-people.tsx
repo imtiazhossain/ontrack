@@ -115,14 +115,14 @@ function PersonRow({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Remove invite ${participant.name}`}
+            accessibilityLabel={`Remove Invite ${participant.name}`}
             disabled={managing}
             onPress={onRemove}
             style={({ pressed }) => [
               styles.personAction,
               { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
             ]}>
-            <AppText variant="callout" color="danger">Remove invite</AppText>
+            <AppText variant="callout" color="danger">Remove Invite</AppText>
           </Pressable>
         </View>
       ) : null}
@@ -195,7 +195,7 @@ export function TripPeople({
 
       {editing ? (
         <Card style={styles.form}>
-          <AppText variant="subheading">Invite a friend</AppText>
+          <AppText variant="subheading">Invite a Friend</AppText>
           <Input
             label="Name"
             value={name}
@@ -218,7 +218,7 @@ export function TripPeople({
           {error ? <ErrorMessage message={error} selectable /> : null}
           <View style={styles.actions}>
             <Button disabled={inviting} onPress={onInvite}>
-              {inviting ? 'Creating invite…' : 'Create invite'}
+              {inviting ? 'Creating invite…' : 'Create Invite'}
             </Button>
             <Button variant="ghost" disabled={inviting} onPress={onCancelInvite}>
               Cancel
@@ -227,7 +227,7 @@ export function TripPeople({
         </Card>
       ) : (
         <Button icon="invite" onPress={onBeginInvite}>
-          Invite a friend
+          Invite a Friend
         </Button>
       )}
     </View>

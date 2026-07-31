@@ -34,6 +34,14 @@ describe('plant AI provider selection', () => {
       watering: { minMl: 200, maxMl: 400, intervalDays: 10, soilCheck: 'Check the top 3 cm.', notes: 'Drain excess.' },
       pruning: { urgency: 'now', reason: 'No pruning is needed for this healthy plant.', steps: [] },
       placement: { light: 'Bright indirect light', location: 'Near the east window', windowDistance: '1 m', avoid: [] },
+      soil: {
+        soilType: 'Well-draining mix',
+        phMin: 6,
+        phMax: 7,
+        mixNotes: 'Indoor potting mix with perlite.',
+        drainageNotes: 'Empty saucers after watering.',
+        amendments: ['Perlite'],
+      },
       sources: [{ title: 'Model supplied', url: 'https://example.com' }],
       disclaimer: 'Model supplied',
     });

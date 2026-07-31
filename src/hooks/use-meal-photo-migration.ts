@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
 
-import {
-  CURRENT_MEAL_PHOTO_PROCESSING_VERSION,
-  enhanceMealPhoto,
-} from '@/services/nutrition';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
+import {
+    CURRENT_MEAL_PHOTO_PROCESSING_VERSION,
+    enhanceMealPhoto,
+} from '@/services/nutrition';
 import { useSchedule } from '@/store/schedule';
+import { deferUntilIdle } from '@/utils/defer-until-idle';
 
 /** Upgrades user-added meal photos once after persisted state has loaded. */
 export function useMealPhotoMigration(enabled: boolean) {
@@ -47,7 +48,12 @@ export function useMealPhotoMigration(enabled: boolean) {
       }
     };
 
-    void migrate();
-    return () => { cancelled = true; };
+    const cancelIdle = deferUntilIdle(() => {
+      if (!cancelled) void migrate();
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle();
+    };
   }, [enabled]);
 }

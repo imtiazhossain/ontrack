@@ -5,41 +5,61 @@ import { StyleSheet, View } from 'react-native';
 
 import { appPrompt, AppText, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { plantImageSource } from '@/features/plants/sample';
+import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import {
-    addPruningActivity,
-    deletePlant,
-    logPlantWatering,
-    undoPlantWatering,
+  addPruningActivity,
+  deletePlant,
+  logPlantWatering,
+  undoPlantWatering,
 } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
-import { formatDueLabel, formatMinutes, toDateKey, todayKey } from '@/utils/date';
+import { DAY_MS, formatDueLabel, formatMinutes, fromDateKey, toDateKey, todayKey } from '@/utils/date';
 import { openHttpsUrl } from '@/utils/safe-url';
 
+function wateringCountdownLabel(dueKey: string) {
+  const days = Math.round((fromDateKey(dueKey).getTime() - fromDateKey(todayKey()).getTime()) / DAY_MS);
+  if (days < 0) return `Overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`;
+  if (days === 0) return 'Water check due today';
+  if (days === 1) return 'Next watering in 1 day';
+  return `Next watering in ${days} days`;
+}
+
 export default function PlantDetailScreen() {
+  return (
+    <FeatureThemeProvider feature="plants">
+      <PlantDetailContent />
+    </FeatureThemeProvider>
+  );
+}
+
+function PlantDetailContent() {
   const router = useRouter();
+  const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const plant = usePlants((state) => state.plants.find((item) => item.id === id));
   const [amount, setAmount] = useState('');
 
   if (!plant) {
-    return <Screen><AppText variant="title">Plant not found</AppText></Screen>;
+    return <Screen><AppText variant="title">Plant Not Found</AppText></Screen>;
   }
 
   const dueKey = toDateKey(new Date(plant.nextWateringAt));
   const due = formatDueLabel(dueKey, { overduePrefix: 'Overdue since' });
   const latestLog = plant.wateringLogs.at(-1);
+  const soil = plant.carePlan.soil;
 
   const remove = () =>
     confirmDestructiveAction({
-      title: 'Delete plant',
+      title: 'Delete Plant',
       message: `Remove ${plant.nickname}, its care tasks, and locally saved photos?`,
       onConfirm: () => void deletePlant(plant.id).then(() => router.replace('/plants')),
     });
 
   return (
     <Screen contentStyle={styles.content}>
-      <Image source={plant.photoUri} style={styles.hero} contentFit="cover" />
+      <Image source={plantImageSource(plant.photoUri)} style={styles.hero} contentFit="cover" />
       <View style={styles.titleRow}>
         <View style={styles.flex}>
           <AppText variant="title">{plant.nickname}</AppText>
@@ -49,20 +69,29 @@ export default function PlantDetailScreen() {
         <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>Edit</Button>
       </View>
 
+      <SectionHeader title="Watering schedule" detail={`Every ${plant.carePlan.watering.intervalDays} days`} />
       <Card style={styles.careCard}>
-        <AppText variant="overline" color="tertiary">Next soil check</AppText>
-        <AppText variant="heading" color={dueKey <= todayKey() ? 'accent' : 'primary'}>{due}</AppText>
-        <AppText color="secondary">At {formatMinutes(plant.reminderMinutes)} · {plant.carePlan.watering.soilCheck}</AppText>
-        <AppText variant="callout">Start with {Math.round(plant.carePlan.watering.minMl)}–{Math.round(plant.carePlan.watering.maxMl)} mL only when the soil check says it is needed.</AppText>
-        <Input label="Amount used (mL, optional)" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+        <View style={[styles.scheduleBadge, { backgroundColor: theme.accentFaint }]}>
+          <AppText variant="heading" color="accent">{wateringCountdownLabel(dueKey)}</AppText>
+          <AppText variant="caption" color="secondary">{due} · reminder at {formatMinutes(plant.reminderMinutes)}</AppText>
+        </View>
+        <AppText color="secondary">{plant.carePlan.watering.soilCheck}</AppText>
+        <AppText variant="callout">
+          Start with {Math.round(plant.carePlan.watering.minMl)}–{Math.round(plant.carePlan.watering.maxMl)} mL only when the soil check says it is needed.
+        </AppText>
+        <AppText variant="caption" color="tertiary">{plant.carePlan.watering.notes}</AppText>
+        <Input label="Amount Used (mL, Optional)" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
         <Button onPress={() => {
           const parsed = Number(amount);
           void logPlantWatering(plant.id, amount.trim() && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined);
-        }}>Log watering now</Button>
-        {latestLog?.activityId ? <Button variant="ghost" onPress={() => void undoPlantWatering(latestLog.activityId!)}>Undo last watering</Button> : null}
+        }}>Log Watering Now</Button>
+        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>
+          Adjust schedule
+        </Button>
+        {latestLog?.activityId ? <Button variant="ghost" onPress={() => void undoPlantWatering(latestLog.activityId!)}>Undo Last Watering</Button> : null}
       </Card>
 
-      <SectionHeader title="Health" detail={`${Math.round(plant.health.confidence * 100)}% assessment confidence`} />
+      <SectionHeader title="Health check-in" detail={`${Math.round(plant.health.confidence * 100)}% confidence`} />
       <Card style={styles.careCard}>
         <AppText variant="heading" color={plant.health.status === 'healthy' ? 'success' : plant.health.status === 'urgent' ? 'danger' : 'primary'}>
           {plant.health.status === 'healthy' ? 'Looking healthy' : plant.health.status === 'urgent' ? 'Needs prompt attention' : 'Keep watching'}
@@ -70,7 +99,43 @@ export default function PlantDetailScreen() {
         <AppText>{plant.health.summary}</AppText>
         {plant.health.visibleSigns.map((item) => <AppText key={item} color="secondary">Observed: {item}</AppText>)}
         {plant.health.possibleCauses.map((item) => <AppText key={item} variant="caption" color="tertiary">Possible, not diagnosed: {item}</AppText>)}
-        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })} icon="camera">Add health check-in</Button>
+        {plant.health.actions.length ? (
+          <View style={styles.actionsBlock}>
+            <AppText variant="overline" color="tertiary">Recommendations</AppText>
+            {plant.health.actions.map((item) => (
+              <AppText key={item} color="secondary">• {item}</AppText>
+            ))}
+          </View>
+        ) : null}
+        <Button onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })} icon="camera">
+          Take photo for health status
+        </Button>
+      </Card>
+
+      <SectionHeader title="Soil" detail={`pH ${soil.phMin.toFixed(1)}–${soil.phMax.toFixed(1)}`} />
+      <Card style={styles.careCard}>
+        <AppText variant="heading">{soil.soilType}</AppText>
+        <View style={[styles.soilMetrics, { backgroundColor: theme.backgroundSunken }]}>
+          <View style={styles.soilMetric}>
+            <AppText variant="overline" color="tertiary">Target pH</AppText>
+            <AppText variant="heading" color="accent">{soil.phMin.toFixed(1)}–{soil.phMax.toFixed(1)}</AppText>
+          </View>
+          <View style={styles.soilMetric}>
+            <AppText variant="overline" color="tertiary">Mix style</AppText>
+            <AppText variant="callout">{soil.soilType}</AppText>
+          </View>
+        </View>
+        <AppText>{soil.mixNotes}</AppText>
+        <AppText color="secondary">{soil.drainageNotes}</AppText>
+        {soil.amendments.length ? (
+          <View style={styles.chipRow}>
+            {soil.amendments.map((item) => (
+              <View key={item} style={[styles.chip, { backgroundColor: theme.accentFaint }]}>
+                <AppText variant="caption" color="accent">{item}</AppText>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </Card>
 
       <SectionHeader title="Placement" />
@@ -85,19 +150,19 @@ export default function PlantDetailScreen() {
       <Card style={styles.careCard}>
         <AppText>{plant.carePlan.pruning.reason}</AppText>
         {plant.carePlan.pruning.steps.map((item) => <AppText key={item} color="secondary">• {item}</AppText>)}
-        {plant.carePlan.pruning.urgency !== 'not-needed' ? <Button variant="secondary" onPress={() => { addPruningActivity(plant.id); appPrompt.alert('Added to Today', `Prune ${plant.nickname} is now on your schedule.`); }}>Add pruning task</Button> : null}
+        {plant.carePlan.pruning.urgency !== 'not-needed' ? <Button variant="secondary" onPress={() => { addPruningActivity(plant.id); appPrompt.alert('Added to Today', `Prune ${plant.nickname} is now on your schedule.`); }}>Add Pruning Task</Button> : null}
       </Card>
 
       <SectionHeader title="History" detail={`${plant.wateringLogs.length} waterings · ${plant.checkIns.length} check-ins`} />
       {plant.checkIns.slice().reverse().map((checkIn) => (
         <Card key={checkIn.id} style={styles.historyRow}>
-          <Image source={checkIn.photoUri} style={styles.historyPhoto} contentFit="cover" />
+          <Image source={plantImageSource(checkIn.photoUri)} style={styles.historyPhoto} contentFit="cover" />
           <View style={styles.flex}><AppText variant="callout">{new Date(checkIn.createdAt).toLocaleDateString()}</AppText><AppText variant="caption" color="secondary">{checkIn.assessment.summary}</AppText></View>
         </Card>
       ))}
       {plant.wateringLogs.slice().reverse().slice(0, 5).map((log) => <AppText key={log.id} variant="caption" color="secondary">Watered {new Date(log.wateredAt).toLocaleString()}{log.amountMl ? ` · ${log.amountMl} mL` : ''}</AppText>)}
 
-      <SectionHeader title="Care sources" />
+      <SectionHeader title="Care Sources" />
       {plant.carePlan.sources.map((source) => (
         <AppText
           key={source.url}
@@ -107,7 +172,7 @@ export default function PlantDetailScreen() {
         </AppText>
       ))}
       <AppText variant="caption" color="tertiary">{plant.carePlan.disclaimer}</AppText>
-      <Button variant="danger" onPress={remove}>Delete plant</Button>
+      <Button variant="danger" onPress={remove}>Delete Plant</Button>
     </Screen>
   );
 }
@@ -119,6 +184,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   italic: { fontStyle: 'italic' },
   careCard: { gap: spacing.sm },
+  scheduleBadge: { borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
+  actionsBlock: { gap: spacing.xs, marginTop: spacing.xs },
+  soilMetrics: { flexDirection: 'row', gap: spacing.md, borderRadius: radii.md, padding: spacing.md },
+  soilMetric: { flex: 1, gap: spacing.xs },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyPhoto: { width: 64, height: 64, borderRadius: radii.sm },
 });

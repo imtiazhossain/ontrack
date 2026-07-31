@@ -1,6 +1,24 @@
-import { asString } from '@/utils/parse';
+import { asPositiveNumber, asString } from '@/utils/parse';
+import { normalizeCurrencyCode } from './expenses/format-money';
 import { normalizeFlightDetails } from './flight-details';
-import type { TravelItineraryItem, TravelParticipant, TravelPlan } from './types';
+import type {
+  TravelExpense,
+  TravelExpenseCategory,
+  TravelItineraryItem,
+  TravelParticipant,
+  TravelPlan,
+} from './types';
+import { TRAVEL_EXPENSE_SELF_ID } from './types';
+
+const EXPENSE_CATEGORIES = new Set<TravelExpenseCategory>([
+  'flight',
+  'stay',
+  'food',
+  'transport',
+  'activity',
+  'shopping',
+  'other',
+]);
 
 export function normalizeTravelItineraryItem(
   value: unknown,
@@ -113,6 +131,75 @@ export function normalizeTravelParticipants(value: unknown): TravelParticipant[]
   });
 }
 
+function normalizeExpenseCategory(value: unknown): TravelExpenseCategory | undefined {
+  return typeof value === 'string' && EXPENSE_CATEGORIES.has(value as TravelExpenseCategory)
+    ? (value as TravelExpenseCategory)
+    : undefined;
+}
+
+export function normalizeTravelExpense(
+  value: unknown,
+  participantIds: Set<string>,
+): TravelExpense | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const expense = value as Partial<TravelExpense>;
+  const amount = asPositiveNumber(expense.amount);
+  const category = normalizeExpenseCategory(expense.category);
+  const currency = normalizeCurrencyCode(expense.currency, '');
+  if (
+    typeof expense.id !== 'string' ||
+    typeof expense.title !== 'string' ||
+    !expense.title.trim() ||
+    amount === undefined ||
+    !currency ||
+    typeof expense.date !== 'string' ||
+    !category ||
+    typeof expense.paidById !== 'string'
+  ) {
+    return undefined;
+  }
+
+  const allowedPayer =
+    expense.paidById === TRAVEL_EXPENSE_SELF_ID || participantIds.has(expense.paidById);
+  if (!allowedPayer) return undefined;
+
+  const splitWithIds = Array.isArray(expense.splitWithIds)
+    ? expense.splitWithIds.filter(
+        (id): id is string =>
+          typeof id === 'string' &&
+          (id === TRAVEL_EXPENSE_SELF_ID || participantIds.has(id)),
+      )
+    : [];
+  const resolvedSplit = splitWithIds.length > 0 ? [...new Set(splitWithIds)] : [expense.paidById];
+  const fallbackTimestamp = new Date().toISOString();
+
+  return {
+    id: expense.id,
+    title: expense.title.trim(),
+    amount,
+    currency,
+    date: expense.date,
+    category,
+    notes: asString(expense.notes)?.trim() || undefined,
+    paidById: expense.paidById,
+    splitWithIds: resolvedSplit,
+    createdAt: asString(expense.createdAt) ?? asString(expense.updatedAt) ?? fallbackTimestamp,
+    updatedAt: asString(expense.updatedAt) ?? asString(expense.createdAt) ?? fallbackTimestamp,
+  };
+}
+
+export function normalizeTravelExpenses(
+  value: unknown,
+  participants: TravelParticipant[],
+): TravelExpense[] {
+  if (!Array.isArray(value)) return [];
+  const participantIds = new Set(participants.map((p) => p.id));
+  return value.flatMap((item) => {
+    const normalized = normalizeTravelExpense(item, participantIds);
+    return normalized ? [normalized] : [];
+  });
+}
+
 export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const plan = value as Partial<TravelPlan>;
@@ -129,6 +216,7 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
   const repairedImport = repairLegacyIcelandairRoundTripImport(
     normalizeTravelItinerary(plan.itinerary),
   );
+  const participants = normalizeTravelParticipants(plan.participants);
   return {
     id: plan.id,
     ...(typeof plan.chatAccessCode === 'string' &&
@@ -145,7 +233,9 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
         : plan.endDate,
     notes: asString(plan.notes),
     itinerary: repairedImport.itinerary,
-    participants: normalizeTravelParticipants(plan.participants),
+    participants,
+    baseCurrency: normalizeCurrencyCode(plan.baseCurrency),
+    expenses: normalizeTravelExpenses(plan.expenses, participants),
     createdAt: asString(plan.createdAt) ?? asString(plan.updatedAt) ?? fallbackTimestamp,
     updatedAt: asString(plan.updatedAt) ?? asString(plan.createdAt) ?? fallbackTimestamp,
   };

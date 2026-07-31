@@ -327,10 +327,22 @@ export interface PlacementRecommendation {
   avoid: string[];
 }
 
+export interface SoilRecommendation {
+  /** Named mix style, e.g. "Chunky aroid mix". */
+  soilType: string;
+  phMin: number;
+  phMax: number;
+  mixNotes: string;
+  drainageNotes: string;
+  amendments: string[];
+}
+
 export interface PlantCarePlan {
   watering: WateringRecommendation;
   pruning: PruningRecommendation;
   placement: PlacementRecommendation;
+  /** Preferred potting mix, pH range, and drainage guidance for this species. */
+  soil: SoilRecommendation;
   sources: PlantCareSource[];
   disclaimer: string;
   generatedAt: string;

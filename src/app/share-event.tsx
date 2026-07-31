@@ -116,10 +116,10 @@ export default function ShareEventScreen() {
   const confirmDiscard = useCallback(
     (action?: NavigationAction) => {
       appPrompt.alert(
-        'Discard shared events?',
+        'Discard Shared Events?',
         'Nothing from this share will be added to your calendar.',
         [
-          { text: 'Keep reviewing', style: 'cancel' },
+          { text: 'Keep Reviewing', style: 'cancel' },
           {
             text: 'Discard',
             style: 'destructive',
@@ -196,7 +196,7 @@ export default function ShareEventScreen() {
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <AppText variant="title">Review shared events</AppText>
+          <AppText variant="title">Review Shared Events</AppText>
           <AppText variant="body" color="secondary">
             Everything stays on this device until you save it.
           </AppText>
@@ -226,7 +226,7 @@ export default function ShareEventScreen() {
               setDrafts([]);
               setRetryKey((value) => value + 1);
             }}>
-            Try again
+            Try Again
           </Button>
         </View>
       ) : null}
@@ -275,10 +275,10 @@ export default function ShareEventScreen() {
                 </View>
                 <View style={styles.flex}>
                   <TimeField
-                    label="Start time"
+                    label="Start Time"
                     value={draft.startMinutes}
                     onChange={(startMinutes) => updateDraft(draft.id, { startMinutes })}
-                    accessibilityLabel={`Start time for ${draft.title || `event ${index + 1}`}`}
+                    accessibilityLabel={`Start Time for ${draft.title || `event ${index + 1}`}`}
                   />
                 </View>
               </View>

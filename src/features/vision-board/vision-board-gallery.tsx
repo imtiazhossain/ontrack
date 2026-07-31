@@ -1,8 +1,8 @@
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
-  FadeIn,
-  ReduceMotion,
-  SharedTransition,
+    FadeIn,
+    ReduceMotion,
+    SharedTransition,
 } from 'react-native-reanimated';
 
 import { AppText, EmptyState } from '@/components/primitives';
@@ -28,7 +28,7 @@ export function VisionBoardGallery({
       <EmptyState
         icon="gallery"
         title="Your gallery is waiting"
-        message="Switch back to Edit board to add an image, affirmation, or goal."
+        message="Switch back to Edit Board to add an image, affirmation, or goal."
       />
     );
   }

@@ -17,7 +17,7 @@ import type {
 export const ADDONS = [
   {
     id: 'food',
-    name: 'Food tracker',
+    name: 'Food Tracker',
     description: 'Meals, nutrition, photos, and food insights.',
     categoryIds: ['food'],
   },
@@ -30,14 +30,14 @@ export const ADDONS = [
   },
   {
     id: 'plants',
-    name: 'Plant care',
+    name: 'Plant Care',
     description: 'Plant profiles, reminders, and care check-ins.',
     categoryIds: ['plant'],
     tabRoute: 'plants',
   },
   {
     id: 'travel',
-    name: 'Travel planner',
+    name: 'Travel Planner',
     description: 'Shared trips, itineraries, flight search, and stays.',
     categoryIds: [],
     tabRoute: 'travel',
@@ -49,6 +49,13 @@ export const ADDONS = [
     categoryIds: [],
     tabRoute: 'vision-board',
   },
+  {
+    id: 'games',
+    name: 'Games',
+    description: 'Quick mini-games like Balloon Pop for short focus breaks.',
+    categoryIds: [],
+    tabRoute: 'games',
+  },
 ] as const satisfies readonly AddonDefinition[];
 
 export const DEFAULT_ADDON_STATE: AddonEnabledState = {
@@ -57,6 +64,7 @@ export const DEFAULT_ADDON_STATE: AddonEnabledState = {
   plants: true,
   travel: true,
   'vision-board': true,
+  games: true,
 };
 
 /** Beta default. Paid access can later replace this from server-owned rows. */
@@ -66,6 +74,7 @@ export const DEFAULT_ADDON_ENTITLEMENTS: AddonEntitlementState = {
   plants: { active: true, source: 'included' },
   travel: { active: true, source: 'included' },
   'vision-board': { active: true, source: 'included' },
+  games: { active: true, source: 'included' },
 };
 
 const ADDON_BY_ID = new Map<AddonId, AddonDefinition>(ADDONS.map((addon) => [addon.id, addon]));

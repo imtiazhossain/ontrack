@@ -113,7 +113,7 @@ export function TodoJoinScreen({ code }: { code: string }) {
     <Screen contentStyle={styles.page}>
       <View style={styles.brand}>
         <AppText variant="overline" color="accent">onTrack To Do</AppText>
-        <AppText variant="display">Join the list</AppText>
+        <AppText variant="display">Join the List</AppText>
       </View>
       <Card style={styles.card}>
         {resolved ? (
@@ -143,7 +143,7 @@ export function TodoJoinScreen({ code }: { code: string }) {
               })
               .finally(() => setJoining(false));
           }}>
-          {joining ? 'Joining…' : 'Join list'}
+          {joining ? 'Joining…' : 'Join List'}
         </Button>
       ) : null}
     </Screen>

@@ -1,23 +1,25 @@
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { isActivityEnabled } from '@/addons/registry';
 import { AppText, EmptyState, IconButton } from '@/components/primitives';
 import { ActivityCard } from '@/components/shared';
-import { isActivityEnabled } from '@/addons/registry';
 import { findCategory } from '@/constants/categories';
 import { layout, shadows, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { aiProvider } from '@/services/ai';
-import { usePreferences } from '@/store/preferences';
+import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import { useAddons } from '@/store/addons';
+import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useUI } from '@/store/ui';
-import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import type { Activity } from '@/types/models';
-import { addDays, isToday, nowMinutes, todayKey } from '@/utils/date';
 import { confirmDeleteActivity, showActivityActions, type ActivityAction } from '@/utils/activity-actions';
+import { addDays, isToday, nowMinutes, todayKey } from '@/utils/date';
+import { listReferenceEquality } from '@/utils/list-equality';
 
 interface DayViewProps {
   date: string;
@@ -55,13 +57,16 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const enabledAddons = useAddons((s) => s.enabled);
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
 
-  const allActivities = useSchedule((s) => s.activities);
+  const dayActivities = useSchedule(
+    (s) => s.activities.filter((activity) => activity.date === date),
+    listReferenceEquality,
+  );
   const activities = useMemo(
     () =>
-      allActivities
-        .filter((activity) => activity.date === date && isActivityEnabled(activity, enabledAddons))
+      dayActivities
+        .filter((activity) => isActivityEnabled(activity, enabledAddons))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [allActivities, date, enabledAddons],
+    [dayActivities, enabledAddons],
   );
   const categories = useSchedule((s) => s.categories);
   const setStatus = useSchedule((s) => s.setStatus);
@@ -182,46 +187,50 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
       edges={['left', 'right']}
       onTouchStart={notifyPageInteraction}
       style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-      <ScrollView
+      <FlashList
+        data={activities}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}>
-        {renderHeader({ completion, nowLine, summaryLine, topInset: 0 })}
-
-        <View style={styles.timeline}>
-          {activities.length === 0 ? (
-            <EmptyState
-              icon="calendar-add"
-              title="A blank page"
-              message="Nothing planned for this day yet. Add your first activity to begin shaping it."
-              actionLabel="Add activity"
-              onAction={() => router.push({ pathname: '/activity-form', params: { date } })}
-            />
-          ) : (
-            <>
-              <AppText variant="overline" color="tertiary" style={styles.timelineLabel}>
-                Timeline
-              </AppText>
-              {activities.map((activity, index) => (
-                <ActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  category={findCategory(categories, activity.categoryId)}
-                  isCurrent={activity.id === currentId}
-                  index={index}
-                  onPress={() => openActivity(activity)}
-                  onLongPress={activity.plantId ? undefined : () =>
-                    showActivityActions({
-                      activity,
-                      onAction: (action) => handleActivityAction(activity, action),
-                    })
-                  }
-                  onToggleComplete={() => void toggleComplete(activity)}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}
+        ListHeaderComponent={
+          <View>
+            {renderHeader({ completion, nowLine, summaryLine, topInset: 0 })}
+            <View style={styles.timeline}>
+              {activities.length === 0 ? (
+                <EmptyState
+                  icon="calendar-add"
+                  title="A blank page"
+                  message="Nothing planned for this day yet. Add your first activity to begin shaping it."
+                  actionLabel="Add Activity"
+                  onAction={() => router.push({ pathname: '/activity-form', params: { date } })}
                 />
-              ))}
-            </>
-          )}
-        </View>
-      </ScrollView>
+              ) : (
+                <AppText variant="overline" color="tertiary" style={styles.timelineLabel}>
+                  Timeline
+                </AppText>
+              )}
+            </View>
+          </View>
+        }
+        renderItem={({ item: activity, index }) => (
+          <View style={styles.rowPad}>
+            <ActivityCard
+              activity={activity}
+              category={findCategory(categories, activity.categoryId)}
+              isCurrent={activity.id === currentId}
+              index={index}
+              onPress={() => openActivity(activity)}
+              onLongPress={activity.plantId ? undefined : () =>
+                showActivityActions({
+                  activity,
+                  onAction: (action) => handleActivityAction(activity, action),
+                })
+              }
+              onToggleComplete={() => void toggleComplete(activity)}
+            />
+          </View>
+        )}
+      />
 
       <View
         style={[
@@ -231,10 +240,10 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
         ]}>
         <IconButton
           icon="add"
-          size={56}
+          size={48}
           background={theme.accentPrimary}
           color={theme.textOnAccent}
-          accessibilityLabel="Add activity"
+          accessibilityLabel="Add Activity"
           onPress={() => router.push({ pathname: '/activity-form', params: { date } })}
         />
       </View>
@@ -251,9 +260,12 @@ const styles = StyleSheet.create({
   timelineLabel: {
     marginBottom: spacing.md,
   },
+  rowPad: {
+    paddingHorizontal: layout.screenPadding,
+  },
   fab: {
     position: 'absolute',
     right: layout.screenPadding,
-    borderRadius: 28,
+    borderRadius: 24,
   },
 });

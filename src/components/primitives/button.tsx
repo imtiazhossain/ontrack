@@ -1,7 +1,8 @@
 import type { PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 
-import { layout, radii, spacing, type AppIconName } from '@/design-system';
+import { radii, type AppIconName } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 import { AppText } from './app-text';
@@ -30,6 +31,7 @@ export function Button({
   accessibilityLabel,
 }: ButtonProps) {
   const theme = useTheme();
+  const { spacing, layout } = useResponsive();
 
   const background = {
     primary: theme.accentPrimary,
@@ -54,15 +56,22 @@ export function Button({
       }}
       style={({ pressed }) => [
         styles.base,
-        size === 'lg' && styles.lg,
-        { backgroundColor: background, opacity: disabled ? 0.4 : pressed ? 0.75 : 1 },
+        {
+          gap: spacing.sm,
+          minHeight: layout.minTapTarget,
+          paddingHorizontal: spacing.xl,
+          paddingVertical: size === 'lg' ? spacing.lg : spacing.md,
+          opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
+          backgroundColor: background,
+        },
         style,
       ]}>
       {icon ? <Symbol name={icon} size="sm" color={iconColor} /> : null}
       <AppText
         variant={size === 'lg' ? 'subheading' : 'callout'}
         color={textColor}
-        style={textStyle}>
+        fit
+        style={[{ flexShrink: 1 }, textStyle]}>
         {children}
       </AppText>
     </Pressable>
@@ -88,11 +97,13 @@ export function IconButton({
   background,
   borderColor,
   shape = 'circle',
-  size = layout.minTapTarget,
+  size,
   accessibilityLabel,
   disabled,
 }: IconButtonProps) {
   const theme = useTheme();
+  const { layout } = useResponsive();
+  const resolvedSize = size ?? layout.minTapTarget;
   return (
     <Pressable
       accessibilityRole="button"
@@ -106,9 +117,9 @@ export function IconButton({
       style={({ pressed }) => [
         styles.iconButton,
         {
-          width: size,
-          height: size,
-          borderRadius: shape === 'rounded' ? radii.md : size / 2,
+          width: resolvedSize,
+          height: resolvedSize,
+          borderRadius: shape === 'rounded' ? radii.md : resolvedSize / 2,
           backgroundColor: background ?? theme.backgroundSunken,
           borderColor,
           borderWidth: borderColor ? StyleSheet.hairlineWidth : 0,
@@ -125,14 +136,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: layout.minTapTarget,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     borderRadius: radii.pill,
-  },
-  lg: {
-    paddingVertical: spacing.lg,
   },
   iconButton: {
     alignItems: 'center',

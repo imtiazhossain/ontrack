@@ -7,7 +7,7 @@ import { goBackOrReplace } from '@/utils/navigation';
 import { IconButton } from './button';
 
 export function BackButton({
-  accessibilityLabel = 'Go back',
+  accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
 }: {
   accessibilityLabel?: string;
@@ -29,7 +29,7 @@ export function BackButton({
 
 /** Back control used by the shared native stack header on every non-root route. */
 export function HeaderBackButton({
-  accessibilityLabel = 'Go back',
+  accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
 }: {
   accessibilityLabel?: string;

@@ -37,6 +37,7 @@ import {
   shareTravelPlan,
 } from '@/features/travel/share';
 import { TripPeople } from '@/features/travel/trip-people';
+import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { TravelItineraryForm } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryItem } from '@/features/travel/travel-itinerary-item';
@@ -115,6 +116,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [minimizedItemIds, setMinimizedItemIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [showExpenses, setShowExpenses] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -181,7 +183,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       <Screen>
         <EmptyState
           icon="flight"
-          title="Trip not found"
+          title="Trip Not Found"
           message="This trip may have been removed on another device."
         />
       </Screen>
@@ -257,7 +259,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 
   const confirmRemoveItem = (item: TravelPlan['itinerary'][number]) => {
     confirmDestructiveAction({
-      title: 'Remove itinerary item?',
+      title: 'Remove Itinerary Item?',
       message: item.title,
       actionLabel: 'Remove',
       onConfirm: () => removeItem(item.id),
@@ -295,15 +297,15 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 
   const chooseConfirmationImport = (target: 'new' | string) => {
     appPrompt.alert(
-      'Import flight confirmation',
+      'Import Flight Confirmation',
       'Choose a document, saved email, or up to 6 screenshots from Photos.',
       [
         {
-          text: 'Photo screenshots',
+          text: 'Photo Screenshots',
           onPress: () => void importConfirmation(target, 'screenshots'),
         },
         {
-          text: 'Document or email',
+          text: 'Document or Email',
           onPress: () => void importConfirmation(target, 'document'),
         },
         { text: 'Cancel', style: 'cancel' },
@@ -541,11 +543,11 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const confirmRemoveParticipant = (participant: TravelParticipant) => {
     const accepted = Boolean(participant.acceptedAt);
     confirmDestructiveAction({
-      title: accepted ? 'Remove friend?' : 'Remove invitation?',
+      title: accepted ? 'Remove Friend?' : 'Remove Invitation?',
       message: accepted
         ? `${participant.name} will be removed from this trip and their invite link will stop working.`
         : `${participant.name}’s invite link will stop working.`,
-      actionLabel: accepted ? 'Remove friend' : 'Remove invite',
+      actionLabel: accepted ? 'Remove Friend' : 'Remove Invite',
       onConfirm: () => void removeParticipant(participant),
     });
   };
@@ -604,13 +606,26 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           />
           {dateError ? <ErrorMessage message={dateError} /> : null}
           <View style={styles.dateEditorActions}>
-            <Button onPress={saveEditedDates}>Save dates</Button>
+            <Button onPress={saveEditedDates}>Save Dates</Button>
             <Button variant="ghost" onPress={() => setEditingDates(false)}>Cancel</Button>
           </View>
         </View>
       ) : null}
 
-      <TravelPlanActions plan={plan} dateLocale={dateLocale} />
+      <TravelPlanActions
+        plan={plan}
+        dateLocale={dateLocale}
+        onOpenExpenses={() => setShowExpenses(true)}
+      />
+
+      <Button
+        variant="secondary"
+        icon="receipt"
+        onPress={() => setShowExpenses(true)}
+        accessibilityLabel={`Track expenses for ${plan.title}`}>
+        Expenses
+        {plan.expenses.length > 0 ? ` · ${plan.expenses.length}` : ''}
+      </Button>
 
       <TripPeople
         participants={plan.participants}
@@ -687,6 +702,12 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         onFlightDetailsChange={setFlightDetails}
         onImportFlight={() => chooseConfirmationImport('new')}
         onAdd={addItem}
+      />
+      <TravelExpensesSheet
+        plan={plan}
+        visible={showExpenses}
+        onClose={() => setShowExpenses(false)}
+        onSavePlan={(next) => updatePlan(next)}
       />
     </Screen>
   );

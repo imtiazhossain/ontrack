@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Keyboard,
   Platform,
   StyleSheet,
@@ -46,7 +46,8 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 function TravelChatScreenContent({ planId }: { planId: string }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<OptimisticTravelChatMessage>>(null);
+  const listRef =
+    useRef<ComponentRef<typeof FlashList<OptimisticTravelChatMessage>>>(null);
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const senderName = usePreferences((state) => state.name).trim() || 'Trip member';
   const accessCode = plan ? travelChatAccessCode(plan) : undefined;
@@ -218,7 +219,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
   if (!plan) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-        <EmptyState icon="chat" title="Trip not found" message="This trip is no longer available." />
+        <EmptyState icon="chat" title="Trip Not Found" message="This trip is no longer available." />
       </View>
     );
   }
@@ -227,12 +228,12 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
         <View style={styles.paddedHeader}>
-          <AppText variant="title">Trip chat</AppText>
+          <AppText variant="title">Trip Chat</AppText>
         </View>
         <View style={styles.center}>
           <EmptyState
             icon="people"
-            title="Chat opens when a friend joins"
+            title="Chat Opens When a Friend Joins"
             message="Invite someone to this trip. Once they accept, everyone can start planning here."
           />
         </View>
@@ -247,7 +248,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           <AppText variant="heading" numberOfLines={1}>{plan.title}</AppText>
           <AppText variant="caption" color="secondary">
             {plan.id === ALL_ACCOUNTS_TEST_TRIP.id
-              ? 'Shared test chat'
+              ? 'Shared Test Chat'
               : `${plan.participants.length + 1} ${
                   plan.participants.length === 0 ? 'trip member' : 'trip members'
                 }`}
@@ -281,7 +282,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           <AppText variant="body" color="secondary">Loading messages…</AppText>
         </View>
       ) : (
-        <FlatList
+        <FlashList<OptimisticTravelChatMessage>
           ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
@@ -295,7 +296,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           ListEmptyComponent={
             <EmptyState
               icon="chat"
-              title="Start the conversation"
+              title="Start the Conversation"
               message="Share ideas, arrival plans, reservations, and anything the group should know."
             />
           }

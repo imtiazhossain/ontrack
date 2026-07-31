@@ -128,7 +128,7 @@ export function TodoCollaboratorJoinScreen({ code }: { code: string }) {
     <Screen contentStyle={styles.page}>
       <View style={styles.brand}>
         <AppText variant="overline" color="accent">onTrack To Do</AppText>
-        <AppText variant="display">Join checklists</AppText>
+        <AppText variant="display">Join Checklists</AppText>
       </View>
       <Card style={styles.card}>
         {resolved ? (
@@ -178,7 +178,7 @@ export function TodoCollaboratorJoinScreen({ code }: { code: string }) {
               })
               .finally(() => setJoining(false));
           }}>
-          {joining ? 'Joining…' : 'Join checklists'}
+          {joining ? 'Joining…' : 'Join Checklists'}
         </Button>
       ) : null}
     </Screen>

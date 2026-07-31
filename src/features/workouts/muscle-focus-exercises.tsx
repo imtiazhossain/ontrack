@@ -1,0 +1,329 @@
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { AppText, SectionHeader, Symbol } from '@/components/primitives';
+import { layout, radii, spacing } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
+import { haptics } from '@/utils/haptics';
+
+import {
+  type ExerciseLoadKind,
+  filterExercisesByLoadKind,
+} from './exercise-load';
+import type { ExerciseTemplate } from './muscle-data';
+
+const LOAD_TABS: { id: ExerciseLoadKind; label: string }[] = [
+  { id: 'weighted', label: 'Weighted' },
+  { id: 'bodyweight', label: 'Bodyweight' },
+];
+
+interface MuscleFocusExercisesProps {
+  muscleLabel: string;
+  exercises: ExerciseTemplate[];
+  loadKind: ExerciseLoadKind;
+  selectedExerciseIds: string[];
+  accentTint: string;
+  accentMain: string;
+  onChangeLoadKind: (kind: ExerciseLoadKind) => void;
+  onPreview: (exercise: ExerciseTemplate) => void;
+  onToggle: (exerciseId: string) => void;
+}
+
+export function MuscleFocusExercises({
+  muscleLabel,
+  exercises,
+  loadKind,
+  selectedExerciseIds,
+  accentTint,
+  accentMain,
+  onChangeLoadKind,
+  onPreview,
+  onToggle,
+}: MuscleFocusExercisesProps) {
+  const theme = useTheme();
+  const { s, spacing: rs } = useResponsive();
+  const visibleExercises = filterExercisesByLoadKind(exercises, loadKind);
+  const bodyweightCount = filterExercisesByLoadKind(exercises, 'bodyweight').length;
+  const weightedCount = filterExercisesByLoadKind(exercises, 'weighted').length;
+  const tabMinHeight = Math.max(44, s(36));
+
+  const changeLoadKind = (kind: ExerciseLoadKind) => {
+    if (kind === loadKind) return;
+    haptics.select();
+    onChangeLoadKind(kind);
+  };
+
+  return (
+    <View style={styles.pagePadding}>
+      <SectionHeader title={`Workouts for ${muscleLabel}`} />
+
+      {exercises.length > 0 ? (
+        <View
+          style={[
+            styles.loadToggle,
+            {
+              backgroundColor: theme.backgroundElevated,
+              borderColor: theme.separator,
+              marginBottom: rs.md,
+            },
+          ]}>
+          {LOAD_TABS.map((tab) => {
+            const selected = loadKind === tab.id;
+            const count = tab.id === 'bodyweight' ? bodyweightCount : weightedCount;
+            return (
+              <Pressable
+                key={tab.id}
+                accessibilityRole="tab"
+                accessibilityLabel={`${tab.label} workouts`}
+                accessibilityState={{ selected }}
+                onPress={() => changeLoadKind(tab.id)}
+                style={[
+                  styles.loadTab,
+                  {
+                    minHeight: tabMinHeight,
+                    paddingHorizontal: rs.md,
+                  },
+                  selected && { backgroundColor: theme.backgroundSunken },
+                ]}>
+                <View style={styles.loadTabLabel}>
+                  <AppText
+                    variant="caption"
+                    color={selected ? 'primary' : 'secondary'}
+                    fit
+                    style={styles.loadTabText}>
+                    {tab.label}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color={selected ? 'accent' : 'tertiary'}
+                    fit>
+                    {count}
+                  </AppText>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+
+      <View style={styles.exerciseList}>
+        {visibleExercises.map((exercise, index) => {
+          const selected = selectedExerciseIds.includes(exercise.id);
+          return (
+            <View
+              key={exercise.id}
+              style={[
+                styles.exerciseCard,
+                {
+                  backgroundColor: selected ? accentTint : theme.backgroundElevated,
+                  borderColor: selected ? accentMain : theme.separator,
+                },
+              ]}>
+              <View style={styles.exerciseTopRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Watch ${exercise.name} anatomy animation`}
+                  onPress={() => onPreview(exercise)}
+                  style={({ pressed }) => [
+                    styles.exercisePreviewButton,
+                    { opacity: pressed ? 0.72 : 1 },
+                  ]}>
+                  <View
+                    style={[
+                      styles.exerciseIndex,
+                      { backgroundColor: selected ? accentMain : theme.backgroundSunken },
+                    ]}>
+                    {selected ? (
+                      <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
+                    ) : (
+                      <AppText variant="mono" color="secondary">
+                        0{index + 1}
+                      </AppText>
+                    )}
+                  </View>
+                  <View style={styles.flex}>
+                    <AppText variant="subheading">{exercise.name}</AppText>
+                    <AppText variant="caption" color="secondary">
+                      {exercise.equipment}
+                    </AppText>
+                  </View>
+                  <View
+                    style={[styles.previewControl, { backgroundColor: theme.backgroundSunken }]}>
+                    <Symbol name="play.fill" size={10} color={accentMain} />
+                  </View>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${exercise.name}`}
+                  accessibilityState={{ checked: selected }}
+                  hitSlop={6}
+                  onPress={() => onToggle(exercise.id)}
+                  style={({ pressed }) => [
+                    styles.addControl,
+                    {
+                      backgroundColor: selected ? accentMain : theme.backgroundPrimary,
+                      borderColor: selected ? accentMain : theme.separator,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Symbol
+                    name={selected ? 'minus' : 'plus'}
+                    size="sm"
+                    color={selected ? theme.textOnAccent : theme.textPrimary}
+                  />
+                </Pressable>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View muscles worked by ${exercise.name}`}
+                onPress={() => onPreview(exercise)}
+                style={({ pressed }) => [
+                  styles.exerciseMeta,
+                  { borderTopColor: theme.separator, opacity: pressed ? 0.72 : 1 },
+                ]}>
+                <View style={styles.metaItem}>
+                  <Symbol name="square.stack.3d.up" size="sm" color={theme.textTertiary} />
+                  <AppText variant="caption" color="secondary">
+                    {exercise.sets} sets
+                  </AppText>
+                </View>
+                <View style={styles.metaItem}>
+                  <Symbol name="repeat" size="sm" color={theme.textTertiary} />
+                  <AppText variant="caption" color="secondary">
+                    {exercise.reps} reps
+                  </AppText>
+                </View>
+                <View style={styles.metaItem}>
+                  <Symbol name="timer" size="sm" color={theme.textTertiary} />
+                  <AppText variant="caption" color="secondary">
+                    {exercise.restSeconds}s rest
+                  </AppText>
+                </View>
+                <View style={styles.watchHint}>
+                  <AppText variant="caption" color="accent">
+                    Watch Anatomy
+                  </AppText>
+                  <Symbol name="chevron.right" size={10} color={accentMain} />
+                </View>
+              </Pressable>
+            </View>
+          );
+        })}
+
+        {exercises.length === 0 ? (
+          <AppText variant="callout" color="secondary">
+            This muscle is in the atlas for learning. Choose a training-linked body part like Chest
+            or Back for programmed workouts.
+          </AppText>
+        ) : visibleExercises.length === 0 ? (
+          <AppText variant="callout" color="secondary">
+            No {loadKind === 'bodyweight' ? 'bodyweight' : 'weighted'} workouts for this muscle yet.
+            Switch to {loadKind === 'bodyweight' ? 'Weighted' : 'Bodyweight'} to see available
+            options.
+          </AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  pagePadding: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  loadToggle: {
+    flexDirection: 'row',
+    gap: 2,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    padding: 2,
+  },
+  loadTab: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+  },
+  loadTabLabel: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  loadTabText: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  exerciseList: {
+    gap: spacing.md,
+  },
+  exerciseCard: {
+    gap: spacing.md,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    boxShadow: '0 4px 18px rgba(27, 24, 21, 0.045)',
+  },
+  exerciseTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  exercisePreviewButton: {
+    minHeight: layout.minTapTarget,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  flex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  exerciseIndex: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+  },
+  addControl: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 20,
+  },
+  previewControl: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+  },
+  exerciseMeta: {
+    minHeight: layout.minTapTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+    paddingLeft: 54,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  watchHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginLeft: 'auto',
+  },
+});

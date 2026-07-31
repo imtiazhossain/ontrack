@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { layout, radii, spacing, type AppIconName } from '@/design-system';
+import { radii, type AppIconName } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 
@@ -26,16 +27,27 @@ export function SettingsRow({
   accessibilityLabel = label,
 }: SettingsRowProps) {
   const theme = useTheme();
+  const { spacing, layout, s } = useResponsive();
   const content = (
     <>
       {icon ? (
-        <View style={[styles.icon, { backgroundColor: theme.accentFaint }]}>
+        <View
+          style={[
+            styles.icon,
+            {
+              width: s(34),
+              height: s(34),
+              backgroundColor: theme.accentFaint,
+            },
+          ]}>
           <Symbol name={icon} size="sm" color={theme.accentPrimary} />
         </View>
       ) : null}
-      <View style={styles.text}>
-        <AppText variant="callout">{label}</AppText>
-        <AppText variant="caption" color="secondary">
+      <View style={[styles.text, { gap: spacing.xxs }]}>
+        <AppText variant="callout" fit>
+          {label}
+        </AppText>
+        <AppText variant="caption" color="secondary" numberOfLines={2}>
           {detail}
         </AppText>
       </View>
@@ -44,7 +56,14 @@ export function SettingsRow({
   );
   const surface = [
     styles.row,
-    { backgroundColor: theme.backgroundSunken, borderColor: theme.separator },
+    {
+      minHeight: layout.minTapTarget,
+      gap: spacing.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+      backgroundColor: theme.backgroundSunken,
+      borderColor: theme.separator,
+    },
   ];
 
   if (!onPress) return <View style={surface}>{content}</View>;
@@ -120,19 +139,13 @@ export function SettingsActionRow({
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: layout.minTapTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
     borderRadius: radii.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    marginBottom: spacing.sm,
   },
   icon: {
-    width: 34,
-    height: 34,
     borderRadius: radii.sm,
     borderCurve: 'continuous',
     alignItems: 'center',
@@ -140,6 +153,6 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    gap: spacing.xxs,
+    minWidth: 0,
   },
 });

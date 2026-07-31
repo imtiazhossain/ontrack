@@ -15,6 +15,14 @@ const carePlan = {
     windowDistance: 'About 1 metre from the glass.',
     avoid: ['Heating vents'],
   },
+  soil: {
+    soilType: 'Chunky aroid mix',
+    phMin: 5.5,
+    phMax: 7,
+    mixNotes: 'Potting soil with bark and perlite.',
+    drainageNotes: 'Drain thoroughly after watering.',
+    amendments: ['Orchid bark', 'Perlite'],
+  },
   sources: [{ title: 'University Extension', url: 'https://extension.umn.edu/houseplants' }],
   disclaimer: 'Use this as a starting point because indoor conditions vary.',
 };

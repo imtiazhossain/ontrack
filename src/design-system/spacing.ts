@@ -13,8 +13,8 @@ export const layout = {
   screenPadding: 20,
   maxContentWidth: 640,
   minTapTarget: 44,
-  tabBarInset: 56,
-  floatingTabBarBaseHeight: 90,
+  tabBarInset: 44,
+  floatingTabBarBaseHeight: 58,
 } as const;
 
 export const iconSizes = {

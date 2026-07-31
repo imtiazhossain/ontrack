@@ -26,6 +26,7 @@ export const appIcons = {
   plant: { ios: 'leaf.fill', android: 'potted_plant', web: 'potted_plant' },
   insights: { ios: 'chart.line.uptrend.xyaxis', android: 'monitoring', web: 'monitoring' },
   'vision-board': { ios: 'square.grid.2x2.fill', android: 'dashboard', web: 'dashboard' },
+  games: { ios: 'gamecontroller.fill', android: 'sports_esports', web: 'sports_esports' },
   tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
   groceries: { ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' },
   maintenance: {
@@ -75,6 +76,8 @@ export const appIcons = {
   chat: { ios: 'message.fill', android: 'chat', web: 'chat' },
   send: { ios: 'paperplane.fill', android: 'send', web: 'send' },
   currency: { ios: 'dollarsign.circle', android: 'attach_money', web: 'attach_money' },
+  receipt: { ios: 'receipt', android: 'receipt_long', web: 'receipt_long' },
+  wallet: { ios: 'wallet.pass', android: 'account_balance_wallet', web: 'account_balance_wallet' },
   clock: { ios: 'clock', android: 'schedule', web: 'schedule' },
   download: { ios: 'square.and.arrow.down', android: 'download', web: 'download' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },

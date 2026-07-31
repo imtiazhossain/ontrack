@@ -11,9 +11,11 @@ import { googleWeatherUrl } from '@/features/travel/weather';
 export function TravelPlanActions({
   plan,
   dateLocale,
+  onOpenExpenses,
 }: {
   plan: TravelPlan;
   dateLocale: string;
+  onOpenExpenses?: () => void;
 }) {
   const router = useRouter();
   return (
@@ -61,6 +63,15 @@ export function TravelPlanActions({
         accessibilityLabel={`Convert your home currency for ${plan.destination} with Google`}>
         Currency
       </Button>
+      {onOpenExpenses ? (
+        <Button
+          variant="secondary"
+          icon="receipt"
+          onPress={onOpenExpenses}
+          accessibilityLabel={`Track expenses for ${plan.title}`}>
+          Expenses
+        </Button>
+      ) : null}
     </View>
   );
 }

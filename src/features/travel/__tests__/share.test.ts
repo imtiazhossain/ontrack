@@ -37,6 +37,8 @@ const plan: TravelPlan = {
     },
   ],
   participants: [],
+  baseCurrency: 'USD',
+  expenses: [],
   createdAt: '2026-07-25T12:00:00.000Z',
   updatedAt: '2026-07-25T12:00:00.000Z',
 };
@@ -62,6 +64,8 @@ describe('travel invites', () => {
         },
       ],
       participants: [],
+      baseCurrency: 'USD',
+      expenses: [],
     });
   });
 

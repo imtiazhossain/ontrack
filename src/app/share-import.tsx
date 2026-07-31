@@ -73,10 +73,10 @@ export default function ShareImportScreen() {
   const confirmDiscard = useCallback(
     (action?: NavigationAction) => {
       appPrompt.alert(
-        'Discard shared content?',
+        'Discard Shared Content?',
         'Nothing from this share will be saved.',
         [
-          { text: 'Keep choosing', style: 'cancel' },
+          { text: 'Keep Choosing', style: 'cancel' },
           {
             text: 'Discard',
             style: 'destructive',
@@ -128,7 +128,7 @@ export default function ShareImportScreen() {
             Incoming share
           </AppText>
           <AppText variant="display">
-            {mode === 'recipe' ? 'Choose a Grocery list' : 'What are you adding?'}
+            {mode === 'recipe' ? 'Choose a Grocery List' : 'What are you adding?'}
           </AppText>
           <AppText variant="body" color="secondary">
             The shared payload stays available until you save it or confirm
@@ -161,7 +161,7 @@ export default function ShareImportScreen() {
               <Symbol name="groceries" size={28} color={theme.accentPrimary} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="heading">Add recipe</AppText>
+              <AppText variant="heading">Add Recipe</AppText>
               <AppText variant="body" color="secondary">
                 Extract a meal and review its grocery ingredients.
               </AppText>
@@ -179,7 +179,7 @@ export default function ShareImportScreen() {
               <Symbol name="calendar-add" size={28} color={theme.textSecondary} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="heading">Add calendar event</AppText>
+              <AppText variant="heading">Add Calendar Event</AppText>
               <AppText variant="body" color="secondary">
                 Read dates and times, then review calendar fields.
               </AppText>
@@ -213,7 +213,7 @@ export default function ShareImportScreen() {
           <Card style={styles.newList}>
             <AppText variant="subheading">Create a Grocery list</AppText>
             <Input
-              label="List name"
+              label="List Name"
               value={newListName}
               maxLength={80}
               onChangeText={setNewListName}

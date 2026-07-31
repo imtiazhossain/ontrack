@@ -28,7 +28,7 @@ export function TravelPlanDetailsEditor({
   return (
     <View style={styles.editor}>
       <Input
-        label="Trip name"
+        label="Trip Name"
         value={title}
         onChangeText={onTitleChange}
         placeholder="Birthday in Lisbon"
@@ -49,7 +49,7 @@ export function TravelPlanDetailsEditor({
       />
       {error ? <ErrorMessage message={error} selectable /> : null}
       <View style={styles.actions}>
-        <Button onPress={onSave} style={styles.flex}>Save details</Button>
+        <Button onPress={onSave} style={styles.flex}>Save Details</Button>
         <Button variant="ghost" onPress={onCancel} style={styles.flex}>Cancel</Button>
       </View>
     </View>

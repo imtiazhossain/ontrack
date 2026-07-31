@@ -27,9 +27,9 @@ export default function DataChoiceScreen() {
       'Replace cloud account data?',
       'The complete dataset on this device will replace the account dataset on every synced device. This cannot be undone.',
       [
-        { text: 'Keep choosing', style: 'cancel' },
+        { text: 'Keep Choosing', style: 'cancel' },
         {
-          text: 'Use this device',
+          text: 'Use This Device',
           style: 'destructive',
           onPress: () => void resolve('device'),
         },
@@ -48,7 +48,7 @@ export default function DataChoiceScreen() {
       </AppText>
 
       <View style={[styles.option, { backgroundColor: theme.backgroundElevated, borderColor: theme.accentPrimary }]}>
-        <AppText variant="heading">Use cloud account</AppText>
+        <AppText variant="heading">Use Cloud Account</AppText>
         <AppText variant="body" color="secondary">
           Restore the account’s plans on this device. This is the safest choice when you already use onTrack elsewhere.
         </AppText>
@@ -56,13 +56,13 @@ export default function DataChoiceScreen() {
           size="lg"
           disabled={Boolean(working)}
           onPress={() => void resolve('cloud')}
-          accessibilityLabel="Use cloud account data">
-          {working === 'cloud' ? 'Restoring…' : 'Use cloud account'}
+          accessibilityLabel="Use Cloud Account data">
+          {working === 'cloud' ? 'Restoring…' : 'Use Cloud Account'}
         </Button>
       </View>
 
       <View style={[styles.option, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
-        <AppText variant="heading">Use this device</AppText>
+        <AppText variant="heading">Use This Device</AppText>
         <AppText variant="body" color="secondary">
           Upload every plan and app-owned photo from this device, replacing the account dataset.
         </AppText>
@@ -71,7 +71,7 @@ export default function DataChoiceScreen() {
           disabled={Boolean(working)}
           onPress={confirmDevice}
           accessibilityLabel="Use data from this device">
-          {working === 'device' ? 'Uploading…' : 'Use this device'}
+          {working === 'device' ? 'Uploading…' : 'Use This Device'}
         </Button>
       </View>
 

@@ -16,7 +16,7 @@ export function showActivityActions({ activity, onAction }: ShowActivityActionsI
     'Edit',
     isSkipped ? 'Unskip' : 'Skip',
     'Duplicate',
-    'Move to tomorrow',
+    'Move to Tomorrow',
     'Delete',
     'Cancel',
   ];
@@ -56,7 +56,7 @@ export function showActivityActions({ activity, onAction }: ShowActivityActionsI
 
 export function confirmDeleteActivity(title: string, onConfirm: () => void) {
   confirmDestructiveAction({
-    title: 'Delete activity',
+    title: 'Delete Activity',
     message: `Remove "${title}" from your schedule?`,
     onConfirm,
   });

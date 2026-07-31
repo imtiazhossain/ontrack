@@ -1,0 +1,26 @@
+---
+description: After every change, verify Metro/app is running and leave a usable working state
+alwaysApply: true
+---
+
+# Verify and hand off a working app
+
+After any code change that affects the running Expo app, do not end the turn until the user can open and use the app.
+
+## Required close-out
+
+1. **Metro must be up.** If port `8081` is not serving `/status` → 200, start it:
+   - Prefer: `REACT_NATIVE_PACKAGER_HOSTNAME=<current en0 IP> npm start`
+   - Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with that LAN IP when it drifts.
+2. **Prove the bundle loads.** `curl` LAN + localhost status; on doubt, fetch the iOS entry bundle and confirm HTTP 200.
+3. **Check the change.** Run `npm run typecheck` and relevant `npm test` for touched domains. Fix failures before finishing.
+4. **Watch for white screens / LoadBundleFromServerError.** Those usually mean Metro died or Fast Refresh broke — restart Metro and confirm status before handing off.
+5. **Tell the user the handoff.** State that Metro is running (URL/IP), what to press if needed (⌘R / reopen app), and that the changed surface should be usable.
+6. **Show it in the simulator.** Capture a fully loaded iOS Simulator screenshot of the changed surface (`xcrun simctl io booted screenshot`) and read the image into the reply. Do not finish on a splash, blank, or error screen — wait/retry until the UI is loaded.
+
+## Do not
+
+- End on “reload the app” while Metro is down or unverified.
+- Leave Fast Refresh / HMR errors as the final state — recover to a clean bundle first.
+- Assume a background `npm start` is healthy without checking `/status`.
+- Hand off without a fully loaded simulator screenshot of the changed UI.

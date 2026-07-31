@@ -1,23 +1,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  useWindowDimensions,
+    Platform,
+    Pressable,
+    StyleSheet,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  EmptyState,
-  ErrorMessage,
-  IconButton,
-  Screen,
-  Symbol,
+    appPrompt,
+    AppText,
+    Button,
+    EmptyState,
+    ErrorMessage,
+    IconButton,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
@@ -28,22 +28,22 @@ import { goBackOrReplace } from '@/utils/navigation';
 import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 
 import {
-  initialCanvasFrame,
-  nudgeCanvasFrame,
-  VISION_BOARD_ASPECT_RATIO,
+    initialCanvasFrame,
+    nudgeCanvasFrame,
+    VISION_BOARD_ASPECT_RATIO,
 } from './canvas';
 import { VISION_BOARD_BACKGROUNDS } from './defaults';
 import {
-  cleanupOrphanedVisionBoardImages,
-  persistVisionBoardImage,
+    cleanupOrphanedVisionBoardImages,
+    persistVisionBoardImage,
 } from './media';
 import { itemsForCategory } from './selectors';
 import type {
-  CanvasFrame,
-  VisionBoardBackground,
-  VisionBoardImageItem,
-  VisionBoardItem,
-  VisionBoardItemKind,
+    CanvasFrame,
+    VisionBoardBackground,
+    VisionBoardImageItem,
+    VisionBoardItem,
+    VisionBoardItemKind,
 } from './types';
 import { VisionBoardBackground as BoardBackground } from './vision-board-background';
 import { VisionBoardCanvasItem } from './vision-board-canvas-item';
@@ -167,7 +167,7 @@ export function VisionBoardCategoryScreen() {
         {
           options: ['Cancel', 'Choose from Photos', 'Take Photo'],
           cancelButtonIndex: 0,
-          title: 'Add an image',
+          title: 'Add an Image',
         },
         (index) => {
           if (index === 1) void choosePhoto();
@@ -176,7 +176,7 @@ export function VisionBoardCategoryScreen() {
       );
       return;
     }
-    appPrompt.alert('Add an image', undefined, [
+    appPrompt.alert('Add an Image', undefined, [
       { text: 'Choose from Photos', onPress: () => void choosePhoto() },
       { text: 'Take Photo', onPress: () => void capturePhoto() },
       { text: 'Cancel', style: 'cancel' },
@@ -202,7 +202,7 @@ export function VisionBoardCategoryScreen() {
           ? item.text
           : item.title;
     confirmDestructiveAction({
-      title: 'Remove board item?',
+      title: 'Remove Board Item?',
       message: label,
       actionLabel: 'Remove',
       onConfirm: perform,
@@ -233,7 +233,7 @@ export function VisionBoardCategoryScreen() {
       <Screen>
         <EmptyState
           icon="vision-board"
-          title="Category not found"
+          title="Category Not Found"
           message="This vision board category may have been removed on another device."
           actionLabel="Back to Vision Board"
           onAction={() =>
@@ -271,7 +271,7 @@ export function VisionBoardCategoryScreen() {
             accessibilityLabel={
               mode === 'edit' ? 'Show read-only gallery' : 'Return to editable board'
             }>
-            {mode === 'edit' ? 'Gallery' : 'Edit board'}
+            {mode === 'edit' ? 'Gallery' : 'Edit Board'}
           </Button>
         ) : null}
       </View>

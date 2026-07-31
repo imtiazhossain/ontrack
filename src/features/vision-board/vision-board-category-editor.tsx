@@ -3,27 +3,27 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  ErrorMessage,
-  IconButton,
-  Input,
-  Screen,
-  Symbol,
+    AppText,
+    Button,
+    ErrorMessage,
+    IconButton,
+    Input,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { newVisionBoardId, useVisionBoard } from '@/store/vision-board';
 
 import {
-  VISION_BOARD_ACCENTS,
-  VISION_BOARD_BACKGROUNDS,
-  VISION_BOARD_CATEGORY_ICONS,
+    VISION_BOARD_ACCENTS,
+    VISION_BOARD_BACKGROUNDS,
+    VISION_BOARD_CATEGORY_ICONS,
 } from './defaults';
 import type {
-  VisionBoardAccent,
-  VisionBoardBackground,
-  VisionBoardCategory,
+    VisionBoardAccent,
+    VisionBoardBackground,
+    VisionBoardCategory,
 } from './types';
 
 function param(value: string | string[] | undefined) {
@@ -88,7 +88,7 @@ export function VisionBoardCategoryEditor() {
   if (Platform.OS === 'web') {
     return (
       <Screen>
-        <AppText variant="title">Mobile editing</AppText>
+        <AppText variant="title">Mobile Editing</AppText>
         <AppText color="secondary">
           Category editing is available in the onTrack iOS and Android apps.
         </AppText>
@@ -101,7 +101,7 @@ export function VisionBoardCategoryEditor() {
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <AppText style={styles.title}>{existing ? 'Edit category' : 'New category'}</AppText>
+          <AppText style={styles.title}>{existing ? 'Edit Category' : 'New Category'}</AppText>
           <AppText color="secondary">
             Shape a clear space for one part of your future.
           </AppText>
@@ -114,7 +114,7 @@ export function VisionBoardCategoryEditor() {
         />
       </View>
       <Input
-        label="Category name"
+        label="Category Name"
         value={name}
         onChangeText={setName}
         placeholder="Creativity"
@@ -219,7 +219,7 @@ export function VisionBoardCategoryEditor() {
 
       {error ? <ErrorMessage message={error} /> : null}
       <Button onPress={save}>
-        {existing ? 'Save changes' : 'Create category'}
+        {existing ? 'Save Changes' : 'Create Category'}
       </Button>
     </Screen>
   );

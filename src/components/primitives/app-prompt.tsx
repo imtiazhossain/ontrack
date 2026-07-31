@@ -102,7 +102,7 @@ export const appPrompt = {
     );
     const disabledIndices = new Set(options.disabledButtonIndices ?? []);
     showPrompt({
-      title: options.title ?? 'Choose an option',
+      title: options.title ?? 'Choose an Option',
       message: options.message,
       actions: options.options.map((text, index) => ({
         text,

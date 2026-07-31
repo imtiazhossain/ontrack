@@ -1,19 +1,19 @@
-import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import { clampCanvasFrame } from '@/features/vision-board/canvas';
 import { createDefaultVisionBoardCategories } from '@/features/vision-board/defaults';
 import {
-  createSampleVisionBoardItems,
-  upgradeVisionBoardSample,
-  VISION_BOARD_SAMPLE_VERSION,
+    createSampleVisionBoardItems,
+    upgradeVisionBoardSample,
+    VISION_BOARD_SAMPLE_VERSION,
 } from '@/features/vision-board/sample';
 import type {
-  CanvasFrame,
-  VisionBoardCategory,
-  VisionBoardItem,
-  VisionBoardItemPatch,
-  VisionBoardSnapshot,
+    CanvasFrame,
+    VisionBoardCategory,
+    VisionBoardItem,
+    VisionBoardItemPatch,
+    VisionBoardSnapshot,
 } from '@/features/vision-board/types';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { newPrefixedUuid } from '@/utils/id';

@@ -1,30 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, Symbol } from '@/components/primitives';
 import { categoryColors, layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  MOVEMENT_LABELS,
-  movementPatternForExercise,
-  muscleHitsForExercise,
-  type MovementPattern,
-} from './exercise-motion';
-import {
-  MUSCLE_GROUPS_BY_KEY,
-  type ExerciseTemplate,
-  type MuscleKey,
-  type MuscleTarget,
-} from './muscle-data';
 import { BenchPressAnimation } from './bench-press-animation';
+import { ExerciseAnatomyStill } from './exercise-anatomy-still';
 import {
-  ACTIVE_MUSCLE,
-  GenericAnatomyFigure,
-  RESTING_MUSCLE,
+    MOVEMENT_LABELS,
+    movementPatternForExercise,
+    muscleHitsForExercise,
+    type MovementPattern,
+} from './exercise-motion';
+import { FrontPlankAnimation } from './front-plank-animation';
+import {
+    ACTIVE_MUSCLE,
+    RESTING_MUSCLE,
 } from './generic-anatomy-figure';
+import {
+    MUSCLE_GROUPS_BY_KEY,
+    type AnatomySex,
+    type ExerciseTemplate,
+    type MuscleKey,
+    type MuscleTarget,
+} from './muscle-data';
 
 interface ExerciseAnatomyDemoProps {
+  anatomySex?: AnatomySex;
   exercise?: ExerciseTemplate;
   primaryGroup: MuscleKey;
   primaryTarget: MuscleTarget;
@@ -39,24 +42,46 @@ interface DemoContentProps extends Omit<ExerciseAnatomyDemoProps, 'exercise'> {
 }
 
 function AnimatedAnatomyFigure({
-  exerciseId,
+  anatomySex,
+  exercise,
   hits,
   pattern,
   playing,
+  primaryTarget,
 }: {
-  exerciseId: string;
+  anatomySex: AnatomySex;
+  exercise: ExerciseTemplate;
   hits: MuscleKey[];
   pattern: MovementPattern;
   playing: boolean;
+  primaryTarget: MuscleTarget;
 }) {
-  if (exerciseId === 'bench-press') {
-    return <BenchPressAnimation hits={hits} playing={playing} />;
+  if (exercise.id === 'bench-press') {
+    return <BenchPressAnimation anatomySex={anatomySex} hits={hits} playing={playing} />;
+  }
+  if (exercise.id === 'front-plank') {
+    return (
+      <FrontPlankAnimation anatomySex={anatomySex} hits={hits} playing={playing} />
+    );
   }
 
-  return <GenericAnatomyFigure hits={hits} pattern={pattern} playing={playing} />;
+  return (
+    <ExerciseAnatomyStill
+      anatomySex={anatomySex}
+      exercise={exercise}
+      pattern={pattern}
+      playing={playing}
+      primaryTarget={primaryTarget}
+    />
+  );
+}
+
+function usesCustomStepSlides(exerciseId: string) {
+  return exerciseId === 'bench-press';
 }
 
 function DemoContent({
+  anatomySex = 'male',
   exercise,
   primaryGroup,
   primaryTarget,
@@ -71,6 +96,13 @@ function DemoContent({
   const [playing, setPlaying] = useState(true);
   const pattern = movementPatternForExercise(exercise);
   const hits = muscleHitsForExercise(exercise, primaryGroup);
+  const stepMode = usesCustomStepSlides(exercise.id);
+  const showPlayControls = exercise.id === 'front-plank' || !stepMode;
+
+  useEffect(() => {
+    if (!visible) return;
+    setPlaying(true);
+  }, [visible, exercise.id, anatomySex]);
 
   return (
     <Modal
@@ -103,10 +135,11 @@ function DemoContent({
             showsVerticalScrollIndicator={false}>
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
-                <AppText variant="overline" color="accent">Anatomy in motion</AppText>
+                <AppText variant="overline" color="accent">Anatomy in Motion</AppText>
                 <AppText variant="title">{exercise.name}</AppText>
                 <AppText variant="callout" color="secondary">
-                  {MOVEMENT_LABELS[pattern]} · {exercise.sets} sets × {exercise.reps}
+                  {MOVEMENT_LABELS[pattern]} · {exercise.sets} sets × {exercise.reps} ·{' '}
+                  {anatomySex === 'female' ? 'Female' : 'Male'}
                 </AppText>
               </View>
               <Pressable
@@ -124,45 +157,56 @@ function DemoContent({
                 styles.animationCard,
                 { backgroundColor: theme.backgroundSunken, borderColor: theme.separator },
               ]}>
-              <View style={styles.animationMeta}>
-                <View style={[styles.loopPill, { backgroundColor: theme.backgroundElevated }]}>
+              {stepMode ? (
+                <View style={[styles.loopPill, { backgroundColor: theme.backgroundElevated, alignSelf: 'flex-start' }]}>
                   <View style={[styles.loopDot, { backgroundColor: gymColors.main }]} />
-                  <AppText variant="overline" color="secondary">
-                    {playing ? 'Looping motion' : 'Paused'}
-                  </AppText>
+                  <AppText variant="overline" color="secondary">Form steps</AppText>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={playing ? 'Pause animation' : 'Play animation'}
-                  onPress={() => setPlaying((current) => !current)}
-                  style={[styles.playButton, { backgroundColor: theme.backgroundElevated }]}>
-                  <Symbol name={playing ? 'pause.fill' : 'play.fill'} size="sm" color={gymColors.main} />
-                  <AppText variant="caption" color="accent">{playing ? 'Pause' : 'Play'}</AppText>
-                </Pressable>
-              </View>
+              ) : (
+                <View style={styles.animationMeta}>
+                  <View style={[styles.loopPill, { backgroundColor: theme.backgroundElevated }]}>
+                    <View style={[styles.loopDot, { backgroundColor: gymColors.main }]} />
+                    <AppText variant="overline" color="secondary">
+                      {playing ? 'Form steps · looping' : 'Form steps · paused'}
+                    </AppText>
+                  </View>
+                  {showPlayControls ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={playing ? 'Pause animation' : 'Play animation'}
+                      onPress={() => setPlaying((current) => !current)}
+                      style={[styles.playButton, { backgroundColor: theme.backgroundElevated }]}>
+                      <Symbol name={playing ? 'pause.fill' : 'play.fill'} size="sm" color={gymColors.main} />
+                      <AppText variant="caption" color="accent">{playing ? 'Pause' : 'Play'}</AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+              )}
 
               <AnimatedAnatomyFigure
-                exerciseId={exercise.id}
+                anatomySex={anatomySex}
+                exercise={exercise}
                 hits={hits}
                 pattern={pattern}
                 playing={playing}
+                primaryTarget={primaryTarget}
               />
 
               <View style={styles.motionLegend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendSwatch, { backgroundColor: ACTIVE_MUSCLE }]} />
-                  <AppText variant="caption" color="secondary">Muscles working</AppText>
+                  <AppText variant="caption" color="secondary">Muscles Working</AppText>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendSwatch, { backgroundColor: RESTING_MUSCLE }]} />
-                  <AppText variant="caption" color="secondary">Supporting anatomy</AppText>
+                  <AppText variant="caption" color="secondary">Supporting Anatomy</AppText>
                 </View>
               </View>
             </View>
 
             <View style={styles.targetSection}>
               <View>
-                <AppText variant="overline" color="tertiary">Primary target</AppText>
+                <AppText variant="overline" color="tertiary">Primary Target</AppText>
                 <AppText variant="heading">{primaryTarget.label}</AppText>
                 <AppText variant="callout" color="secondary">
                   {primaryTarget.description}
@@ -197,7 +241,7 @@ function DemoContent({
             <View style={[styles.demoCue, { backgroundColor: gymColors.tint }]}>
               <Symbol name="scope" size="md" color={gymColors.main} />
               <View style={styles.flex}>
-                <AppText variant="overline" color="accent">What to feel</AppText>
+                <AppText variant="overline" color="accent">What to Feel</AppText>
                 <AppText variant="callout" color="secondary">{primaryTarget.cue}</AppText>
               </View>
             </View>
@@ -207,7 +251,7 @@ function DemoContent({
               onPress={onToggleSelected}
               size="lg"
               variant={selected ? 'secondary' : 'primary'}>
-              {selected ? 'Remove from session' : 'Add to session'}
+              {selected ? 'Remove from Session' : 'Add to Session'}
             </Button>
           </ScrollView>
         </View>

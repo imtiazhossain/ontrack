@@ -45,7 +45,7 @@ const ASSISTANT_COPY: Record<string, { question: string; label: string; placehol
   food: { question: 'What are we eating? Give me the delicious details. 🍴', label: 'Meal', placeholder: 'Breakfast, sushi night…' },
   gym: { question: 'What are we training today? Let’s get it on the books. 💪', label: 'Workout', placeholder: 'Leg day, morning run…' },
   work: { question: 'What are we getting done? Future you says thanks. ✨', label: 'Focus', placeholder: 'Deep work, team planning…' },
-  sleep: { question: 'When are we heading to dreamland? 🌙', label: 'Sleep plan', placeholder: 'Early night, power nap…' },
+  sleep: { question: 'When are we heading to dreamland? 🌙', label: 'Sleep Plan', placeholder: 'Early night, power nap…' },
   water: { question: 'How are we staying hydrated? 💧', label: 'Hydration', placeholder: 'Morning water, refill bottle…' },
   personal: { question: 'What are we making time for?', label: 'Plan', placeholder: 'Call Mom, creative time…' },
   mindfulness: { question: 'How are we finding a little calm? 🌿', label: 'Practice', placeholder: 'Meditation, breathing break…' },
@@ -122,8 +122,8 @@ export default function ActivityFormScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       if (allowLeave.current || !dirty) return;
       event.preventDefault();
-      appPrompt.alert('Discard changes?', 'Your unsaved changes will be lost.', [
-        { text: 'Keep editing', style: 'cancel' },
+      appPrompt.alert('Discard Changes?', 'Your unsaved changes will be lost.', [
+        { text: 'Keep Editing', style: 'cancel' },
         {
           text: 'Discard',
           style: 'destructive',
@@ -350,19 +350,19 @@ export default function ActivityFormScreen() {
 
   const editorTitle =
     category?.detailKind === 'food'
-      ? 'Edit meal'
+      ? 'Edit Meal'
       : category?.detailKind === 'gym'
-        ? 'Edit workout'
+        ? 'Edit Workout'
         : category?.detailKind === 'work'
-          ? 'Edit work session'
+          ? 'Edit Work Session'
           : category?.detailKind === 'movie'
-            ? 'Edit movie'
-          : 'Edit event';
+            ? 'Edit Movie'
+          : 'Edit Event';
 
   const confirmDelete = () => {
     if (!editId || !existing) return;
     confirmDestructiveAction({
-      title: 'Delete event',
+      title: 'Delete Event',
       message: `Remove “${existing.title}” from your schedule?`,
       onConfirm: () => {
         deleteActivity(editId);
@@ -375,7 +375,7 @@ export default function ActivityFormScreen() {
   if (missingActivity) {
     return (
       <Screen>
-        <AppText variant="title">Event not found</AppText>
+        <AppText variant="title">Event Not Found</AppText>
         <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
       </Screen>
     );
@@ -384,7 +384,7 @@ export default function ActivityFormScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <AppText variant="title">{isEditing ? editorTitle : 'Add event'}</AppText>
+        <AppText variant="title">{isEditing ? editorTitle : 'Add Event'}</AppText>
       </View>
 
       {!isEditing ? (
@@ -459,13 +459,13 @@ export default function ActivityFormScreen() {
         <View style={styles.flex}><DateField label="Date" value={date} onChange={setDate} /></View>
         <View style={styles.flex}><Input label="Duration (min)" value={duration} onChangeText={setDuration} keyboardType="number-pad" /></View>
       </View>
-      <TimeField label="Start time" value={startMinutes} onChange={setStartMinutes} />
+      <TimeField label="Start Time" value={startMinutes} onChange={setStartMinutes} />
 
       <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional context" multiline style={styles.multiline} />
 
       {category?.supportsPhotos && category.detailKind === 'food' ? (
         <>
-          <SectionHeader title="Meal photo analysis" />
+          <SectionHeader title="Meal Photo Analysis" />
           <AppText variant="body" color="secondary">
             Upload a clear photo to identify foods and estimate portions and nutrients. You can edit every result before saving.
           </AppText>
@@ -496,7 +496,7 @@ export default function ActivityFormScreen() {
           {analysisError ? <ErrorMessage message={analysisError} /> : null}
           {meal.aiAnalysis ? (
             <View style={[styles.analysisReady, { backgroundColor: theme.accentFaint, borderColor: theme.accentPrimary }]}>
-              <AppText variant="bodyMedium">Analysis ready</AppText>
+              <AppText variant="bodyMedium">Analysis Ready</AppText>
               <AppText variant="caption" color="secondary">
                 {meal.items.length} food item{meal.items.length === 1 ? '' : 's'} identified
                 {meal.aiAnalysis.overallConfidence === undefined ? '' : ` · ${Math.round(meal.aiAnalysis.overallConfidence * 100)}% confidence`}. Review the values below before saving.
@@ -527,7 +527,7 @@ export default function ActivityFormScreen() {
           <SectionHeader title="Photo" />
           {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
           <View style={styles.twoColumns}>
-            <Button variant="secondary" onPress={() => void pickPhoto()} style={styles.flex} accessibilityLabel="Choose photo">{photo ? 'Replace photo' : 'Choose photo'}</Button>
+            <Button variant="secondary" onPress={() => void pickPhoto()} style={styles.flex} accessibilityLabel="Choose photo">{photo ? 'Replace Photo' : 'Choose Photo'}</Button>
             {photo ? <Button variant="ghost" onPress={() => setPhoto(undefined)} style={styles.flex} accessibilityLabel="Remove photo">Remove</Button> : null}
           </View>
         </>
@@ -571,7 +571,7 @@ export default function ActivityFormScreen() {
       <View style={styles.actions}>
         <Button onPress={save} disabled={!title.trim()} accessibilityLabel="Save event">Save</Button>
         <Button variant="ghost" onPress={close} accessibilityLabel="Cancel">Cancel</Button>
-        {isEditing ? <Button variant="danger" onPress={confirmDelete} accessibilityLabel="Delete event">Delete event</Button> : null}
+        {isEditing ? <Button variant="danger" onPress={confirmDelete} accessibilityLabel="Delete event">Delete Event</Button> : null}
       </View>
       </>
       ) : null}

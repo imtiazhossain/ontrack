@@ -1,28 +1,28 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-  useWindowDimensions,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AppText,
-  appPrompt,
-  EmptyState,
-  IconButton,
-  Symbol,
+    AppText,
+    EmptyState,
+    IconButton,
+    Symbol,
+    appPrompt,
 } from '@/components/primitives';
 import {
-  fontFamilies,
-  layout,
-  radii,
-  spacing,
+    fontFamilies,
+    layout,
+    radii,
+    spacing,
 } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
@@ -30,18 +30,17 @@ import { useVisionBoard } from '@/store/vision-board';
 import { haptics } from '@/utils/haptics';
 import { BoardCard, FilterChip } from './consolidated-card';
 import {
-  BOARD_SIDE_PADDING,
-  CARD_GAP,
-  CATEGORY_PRIORITY,
-  CATEGORY_SHOWCASE_LAYOUTS,
-  SHOWCASE_CARDS,
-  SHOWCASE_LAYOUT,
-  cardsFromBoard,
-  isDefaultBoard,
-  packedCategoryLayout,
-  searchText,
-  splitCards,
-  type DisplayCard,
+    BOARD_SIDE_PADDING,
+    CARD_GAP,
+    CATEGORY_PRIORITY,
+    CATEGORY_SHOWCASE_LAYOUTS,
+    SHOWCASE_CARDS,
+    SHOWCASE_LAYOUT,
+    cardsFromBoard,
+    isDefaultBoard,
+    packedCategoryLayout,
+    searchText,
+    splitCards
 } from './consolidated-model';
 import { orderedVisionBoardCategories } from './selectors';
 
@@ -151,7 +150,7 @@ export function VisionBoardConsolidated() {
     if (Platform.OS === 'ios') {
       appPrompt.actionSheet(
         {
-          title: 'Add to a vision board',
+          title: 'Add to a Vision Board',
           message: 'Choose the category you want to build out.',
           options: ['Cancel', ...orderedCategories.map((category) => category.name)],
           cancelButtonIndex: 0,
@@ -164,7 +163,7 @@ export function VisionBoardConsolidated() {
       return;
     }
     appPrompt.alert(
-      'Add to a vision board',
+      'Add to a Vision Board',
       'Choose a category.',
       [
         ...orderedCategories.map((category) => ({
@@ -186,7 +185,7 @@ export function VisionBoardConsolidated() {
       appPrompt.actionSheet(
         {
           title: 'Vision Board',
-          options: ['Cancel', 'Category list', 'Add category', 'Back to Today'],
+          options: ['Cancel', 'Category List', 'Add Category', 'Back to Today'],
           cancelButtonIndex: 0,
         },
         (index) => {
@@ -198,8 +197,8 @@ export function VisionBoardConsolidated() {
       return;
     }
     appPrompt.alert('Vision Board', undefined, [
-      { text: 'Category list', onPress: openCategories },
-      { text: 'Add category', onPress: addCategory },
+      { text: 'Category List', onPress: openCategories },
+      { text: 'Add Category', onPress: addCategory },
       { text: 'Back to Today', onPress: backToToday },
       { text: 'Cancel', style: 'cancel' },
     ]);
@@ -318,9 +317,9 @@ export function VisionBoardConsolidated() {
           <View style={[styles.empty, { width: boardWidth }]}>
             <EmptyState
               icon="search"
-              title="No inspiration found"
+              title="No Inspiration Found"
               message="Try another category or search term."
-              actionLabel="Show all"
+              actionLabel="Show All"
               onAction={() => {
                 setSelectedCategoryId('all');
                 setQuery('');
@@ -404,7 +403,7 @@ export function VisionBoardConsolidated() {
               transform: [{ scale: pressed ? 0.96 : 1 }],
             },
           ]}>
-          <Symbol name="add" size={31} color="#FFFFFF" />
+          <Symbol name="add" size={24} color="#FFFFFF" />
         </Pressable>
       ) : null}
     </View>
@@ -493,13 +492,13 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     right: 24,
-    width: 66,
-    height: 66,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 33,
-    borderWidth: 7,
+    borderRadius: 24,
+    borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.92)',
-    boxShadow: '0 8px 22px rgba(53, 38, 25, 0.22)',
+    boxShadow: '0 6px 16px rgba(53, 38, 25, 0.2)',
   },
 });

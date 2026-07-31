@@ -3,7 +3,6 @@ import type { SharePayload } from 'expo-sharing';
 
 import { recognizeDocumentText } from '@/services/document-text';
 
-import { deduplicateDrafts, parseIcsEvents, parseNaturalLanguageEvents } from './parser';
 import type { CalendarImportParsingOptions, SharedEventDraft } from './types';
 
 interface NormalizeIncomingShareOptions extends CalendarImportParsingOptions {
@@ -39,6 +38,16 @@ async function defaultReadTextFile(uri: string): Promise<string> {
   return new File(uri).text();
 }
 
+async function loadCalendarParser(): Promise<typeof import('./parser')> {
+  try {
+    return await import('./parser');
+  } catch {
+    // Jest (without --experimental-vm-modules) cannot evaluate dynamic import().
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('./parser') as typeof import('./parser');
+  }
+}
+
 export async function normalizeIncomingShare(
   payloads: SharePayload[],
   options: NormalizeIncomingShareOptions = {},
@@ -49,6 +58,11 @@ export async function normalizeIncomingShare(
 
   const recognizeText = options.recognizeText ?? recognizeDocumentText;
   const readTextFile = options.readTextFile ?? defaultReadTextFile;
+  const {
+    deduplicateDrafts,
+    parseIcsEvents,
+    parseNaturalLanguageEvents,
+  } = await loadCalendarParser();
   const drafts: SharedEventDraft[] = [];
 
   for (const payload of payloads) {

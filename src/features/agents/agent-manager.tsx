@@ -120,7 +120,7 @@ function AgentCard({
       {installed && installation ? (
         <>
           <SettingsToggleRow
-            label="Agent enabled"
+            label="Agent Enabled"
             detail="Allow this agent to run when all required permissions are on."
             value={installation.enabled}
             disabled={!availability.available}

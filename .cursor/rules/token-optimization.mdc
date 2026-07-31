@@ -10,8 +10,9 @@ Future agents must leave the codebase *more* optimized than they found it when t
 ## Before writing code
 
 1. Read `AGENTS.md` feature entry points and Shared patterns.
-2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `LoadingBlock`, `DateField`, `appPrompt`.
+2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `useResponsive` / `AppText fit`, `LoadingBlock`, `DateField`, `appPrompt`.
 3. Open the smallest entry file first; do not load sibling giants unless needed.
+4. For any UI change, follow `.cursor/rules/responsive-layout.mdc` — scale with `useResponsive()`, keep chrome on one line with `fit`.
 
 ## When editing large screens
 
@@ -28,6 +29,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 - Parallel API URL/fetch helpers when `resolveExpoApiUrl` / `apiRequest` fit
 - Parallel OpenAI/Ollama vision transport when `vision-transport` fits
 - Persisting image-picker cache URIs (always re-encode via image helpers)
+- Hard-coded chrome `fontSize` / control padding that ignores `useResponsive()` / `AppText fit`
 
 ## After substantive edits
 

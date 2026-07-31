@@ -79,18 +79,18 @@ export default function InsightsScreen() {
       <SectionHeader title="Overview" />
       <View style={styles.row}>
         <MetricDisplay label="Today" value={`${stats.todayCompletion}%`} detail={`${stats.completedToday} completed`} accent={theme.accentPrimary} />
-        <MetricDisplay label="This week" value={`${stats.weekCompletion}%`} detail="7-day average" />
+        <MetricDisplay label="This Week" value={`${stats.weekCompletion}%`} detail="7-day average" />
       </View>
 
       <View style={styles.row}>
         <MetricDisplay label="Streak" value={`${stats.currentStreak}d`} detail="Days above 50% completion" accent={theme.success} />
-        <MetricDisplay label="Meals logged" value={`${stats.mealCount}`} detail="Recorded meals" />
+        <MetricDisplay label="Meals Logged" value={`${stats.mealCount}`} detail="Recorded meals" />
       </View>
 
       <SectionHeader title="Training" />
       <MetricDisplay label="Workouts" value={`${stats.workoutCount}`} detail="Sessions in your history" accent={categoryColors(theme, 'gym').main} />
 
-      <SectionHeader title="Today’s nutrition" />
+      <SectionHeader title="Today’s Nutrition" />
       <View style={styles.row}>
         <MetricDisplay label="Calories" value={`${stats.nutrition.calories}`} detail={activeTarget ? `of ${activeTarget.calories} target` : 'No active target'} />
         <MetricDisplay label="Protein" value={`${stats.nutrition.proteinG}g`} detail={activeTarget ? `of ${activeTarget.proteinG}g target` : 'Known values'} accent={theme.accentPrimary} />
@@ -100,7 +100,7 @@ export default function InsightsScreen() {
         <MetricDisplay label="Fat" value={`${stats.nutrition.fatG}g`} detail={activeTarget ? `of ${activeTarget.fatG}g target` : 'Known values'} />
       </View>
       <MetricDisplay
-        label="Nutrient coverage"
+        label="Nutrient Coverage"
         value={stats.nutrition.itemCount ? `${Math.round(stats.nutrition.knownSodium / stats.nutrition.itemCount * 100)}%` : '—'}
         detail="Items with known sodium; unknown values are not counted as zero"
       />

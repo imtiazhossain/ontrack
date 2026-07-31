@@ -112,7 +112,7 @@ export function AuthScreen({
           ]}>
           <View style={styles.cardHeading}>
             <AppText variant="heading">
-              {variant === 'welcome' ? 'Begin your day' : 'Create or sign in'}
+              {variant === 'welcome' ? 'Begin your day' : 'Create or Sign In'}
             </AppText>
             <AppText variant="caption" color="secondary">
               One tap. No password to remember.
@@ -159,11 +159,11 @@ export function AuthScreen({
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Continue as guest"
+                accessibilityLabel="Continue as Guest"
                 disabled={busy}
                 onPress={() => void continueAsGuest()}
                 style={({ pressed }) => [styles.guest, { opacity: pressed ? 0.65 : 1 }]}>
-                <AppText variant="bodyMedium" color="accent">Continue as guest</AppText>
+                <AppText variant="bodyMedium" color="accent">Continue as Guest</AppText>
               </Pressable>
               <AppText variant="caption" color="secondary" align="center">
                 Guest data stays on this device until you choose to sign in.

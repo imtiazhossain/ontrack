@@ -10,6 +10,19 @@ import { useTodos } from '@/store/todos';
 import { useTravel } from '@/store/travel';
 import { useVisionBoard } from '@/store/vision-board';
 
+/** Hard ceiling so a stuck persist never leaves the user on a blank shell. */
+const HYDRATION_TIMEOUT_MS = 4_000;
+
+async function rehydrateStore(
+  rehydrate: () => Promise<unknown> | unknown,
+): Promise<void> {
+  try {
+    await Promise.resolve(rehydrate());
+  } catch {
+    // Keep booting on empty/default state rather than white-screening.
+  }
+}
+
 /** True only after every persisted store has finished rehydrating from disk. */
 export function useHydrated(): boolean {
   // Keep the server and first browser render identical, then release the
@@ -18,21 +31,26 @@ export function useHydrated(): boolean {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([
-      usePreferences.persist.rehydrate(),
-      useSchedule.persist.rehydrate(),
-      usePlants.persist.rehydrate(),
-      useAddons.persist.rehydrate(),
-      useTravel.persist.rehydrate(),
-      useAgents.persist.rehydrate(),
-      useAuthAccess.persist.rehydrate(),
-      useTodos.persist.rehydrate(),
-      useVisionBoard.persist.rehydrate(),
-    ]).then(() => {
+    const release = () => {
       if (active) setHydrated(true);
-    });
+    };
+
+    const timer = setTimeout(release, HYDRATION_TIMEOUT_MS);
+    void Promise.all([
+      rehydrateStore(() => usePreferences.persist.rehydrate()),
+      rehydrateStore(() => useSchedule.persist.rehydrate()),
+      rehydrateStore(() => usePlants.persist.rehydrate()),
+      rehydrateStore(() => useAddons.persist.rehydrate()),
+      rehydrateStore(() => useTravel.persist.rehydrate()),
+      rehydrateStore(() => useAgents.persist.rehydrate()),
+      rehydrateStore(() => useAuthAccess.persist.rehydrate()),
+      rehydrateStore(() => useTodos.persist.rehydrate()),
+      rehydrateStore(() => useVisionBoard.persist.rehydrate()),
+    ]).then(release);
+
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, []);
 

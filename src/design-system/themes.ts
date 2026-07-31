@@ -93,6 +93,22 @@ export const darkTravelTheme: Theme = {
   textOnAccent: '#F7FCFF',
 };
 
+export const lightPlantTheme: Theme = {
+  ...lightTheme,
+  accentPrimary: palette.plantGreen,
+  accentSoft: palette.plantGreenSoft,
+  accentFaint: palette.plantGreenFaint,
+  textOnAccent: '#F4FBF6',
+};
+
+export const darkPlantTheme: Theme = {
+  ...darkTheme,
+  accentPrimary: palette.plantGreenDark,
+  accentSoft: palette.plantGreenSoftDark,
+  accentFaint: palette.plantGreenFaintDark,
+  textOnAccent: '#F4FBF6',
+};
+
 export interface CategoryColors {
   main: string;
   tint: string;

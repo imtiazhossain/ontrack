@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { memo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText, Card, Symbol } from '@/components/primitives';
@@ -39,7 +40,7 @@ export function Checkbox({
   );
 }
 
-export function GroceryTaskRow({
+export const GroceryTaskRow = memo(function GroceryTaskRow({
   task,
   canComplete,
   onToggle,
@@ -89,9 +90,9 @@ export function GroceryTaskRow({
       ) : null}
     </View>
   );
-}
+});
 
-export function MealCard({
+export const MealCard = memo(function MealCard({
   recipe,
   tasks,
   collapsed,
@@ -117,6 +118,8 @@ export function MealCard({
       {recipe.sourceImageUri ? (
         <Image
           source={{ uri: recipe.sourceImageUri }}
+          cachePolicy="memory-disk"
+          recyclingKey={recipe.id}
           contentFit="cover"
           style={styles.recipeImage}
           transition={160}
@@ -185,9 +188,9 @@ export function MealCard({
       ) : null}
     </Card>
   );
-}
+});
 
-export function CombinedRow({
+export const CombinedRow = memo(function CombinedRow({
   completion,
   disabled,
   first,
@@ -228,7 +231,7 @@ export function CombinedRow({
       </View>
     </Pressable>
   );
-}
+});
 
 export function OtherItems({
   tasks,

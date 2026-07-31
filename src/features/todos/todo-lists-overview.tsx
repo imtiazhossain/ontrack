@@ -1,36 +1,37 @@
-import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  Keyboard,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
+    Keyboard,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 import DraggableFlatList, {
-  type RenderItemParams,
+    type RenderItemParams,
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, appPrompt, Screen, Symbol } from '@/components/primitives';
+import { appPrompt, AppText, Screen, Symbol } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
 import { TodoListCard } from '@/features/todos/todo-list-card';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  deleteSharedTodoList,
-  leaveTodoList,
-} from '@/services/todos/collaboration';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
-  useTodos,
-  type TodoList,
-  type TodoListKind,
+    deleteSharedTodoList,
+    leaveTodoList,
+} from '@/services/todos/collaboration';
+import {
+    useTodos,
+    type TodoList,
+    type TodoListKind,
 } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { haptics } from '@/utils/haptics';
+import { listReferenceEquality } from '@/utils/list-equality';
 
 export function TodoListsOverview() {
   const router = useRouter();
@@ -38,10 +39,31 @@ export function TodoListsOverview() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
   const lists = useTodos((state) => state.lists);
-  const tasks = useTodos((state) => state.tasks);
-  const recipes = useTodos((state) => state.recipes);
-  const members = useTodos((state) => state.members);
-  const invites = useTodos((state) => state.invites);
+  const counts = useTodos(
+    (state) => {
+      const next = new Map<string, { open: number; total: number }>();
+      for (const task of state.tasks) {
+        const entry = next.get(task.listId) ?? { open: 0, total: 0 };
+        entry.total += 1;
+        if (!task.completed) entry.open += 1;
+        next.set(task.listId, entry);
+      }
+      return next;
+    },
+    (a, b) => {
+      if (a === b) return true;
+      if (a.size !== b.size) return false;
+      for (const [key, value] of a) {
+        const other = b.get(key);
+        if (!other || other.open !== value.open || other.total !== value.total) {
+          return false;
+        }
+      }
+      return true;
+    },
+  );
+  const members = useTodos((state) => state.members, listReferenceEquality);
+  const invites = useTodos((state) => state.invites, listReferenceEquality);
   const createList = useTodos((state) => state.createList);
   const deletePrivateList = useTodos((state) => state.deleteList);
   const reorderLists = useTodos((state) => state.reorderLists);
@@ -55,17 +77,11 @@ export function TodoListsOverview() {
     editingListIds !== null &&
     lists.some((list) => editingListIds.has(list.id));
 
-  const counts = useMemo(() => {
-    const next = new Map<string, { open: number; total: number }>();
-    for (const task of tasks) {
-      const count = next.get(task.listId) ?? { open: 0, total: 0 };
-      count.total += 1;
-      if (!task.completed) count.open += 1;
-      next.set(task.listId, count);
-    }
-    return next;
-  }, [tasks]);
-  const totalOpen = tasks.filter((task) => !task.completed).length;
+  const totalOpen = useMemo(() => {
+    let open = 0;
+    for (const value of counts.values()) open += value.open;
+    return open;
+  }, [counts]);
   const listContentStyle = useMemo(
     () => [
       styles.listContent,
@@ -156,8 +172,9 @@ export function TodoListsOverview() {
           : 'The checklist and every item in it will be permanently deleted.';
       const remove = () => {
         if (list.mode === 'private') {
-          recipes
-            .filter((recipe) => recipe.listId === list.id)
+          useTodos
+            .getState()
+            .recipes.filter((recipe) => recipe.listId === list.id)
             .forEach((recipe) =>
               deletePersistedRecipeImage(recipe.sourceImageUri),
             );
@@ -185,7 +202,7 @@ export function TodoListsOverview() {
         onConfirm: remove,
       });
     },
-    [deletePrivateList, recipes],
+    [deletePrivateList],
   );
 
   const renderList = useCallback(

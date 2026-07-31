@@ -11,6 +11,8 @@ const basePlan: TravelPlan = {
   endDate: '2026-09-05',
   itinerary: [],
   participants: [],
+  baseCurrency: 'USD',
+  expenses: [],
   createdAt: '2026-07-27T12:00:00.000Z',
   updatedAt: '2026-07-27T12:00:00.000Z',
 };
