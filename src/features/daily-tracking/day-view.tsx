@@ -13,6 +13,7 @@ import { aiProvider } from '@/services/ai';
 import { usePreferences } from '@/store/preferences';
 import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
+import { useUI } from '@/store/ui';
 import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import type { Activity } from '@/types/models';
 import { addDays, isToday, nowMinutes } from '@/utils/date';
@@ -46,8 +47,13 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
+  const tabBarHeight =
+    measuredTabBarHeight ||
+    layout.floatingTabBarBaseHeight + insets.bottom;
   const aiEnabled = usePreferences((s) => s.aiEnabled);
   const enabledAddons = useAddons((s) => s.enabled);
+  const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
 
   const allActivities = useSchedule((s) => s.activities);
   const activities = useMemo(
@@ -174,10 +180,11 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   return (
     <SafeAreaView
       edges={['left', 'right']}
+      onTouchStart={notifyPageInteraction}
       style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + layout.tabBarInset + 80 }}>
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}>
         {renderHeader({ completion, nowLine, summaryLine, topInset: 0 })}
 
         <View style={styles.timeline}>
@@ -220,7 +227,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
         style={[
           styles.fab,
           shadows.raised,
-          { bottom: insets.bottom + layout.tabBarInset + spacing.lg },
+          { bottom: tabBarHeight + spacing.lg },
         ]}>
         <IconButton
           icon="add"

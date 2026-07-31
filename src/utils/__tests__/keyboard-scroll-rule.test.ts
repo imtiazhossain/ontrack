@@ -44,7 +44,8 @@ describe('keyboard scrolling invariant', () => {
       'utf8',
     );
 
-    expect(todoScreen).toContain('<FlatList');
+    expect(todoScreen).toContain('<DraggableFlatList');
+    expect(todoScreen).toContain('containerStyle={styles.list}');
     expect(todoScreen).toContain('ListHeaderComponent=');
     expect(todoScreen).not.toContain('TouchableWithoutFeedback');
   });

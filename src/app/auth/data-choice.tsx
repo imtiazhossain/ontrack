@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, Screen } from '@/components/primitives';
+import { AppText, appPrompt, Button, ErrorMessage, Screen } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession, type DataResolution } from '@/features/auth/auth-provider';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,7 +23,7 @@ export default function DataChoiceScreen() {
   };
 
   const confirmDevice = () => {
-    Alert.alert(
+    appPrompt.alert(
       'Replace cloud account data?',
       'The complete dataset on this device will replace the account dataset on every synced device. This cannot be undone.',
       [

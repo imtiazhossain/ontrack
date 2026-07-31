@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, appPrompt, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import {
   addPruningActivity,
@@ -28,7 +28,7 @@ export default function PlantDetailScreen() {
   const due = dueKey < todayKey() ? `Overdue since ${formatDateLong(dueKey)}` : dueKey === todayKey() ? 'Due today' : `Due ${formatDateLong(dueKey)}`;
   const latestLog = plant.wateringLogs.at(-1);
 
-  const remove = () => Alert.alert('Delete plant', `Remove ${plant.nickname}, its care tasks, and locally saved photos?`, [
+  const remove = () => appPrompt.alert('Delete plant', `Remove ${plant.nickname}, its care tasks, and locally saved photos?`, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: () => void deletePlant(plant.id).then(() => router.replace('/plants')) },
   ]);
@@ -81,7 +81,7 @@ export default function PlantDetailScreen() {
       <Card style={styles.careCard}>
         <AppText>{plant.carePlan.pruning.reason}</AppText>
         {plant.carePlan.pruning.steps.map((item) => <AppText key={item} color="secondary">• {item}</AppText>)}
-        {plant.carePlan.pruning.urgency !== 'not-needed' ? <Button variant="secondary" onPress={() => { addPruningActivity(plant.id); Alert.alert('Added to Today', `Prune ${plant.nickname} is now on your schedule.`); }}>Add pruning task</Button> : null}
+        {plant.carePlan.pruning.urgency !== 'not-needed' ? <Button variant="secondary" onPress={() => { addPruningActivity(plant.id); appPrompt.alert('Added to Today', `Prune ${plant.nickname} is now on your schedule.`); }}>Add pruning task</Button> : null}
       </Card>
 
       <SectionHeader title="History" detail={`${plant.wateringLogs.length} waterings · ${plant.checkIns.length} check-ins`} />

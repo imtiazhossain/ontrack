@@ -2,6 +2,12 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import {
+  prepareRecipeMutationMedia,
+  removeSharedRecipeImages,
+  resolveSharedRecipeMedia,
+  uploadSharedRecipeImage,
+} from '@/services/todos/recipe-media';
+import {
   normalizeTodoState,
   type TodoInvite,
   type TodoList,
@@ -40,10 +46,13 @@ function sharedSnapshot(value: unknown): TodoSharedSnapshot | undefined {
     list?: unknown;
     tasks?: unknown;
     members?: unknown;
+    recipes?: unknown;
   };
   const normalized = normalizeTodoState({
+    groceryMigrationVersion: 1,
     lists: candidate.list ? [candidate.list] : [],
     tasks: Array.isArray(candidate.tasks) ? candidate.tasks : [],
+    recipes: Array.isArray(candidate.recipes) ? candidate.recipes : [],
     members: Array.isArray(candidate.members) ? candidate.members : [],
   });
   const list = normalized.lists.find((item) => item.mode === 'shared');
@@ -51,6 +60,7 @@ function sharedSnapshot(value: unknown): TodoSharedSnapshot | undefined {
   return {
     list,
     tasks: normalized.tasks.filter((task) => task.listId === list.id),
+    recipes: normalized.recipes.filter((recipe) => recipe.listId === list.id),
     members: normalized.members.filter((member) => member.listId === list.id),
   };
 }
@@ -67,7 +77,10 @@ export async function loadTodoListSnapshot(
       messageFrom(error, 'The shared list could not be refreshed.'),
     );
   }
-  const snapshot = sharedSnapshot(data);
+  const parsed = sharedSnapshot(data);
+  const snapshot = parsed
+    ? await resolveSharedRecipeMedia(client, parsed)
+    : undefined;
   if (snapshot) useTodos.getState().replaceSharedSnapshot(snapshot);
   else useTodos.getState().removeSharedList(listId);
   return snapshot;
@@ -80,10 +93,19 @@ export async function publishTodoList(listId: string): Promise<TodoSharedSnapsho
     throw new TodoCollaborationError('Only a private list owner can share it.');
   }
   const client = await authenticatedClient();
+  const recipes = state.recipes.filter((recipe) => recipe.listId === list.id);
+  const sharedRecipes = await Promise.all(
+    recipes.map(async (recipe) => ({
+      ...recipe,
+      sourceImagePath: await uploadSharedRecipeImage(client, recipe),
+    })),
+  );
   const { error } = await client.rpc('publish_todo_list', {
     list_payload: {
       id: list.id,
       name: list.name,
+      kind: list.kind,
+      recipes: sharedRecipes,
       tasks: state.tasks.filter((task) => task.listId === list.id),
     },
   });
@@ -115,8 +137,16 @@ export async function flushTodoMutations(): Promise<void> {
     batch.forEach((mutation) => {
       useTodos.getState().markMutationAttempt(mutation.id);
     });
+    let preparedBatch;
+    try {
+      preparedBatch = await Promise.all(
+        batch.map((mutation) => prepareRecipeMutationMedia(client, mutation)),
+      );
+    } catch {
+      return;
+    }
     const { data, error } = await client.rpc('apply_todo_mutations', {
-      mutations: batch.map((mutation) => ({
+      mutations: preparedBatch.map((mutation) => ({
         id: mutation.id,
         listId: mutation.listId,
         operation: mutation.operation,
@@ -444,6 +474,7 @@ export async function leaveTodoList(listId: string) {
     ? {
         list,
         tasks: state.tasks.filter((task) => task.listId === listId),
+        recipes: state.recipes.filter((recipe) => recipe.listId === listId),
         members: state.members.filter((member) => member.listId === listId),
       }
     : undefined;
@@ -467,12 +498,16 @@ export async function deleteSharedTodoList(listId: string) {
     ? {
         list,
         tasks: state.tasks.filter((task) => task.listId === listId),
+        recipes: state.recipes.filter((recipe) => recipe.listId === listId),
         members: state.members.filter((member) => member.listId === listId),
       }
     : undefined;
   useTodos.getState().removeSharedList(listId);
   try {
     const client = await authenticatedClient();
+    if (rollback?.recipes?.length) {
+      await removeSharedRecipeImages(client, rollback.recipes);
+    }
     const { error } = await client.rpc('delete_todo_list', {
       requested_list_id: listId,
     });

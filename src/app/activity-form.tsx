@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, DateField, ErrorMessage, IconButton, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { AppText, appPrompt, Button, DateField, ErrorMessage, IconButton, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { isCategoryEnabled } from '@/addons/registry';
 import { radii, spacing } from '@/design-system';
@@ -148,7 +148,7 @@ export default function ActivityFormScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       if (allowLeave.current || !dirty) return;
       event.preventDefault();
-      Alert.alert('Discard changes?', 'Your unsaved changes will be lost.', [
+      appPrompt.alert('Discard changes?', 'Your unsaved changes will be lost.', [
         { text: 'Keep editing', style: 'cancel' },
         {
           text: 'Discard',
@@ -389,7 +389,7 @@ export default function ActivityFormScreen() {
 
   const confirmDelete = () => {
     if (!editId || !existing) return;
-    Alert.alert('Delete event', `Remove “${existing.title}” from your schedule?`, [
+    appPrompt.alert('Delete event', `Remove “${existing.title}” from your schedule?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',

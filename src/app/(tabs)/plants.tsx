@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { usePlants } from '@/store/plants';
 import { formatDateLong, toDateKey, todayKey } from '@/utils/date';
 
+/** Primary carousel section for plant care. */
 export default function PlantsScreen() {
   const router = useRouter();
   const theme = useTheme();

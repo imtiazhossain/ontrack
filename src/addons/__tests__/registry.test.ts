@@ -8,12 +8,19 @@ import {
 
 describe('add-on registry', () => {
   it('keeps the beta catalog enabled by default', () => {
-    expect(ADDONS.map((addon) => addon.id)).toEqual(['food', 'fitness', 'plants', 'travel']);
+    expect(ADDONS.map((addon) => addon.id)).toEqual([
+      'food',
+      'fitness',
+      'plants',
+      'travel',
+      'vision-board',
+    ]);
     expect(DEFAULT_ADDON_STATE).toEqual({
       food: true,
       fitness: true,
       plants: true,
       travel: true,
+      'vision-board': true,
     });
   });
 

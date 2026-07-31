@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, appPrompt, Button, Card, ErrorMessage, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { analyzePlantCheckIn, persistPlantPhoto, PlantServiceError } from '@/services/plants';
 import { applyPlantCarePlan } from '@/services/plants/schedule';
@@ -29,7 +29,7 @@ export default function PlantCheckInScreen() {
   const camera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Camera access needed', 'Allow camera access in Settings to take a health check-in.', [
+      appPrompt.alert('Camera access needed', 'Allow camera access in Settings to take a health check-in.', [
         { text: 'Cancel', style: 'cancel' }, { text: 'Settings', onPress: () => Linking.openSettings() },
       ]);
       return;

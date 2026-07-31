@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage } from '@/components/primitives';
+import { AppText, appPrompt, Button, ErrorMessage } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { useTheme } from '@/hooks/use-theme';
@@ -27,7 +27,7 @@ export function CloudAccountCard() {
       const result = await signOutCurrentDevice(force);
       if (result.status === 'sync-failed') {
         setMessage(result.message);
-        Alert.alert(
+        appPrompt.alert(
           'Changes are not synced',
           `${result.message}\n\nSigning out anyway removes this device’s local data. Cloud data and photos in your system library are not deleted.`,
           [

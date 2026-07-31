@@ -42,6 +42,13 @@ export const ADDONS = [
     categoryIds: [],
     tabRoute: 'travel',
   },
+  {
+    id: 'vision-board',
+    name: 'Vision Board',
+    description: 'Visualize goals with personal images, affirmations, and intentions.',
+    categoryIds: [],
+    tabRoute: 'vision-board',
+  },
 ] as const satisfies readonly AddonDefinition[];
 
 export const DEFAULT_ADDON_STATE: AddonEnabledState = {
@@ -49,6 +56,7 @@ export const DEFAULT_ADDON_STATE: AddonEnabledState = {
   fitness: true,
   plants: true,
   travel: true,
+  'vision-board': true,
 };
 
 /** Beta default. Paid access can later replace this from server-owned rows. */
@@ -57,6 +65,7 @@ export const DEFAULT_ADDON_ENTITLEMENTS: AddonEntitlementState = {
   fitness: { active: true, source: 'included' },
   plants: { active: true, source: 'included' },
   travel: { active: true, source: 'included' },
+  'vision-board': { active: true, source: 'included' },
 };
 
 const ADDON_BY_ID = new Map<AddonId, AddonDefinition>(ADDONS.map((addon) => [addon.id, addon]));

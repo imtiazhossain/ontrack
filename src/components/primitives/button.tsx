@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 
 import { layout, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -14,6 +14,7 @@ interface ButtonProps extends PropsWithChildren {
   icon?: AppIconName;
   disabled?: boolean;
   style?: ViewStyle;
+  textStyle?: TextStyle;
   accessibilityLabel?: string;
 }
 
@@ -25,6 +26,7 @@ export function Button({
   icon,
   disabled,
   style,
+  textStyle,
   accessibilityLabel,
 }: ButtonProps) {
   const theme = useTheme();
@@ -57,7 +59,10 @@ export function Button({
         style,
       ]}>
       {icon ? <Symbol name={icon} size="sm" color={iconColor} /> : null}
-      <AppText variant={size === 'lg' ? 'subheading' : 'callout'} color={textColor}>
+      <AppText
+        variant={size === 'lg' ? 'subheading' : 'callout'}
+        color={textColor}
+        style={textStyle}>
         {children}
       </AppText>
     </Pressable>
@@ -69,6 +74,8 @@ interface IconButtonProps {
   onPress: () => void;
   color?: string;
   background?: string;
+  borderColor?: string;
+  shape?: 'circle' | 'rounded';
   size?: number;
   accessibilityLabel: string;
   disabled?: boolean;
@@ -79,6 +86,8 @@ export function IconButton({
   onPress,
   color,
   background,
+  borderColor,
+  shape = 'circle',
   size = layout.minTapTarget,
   accessibilityLabel,
   disabled,
@@ -99,8 +108,10 @@ export function IconButton({
         {
           width: size,
           height: size,
-          borderRadius: size / 2,
+          borderRadius: shape === 'rounded' ? radii.md : size / 2,
           backgroundColor: background ?? theme.backgroundSunken,
+          borderColor,
+          borderWidth: borderColor ? StyleSheet.hairlineWidth : 0,
           opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
         },
       ]}>
@@ -126,5 +137,6 @@ const styles = StyleSheet.create({
   iconButton: {
     alignItems: 'center',
     justifyContent: 'center',
+    borderCurve: 'continuous',
   },
 });

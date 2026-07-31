@@ -22,8 +22,8 @@
         "applinks:ontrack--links.expo.app"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "onTrack uses the camera to capture meal, activity, and plant-care photos.",
-        "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal, activity, and plant-care photos.",
+        "NSCameraUsageDescription": "onTrack uses the camera to capture meal, activity, plant-care, and vision-board photos.",
+        "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal, activity, plant-care, and vision-board photos.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "F5HRXF5795"
@@ -85,8 +85,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "onTrack accesses your photos so you can attach meal, activity, and plant-care photos.",
-          "cameraPermission": "onTrack uses the camera to capture meal, activity, and plant-care photos.",
+          "photosPermission": "onTrack accesses your photos so you can attach meal, activity, plant-care, and vision-board photos.",
+          "cameraPermission": "onTrack uses the camera to capture meal, activity, plant-care, and vision-board photos.",
           "microphonePermission": false
         }
       ],

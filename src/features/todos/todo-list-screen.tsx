@@ -1,8 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
-  Alert,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,20 +9,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DraggableFlatList from 'react-native-draggable-flatlist';
 import Animated, {
   FadeInDown,
   FadeOutLeft,
-  interpolate,
   LinearTransition,
-  type SharedValue,
-  useAnimatedStyle,
 } from 'react-native-reanimated';
-import ReanimatedSwipeable, {
-  type SwipeableMethods,
-} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import {
   AppText,
+  appPrompt,
+  DragHandle,
   ErrorMessage,
   ProgressRing,
   Screen,
@@ -51,7 +46,7 @@ import {
 import { haptics } from '@/utils/haptics';
 
 type TodoFilter = 'open' | 'completed';
-type TodoSort = 'smart' | 'newest' | 'oldest' | 'alphabetical';
+type TodoSort = 'manual' | 'smart' | 'newest' | 'oldest' | 'alphabetical';
 
 const QUICK_START_TASKS = [
   'Plan tomorrow',
@@ -70,6 +65,14 @@ function sortTodoTasks(
   filter: TodoFilter,
 ) {
   return [...tasks].sort((a, b) => {
+    if (sort === 'manual') {
+      return (
+        (a.position ?? Number.MAX_SAFE_INTEGER) -
+          (b.position ?? Number.MAX_SAFE_INTEGER) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        a.id.localeCompare(b.id)
+      );
+    }
     if (sort === 'newest') {
       return b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
     }
@@ -90,6 +93,32 @@ function sortTodoTasks(
     }
     return byPriorityAndRecency(a, b) || a.id.localeCompare(b.id);
   });
+}
+
+function confirmDestructiveAction({
+  title,
+  message,
+  actionLabel,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  actionLabel: string;
+  onConfirm: () => void;
+}) {
+  if (Platform.OS === 'web') {
+    if (globalThis.confirm(`${title}\n\n${message}`)) onConfirm();
+    return;
+  }
+
+  appPrompt.alert(title, message, [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: actionLabel,
+      style: 'destructive',
+      onPress: onConfirm,
+    },
+  ]);
 }
 
 export function TodoListScreen({ listId }: { listId: string }) {
@@ -114,14 +143,16 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const setAssignee = useTodos((state) => state.setAssignee);
   const updateTask = useTodos((state) => state.updateTask);
   const deleteTask = useTodos((state) => state.deleteTask);
+  const reorderTasks = useTodos((state) => state.reorderTasks);
   const clearCompleted = useTodos((state) => state.clearCompleted);
   const syncError = useTodos((state) => state.syncError);
   const clearSyncError = useTodos((state) => state.clearSyncError);
   const inputRef = useRef<TextInput>(null);
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
   const [draft, setDraft] = useState('');
   const [filter, setFilter] = useState<TodoFilter>('open');
   const [sort, setSort] = useState<TodoSort>('smart');
+  const [editingTaskIds, setEditingTaskIds] =
+    useState<ReadonlySet<string> | null>(null);
 
   const openTasks = useMemo(
     () => sortTodoTasks(tasks.filter((task) => !task.completed), sort, 'open'),
@@ -132,8 +163,12 @@ export function TodoListScreen({ listId }: { listId: string }) {
     [sort, tasks],
   );
   const visibleTasks = filter === 'open' ? openTasks : completedTasks;
+  const editMode =
+    editingTaskIds !== null &&
+    visibleTasks.some((task) => editingTaskIds.has(task.id));
   const completedCount = completedTasks.length;
   const progress = tasks.length === 0 ? 0 : completedCount / tasks.length;
+
   const dateLabel = useMemo(
     () =>
       new Intl.DateTimeFormat(dateLocale, {
@@ -147,27 +182,22 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const add = (title = draft) => {
     const task = addTask(listId, title);
     if (!task) return;
+    setEditingTaskIds(null);
     setDraft('');
     setFilter('open');
     haptics.success();
   };
 
   const clearDone = () => {
-    Alert.alert(
-      'Clear completed tasks?',
-      'This removes every completed task from your list.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            clearCompleted(listId);
-            haptics.warning();
-          },
-        },
-      ],
-    );
+    confirmDestructiveAction({
+      title: 'Clear completed tasks?',
+      message: 'This removes every completed task from your list.',
+      actionLabel: 'Clear',
+      onConfirm: () => {
+        clearCompleted(listId);
+        haptics.warning();
+      },
+    });
   };
 
   const heroCopy =
@@ -205,13 +235,18 @@ export function TodoListScreen({ listId }: { listId: string }) {
         style={styles.flex}
       >
         <View style={styles.content}>
-          <FlatList
+          <DraggableFlatList
+            activationDistance={8}
+            autoscrollSpeed={180}
+            autoscrollThreshold={80}
+            containerStyle={styles.list}
             contentContainerStyle={[
               styles.listContent,
               visibleTasks.length === 0 && styles.listEmptyContent,
             ]}
             contentInsetAdjustmentBehavior="never"
             data={visibleTasks}
+            dragItemOverflow={false}
             keyboardDismissMode={
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'
             }
@@ -234,8 +269,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                           ? theme.accentFaint
                           : theme.backgroundSunken,
                       },
-                    ]}
-                  >
+                    ]}>
                     <View
                       style={[
                         styles.openDot,
@@ -248,8 +282,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     />
                     <AppText
                       variant="caption"
-                      color={openTasks.length ? 'accent' : 'success'}
-                    >
+                      color={openTasks.length ? 'accent' : 'success'}>
                       {openTasks.length
                         ? `${openTasks.length} open`
                         : 'All clear'}
@@ -378,6 +411,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     accessibilityHint="Toggles between open and closed tasks"
                     hitSlop={4}
                     onPress={() => {
+                      setEditingTaskIds(null);
                       setFilter(filter === 'open' ? 'completed' : 'open');
                       haptics.select();
                     }}
@@ -421,11 +455,55 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     </AppText>
                   </Pressable>
                   <View style={styles.toolbarMenus}>
+                    {owner && visibleTasks.length > 0 ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          editMode ? 'Finish editing checklist' : 'Edit checklist'
+                        }
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          if (editMode) {
+                            setEditingTaskIds(null);
+                          } else {
+                            setSort('manual');
+                            setEditingTaskIds(
+                              new Set(visibleTasks.map((task) => task.id)),
+                            );
+                          }
+                          haptics.select();
+                        }}
+                        style={({ pressed }) => [
+                          styles.editModeButton,
+                          {
+                            backgroundColor: editMode
+                              ? theme.accentPrimary
+                              : theme.backgroundSunken,
+                            borderColor: editMode
+                              ? theme.accentPrimary
+                              : theme.separator,
+                            opacity: pressed ? 0.72 : 1,
+                          },
+                        ]}>
+                        <AppText
+                          variant="caption"
+                          color={editMode ? 'onAccent' : 'accent'}>
+                          {editMode ? 'Done' : 'Edit'}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
                     <ChecklistPopoverMenu
                       accessibilityLabel="Sort checklist"
                       title="Sort items"
                       triggerIcon="sort"
                       items={[
+                        {
+                          id: 'manual',
+                          title: 'Manual',
+                          description: 'Your drag-and-drop order',
+                          icon: 'list',
+                          selected: sort === 'manual',
+                        },
                         {
                           id: 'smart',
                           title: 'Smart',
@@ -457,6 +535,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                       ]}
                       onSelect={(action) => {
                         if (
+                          action === 'manual' ||
                           action === 'smart' ||
                           action === 'newest' ||
                           action === 'oldest' ||
@@ -530,31 +609,35 @@ export function TodoListScreen({ listId }: { listId: string }) {
                 hasTasks={tasks.length > 0}
                 onAddSuggestion={add}
                 onFocusComposer={() => inputRef.current?.focus()}
-                onShowCompleted={() => setFilter('completed')}
+                onShowCompleted={() => {
+                  setEditingTaskIds(null);
+                  setFilter('completed');
+                }}
               />
             }
-            renderItem={({ item, index }) => (
+            onDragBegin={() => haptics.heavy()}
+            onDragEnd={({ data, from, to }) => {
+              if (!editMode || from < 0 || to < 0 || from === to) return;
+              reorderTasks(list.id, data.map((task) => task.id));
+              haptics.select();
+            }}
+            renderItem={({ item, drag, getIndex, isActive }) => (
               <Animated.View
-                entering={FadeInDown.delay(Math.min(index, 5) * 36).duration(
+                entering={FadeInDown.delay(Math.min(getIndex() ?? 0, 5) * 36).duration(
                   220,
                 )}
                 exiting={FadeOutLeft.duration(180)}
                 layout={LinearTransition.duration(220)}
+                style={isActive ? styles.activeTaskRow : undefined}
               >
                 <TodoRow
                   task={item}
                   canComplete={canCompleteTodo(list, item, user?.id)}
+                  editMode={editMode}
+                  isActive={isActive}
                   listOwner={owner}
                   members={members}
-                  onSwipeOpen={(swipeable) => {
-                    if (
-                      openSwipeableRef.current &&
-                      openSwipeableRef.current !== swipeable
-                    ) {
-                      openSwipeableRef.current.close();
-                    }
-                    openSwipeableRef.current = swipeable;
-                  }}
+                  onDragStart={drag}
                   onDelete={() => {
                     deleteTask(item.id);
                     haptics.warning();
@@ -595,28 +678,31 @@ export function TodoListScreen({ listId }: { listId: string }) {
 function TodoRow({
   task,
   canComplete,
+  editMode,
+  isActive,
   listOwner,
   members,
   onDelete,
+  onDragStart,
   onCycleAssignee,
   onToggle,
   onToggleImportant,
   onUpdate,
-  onSwipeOpen,
 }: {
   task: TodoTask;
   canComplete: boolean;
+  editMode: boolean;
+  isActive: boolean;
   listOwner: boolean;
   members: TodoMember[];
   onDelete: () => void;
+  onDragStart: () => void;
   onCycleAssignee: () => void;
   onToggle: () => void;
   onToggleImportant: () => void;
   onUpdate: (title: string) => void;
-  onSwipeOpen: (swipeable: SwipeableMethods) => void;
 }) {
   const theme = useTheme();
-  const swipeableRef = useRef<SwipeableMethods | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
 
@@ -627,53 +713,58 @@ function TodoRow({
     setEditing(false);
   };
 
+  const confirmDelete = () => {
+    Keyboard.dismiss();
+    confirmDestructiveAction({
+      title: `Delete “${task.title}”?`,
+      message: 'This checklist item will be permanently deleted.',
+      actionLabel: 'Delete',
+      onConfirm: onDelete,
+    });
+  };
+
   return (
-    <ReanimatedSwipeable
-      ref={swipeableRef}
-      dragOffsetFromRightEdge={12}
-      enableTrackpadTwoFingerGesture
-      friction={1.15}
-      overshootRight={false}
-      rightThreshold={44}
-      containerStyle={[styles.swipeable, { backgroundColor: theme.danger }]}
-      onSwipeableOpenStartDrag={() => {
-        Keyboard.dismiss();
-        haptics.select();
-      }}
-      onSwipeableWillOpen={() => {
-        if (swipeableRef.current) onSwipeOpen(swipeableRef.current);
-      }}
-      renderRightActions={
-        listOwner
-          ? (progress, _translation, swipeable) => (
-              <DeleteAction
-                progress={progress}
-                swipeable={swipeable}
-                taskTitle={task.title}
-                onDelete={onDelete}
-              />
-            )
+    <View
+      accessibilityActions={
+        listOwner && editMode
+          ? [{ name: 'delete', label: `Delete ${task.title}` }]
           : undefined
       }
+      onAccessibilityAction={(event) => {
+        if (
+          listOwner &&
+          editMode &&
+          event.nativeEvent.actionName === 'delete'
+        ) {
+          confirmDelete();
+        }
+      }}
+      style={[
+        styles.taskRow,
+        {
+          backgroundColor: theme.backgroundElevated,
+          borderColor:
+            task.important && !task.completed
+              ? theme.accentSoft
+              : theme.separator,
+        },
+      ]}
     >
-      <View
-        accessibilityActions={[
-          { name: 'delete', label: `Delete ${task.title}` },
-        ]}
-        onAccessibilityAction={(event) => {
-          if (event.nativeEvent.actionName === 'delete') onDelete();
-        }}
-        style={[
-          styles.taskRow,
-          {
-            backgroundColor: theme.backgroundElevated,
-            borderColor:
-              task.important && !task.completed
-                ? theme.accentSoft
-                : theme.separator,
-          },
-        ]}
-      >
+      {editMode && listOwner ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${task.title}`}
+          accessibilityHint="Deletes after confirmation"
+          hitSlop={2}
+          onPress={confirmDelete}
+          style={({ pressed }) => [
+            styles.rowAction,
+            { backgroundColor: `${theme.danger}18` },
+            pressed && styles.pressed,
+          ]}>
+          <Symbol name="delete" size={18} color={theme.danger} />
+        </Pressable>
+      ) : (
         <Pressable
           accessibilityLabel={
             task.completed
@@ -696,145 +787,124 @@ function TodoRow({
               opacity: canComplete ? 1 : 0.35,
               transform: [{ scale: pressed ? 0.88 : 1 }],
             },
-          ]}
-        >
+          ]}>
           {task.completed ? (
             <Symbol name="check" size={15} color={theme.textOnAccent} />
           ) : null}
         </Pressable>
+      )}
 
-        <View style={styles.taskCopy}>
-          {editing && listOwner ? (
-            <TextInput
-              accessibilityLabel={`Edit ${task.title}`}
-              autoFocus
-              blurOnSubmit
-              maxLength={160}
-              onBlur={commitEdit}
-              onChangeText={setDraft}
-              onSubmitEditing={Keyboard.dismiss}
-              returnKeyType="done"
-              selectionColor={theme.accentPrimary}
-              style={[
-                styles.editInput,
-                { color: theme.textPrimary, borderColor: theme.accentPrimary },
-              ]}
-              value={draft}
-            />
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Edit ${task.title}`}
-              disabled={!listOwner}
-              onPress={() => {
-                Keyboard.dismiss();
-                setEditing(true);
-              }}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <AppText
-                variant="bodyMedium"
-                color={task.completed ? 'tertiary' : 'primary'}
-                numberOfLines={2}
-                style={task.completed ? styles.completedTitle : undefined}
-              >
-                {task.title}
-              </AppText>
-            </Pressable>
-          )}
-          {task.important && !task.completed ? (
-            <AppText variant="overline" color="accent">
-              Focus
-            </AppText>
-          ) : null}
-          {members.length > 1 ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Assignment for ${task.title}`}
-              disabled={!listOwner}
-              onPress={onCycleAssignee}>
-              <AppText variant="caption" color="secondary">
-                {task.assigneeUserId
-                  ? members.find((member) => member.userId === task.assigneeUserId)
-                      ?.displayName ?? 'Member'
-                  : 'Anyone'}
-                {listOwner ? ' · tap to change' : ''}
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-
-        {listOwner ? <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            task.important
-              ? `Remove ${task.title} from focus`
-              : `Mark ${task.title} as focus`
-          }
-          accessibilityState={{ selected: task.important }}
-          hitSlop={2}
-          onPress={() => {
-            Keyboard.dismiss();
-            onToggleImportant();
-          }}
-          style={({ pressed }) => [
-            styles.rowAction,
-            task.important && { backgroundColor: theme.accentFaint },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Symbol
-            name={task.important ? 'important-filled' : 'important'}
-            size={19}
-            color={task.important ? theme.accentPrimary : theme.textTertiary}
+      <View style={styles.taskCopy}>
+        {editing && listOwner && !editMode ? (
+          <TextInput
+            accessibilityLabel={`Edit ${task.title}`}
+            autoFocus
+            blurOnSubmit
+            maxLength={160}
+            onBlur={commitEdit}
+            onChangeText={setDraft}
+            onSubmitEditing={Keyboard.dismiss}
+            returnKeyType="done"
+            selectionColor={theme.accentPrimary}
+            style={[
+              styles.editInput,
+              { color: theme.textPrimary, borderColor: theme.accentPrimary },
+            ]}
+            value={draft}
           />
-        </Pressable> : null}
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${task.title}`}
+            disabled={!listOwner || editMode}
+            onPress={() => {
+              Keyboard.dismiss();
+              setEditing(true);
+            }}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <AppText
+              variant="bodyMedium"
+              color={task.completed ? 'tertiary' : 'primary'}
+              numberOfLines={2}
+              style={task.completed ? styles.completedTitle : undefined}
+            >
+              {task.title}
+            </AppText>
+          </Pressable>
+        )}
+        {task.important && !task.completed ? (
+          <AppText variant="overline" color="accent">
+            Focus
+          </AppText>
+        ) : null}
+        {members.length > 1 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Assignment for ${task.title}`}
+            disabled={!listOwner || editMode}
+            onPress={onCycleAssignee}>
+            <AppText variant="caption" color="secondary">
+              {task.assigneeUserId
+                ? members.find((member) => member.userId === task.assigneeUserId)
+                    ?.displayName ?? 'Member'
+                : 'Anyone'}
+              {listOwner && !editMode ? ' · tap to change' : ''}
+            </AppText>
+          </Pressable>
+        ) : null}
       </View>
-    </ReanimatedSwipeable>
-  );
-}
 
-function DeleteAction({
-  progress,
-  swipeable,
-  taskTitle,
-  onDelete,
-}: {
-  progress: SharedValue<number>;
-  swipeable: SwipeableMethods;
-  taskTitle: string;
-  onDelete: () => void;
-}) {
-  const theme = useTheme();
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.35, 1], [0, 0.7, 1], 'clamp'),
-    transform: [
-      {
-        translateX: interpolate(progress.value, [0, 1], [32, 0], 'clamp'),
-      },
-    ],
-  }));
-
-  return (
-    <Animated.View style={[styles.deleteAction, animatedStyle]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Delete ${taskTitle}`}
-        onPress={() => {
-          swipeable.close();
-          onDelete();
-        }}
-        style={({ pressed }) => [
-          styles.deleteButton,
-          pressed && styles.deletePressed,
-        ]}
-      >
-        <Symbol name="delete" size={19} color={theme.textOnAccent} />
-        <AppText variant="caption" color="onAccent">
-          Delete
-        </AppText>
-      </Pressable>
-    </Animated.View>
+      {listOwner ? (
+        editMode ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Drag to reorder ${task.title}`}
+            accessibilityHint="Long press and drag to move this item"
+            disabled={isActive}
+            delayLongPress={180}
+            onLongPress={onDragStart}
+            style={({ pressed }) => [
+              styles.rowAction,
+              (pressed || isActive) && styles.pressed,
+            ]}>
+            <DragHandle
+              size={20}
+              color={
+                theme.name === 'dark'
+                  ? theme.textOnAccent
+                  : theme.textSecondary
+              }
+            />
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              task.important
+                ? `Remove ${task.title} from focus`
+                : `Mark ${task.title} as focus`
+            }
+            accessibilityState={{ selected: task.important }}
+            hitSlop={2}
+            onPress={() => {
+              Keyboard.dismiss();
+              onToggleImportant();
+            }}
+            style={({ pressed }) => [
+              styles.rowAction,
+              task.important && { backgroundColor: theme.accentFaint },
+              pressed && styles.pressed,
+            ]}>
+            <Symbol
+              name={task.important ? 'important-filled' : 'important'}
+              size={19}
+              color={task.important ? theme.accentPrimary : theme.textTertiary}
+            />
+          </Pressable>
+        )
+      ) : null}
+    </View>
   );
 }
 
@@ -994,8 +1064,9 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fontFamilies.serif,
     fontSize: 34,
-    lineHeight: 38,
-    fontWeight: '600',
+    lineHeight: 41,
+    fontWeight: '400',
+    letterSpacing: -0.65,
   },
   openPill: {
     minHeight: 32,
@@ -1086,6 +1157,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: spacing.sm,
   },
+  editModeButton: {
+    minWidth: 58,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.pill,
+  },
   memberNotice: {
     minHeight: 44,
     justifyContent: 'center',
@@ -1107,10 +1187,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
-  swipeable: {
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
+  activeTaskRow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 8,
   },
   checkButton: {
     width: 27,
@@ -1136,19 +1218,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.pill,
   },
-  deleteAction: {
-    width: 88,
-    alignItems: 'stretch',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-  },
-  deletePressed: { opacity: 0.72 },
   empty: {
     flex: 1,
     alignItems: 'center',

@@ -90,6 +90,18 @@ For free local photo analysis during development, install Ollama and pull `qwen3
 the normalized image only to the loopback Ollama service; USDA grounding remains optional through
 `USDA_FDC_API_KEY`. Restaurant-link analysis continues to require the guarded cloud provider.
 
+## Grocery recipe import
+
+Lists have an explicit Checklist or Grocery type. Grocery owners can import one
+recipe at a time from a public HTTPS URL, camera photo, screenshot, or system
+share. Every result is reviewed before it becomes a meal card, and the Combined
+view synchronizes checks across matching ingredient occurrences.
+
+Set the server-only `RECIPE_AI_ENABLED=true` and `OPENAI_API_KEY` values to
+enable extraction. `OPENAI_RECIPE_MODEL` is optional and otherwise falls back to
+the existing meal model. Apply the Supabase migrations for collaborative recipe
+rows and the private, list-scoped recipe-image bucket.
+
 ## iOS notes
 
 - Portrait iPhone only for this milestone

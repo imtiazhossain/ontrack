@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
-  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -12,13 +11,9 @@ import {
 import DraggableFlatList, {
   type RenderItemParams,
 } from 'react-native-draggable-flatlist';
-import SwipeableItem, {
-  OpenDirection,
-  type SwipeableItemImperativeRef,
-} from 'react-native-swipeable-item';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Screen, Symbol } from '@/components/primitives';
+import { AppText, appPrompt, DragHandle, Screen, Symbol } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
@@ -30,7 +25,12 @@ import {
   deleteSharedTodoList,
   leaveTodoList,
 } from '@/services/todos/collaboration';
-import { useTodos, type TodoList } from '@/store/todos';
+import { deletePersistedRecipeImage } from '@/services/recipes';
+import {
+  useTodos,
+  type TodoList,
+  type TodoListKind,
+} from '@/store/todos';
 import { haptics } from '@/utils/haptics';
 
 export function TodoListsOverview() {
@@ -40,13 +40,22 @@ export function TodoListsOverview() {
   const { user } = useAuthSession();
   const lists = useTodos((state) => state.lists);
   const tasks = useTodos((state) => state.tasks);
+  const recipes = useTodos((state) => state.recipes);
   const members = useTodos((state) => state.members);
   const invites = useTodos((state) => state.invites);
   const createList = useTodos((state) => state.createList);
   const deletePrivateList = useTodos((state) => state.deleteList);
   const reorderLists = useTodos((state) => state.reorderLists);
-  const openSwipeableRef = useRef<SwipeableItemImperativeRef | null>(null);
+  const renameList = useTodos((state) => state.renameList);
   const [draft, setDraft] = useState('');
+  const [draftKind, setDraftKind] = useState<TodoListKind>('checklist');
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
+  const [editingListIds, setEditingListIds] =
+    useState<ReadonlySet<string> | null>(null);
+  const editMode =
+    editingListIds !== null &&
+    lists.some((list) => editingListIds.has(list.id));
+
   const counts = useMemo(() => {
     const next = new Map<string, { open: number; total: number }>();
     for (const task of tasks) {
@@ -79,8 +88,9 @@ export function TodoListsOverview() {
   }, [members, user?.id]);
 
   const add = () => {
-    const list = createList(draft);
+    const list = createList(draft, draftKind);
     if (!list) return;
+    setEditingListIds(null);
     setDraft('');
     Keyboard.dismiss();
     haptics.success();
@@ -98,45 +108,92 @@ export function TodoListsOverview() {
     haptics.select();
   }, [lists, reorderLists]);
 
-  const removeList = useCallback(
-    (list: TodoList, swipeable: SwipeableItemImperativeRef) => {
-      const leaving = list.mode === 'shared' && list.role === 'member';
-      Alert.alert(
-        leaving ? `Leave “${list.name}”?` : `Delete “${list.name}”?`,
-        leaving
-          ? 'This checklist will be removed from your account. The owner and other collaborators will keep it.'
-          : 'The checklist and every item in it will be permanently deleted.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => void swipeable.close(),
-          },
-          {
-            text: leaving ? 'Leave' : 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              void swipeable.close();
-              const action =
-                list.mode === 'private'
-                  ? Promise.resolve(deletePrivateList(list.id))
-                  : leaving
-                    ? leaveTodoList(list.id)
-                    : deleteSharedTodoList(list.id);
-              void action
-                .then(() => haptics.warning())
-                .catch((caught: unknown) => {
-                  Alert.alert(
-                    leaving ? 'Could not leave checklist' : 'Could not delete checklist',
-                    caught instanceof Error ? caught.message : 'Please try again.',
-                  );
-                });
-            },
-          },
-        ],
-      );
+  const commitListName = useCallback(
+    (id: string, value: string) => {
+      const list = lists.find((item) => item.id === id);
+      if (!list || list.role !== 'owner') return false;
+      const nextName = value.trim().replace(/\s+/g, ' ');
+      if (!nextName || nextName === list.name) return false;
+      renameList(id, nextName);
+      return true;
     },
-    [deletePrivateList],
+    [lists, renameList],
+  );
+
+  const beginEditing = () => {
+    Keyboard.dismiss();
+    setNameDrafts(
+      Object.fromEntries(
+        lists
+          .filter((list) => list.role === 'owner')
+          .map((list) => [list.id, list.name]),
+      ),
+    );
+    setEditingListIds(new Set(lists.map((list) => list.id)));
+    haptics.select();
+  };
+
+  const finishEditing = () => {
+    Keyboard.dismiss();
+    let renamed = false;
+    for (const list of lists) {
+      renamed =
+        commitListName(list.id, nameDrafts[list.id] ?? list.name) || renamed;
+    }
+    setNameDrafts({});
+    setEditingListIds(null);
+    if (renamed) haptics.success();
+    else haptics.select();
+  };
+
+  const removeList = useCallback(
+    (list: TodoList) => {
+      const leaving = list.mode === 'shared' && list.role === 'member';
+      const title = leaving
+        ? `Leave “${list.name}”?`
+        : `Delete “${list.name}”?`;
+      const message = leaving
+          ? 'This checklist will be removed from your account. The owner and other collaborators will keep it.'
+          : 'The checklist and every item in it will be permanently deleted.';
+      const remove = () => {
+        if (list.mode === 'private') {
+          recipes
+            .filter((recipe) => recipe.listId === list.id)
+            .forEach((recipe) =>
+              deletePersistedRecipeImage(recipe.sourceImageUri),
+            );
+        }
+        const action =
+          list.mode === 'private'
+            ? Promise.resolve(deletePrivateList(list.id))
+            : leaving
+              ? leaveTodoList(list.id)
+              : deleteSharedTodoList(list.id);
+        void action
+          .then(() => haptics.warning())
+          .catch((caught: unknown) => {
+            appPrompt.alert(
+              leaving ? 'Could not leave checklist' : 'Could not delete checklist',
+              caught instanceof Error ? caught.message : 'Please try again.',
+            );
+          });
+      };
+
+      if (Platform.OS === 'web') {
+        if (globalThis.confirm(`${title}\n\n${message}`)) remove();
+        return;
+      }
+
+      appPrompt.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: leaving ? 'Leave' : 'Delete',
+          style: 'destructive',
+          onPress: remove,
+        },
+      ]);
+    },
+    [deletePrivateList, recipes],
   );
 
   const renderList = useCallback(
@@ -151,24 +208,24 @@ export function TodoListsOverview() {
       return (
         <View style={styles.listItem}>
           <TodoListCard
+            editMode={editMode}
             isActive={isActive}
             list={item}
             collaboratorNames={collaboratorsByList.get(item.id)}
             open={count.open}
             total={count.total}
+            nameDraft={nameDrafts[item.id] ?? item.name}
             onDragStart={drag}
+            onNameChange={(name) =>
+              setNameDrafts((current) => ({ ...current, [item.id]: name }))
+            }
+            onNameSubmit={(name) => {
+              if (commitListName(item.id, name)) haptics.success();
+              Keyboard.dismiss();
+            }}
             onMoveDown={() => moveList(item.id, 1)}
             onMoveUp={() => moveList(item.id, -1)}
-            onRemove={(swipeable) => removeList(item, swipeable)}
-            onSwipeOpen={(swipeable) => {
-              if (
-                openSwipeableRef.current &&
-                openSwipeableRef.current !== swipeable
-              ) {
-                void openSwipeableRef.current.close();
-              }
-              openSwipeableRef.current = swipeable;
-            }}
+            onRemove={() => removeList(item)}
             canMoveDown={index < lists.length - 1}
             canMoveUp={index > 0}
             onPress={() => router.push(`/todos/${item.id}` as never)}
@@ -176,7 +233,17 @@ export function TodoListsOverview() {
         </View>
       );
     },
-    [collaboratorsByList, counts, lists, moveList, removeList, router],
+    [
+      collaboratorsByList,
+      counts,
+      editMode,
+      lists,
+      nameDrafts,
+      commitListName,
+      moveList,
+      removeList,
+      router,
+    ],
   );
 
   return (
@@ -187,6 +254,7 @@ export function TodoListsOverview() {
       <View style={styles.content}>
         <DraggableFlatList
           activationDistance={8}
+          automaticallyAdjustKeyboardInsets
           autoscrollSpeed={180}
           autoscrollThreshold={80}
           containerStyle={styles.dragList}
@@ -195,12 +263,10 @@ export function TodoListsOverview() {
           data={lists}
           dragItemOverflow={false}
           onDragBegin={() => {
-            void openSwipeableRef.current?.close();
-            openSwipeableRef.current = null;
             haptics.heavy();
           }}
           onDragEnd={({ data, from, to }) => {
-            if (from < 0 || to < 0) return;
+            if (!editMode || from < 0 || to < 0) return;
             haptics.select();
             reorderLists(data.map((list) => list.id));
           }}
@@ -212,74 +278,172 @@ export function TodoListsOverview() {
               <View style={styles.heading}>
                 <View style={styles.headingCopy}>
                   <AppText variant="overline" color="accent">Your checklists</AppText>
-                  <AppText style={styles.title}>To Do</AppText>
+                  <AppText style={styles.title}>Checklists</AppText>
                   <AppText variant="body" color="secondary">
                     {totalOpen
                       ? `${totalOpen} open ${totalOpen === 1 ? 'item' : 'items'} across ${lists.length} ${lists.length === 1 ? 'list' : 'lists'}.`
                       : 'Everything is handled. Make a list for what comes next.'}
                   </AppText>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    invites.length
-                      ? `Add collaborators, ${invites.length} invitations waiting`
-                      : 'Add collaborators'
-                  }
-                  onPress={() => router.push('/todo-collaborators' as never)}
-                  style={({ pressed }) => [
-                    styles.inviteButton,
-                    { backgroundColor: theme.backgroundSunken },
-                    pressed && styles.pressed,
-                  ]}>
-                  <Symbol
-                    name="invite"
-                    size={21}
-                    color={invites.length ? theme.accentPrimary : theme.textSecondary}
-                  />
-                </Pressable>
+                <View style={styles.headingActions}>
+                  {lists.length > 0 ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        editMode
+                          ? 'Finish editing checklists'
+                          : 'Edit checklists'
+                      }
+                      onPress={() => {
+                        if (editMode) finishEditing();
+                        else beginEditing();
+                      }}
+                      style={({ pressed }) => [
+                        styles.editModeButton,
+                        {
+                          backgroundColor: editMode
+                            ? theme.accentPrimary
+                            : theme.backgroundSunken,
+                          borderColor: editMode
+                            ? theme.accentPrimary
+                            : theme.separator,
+                          opacity: pressed ? 0.72 : 1,
+                        },
+                      ]}>
+                      <AppText
+                        variant="caption"
+                        color={editMode ? 'onAccent' : 'accent'}>
+                        {editMode ? 'Done' : 'Edit'}
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      invites.length
+                        ? `Add collaborators, ${invites.length} invitations waiting`
+                        : 'Add collaborators'
+                    }
+                    onPress={() => router.push('/todo-collaborators' as never)}
+                    style={({ pressed }) => [
+                      styles.inviteButton,
+                      { backgroundColor: theme.backgroundSunken },
+                      pressed && styles.pressed,
+                    ]}>
+                    <Symbol
+                      name="invite"
+                      size={21}
+                      color={
+                        invites.length
+                          ? theme.accentPrimary
+                          : theme.textSecondary
+                      }
+                    />
+                  </Pressable>
+                </View>
               </View>
 
-              <View
-                style={[
-                  styles.composer,
-                  {
-                    backgroundColor: theme.backgroundSunken,
-                    borderColor: draft.trim() ? theme.accentPrimary : theme.separator,
-                  },
-                ]}>
-                <Symbol name="add" size={21} color={theme.accentPrimary} />
-                <TextInput
-                  accessibilityLabel="New list name"
-                  maxLength={80}
-                  onChangeText={setDraft}
-                  onSubmitEditing={add}
-                  placeholder="New list, e.g. Groceries"
-                  placeholderTextColor={theme.textTertiary}
-                  returnKeyType="done"
-                  style={[styles.input, { color: theme.textPrimary }]}
-                  value={draft}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Create list"
-                  disabled={!draft.trim()}
-                  onPress={add}
-                  style={({ pressed }) => [
-                    styles.addButton,
-                    {
-                      backgroundColor: draft.trim()
-                        ? theme.accentPrimary
-                        : theme.separator,
-                      opacity: pressed ? 0.72 : 1,
-                    },
-                  ]}>
-                  <Symbol name="arrow-up" size={18} color={theme.textOnAccent} />
-                </Pressable>
-              </View>
+              {!editMode ? (
+                <View style={styles.newListBlock}>
+                  <View
+                    accessibilityRole="radiogroup"
+                    style={styles.kindChoices}>
+                    {([
+                      ['checklist', 'Checklist', 'tasks'],
+                      ['grocery', 'Grocery', 'groceries'],
+                    ] as const).map(([kind, label, icon]) => {
+                      const selected = draftKind === kind;
+                      return (
+                        <Pressable
+                          key={kind}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: selected }}
+                          onPress={() => {
+                            setDraftKind(kind);
+                            haptics.select();
+                          }}
+                          style={[
+                            styles.kindChoice,
+                            {
+                              backgroundColor: selected
+                                ? theme.accentFaint
+                                : theme.backgroundSunken,
+                              borderColor: selected
+                                ? theme.accentPrimary
+                                : theme.separator,
+                            },
+                          ]}>
+                          <Symbol
+                            name={icon}
+                            size={17}
+                            color={
+                              selected
+                                ? theme.accentPrimary
+                                : theme.textSecondary
+                            }
+                          />
+                          <AppText
+                            variant="caption"
+                            color={selected ? 'accent' : 'secondary'}>
+                            {label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <View
+                    style={[
+                      styles.composer,
+                      {
+                        backgroundColor: theme.backgroundSunken,
+                        borderColor: draft.trim()
+                          ? theme.accentPrimary
+                          : theme.separator,
+                      },
+                    ]}>
+                    <Symbol name="add" size={21} color={theme.accentPrimary} />
+                    <TextInput
+                      accessibilityLabel="New list name"
+                      maxLength={80}
+                      onChangeText={setDraft}
+                      onSubmitEditing={add}
+                      placeholder={
+                        draftKind === 'grocery'
+                          ? 'New grocery list'
+                          : 'New checklist'
+                      }
+                      placeholderTextColor={theme.textTertiary}
+                      returnKeyType="done"
+                      style={[styles.input, { color: theme.textPrimary }]}
+                      value={draft}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Create list"
+                      disabled={!draft.trim()}
+                      onPress={add}
+                      style={({ pressed }) => [
+                        styles.addButton,
+                        {
+                          backgroundColor: draft.trim()
+                            ? theme.accentPrimary
+                            : theme.separator,
+                          opacity: pressed ? 0.72 : 1,
+                        },
+                      ]}>
+                      <Symbol
+                        name="arrow-up"
+                        size={18}
+                        color={theme.textOnAccent}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
 
             </View>
           }
+          ListEmptyComponent={<EmptyChecklists />}
           renderItem={renderList}
           showsVerticalScrollIndicator={false}
         />
@@ -288,237 +452,328 @@ export function TodoListsOverview() {
   );
 }
 
+function EmptyChecklists() {
+  const theme = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.emptyState,
+        {
+          backgroundColor: theme.backgroundSecondary,
+          borderColor: theme.separator,
+        },
+      ]}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.emptyIllustration}>
+        <View
+          style={[
+            styles.emptyPaperBack,
+            styles.emptyPaperBackLeft,
+            {
+              backgroundColor: theme.accentFaint,
+              borderColor: theme.separator,
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.emptyPaperBack,
+            styles.emptyPaperBackRight,
+            {
+              backgroundColor: theme.backgroundSunken,
+              borderColor: theme.separator,
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.emptyPaper,
+            {
+              backgroundColor: theme.backgroundElevated,
+              borderColor: theme.separator,
+            },
+          ]}>
+          <View
+            style={[
+              styles.emptyPaperBadge,
+              { backgroundColor: theme.accentFaint },
+            ]}>
+            <Symbol name="tasks" size={24} color={theme.accentPrimary} />
+          </View>
+          {[0.72, 0.9, 0.58].map((width, index) => (
+            <View key={width} style={styles.emptyPaperRow}>
+              <View
+                style={[
+                  styles.emptyPaperCheck,
+                  {
+                    borderColor:
+                      index === 0 ? theme.accentPrimary : theme.separator,
+                    backgroundColor:
+                      index === 0 ? theme.accentFaint : 'transparent',
+                  },
+                ]}>
+                {index === 0 ? (
+                  <Symbol name="check" size={11} color={theme.accentPrimary} />
+                ) : null}
+              </View>
+              <View
+                style={[
+                  styles.emptyPaperLine,
+                  {
+                    width: `${width * 100}%`,
+                    backgroundColor:
+                      index === 0 ? theme.accentSoft : theme.separator,
+                  },
+                ]}
+              />
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.emptyCopy}>
+        <AppText variant="heading" align="center">
+          A clear slate
+        </AppText>
+        <AppText
+          variant="body"
+          color="secondary"
+          align="center"
+          style={styles.emptyMessage}>
+          Give your first list a name above. Groceries, weekend plans, packing—
+          whatever helps quiet your mind.
+        </AppText>
+      </View>
+
+      <View
+        style={[
+          styles.emptyHint,
+          {
+            backgroundColor: theme.accentFaint,
+          },
+        ]}>
+        <Symbol name="arrow-up" size={15} color={theme.accentPrimary} />
+        <AppText variant="caption" color="accent">
+          Start with the field above
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function TodoListCard({
+  editMode,
   list,
+  nameDraft,
   collaboratorNames,
   open,
   total,
   onPress,
   onDragStart,
+  onNameChange,
+  onNameSubmit,
   onMoveDown,
   onMoveUp,
   onRemove,
-  onSwipeOpen,
   canMoveDown,
   canMoveUp,
   isActive,
 }: {
+  editMode: boolean;
   list: TodoList;
+  nameDraft: string;
   collaboratorNames?: string[];
   open: number;
   total: number;
   onPress: () => void;
   onDragStart: () => void;
+  onNameChange: (name: string) => void;
+  onNameSubmit: (name: string) => void;
   onMoveDown: () => void;
   onMoveUp: () => void;
-  onRemove: (swipeable: SwipeableItemImperativeRef) => void;
-  onSwipeOpen: (swipeable: SwipeableItemImperativeRef) => void;
+  onRemove: () => void;
   canMoveDown: boolean;
   canMoveUp: boolean;
   isActive: boolean;
 }) {
   const theme = useTheme();
-  const swipeableRef = useRef<SwipeableItemImperativeRef | null>(null);
-  const swipeGestureRef = useRef(false);
-  const wasOpenAtPressInRef = useRef(false);
-  const longPressGestureRef = useRef(false);
-  const horizontalTouchRef = useRef(false);
-  const touchOriginRef = useRef<{ x: number; y: number } | undefined>(undefined);
-  const icon = todoListIcon(list.name);
+  const nameInputRef = useRef<TextInput>(null);
+  const icon = todoListIcon(list.name, list.kind);
   const collaboratorLabel = collaboratorNames?.join(', ');
   const leaving = list.mode === 'shared' && list.role === 'member';
+  const canRename = editMode && list.role === 'owner';
+  const cardContents = (
+    <>
+      <View
+        style={[
+          styles.cardIcon,
+          {
+            backgroundColor: theme.backgroundSunken,
+          },
+        ]}>
+        <Symbol name={icon} size={22} color={theme.textSecondary} />
+      </View>
+      <View style={styles.cardCopy}>
+        {canRename ? (
+          <View style={styles.nameEditor}>
+            <TextInput
+              ref={nameInputRef}
+              accessibilityLabel="Checklist name"
+              maxLength={80}
+              onChangeText={onNameChange}
+              onSubmitEditing={() => onNameSubmit(nameDraft)}
+              placeholder="Checklist name"
+              placeholderTextColor={theme.textTertiary}
+              returnKeyType="done"
+              selectTextOnFocus
+              selectionColor={theme.accentPrimary}
+              style={[styles.nameInput, { color: theme.textPrimary }]}
+              value={nameDraft}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${list.name} name`}
+              onPress={() => nameInputRef.current?.focus()}
+              style={({ pressed }) => [
+                styles.nameEditButton,
+                pressed && styles.pressed,
+              ]}>
+              <Symbol name="edit" size={16} color={theme.accentPrimary} />
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <AppText variant="subheading" numberOfLines={1}>
+              {list.name}
+            </AppText>
+            {list.kind === 'grocery' ? (
+              <AppText variant="caption" color="accent">
+                Grocery
+              </AppText>
+            ) : null}
+          </>
+        )}
+        {collaboratorNames ? (
+          <View style={styles.collaborators}>
+            <View style={styles.collaboratorAvatars}>
+              {collaboratorNames.slice(0, 2).map((name, index) => (
+                <View
+                  key={`${name}-${index}`}
+                  style={[
+                    styles.collaboratorAvatar,
+                    {
+                      backgroundColor: theme.accentFaint,
+                      borderColor: theme.backgroundElevated,
+                    },
+                    index > 0 && styles.collaboratorAvatarOverlap,
+                  ]}>
+                  <AppText
+                    style={[
+                      styles.collaboratorInitial,
+                      { color: theme.accentPrimary },
+                    ]}>
+                    {collaboratorInitial(name)}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+            <AppText variant="caption" color="secondary" numberOfLines={1}>
+              {collaboratorNames.length > 2
+                ? `${collaboratorNames.slice(0, 2).join(', ')} +${collaboratorNames.length - 2}`
+                : collaboratorLabel}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.count}>
+        <AppText variant="heading" color={open ? 'accent' : 'success'}>
+          {open}
+        </AppText>
+        <AppText variant="caption" color="tertiary">
+          open
+        </AppText>
+      </View>
+    </>
+  );
+
   return (
-    <View style={[styles.swipeable, { backgroundColor: theme.danger }]}>
-      <SwipeableItem
-        ref={swipeableRef}
-        item={list}
-        activationThreshold={12}
-        overSwipe={0}
-        snapPointsLeft={[92]}
-        swipeEnabled={!isActive}
-        onChange={({ openDirection }) => {
-          const opened = openDirection !== OpenDirection.NONE;
-          swipeGestureRef.current = opened;
-          if (opened && swipeableRef.current) {
-            onSwipeOpen(swipeableRef.current);
-            haptics.select();
-          }
-        }}
-        renderUnderlayLeft={() => (
-          <ListRemoveAction
-            label={leaving ? 'Leave' : 'Delete'}
-            listName={list.name}
-            onRemove={() => {
-              if (swipeableRef.current) onRemove(swipeableRef.current);
-            }}
-          />
-        )}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: theme.backgroundElevated,
+          borderColor: isActive ? theme.accentPrimary : theme.separator,
+        },
+        isActive && styles.activeCard,
+      ]}>
+      {editMode ? (
+        <View style={styles.cardMain}>{cardContents}</View>
+      ) : (
         <Pressable
-          accessibilityActions={[
-            ...(canMoveUp ? [{ name: 'moveUp', label: 'Move up' }] : []),
-            ...(canMoveDown ? [{ name: 'moveDown', label: 'Move down' }] : []),
-            {
-              name: leaving ? 'leave' : 'delete',
-              label: `${leaving ? 'Leave' : 'Delete'} ${list.name}`,
-            },
-          ]}
-          accessibilityHint="Tap to open. Long press and drag to reorder. Swipe left for actions."
+          accessibilityHint="Tap to open."
           accessibilityRole="button"
           accessibilityLabel={`${list.name}, ${open} open of ${total}${
             collaboratorLabel ? `, shared with ${collaboratorLabel}` : ''
           }`}
-          onAccessibilityAction={(event) => {
-            if (event.nativeEvent.actionName === 'moveUp') onMoveUp();
-            if (event.nativeEvent.actionName === 'moveDown') onMoveDown();
-            if (
-              (event.nativeEvent.actionName === 'delete' ||
-                event.nativeEvent.actionName === 'leave') &&
-              swipeableRef.current
-            ) {
-              onRemove(swipeableRef.current);
-            }
-          }}
-          delayLongPress={400}
-          onLongPress={() => {
-            if (horizontalTouchRef.current) return;
-            longPressGestureRef.current = true;
-            swipeGestureRef.current = false;
-            if (swipeableRef.current) {
-              void swipeableRef.current.close();
-            }
-            onDragStart();
-          }}
-          onPressIn={() => {
-            wasOpenAtPressInRef.current = swipeGestureRef.current;
-            longPressGestureRef.current = false;
-            horizontalTouchRef.current = false;
-          }}
-          onPress={() => {
-            const shouldClose =
-              wasOpenAtPressInRef.current ||
-              swipeGestureRef.current ||
-              horizontalTouchRef.current;
-            wasOpenAtPressInRef.current = false;
-            if (shouldClose) {
-              void swipeableRef.current?.close();
-              return;
-            }
-            if (longPressGestureRef.current) {
-              longPressGestureRef.current = false;
-              return;
-            }
-            onPress();
-          }}
-          onTouchStart={(event) => {
-            touchOriginRef.current = {
-              x: event.nativeEvent.pageX,
-              y: event.nativeEvent.pageY,
-            };
-            horizontalTouchRef.current = false;
-          }}
-          onTouchMove={(event) => {
-            const origin = touchOriginRef.current;
-            if (!origin) return;
-            const deltaX = Math.abs(event.nativeEvent.pageX - origin.x);
-            const deltaY = Math.abs(event.nativeEvent.pageY - origin.y);
-            if (deltaX > 10 && deltaX > deltaY) {
-              horizontalTouchRef.current = true;
-            }
-          }}
+          onPress={onPress}
           style={({ pressed }) => [
-            styles.card,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: isActive ? theme.accentPrimary : theme.separator,
-              opacity: pressed && !isActive ? 0.72 : 1,
-            },
-            isActive && styles.activeCard,
+            styles.cardMain,
+            { opacity: pressed && !isActive ? 0.72 : 1 },
           ]}>
-          <View
-            style={[
-              styles.cardIcon,
-              {
-                backgroundColor: theme.backgroundSunken,
-              },
+          {cardContents}
+        </Pressable>
+      )}
+      {editMode ? (
+        <View style={styles.cardEditActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${leaving ? 'Leave' : 'Delete'} ${list.name}`}
+            accessibilityHint={`${leaving ? 'Leaves' : 'Deletes'} after confirmation`}
+            onPress={onRemove}
+            style={({ pressed }) => [
+              styles.cardActionButton,
+              { backgroundColor: `${theme.danger}18` },
+              pressed && styles.pressed,
             ]}>
             <Symbol
-              name={icon}
-              size={22}
-              color={theme.textSecondary}
+              name={leaving ? 'minus-circle' : 'delete'}
+              size={18}
+              color={theme.danger}
             />
-          </View>
-          <View style={styles.cardCopy}>
-            <AppText variant="subheading" numberOfLines={1}>{list.name}</AppText>
-            {collaboratorNames ? (
-              <View style={styles.collaborators}>
-                <View style={styles.collaboratorAvatars}>
-                  {collaboratorNames.slice(0, 2).map((name, index) => (
-                    <View
-                      key={`${name}-${index}`}
-                      style={[
-                        styles.collaboratorAvatar,
-                        {
-                          backgroundColor: theme.accentFaint,
-                          borderColor: theme.backgroundElevated,
-                        },
-                        index > 0 && styles.collaboratorAvatarOverlap,
-                      ]}>
-                      <AppText
-                        style={[
-                          styles.collaboratorInitial,
-                          { color: theme.accentPrimary },
-                        ]}>
-                        {collaboratorInitial(name)}
-                      </AppText>
-                    </View>
-                  ))}
-                </View>
-                <AppText variant="caption" color="secondary" numberOfLines={1}>
-                  {collaboratorNames.length > 2
-                    ? `${collaboratorNames.slice(0, 2).join(', ')} +${collaboratorNames.length - 2}`
-                    : collaboratorLabel}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-          <View style={styles.count}>
-            <AppText variant="heading" color={open ? 'accent' : 'success'}>{open}</AppText>
-            <AppText variant="caption" color="tertiary">open</AppText>
-          </View>
-        </Pressable>
-      </SwipeableItem>
-    </View>
-  );
-}
-
-function ListRemoveAction({
-  label,
-  listName,
-  onRemove,
-}: {
-  label: 'Delete' | 'Leave';
-  listName: string;
-  onRemove: () => void;
-}) {
-  const theme = useTheme();
-
-  return (
-    <View style={styles.removeAction}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${label} ${listName}`}
-        onPress={onRemove}
-        style={({ pressed }) => [
-          styles.removeButton,
-          pressed && styles.removePressed,
-        ]}>
-        <Symbol
-          name={label === 'Delete' ? 'delete' : 'minus-circle'}
-          size={19}
-          color={theme.textOnAccent}
-        />
-        <AppText variant="caption" color="onAccent">{label}</AppText>
-      </Pressable>
+          </Pressable>
+          <Pressable
+            accessibilityActions={[
+              ...(canMoveUp ? [{ name: 'moveUp', label: 'Move up' }] : []),
+              ...(canMoveDown ? [{ name: 'moveDown', label: 'Move down' }] : []),
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Drag to reorder ${list.name}`}
+            accessibilityHint="Long press and drag, or use the move actions"
+            delayLongPress={180}
+            disabled={isActive}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'moveUp') onMoveUp();
+              if (event.nativeEvent.actionName === 'moveDown') onMoveDown();
+            }}
+            onLongPress={onDragStart}
+            style={({ pressed }) => [
+              styles.cardActionButton,
+              (pressed || isActive) && styles.pressed,
+            ]}>
+            <DragHandle
+              size={20}
+              color={
+                theme.name === 'dark'
+                  ? theme.textOnAccent
+                  : theme.textSecondary
+              }
+            />
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -545,17 +800,32 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   headingCopy: { flex: 1, gap: spacing.xs },
+  headingActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   title: {
     fontFamily: fontFamilies.serif,
     fontSize: 35,
-    lineHeight: 40,
-    fontWeight: '600',
+    lineHeight: 42,
+    fontWeight: '400',
+    letterSpacing: -0.7,
   },
   inviteButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radii.pill,
+  },
+  editModeButton: {
+    minWidth: 58,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
   composer: {
@@ -568,6 +838,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+  },
+  newListBlock: { gap: spacing.sm },
+  kindChoices: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  kindChoice: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.pill,
   },
   input: {
     ...typography.body,
@@ -582,21 +866,107 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.pill,
   },
-  card: {
-    minHeight: 88,
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
+    gap: spacing.xl,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.xl,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  emptyIllustration: {
+    width: 176,
+    height: 142,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPaperBack: {
+    position: 'absolute',
+    width: 122,
+    height: 116,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+  },
+  emptyPaperBackLeft: {
+    transform: [{ rotate: '-8deg' }, { translateX: -12 }],
+  },
+  emptyPaperBackRight: {
+    transform: [{ rotate: '8deg' }, { translateX: 12 }],
+  },
+  emptyPaper: {
+    width: 132,
+    minHeight: 126,
     gap: spacing.md,
     padding: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    boxShadow: '0 10px 24px rgba(27, 24, 21, 0.10)',
   },
-  swipeable: {
-    height: 88,
+  emptyPaperBadge: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    borderRadius: radii.pill,
+  },
+  emptyPaperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyPaperCheck: {
+    width: 17,
+    height: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: radii.pill,
+  },
+  emptyPaperLine: {
+    maxWidth: 70,
+    height: 5,
+    borderRadius: radii.pill,
+    opacity: 0.7,
+  },
+  emptyCopy: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyMessage: {
+    maxWidth: 360,
+  },
+  emptyHint: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+  },
+  card: {
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
-    overflow: 'hidden',
+  },
+  cardMain: {
+    minHeight: 86,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
   },
   activeCard: {
     shadowColor: '#000',
@@ -613,6 +983,26 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   cardCopy: { flex: 1, gap: spacing.xs },
+  nameEditor: {
+    minHeight: layout.minTapTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  nameInput: {
+    ...typography.subheading,
+    flex: 1,
+    minWidth: 0,
+    minHeight: layout.minTapTarget,
+    paddingVertical: 0,
+  },
+  nameEditButton: {
+    width: layout.minTapTarget,
+    height: layout.minTapTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+  },
   collaborators: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -637,22 +1027,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   count: { alignItems: 'center', minWidth: 44 },
-  removeAction: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 92,
-    height: 88,
-    alignItems: 'stretch',
-    justifyContent: 'center',
+  cardEditActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
   },
-  removeButton: {
-    flex: 1,
+  cardActionButton: {
+    width: layout.minTapTarget,
+    height: layout.minTapTarget,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
   },
-  removePressed: { opacity: 0.72 },
   pressed: { opacity: 0.62 },
 });

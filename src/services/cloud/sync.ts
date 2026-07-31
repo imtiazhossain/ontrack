@@ -6,6 +6,15 @@ import { DEFAULT_ADDON_STATE } from '@/addons/registry';
 import type { AddonEnabledState } from '@/addons/types';
 import type { AgentConversations, AgentInstallations } from '@/agents/types';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
+import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
+import {
+  hasCustomizedVisionBoardCategories,
+  hasCustomizedVisionBoardItems,
+} from '@/features/vision-board/selectors';
+import type {
+  VisionBoardCategory,
+  VisionBoardItem,
+} from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
@@ -15,6 +24,7 @@ import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { privateTodoPayload, useTodos } from '@/store/todos';
+import { useVisionBoard } from '@/store/vision-board';
 
 import { loadEntitlements } from './entitlements';
 import { decideAccountData } from './data-ownership';
@@ -28,7 +38,8 @@ export type SyncDomainName =
   | 'schedule'
   | 'plants'
   | 'travel'
-  | 'todos';
+  | 'todos'
+  | 'vision-board';
 export type InitialSyncResult = 'ready' | 'conflict';
 type JsonObject = Record<string, unknown>;
 
@@ -192,6 +203,29 @@ const domains: {
     reset: () => useTodos.getState().reset(),
     subscribe: (onChange) => useTodos.subscribe(onChange),
   },
+  {
+    name: 'vision-board',
+    read: () => {
+      const state = useVisionBoard.getState();
+      return {
+        categories: state.categories,
+        items: state.items,
+        sampleVersion: state.sampleVersion,
+        updatedAt: state.updatedAt,
+      };
+    },
+    write: (payload) => {
+      if (!Array.isArray(payload.categories) || !Array.isArray(payload.items)) return;
+      useVisionBoard.getState().replaceVisionBoardData(
+        payload.categories as VisionBoardCategory[],
+        payload.items as VisionBoardItem[],
+        typeof payload.updatedAt === 'string' ? payload.updatedAt : undefined,
+        typeof payload.sampleVersion === 'number' ? payload.sampleVersion : undefined,
+      );
+    },
+    reset: () => useVisionBoard.getState().reset(),
+    subscribe: (onChange) => useVisionBoard.subscribe(onChange),
+  },
 ];
 
 let stopSubscriptions: (() => void) | undefined;
@@ -270,7 +304,10 @@ function startSubscriptions(userId: string, email?: string) {
 
 async function deleteAppOwnedMedia() {
   const plants = [...usePlants.getState().plants];
-  await Promise.all(plants.map((plant) => deletePlant(plant.id)));
+  await Promise.all([
+    ...plants.map((plant) => deletePlant(plant.id)),
+    deleteAllVisionBoardImages(),
+  ]);
   if (Platform.OS === 'web') return;
   for (const name of ['plants', 'meal-images']) {
     const directory = new Directory(Paths.document, name);
@@ -318,6 +355,11 @@ export function hasMeaningfulLocalData(): boolean {
   if (Object.keys(useAgents.getState().installations).length > 0) return true;
   if (Object.keys(useAgents.getState().conversations).length > 0) return true;
   if (useTravel.getState().plans.some((plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id)) return true;
+  const visionBoard = useVisionBoard.getState();
+  if (
+    hasCustomizedVisionBoardItems(visionBoard.items) ||
+    hasCustomizedVisionBoardCategories(visionBoard.categories)
+  ) return true;
   return Object.entries(useAddons.getState().enabled).some(
     ([id, enabled]) => enabled !== DEFAULT_ADDON_STATE[id as keyof AddonEnabledState],
   );

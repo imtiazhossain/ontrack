@@ -3,11 +3,17 @@ import {
   createTodoCollaboratorJoinUrl,
   formatTodoListText,
 } from '@/features/todos/share';
-import type { TodoList, TodoMember, TodoTask } from '@/store/todos';
+import type {
+  TodoList,
+  TodoMember,
+  TodoRecipe,
+  TodoTask,
+} from '@/store/todos';
 
 const list: TodoList = {
   id: 'list',
   name: 'Groceries',
+  kind: 'grocery',
   mode: 'shared',
   role: 'owner',
   createdAt: '2026-07-01T10:00:00.000Z',
@@ -38,6 +44,14 @@ function task(patch: Partial<TodoTask>): TodoTask {
     title: patch.title ?? 'Milk',
     completed: patch.completed ?? false,
     important: patch.important ?? false,
+    recipeId: patch.recipeId,
+    ingredientName: patch.ingredientName,
+    canonicalKey: patch.canonicalKey,
+    quantityValue: patch.quantityValue,
+    quantityText: patch.quantityText,
+    unit: patch.unit,
+    preparation: patch.preparation,
+    originalText: patch.originalText,
     assigneeUserId: patch.assigneeUserId,
     createdAt: list.createdAt,
     updatedAt: list.updatedAt,
@@ -73,6 +87,37 @@ describe('pretty to-do list text', () => {
     expect(formatTodoListText({ name: 'Maintenance' }, [], [])).toBe(
       ['📝 Maintenance', '', '✓ All done!', '', 'All done · onTrack'].join('\n'),
     );
+  });
+
+  it('preserves meal headings and ingredient context', () => {
+    const recipe: TodoRecipe = {
+      id: 'recipe',
+      listId: list.id,
+      name: 'Tomato soup',
+      sourceKind: 'url',
+      sourceUrl: 'https://example.com/soup',
+      targetServings: 4,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt,
+    };
+    const text = formatTodoListText(
+      list,
+      [
+        task({
+          id: 'tomatoes',
+          recipeId: recipe.id,
+          ingredientName: 'Tomatoes',
+          title: '4 count Tomatoes',
+        }),
+        task({ id: 'soap', title: 'Dish soap' }),
+      ],
+      [],
+      [recipe],
+    );
+
+    expect(text).toContain('🍽 Tomato soup · 4 servings');
+    expect(text).toContain('  ☐ 4 count Tomatoes');
+    expect(text).toContain('Other items\n☐ Dish soap');
   });
 
   it('creates web fallback and installed-app collaborator links', () => {

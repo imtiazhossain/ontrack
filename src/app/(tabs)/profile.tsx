@@ -24,6 +24,8 @@ import { usePlants } from '@/store/plants';
 import { useTravel } from '@/store/travel';
 import { useTodos } from '@/store/todos';
 import { deletePlant } from '@/services/plants/schedule';
+import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
+import { useVisionBoard } from '@/store/vision-board';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -31,6 +33,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
+/** Primary carousel section for account and app preferences. */
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -54,9 +57,13 @@ export default function ProfileSettingsScreen() {
   const resetPlants = usePlants((s) => s.reset);
   const resetTravel = useTravel((s) => s.reset);
   const resetTodos = useTodos((s) => s.reset);
+  const resetVisionBoard = useVisionBoard((s) => s.reset);
 
   const handleReset = async () => {
-    await Promise.all(plants.map((plant) => deletePlant(plant.id)));
+    await Promise.all([
+      ...plants.map((plant) => deletePlant(plant.id)),
+      deleteAllVisionBoardImages(),
+    ]);
     resetPlants();
     resetPreferences();
     resetAddons();
@@ -64,6 +71,7 @@ export default function ProfileSettingsScreen() {
     resetSchedule();
     resetTravel();
     resetTodos();
+    resetVisionBoard();
     seedIfNeeded();
   };
 

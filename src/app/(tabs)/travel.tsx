@@ -1,9 +1,9 @@
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, ErrorMessage, Input, Screen, Symbol } from '@/components/primitives';
+import { AppText, appPrompt, Button, Card, ErrorMessage, Input, Screen, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
@@ -19,6 +19,7 @@ import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { formatDateKey, todayKey } from '@/utils/date';
 
+/** Primary carousel section for travel planning. */
 export default function TravelScreen() {
   return (
     <FeatureThemeProvider feature="travel">
@@ -135,7 +136,7 @@ function TravelScreenContent() {
 
   const addTripToCalendar = (plan: TravelPlan) => {
     const activities = replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
-    Alert.alert(
+    appPrompt.alert(
       'Calendar updated',
       `${activities.length} ${activities.length === 1 ? 'event' : 'events'} added for “${plan.title}”.`,
     );
@@ -350,7 +351,7 @@ function TravelScreenContent() {
               accessibilityLabel={`Delete ${plan.title}`}
               hitSlop={8}
               onPress={() =>
-                Alert.alert('Delete trip?', `Remove “${plan.title}”?`, [
+                appPrompt.alert('Delete trip?', `Remove “${plan.title}”?`, [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Delete', style: 'destructive', onPress: () => removePlan(plan.id) },
                 ])

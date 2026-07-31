@@ -24,10 +24,10 @@ export const palette = {
   cream2: '#A69E92',
 
   // Accent — burnished copper
-  copper: '#B4602F',
-  copperSoft: '#C97C4B',
-  copperFaint: '#F0DFD2',
-  copperDeep: '#8F4A22',
+  copper: '#9A7654',
+  copperSoft: '#B18A65',
+  copperFaint: '#EFE4D8',
+  copperDeep: '#765638',
 
   // Travel — open-sky blues, scoped to the Travel feature
   travelBlue: '#2474A8',
