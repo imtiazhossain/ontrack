@@ -1,0 +1,35 @@
+---
+description: Keep onTrack optimized for AI token locality and shared patterns
+alwaysApply: true
+---
+
+# Token & maintenance optimization
+
+Future agents must leave the codebase *more* optimized than they found it when the change is in scope. Do not only fix the asked bug/feature and ignore obvious locality debt in touched files.
+
+## Before writing code
+
+1. Read `AGENTS.md` feature entry points and Shared patterns.
+2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `LoadingBlock`, `DateField`, `appPrompt`.
+3. Open the smallest entry file first; do not load sibling giants unless needed.
+
+## When editing large screens
+
+- If a touched screen/module is **>700 lines** and you add non-trivial UI, extract a focused panel/helper into a colocated file instead of growing the monolith.
+- Keep orchestration (state, store calls, navigation) in the screen; move presentational sections + their styles out.
+- Update the `AGENTS.md` feature entry table when you add a new entry module.
+
+## Never reintroduce
+
+- Raw `Alert` / `ActionSheetIOS` for app UI
+- Ad-hoc UUID/`Date.now()` ID generators when `@/utils/id` fits
+- Duplicate camera/library permission + picker flows
+- Duplicate Cancel+destructive `appPrompt.alert` when `confirmDestructiveAction` fits
+- Parallel API URL/fetch helpers when `resolveExpoApiUrl` / `apiRequest` fit
+- Parallel OpenAI/Ollama vision transport when `vision-transport` fits
+- Persisting image-picker cache URIs (always re-encode via image helpers)
+
+## After substantive edits
+
+- Run `npm run typecheck` and relevant `npm test` for touched domains.
+- If you discovered a reusable pattern used in 3+ places while fixing something else, extract it in the same change when safe.

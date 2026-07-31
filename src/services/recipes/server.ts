@@ -1,3 +1,10 @@
+import {
+  defaultOllamaModel,
+  defaultOpenAIModel,
+  fetchOllamaChatJson,
+  fetchOpenAIResponses,
+  parseOpenAIJsonResponse,
+} from '@/services/ai/vision-transport';
 import { gatePaidApiRequest } from '@/services/http/api-gate';
 import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
@@ -11,7 +18,6 @@ import type {
     RecipeImportRequest,
 } from './types';
 
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const MAX_PAGE_BYTES = 1_000_000;
 const MAX_PROMPT_TEXT = 24_000;
 const MAX_INGREDIENTS = 80;
@@ -517,147 +523,51 @@ const RECIPE_SCHEMA = {
   },
 } as const;
 
-function responseText(body: Record<string, unknown>) {
-  if (typeof body.output_text === 'string') return body.output_text;
-  const output = Array.isArray(body.output) ? body.output : [];
-  for (const item of output) {
-    if (!item || typeof item !== 'object') continue;
-    const content = Array.isArray((item as Record<string, unknown>).content)
-      ? ((item as Record<string, unknown>).content as unknown[])
-      : [];
-    for (const part of content) {
-      if (
-        part &&
-        typeof part === 'object' &&
-        typeof (part as Record<string, unknown>).text === 'string'
-      ) {
-        return (part as Record<string, unknown>).text as string;
-      }
-    }
-  }
-  return undefined;
-}
-
 async function analyzeWithOpenAI(input: unknown[]) {
-  const response = await guardedFetch(
-    'openai',
-    OPENAI_RESPONSES_URL,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model:
-          process.env.OPENAI_RECIPE_MODEL ??
-          process.env.OPENAI_MEAL_MODEL ??
-          'gpt-5.6-terra',
-        store: false,
-        reasoning: { effort: 'low' },
-        safety_identifier: 'ontrack-recipe-import',
-        input: [{
-          role: 'user',
-          content: input,
-        }],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'recipe_import',
-            strict: true,
-            schema: RECIPE_SCHEMA,
-          },
+  const body = await fetchOpenAIResponses({
+    model: defaultOpenAIModel(
+      process.env.OPENAI_RECIPE_MODEL,
+      process.env.OPENAI_MEAL_MODEL,
+    ),
+    safetyIdentifier: 'ontrack-recipe-import',
+    payload: {
+      input: [{
+        role: 'user',
+        content: input,
+      }],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'recipe_import',
+          strict: true,
+          schema: RECIPE_SCHEMA,
         },
-      }),
+      },
     },
-    { timeoutMs: 60_000, maxConcurrency: 2 },
-  );
-  if (!response.ok) throw new Error('PROVIDER_FAILURE');
-  const body = (await response.json()) as Record<string, unknown>;
-  const text = responseText(body);
-  if (!text) throw new Error('NO_RECIPE_FOUND');
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new Error('PROVIDER_FAILURE');
-  }
+    timeoutMs: 60_000,
+    httpError: 'PROVIDER_FAILURE',
+  });
+  return parseOpenAIJsonResponse(body, {
+    emptyError: 'NO_RECIPE_FOUND',
+    parseError: 'PROVIDER_FAILURE',
+  });
 }
 
 async function analyzeWithOllama(prompt: string, imageDataUrl?: string) {
-  const baseUrl = new URL(
-    process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434',
-  );
-  if (!['127.0.0.1', 'localhost', '::1'].includes(baseUrl.hostname)) {
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  const message: {
-    role: 'user';
-    content: string;
-    images?: string[];
-  } = {
-    role: 'user',
-    content: prompt,
-  };
-  if (imageDataUrl) {
-    message.images = [imageDataUrl.slice(imageDataUrl.indexOf(',') + 1)];
-  }
-
-  let response: Response;
-  try {
-    response = await guardedFetch(
-      'ollama',
-      new URL('/api/chat', baseUrl),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model:
-            process.env.OLLAMA_RECIPE_MODEL ??
-            process.env.OLLAMA_MEAL_MODEL ??
-            'qwen3-vl:2b',
-          stream: false,
-          think: false,
-          format: RECIPE_SCHEMA,
-          keep_alive: '15m',
-          options: {
-            temperature: 0,
-            num_ctx: 8_192,
-            num_predict: 1_200,
-          },
-          messages: [message],
-        }),
-      },
-      { timeoutMs: 120_000, maxConcurrency: 1 },
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        'Local recipe model connection failed:',
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  if (!response.ok) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        'Local recipe model request failed:',
-        response.status,
-        (await response.text()).slice(0, 300),
-      );
-    }
-    throw new Error('OLLAMA_UNAVAILABLE');
-  }
-  const body = (await response.json()) as {
-    message?: { content?: string; thinking?: string };
-  };
-  const text = body.message?.content || body.message?.thinking;
-  if (!text) throw new Error('NO_RECIPE_FOUND');
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new Error('PROVIDER_FAILURE');
-  }
+  return fetchOllamaChatJson({
+    model: defaultOllamaModel(
+      process.env.OLLAMA_RECIPE_MODEL,
+      process.env.OLLAMA_MEAL_MODEL,
+    ),
+    prompt,
+    schema: RECIPE_SCHEMA,
+    imageDataUrls: imageDataUrl ? [imageDataUrl] : undefined,
+    numPredict: 1_200,
+    numCtx: 8_192,
+    logFailures: true,
+    emptyError: 'NO_RECIPE_FOUND',
+    parseError: 'PROVIDER_FAILURE',
+  });
 }
 
 async function analyzeStructuredRecipe(

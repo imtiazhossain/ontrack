@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { appPrompt, AppText, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { AppText, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import {
@@ -26,6 +26,7 @@ import type {
     RoomProfile,
 } from '@/types/models';
 import { fromDateKey, todayKey } from '@/utils/date';
+import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 import { openHttpsUrl } from '@/utils/safe-url';
 
 type Step = 'photo' | 'details' | 'review';
@@ -108,21 +109,16 @@ export default function NewPlantScreen() {
   };
 
   const capturePhoto = async (target: PhotoTarget) => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      appPrompt.alert('Camera access needed', 'Allow camera access in Settings to photograph your plant.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-      ]);
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: false });
-    if (!result.canceled && result.assets[0]?.uri) setPhoto(target, result.assets[0].uri);
+    const uri = await pickCameraImage({
+      cameraDeniedMessage:
+        'Allow camera access in Settings to photograph your plant.',
+    });
+    if (uri) setPhoto(target, uri);
   };
 
   const choosePhoto = async (target: PhotoTarget) => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: false });
-    if (!result.canceled && result.assets[0]?.uri) setPhoto(target, result.assets[0].uri);
+    const uri = await pickLibraryImage();
+    if (uri) setPhoto(target, uri);
   };
 
   const analyzeIdentity = async () => {

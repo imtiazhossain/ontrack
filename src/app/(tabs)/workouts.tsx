@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, Button, Card, Screen, SectionHeader, Symbol } from '@/components/primitives';
+import { AppText, Button, Screen, SectionHeader, Symbol } from '@/components/primitives';
 import { categoryColors, layout, radii, spacing } from '@/design-system';
 import { ExerciseAnatomyDemo } from '@/features/workouts/exercise-anatomy-demo';
 import { HumanBodyMap } from '@/features/workouts/human-body-map';
@@ -18,10 +17,12 @@ import {
   type MuscleKey,
   type MuscleTarget,
 } from '@/features/workouts/muscle-data';
+import { WorkoutSessionBuilder } from '@/features/workouts/workout-session-builder';
+import { WorkoutTodayPlan } from '@/features/workouts/workout-today-plan';
 import { useTheme } from '@/hooks/use-theme';
 import { newId, useSchedule } from '@/store/schedule';
 import type { WorkoutExercise } from '@/types/models';
-import { formatDuration, formatMinutes, nowMinutes, todayKey } from '@/utils/date';
+import { nowMinutes, todayKey } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
 const DEFAULT_MUSCLE: Record<BodyView, MuscleKey> = {
@@ -539,124 +540,20 @@ export default function WorkoutsScreen() {
         </View>
       </View>
 
-      {selectedExercises.length > 0 ? (
-        <Animated.View entering={FadeInUp.duration(260)} style={styles.pagePadding}>
-          <LinearGradient
-            colors={['#35201D', '#1B1210']}
-            end={{ x: 1, y: 1 }}
-            start={{ x: 0, y: 0 }}
-            style={styles.builder}>
-            <View style={styles.builderHeader}>
-              <View style={styles.flex}>
-                <AppText variant="overline" style={styles.builderOverline}>Session builder</AppText>
-                <AppText variant="heading" style={styles.builderTitle}>
-                  Your workout is taking shape.
-                </AppText>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Clear selected exercises"
-                hitSlop={8}
-                onPress={clearSelectedExercises}>
-                <AppText variant="caption" style={styles.builderClear}>Clear</AppText>
-              </Pressable>
-            </View>
+      <WorkoutSessionBuilder
+        selectedExercises={selectedExercises}
+        selectedSetCount={selectedSetCount}
+        estimatedDuration={estimatedDuration}
+        onClear={clearSelectedExercises}
+        onAddToToday={addWorkoutToToday}
+      />
 
-            <View style={styles.builderMetrics}>
-              <View style={styles.builderMetric}>
-                <AppText variant="metric" style={styles.builderMetricValue}>
-                  {selectedExercises.length}
-                </AppText>
-                <AppText variant="caption" style={styles.builderMetricLabel}>Exercises</AppText>
-              </View>
-              <View style={styles.builderMetric}>
-                <AppText variant="metric" style={styles.builderMetricValue}>{selectedSetCount}</AppText>
-                <AppText variant="caption" style={styles.builderMetricLabel}>Working sets</AppText>
-              </View>
-              <View style={styles.builderMetric}>
-                <AppText variant="metric" style={styles.builderMetricValue}>{estimatedDuration}</AppText>
-                <AppText variant="caption" style={styles.builderMetricLabel}>Minutes</AppText>
-              </View>
-            </View>
-
-            <AppText variant="caption" numberOfLines={2} style={styles.builderNames}>
-              {selectedExercises.map((exercise) => exercise.name).join('  ·  ')}
-            </AppText>
-            <Button
-              size="lg"
-              icon="calendar-add"
-              onPress={addWorkoutToToday}
-              accessibilityLabel={`Add ${selectedExercises.length} exercises to today`}>
-              Add workout to today
-            </Button>
-          </LinearGradient>
-        </Animated.View>
-      ) : null}
-
-      <View style={styles.pagePadding}>
-        <SectionHeader title="Today’s plan" detail={`${todaysWorkouts.length} scheduled`} />
-        {todaysWorkouts.length === 0 ? (
-          <Card variant="sunken" style={styles.emptyPlan}>
-            <View style={[styles.smallIcon, { backgroundColor: gymColors.tint }]}>
-              <Symbol name="calendar.badge.plus" size="md" color={gymColors.main} />
-            </View>
-            <View style={styles.flex}>
-              <AppText variant="subheading">Your training window is open</AppText>
-              <AppText variant="caption" color="secondary">
-                Select movements above or use the custom planner.
-              </AppText>
-            </View>
-            <Symbol name="arrow.up" size="sm" color={theme.textTertiary} />
-          </Card>
-        ) : (
-          <View style={styles.planList}>
-            {todaysWorkouts.map(({ activity, workout }) => (
-              <Card
-                key={activity.id}
-                onPress={() =>
-                  router.push({ pathname: '/detail/gym/[id]', params: { id: activity.id } })
-                }
-                accessibilityLabel={`Open ${activity.title}`}>
-                <View style={styles.planRow}>
-                  <View style={[styles.smallIcon, { backgroundColor: gymColors.tint }]}>
-                    <Symbol name="dumbbell.fill" size="md" color={gymColors.main} />
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="subheading" numberOfLines={1}>{activity.title}</AppText>
-                    <AppText variant="caption" color="secondary">
-                      {formatMinutes(activity.startMinutes)} · {formatDuration(activity.durationMinutes)} · {workout.exercises.length} exercises
-                    </AppText>
-                  </View>
-                  <Symbol name="chevron.right" size="sm" color={theme.textTertiary} />
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {savedMessage ? (
-          <Animated.View
-            entering={FadeInDown.duration(220)}
-            accessible
-            accessibilityRole="alert"
-            style={[styles.savedMessage, { backgroundColor: theme.accentFaint }]}>
-            <Symbol name="checkmark.circle.fill" size="md" color={theme.success} />
-            <AppText variant="callout" color="success">{savedMessage}</AppText>
-          </Animated.View>
-        ) : null}
-
-        <Button
-          variant="secondary"
-          icon="filter"
-          onPress={openCustomPlanner}
-          accessibilityLabel="Open the custom workout editor">
-          Plan from scratch
-        </Button>
-
-        <AppText variant="caption" color="tertiary" align="center" style={styles.disclaimer}>
-          Exercise ideas are general education, not medical advice. Stop if a movement causes pain.
-        </AppText>
-      </View>
+      <WorkoutTodayPlan
+        todaysWorkouts={todaysWorkouts}
+        gymColors={gymColors}
+        savedMessage={savedMessage}
+        onOpenCustomPlanner={openCustomPlanner}
+      />
 
       <ExerciseAnatomyDemo
         exercise={exercisePreview?.exercise}
@@ -956,81 +853,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     marginLeft: 'auto',
-  },
-  builder: {
-    gap: spacing.lg,
-    overflow: 'hidden',
-    borderRadius: radii.xl,
-    padding: spacing.lg,
-    boxShadow: '0 18px 38px rgba(40, 19, 14, 0.24)',
-  },
-  builderHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  builderOverline: {
-    color: '#E49579',
-  },
-  builderTitle: {
-    color: '#FFF8F2',
-  },
-  builderClear: {
-    color: '#C9B9B2',
-  },
-  builderMetrics: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  builderMetric: {
-    flex: 1,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.055)',
-  },
-  builderMetricValue: {
-    color: '#FFF8F2',
-    fontVariant: ['tabular-nums'],
-  },
-  builderMetricLabel: {
-    color: '#C9B9B2',
-  },
-  builderNames: {
-    color: '#C9B9B2',
-  },
-  emptyPlan: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  planList: {
-    gap: spacing.md,
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  smallIcon: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-  },
-  savedMessage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radii.md,
-    padding: spacing.md,
-  },
-  disclaimer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
   },
 });

@@ -1,7 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 
 import TravelDocumentReader from '../../../modules/travel-document-reader';
+import { pickLibraryImages } from '@/utils/pick-image';
 
 import {
   parseFlightConfirmation,
@@ -71,22 +71,20 @@ async function pickConfirmationDocument(): Promise<ConfirmationAsset[] | undefin
 }
 
 async function pickConfirmationScreenshots(): Promise<ConfirmationAsset[] | undefined> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error(
-      'Photo library access is required to choose flight confirmation screenshots.',
-    );
-  }
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
+  const assets = await pickLibraryImages({
+    quality: 1,
     allowsEditing: false,
     allowsMultipleSelection: true,
     orderedSelection: true,
     selectionLimit: MAX_SCREENSHOTS,
-    quality: 1,
+    onDenied: () => {
+      throw new Error(
+        'Photo library access is required to choose flight confirmation screenshots.',
+      );
+    },
   });
-  if (result.canceled) return undefined;
-  return result.assets.map((asset, index) => ({
+  if (!assets?.length) return undefined;
+  return assets.map((asset, index) => ({
     uri: asset.uri,
     fileName: asset.fileName ?? `Flight confirmation screenshot ${index + 1}`,
     size: asset.fileSize,

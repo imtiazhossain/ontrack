@@ -1,8 +1,7 @@
-import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
-import { Platform } from 'react-native';
 
 import { authHeader } from '@/services/cloud/access-token';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
 import type { FlightApiError, FlightSearchInput, FlightSearchResponse } from './types';
 
 const FLIGHT_SEARCH_TIMEOUT_MS = 25_000;
@@ -19,37 +18,31 @@ export class FlightSearchError extends Error {
 }
 
 function apiUrl(path: string): string {
-  if (Platform.OS === 'web') return path;
-  const developmentHost = __DEV__ ? Constants.expoConfig?.hostUri : undefined;
-  const baseUrl = developmentHost
-    ? `http://${developmentHost}`
-    : process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-  if (!baseUrl) {
-    throw new FlightSearchError(
-      'Live flight search is not connected in this build. Compare on Google Flights below.',
-      'NOT_CONFIGURED',
-    );
-  }
-  if (!__DEV__ && !baseUrl.startsWith('https://')) {
-    throw new FlightSearchError(
-      'Live flight search needs a secure hosted service. Compare on Google Flights below.',
-      'NOT_CONFIGURED',
-    );
-  }
-  return `${baseUrl}${path}`;
+  return resolveExpoApiUrl(path, {
+    configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+    requireHttpsInProduction: true,
+    createNotConfiguredError: (reason) =>
+      new FlightSearchError(
+        reason === 'insecure'
+          ? 'Live flight search needs a secure hosted service. Compare on Google Flights below.'
+          : 'Live flight search is not connected in this build. Compare on Google Flights below.',
+        'NOT_CONFIGURED',
+      ),
+  });
 }
 
 export async function searchFlights(
   input: FlightSearchInput,
   signal?: AbortSignal,
 ): Promise<FlightSearchResponse> {
+  const url = apiUrl('/travel/flights/search');
   const requestController = new AbortController();
   const cancelRequest = () => requestController.abort();
   signal?.addEventListener('abort', cancelRequest, { once: true });
   const timeout = setTimeout(cancelRequest, FLIGHT_SEARCH_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(apiUrl('/travel/flights/search'), {
+    response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(input),

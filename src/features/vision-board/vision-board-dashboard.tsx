@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppText,
-  appPrompt,
   EmptyState,
   IconButton,
   Screen,
@@ -17,6 +16,7 @@ import { fontFamilies, layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 import { VISION_BOARD_ACCENTS } from './defaults';
 import { cleanupOrphanedVisionBoardImages } from './media';
@@ -112,10 +112,11 @@ export function VisionBoardDashboard() {
         : `Remove “${name}” and its ${categoryItems.length} board ${
             categoryItems.length === 1 ? 'item' : 'items'
           }?`;
-    appPrompt.alert('Delete category?', message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: perform },
-    ]);
+    confirmDestructiveAction({
+      title: 'Delete category?',
+      message,
+      onConfirm: perform,
+    });
   };
 
   return (

@@ -33,6 +33,7 @@ export function Input({ label, style, trailing, ...rest }: InputProps) {
             style,
           ]}
           {...rest}
+          underlineColorAndroid="transparent"
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>

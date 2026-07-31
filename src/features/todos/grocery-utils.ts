@@ -3,6 +3,7 @@ import {
   type TodoIngredientInput,
   type TodoTask,
 } from '@/store/todos';
+import { formatCompactNumber } from '@/utils/parse';
 
 export type CombinedCompletion = 'checked' | 'mixed' | 'unchecked';
 
@@ -73,10 +74,7 @@ function normalizedUnit(value?: string) {
 }
 
 function formatNumber(value: number) {
-  const rounded = Math.round(value * 100) / 100;
-  return Number.isInteger(rounded)
-    ? String(rounded)
-    : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  return formatCompactNumber(value);
 }
 
 function amountForTask(task: TodoTask) {

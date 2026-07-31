@@ -1,8 +1,6 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -25,7 +23,9 @@ import { fontFamilies, radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { newVisionBoardId, useVisionBoard } from '@/store/vision-board';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { goBackOrReplace } from '@/utils/navigation';
+import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 
 import {
   initialCanvasFrame,
@@ -149,37 +149,16 @@ export function VisionBoardCategoryScreen() {
   });
 
   const choosePhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.9,
-      allowsEditing: false,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      await addPersistedImage(result.assets[0].uri);
-    }
+    const uri = await pickLibraryImage();
+    if (uri) await addPersistedImage(uri);
   };
 
   const capturePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      appPrompt.alert(
-        'Camera access needed',
+    const uri = await pickCameraImage({
+      cameraDeniedMessage:
         'Allow camera access in Settings to add a photo to your vision board.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        ],
-      );
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.9,
-      allowsEditing: false,
     });
-    if (!result.canceled && result.assets[0]?.uri) {
-      await addPersistedImage(result.assets[0].uri);
-    }
+    if (uri) await addPersistedImage(uri);
   };
 
   const showImageActions = () => {
@@ -222,10 +201,12 @@ export function VisionBoardCategoryScreen() {
         : item.kind === 'affirmation'
           ? item.text
           : item.title;
-    appPrompt.alert('Remove board item?', label, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: perform },
-    ]);
+    confirmDestructiveAction({
+      title: 'Remove board item?',
+      message: label,
+      actionLabel: 'Remove',
+      onConfirm: perform,
+    });
   };
 
   const adjustSelected = (

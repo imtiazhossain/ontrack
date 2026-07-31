@@ -1,10 +1,34 @@
-import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { isGuestDirtyTrackingSuppressed } from '@/features/auth/guest-dirty-tracking';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { useAuthAccess } from '@/store/auth-access';
+import { newUuid } from '@/utils/id';
+import { asFiniteNonNegative, asPositiveNumber, formatCompactNumber } from '@/utils/parse';
+import {
+  canonicalIngredientKey,
+  cleanHttpsUrl,
+  cleanName,
+  cleanOptional,
+  cleanTitle,
+  formatIngredientTitle,
+  normalizeInvite,
+  normalizeList,
+  normalizeMember,
+  normalizeRecipe,
+  normalizeTask,
+  normalizeTodoState,
+  nowIso,
+} from './todos-normalize';
+
+export {
+  canonicalIngredientKey,
+  formatIngredientTitle,
+  isGroceryListName,
+  normalizeTodoState,
+  normalizeTodoTasks,
+} from './todos-normalize';
 
 export type TodoListMode = 'private' | 'shared';
 export type TodoListRole = 'owner' | 'member';
@@ -187,452 +211,10 @@ export interface TodoSharedSnapshot {
   members: TodoMember[];
 }
 
-let fallbackIdCounter = 0;
-const generatedIds = new Set<string>();
-
-function newId() {
-  const candidate = Crypto.randomUUID?.();
-  if (
-    typeof candidate === 'string' &&
-    /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(candidate) &&
-    !generatedIds.has(candidate)
-  ) {
-    generatedIds.add(candidate);
-    return candidate;
-  }
-  fallbackIdCounter += 1;
-  const suffix = `${Date.now().toString(16).slice(-10)}${fallbackIdCounter
-    .toString(16)
-    .padStart(2, '0')}`.slice(-12);
-  const fallback = `00000000-0000-4000-8000-${suffix}`;
-  generatedIds.add(fallback);
-  return fallback;
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function cleanName(value: string) {
-  return value.trim().replace(/\s+/g, ' ').slice(0, 80);
-}
-
-function cleanTitle(value: string) {
-  return value.trim().replace(/\s+/g, ' ').slice(0, 160);
-}
-
-function cleanOptional(value: unknown, limit = 160) {
-  return typeof value === 'string'
-    ? value.trim().replace(/\s+/g, ' ').slice(0, limit) || undefined
-    : undefined;
-}
-
-/** Recipe source links must be https so synced lists cannot plant custom schemes. */
-function cleanHttpsUrl(value: unknown, limit = 2_000) {
-  const cleaned = cleanOptional(value, limit);
-  if (!cleaned) return undefined;
-  try {
-    return new URL(cleaned).protocol === 'https:' ? cleaned : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function finiteNonNegative(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
-    ? value
-    : undefined;
-}
-
-function finiteNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-function positiveNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
-    ? value
-    : undefined;
-}
-
-export function isGroceryListName(name: string) {
-  return /\b(grocer(?:y|ies)|supermarket)\b/i.test(name.trim());
-}
-
-export function canonicalIngredientKey(value: string) {
-  return value
-    .normalize('NFKD')
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120);
-}
-
-export function formatIngredientTitle(
-  ingredient: Pick<
-    TodoIngredientInput,
-    'name' | 'quantityText' | 'unit' | 'preparation'
-  >,
-) {
-  const amount = [cleanOptional(ingredient.quantityText, 40), cleanOptional(ingredient.unit, 40)]
-    .filter(Boolean)
-    .join(' ');
-  const name = cleanOptional(ingredient.name, 100) ?? '';
-  const preparation = cleanOptional(ingredient.preparation, 80);
-  return cleanTitle(
-    [amount, name, preparation ? `(${preparation})` : undefined]
-      .filter(Boolean)
-      .join(' '),
-  );
-}
-
-function formatQuantityValue(value: number) {
-  return Number.isInteger(value)
-    ? String(value)
-    : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
 function markGuestEdit() {
   if (!isGuestDirtyTrackingSuppressed()) {
     useAuthAccess.getState().markGuestDataDirty();
   }
-}
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value : undefined;
-}
-
-function normalizeList(
-  value: unknown,
-  upgradeRecognizedGroceryName = false,
-): TodoList | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<TodoList>;
-  const id = stringValue(candidate.id);
-  const name = typeof candidate.name === 'string' ? cleanName(candidate.name) : '';
-  if (!id || !name) return undefined;
-  const createdAt = stringValue(candidate.createdAt) ?? nowIso();
-  return {
-    id,
-    name,
-    kind:
-      candidate.kind === 'grocery' ||
-      (upgradeRecognizedGroceryName && isGroceryListName(name)) ||
-      (candidate.kind !== 'checklist' && isGroceryListName(name))
-        ? 'grocery'
-        : 'checklist',
-    mode: candidate.mode === 'shared' ? 'shared' : 'private',
-    role: candidate.role === 'member' ? 'member' : 'owner',
-    ownerUserId: stringValue(candidate.ownerUserId),
-    ownerName: stringValue(candidate.ownerName),
-    shareCode: stringValue(candidate.shareCode),
-    createdAt,
-    updatedAt: stringValue(candidate.updatedAt) ?? createdAt,
-  };
-}
-
-function normalizeRecipe(value: unknown): TodoRecipe | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<TodoRecipe>;
-  const id = stringValue(candidate.id);
-  const listId = stringValue(candidate.listId);
-  const name = typeof candidate.name === 'string' ? cleanName(candidate.name) : '';
-  if (!id || !listId || !name) return undefined;
-  const createdAt = stringValue(candidate.createdAt) ?? nowIso();
-  return {
-    id,
-    listId,
-    name,
-    sourceKind: candidate.sourceKind === 'image' ? 'image' : 'url',
-    sourceUrl: cleanHttpsUrl(candidate.sourceUrl, 2_000),
-    sourceImageUri: cleanOptional(candidate.sourceImageUri, 6_000_000),
-    sourceImagePath: cleanOptional(candidate.sourceImagePath, 500),
-    originalServings: positiveNumber(candidate.originalServings),
-    targetServings: positiveNumber(candidate.targetServings),
-    position: finiteNumber(candidate.position),
-    createdAt,
-    updatedAt: stringValue(candidate.updatedAt) ?? createdAt,
-  };
-}
-
-function normalizeTask(value: unknown, fallbackListId?: string): TodoTask | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<TodoTask>;
-  const title = typeof candidate.title === 'string' ? cleanTitle(candidate.title) : '';
-  const listId = stringValue(candidate.listId) ?? fallbackListId;
-  if (!title || !listId) return undefined;
-  const createdAt = stringValue(candidate.createdAt) ?? nowIso();
-  const completed = candidate.completed === true;
-  const recipeId = stringValue(candidate.recipeId);
-  const ingredientName = recipeId
-    ? cleanOptional(candidate.ingredientName, 100)
-    : undefined;
-  return {
-    id: stringValue(candidate.id) ?? newId(),
-    listId,
-    position:
-      typeof candidate.position === 'number' && Number.isFinite(candidate.position)
-        ? candidate.position
-        : undefined,
-    recipeId,
-    ingredientPosition: recipeId
-      ? finiteNonNegative(candidate.ingredientPosition)
-      : undefined,
-    ingredientName,
-    canonicalKey: recipeId
-      ? cleanOptional(candidate.canonicalKey, 120) ??
-        (ingredientName ? canonicalIngredientKey(ingredientName) : undefined)
-      : undefined,
-    quantityValue: recipeId
-      ? finiteNonNegative(candidate.quantityValue)
-      : undefined,
-    quantityText: recipeId
-      ? cleanOptional(candidate.quantityText, 40)
-      : undefined,
-    unit: recipeId ? cleanOptional(candidate.unit, 40) : undefined,
-    preparation: recipeId
-      ? cleanOptional(candidate.preparation, 80)
-      : undefined,
-    originalText: recipeId
-      ? cleanOptional(candidate.originalText, 240)
-      : undefined,
-    confidence:
-      recipeId && typeof candidate.confidence === 'number' && Number.isFinite(candidate.confidence)
-        ? Math.max(0, Math.min(1, candidate.confidence))
-        : undefined,
-    title,
-    completed,
-    important: candidate.important === true,
-    assigneeUserId: stringValue(candidate.assigneeUserId),
-    completedByUserId: completed ? stringValue(candidate.completedByUserId) : undefined,
-    createdAt,
-    updatedAt: stringValue(candidate.updatedAt) ?? createdAt,
-    completedAt: completed ? stringValue(candidate.completedAt) : undefined,
-    version:
-      typeof candidate.version === 'number' && Number.isFinite(candidate.version)
-        ? Math.max(0, Math.floor(candidate.version))
-        : 0,
-  };
-}
-
-function normalizeMember(value: unknown): TodoMember | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<TodoMember>;
-  const listId = stringValue(candidate.listId);
-  const userId = stringValue(candidate.userId);
-  const displayName = stringValue(candidate.displayName);
-  if (!listId || !userId || !displayName) return undefined;
-  return {
-    listId,
-    userId,
-    displayName,
-    role: candidate.role === 'owner' ? 'owner' : 'member',
-    joinedAt: stringValue(candidate.joinedAt) ?? nowIso(),
-  };
-}
-
-function normalizeInvite(value: unknown): TodoInvite | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<TodoInvite>;
-  const id = stringValue(candidate.id);
-  const listId = stringValue(candidate.listId);
-  const listName = stringValue(candidate.listName);
-  const inviterName = stringValue(candidate.inviterName);
-  const inviteeEmail = stringValue(candidate.inviteeEmail);
-  const code = stringValue(candidate.code);
-  if (!id || !listId || !listName || !inviterName || !inviteeEmail || !code) {
-    return undefined;
-  }
-  return {
-    id,
-    listId,
-    listName,
-    inviterName,
-    inviteeEmail: inviteeEmail.toLowerCase(),
-    code,
-    createdAt: stringValue(candidate.createdAt) ?? nowIso(),
-  };
-}
-
-function normalizeMutation(value: unknown): PendingTodoMutation | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as Partial<PendingTodoMutation>;
-  const id = stringValue(candidate.id);
-  const listId = stringValue(candidate.listId);
-  const operations: TodoMutationOperation[] = [
-    'rename_list',
-    'set_list_kind',
-    'add_task',
-    'add_recipe',
-    'update_recipe',
-    'delete_recipe',
-    'update_ingredient',
-    'reorder_tasks',
-    'reorder_recipes',
-    'update_task',
-    'delete_task',
-    'set_completion',
-    'set_tasks_completion',
-    'set_assignee',
-    'clear_completed',
-  ];
-  if (
-    !id ||
-    !listId ||
-    !candidate.operation ||
-    !operations.includes(candidate.operation) ||
-    !candidate.payload ||
-    typeof candidate.payload !== 'object' ||
-    Array.isArray(candidate.payload)
-  ) {
-    return undefined;
-  }
-  return {
-    id,
-    listId,
-    operation: candidate.operation,
-    payload: candidate.payload,
-    createdAt: stringValue(candidate.createdAt) ?? nowIso(),
-    attempts:
-      typeof candidate.attempts === 'number'
-        ? Math.max(0, Math.floor(candidate.attempts))
-        : 0,
-  };
-}
-
-export function normalizeTodoState(value: unknown): TodoPersistedState {
-  const source =
-    value && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Partial<TodoPersistedState>)
-      : {};
-  const upgradeRecognizedGroceryNames =
-    source.groceryMigrationVersion !== 1;
-  let lists = Array.isArray(source.lists)
-    ? source.lists.flatMap((item) => {
-        const list = normalizeList(item, upgradeRecognizedGroceryNames);
-        return list ? [list] : [];
-      })
-    : [];
-
-  const rawTasks = Array.isArray(source.tasks) ? source.tasks : [];
-  const legacyTasks =
-    rawTasks.length > 0 &&
-    rawTasks.some(
-      (item) => item && typeof item === 'object' && !stringValue((item as Partial<TodoTask>).listId),
-    );
-  let fallbackListId: string | undefined;
-  if (legacyTasks) {
-    const timestamps = rawTasks.flatMap((item) => {
-      if (!item || typeof item !== 'object') return [];
-      const createdAt = stringValue((item as Partial<TodoTask>).createdAt);
-      return createdAt ? [createdAt] : [];
-    });
-    const createdAt = timestamps.sort()[0] ?? nowIso();
-    fallbackListId = newId();
-    lists = [
-      {
-        id: fallbackListId,
-        name: 'To Do',
-        kind: 'checklist',
-        mode: 'private',
-        role: 'owner',
-        createdAt,
-        updatedAt: nowIso(),
-      },
-      ...lists,
-    ];
-  }
-
-  const listIds = new Set(lists.map((list) => list.id));
-  const recipes = Array.isArray(source.recipes)
-    ? source.recipes.flatMap((item) => {
-        const recipe = normalizeRecipe(item);
-        return recipe && listIds.has(recipe.listId) ? [recipe] : [];
-      })
-    : [];
-  const recipeListIds = new Set(recipes.map((recipe) => recipe.listId));
-  lists = lists.map((list) =>
-    recipeListIds.has(list.id) && list.kind !== 'grocery'
-      ? { ...list, kind: 'grocery' }
-      : list,
-  );
-  const recipeIds = new Set(recipes.map((recipe) => recipe.id));
-  let tasks = rawTasks.length > 0
-    ? rawTasks.flatMap((item) => {
-        const task = normalizeTask(item, fallbackListId);
-        if (!task || !listIds.has(task.listId)) return [];
-        const normalizedTask =
-          task.recipeId && !recipeIds.has(task.recipeId)
-            ? {
-                ...task,
-                recipeId: undefined,
-                ingredientPosition: undefined,
-                ingredientName: undefined,
-                canonicalKey: undefined,
-                quantityValue: undefined,
-                quantityText: undefined,
-                unit: undefined,
-                preparation: undefined,
-                originalText: undefined,
-                confidence: undefined,
-              }
-            : task;
-        return [{ ...normalizedTask, id: legacyTasks ? newId() : task.id }];
-      })
-    : [];
-
-  if (lists.length === 0 && tasks.length === 0) {
-    const createdAt = nowIso();
-    const list: TodoList = {
-      id: newId(),
-      name: 'To Do',
-      kind: 'checklist',
-      mode: 'private',
-      role: 'owner',
-      createdAt,
-      updatedAt: createdAt,
-    };
-    lists = [list];
-  }
-
-  const dedupedLists = new Map(lists.map((list) => [list.id, list]));
-  const validListIds = new Set(dedupedLists.keys());
-  tasks = tasks.filter((task) => validListIds.has(task.listId));
-
-  return {
-    groceryMigrationVersion: 1,
-    lists: [...dedupedLists.values()],
-    tasks: [...new Map(tasks.map((task) => [task.id, task])).values()],
-    recipes: [
-      ...new Map(
-        recipes
-          .filter((recipe) => validListIds.has(recipe.listId))
-          .map((recipe) => [recipe.id, recipe]),
-      ).values(),
-    ],
-    members: Array.isArray(source.members)
-      ? source.members.flatMap((item) => {
-          const member = normalizeMember(item);
-          return member && validListIds.has(member.listId) ? [member] : [];
-        })
-      : [],
-    invites: Array.isArray(source.invites)
-      ? source.invites.flatMap((item) => {
-          const invite = normalizeInvite(item);
-          return invite ? [invite] : [];
-        })
-      : [],
-    pendingMutations: Array.isArray(source.pendingMutations)
-      ? source.pendingMutations.flatMap((item) => {
-          const mutation = normalizeMutation(item);
-          return mutation && validListIds.has(mutation.listId) ? [mutation] : [];
-        })
-      : [],
-  };
-}
-
-export function normalizeTodoTasks(value: unknown): TodoTask[] {
-  return normalizeTodoState({ tasks: value }).tasks;
 }
 
 export function privateTodoPayload(state: TodoPersistedState) {
@@ -663,7 +245,7 @@ function queuedMutation(
 ): PendingTodoMutation[] {
   if (!list || list.mode !== 'shared') return [];
   return [{
-    id: newId(),
+    id: newUuid(),
     listId: list.id,
     operation,
     payload,
@@ -685,7 +267,7 @@ export const useTodos = create<TodoState>()(
         if (!clean) return undefined;
         const now = nowIso();
         const list: TodoList = {
-          id: newId(),
+          id: newUuid(),
           name: clean,
           kind,
           mode: 'private',
@@ -822,7 +404,7 @@ export const useTodos = create<TodoState>()(
             typeof task.position === 'number' ? [task.position] : [],
           );
         const task: TodoTask = {
-          id: newId(),
+          id: newUuid(),
           listId: list.id,
           position: positions.length ? Math.min(...positions) - 1 : 0,
           title: clean,
@@ -852,11 +434,11 @@ export const useTodos = create<TodoState>()(
         const ingredients = input.ingredients.flatMap((ingredient) => {
           const ingredientName = cleanOptional(ingredient.name, 100);
           if (!ingredientName) return [];
-          const quantityValue = finiteNonNegative(ingredient.quantityValue);
+          const quantityValue = asFiniteNonNegative(ingredient.quantityValue);
           const quantityText =
             cleanOptional(ingredient.quantityText, 40) ??
             (quantityValue !== undefined
-              ? formatQuantityValue(quantityValue)
+              ? formatCompactNumber(quantityValue)
               : undefined);
           const normalized: TodoIngredientInput = {
             name: ingredientName,
@@ -893,7 +475,7 @@ export const useTodos = create<TodoState>()(
             typeof recipe.position === 'number' ? [recipe.position] : [],
           );
         const recipe: TodoRecipe = {
-          id: newId(),
+          id: newUuid(),
           listId,
           name,
           sourceKind: input.sourceKind === 'image' ? 'image' : 'url',
@@ -902,10 +484,10 @@ export const useTodos = create<TodoState>()(
             typeof input.sourceImageUri === 'string' && input.sourceImageUri.trim()
               ? input.sourceImageUri.trim()
               : undefined,
-          originalServings: positiveNumber(input.originalServings),
+          originalServings: asPositiveNumber(input.originalServings),
           targetServings:
-            positiveNumber(input.targetServings) ??
-            positiveNumber(input.originalServings),
+            asPositiveNumber(input.targetServings) ??
+            asPositiveNumber(input.originalServings),
           position: recipePositions.length
             ? Math.min(...recipePositions) - 1
             : 0,
@@ -913,7 +495,7 @@ export const useTodos = create<TodoState>()(
           updatedAt: now,
         };
         const tasks: TodoTask[] = ingredients.map((ingredient, index) => ({
-          id: newId(),
+          id: newUuid(),
           listId,
           recipeId: recipe.id,
           ingredientPosition: index,
@@ -968,7 +550,7 @@ export const useTodos = create<TodoState>()(
           targetServings:
             patch.targetServings === undefined
               ? recipe.targetServings
-              : positiveNumber(patch.targetServings),
+              : asPositiveNumber(patch.targetServings),
           updatedAt,
         };
         markGuestEdit();
@@ -1022,7 +604,7 @@ export const useTodos = create<TodoState>()(
         const quantityValue =
           patch.quantityValue === undefined
             ? task.quantityValue
-            : finiteNonNegative(patch.quantityValue);
+            : asFiniteNonNegative(patch.quantityValue);
         const quantityText =
           patch.quantityText === undefined
             ? task.quantityText

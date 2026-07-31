@@ -1,9 +1,6 @@
+import { asString } from '@/utils/parse';
 import { normalizeFlightDetails } from './flight-details';
 import type { TravelItineraryItem, TravelParticipant, TravelPlan } from './types';
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
 
 export function normalizeTravelItineraryItem(
   value: unknown,
@@ -32,8 +29,8 @@ export function normalizeTravelItineraryItem(
     date: item.date,
     startMinutes: Math.round(item.startMinutes),
     durationMinutes: Math.round(item.durationMinutes),
-    details: stringValue(item.details),
-    bookingUrl: stringValue(item.bookingUrl),
+    details: asString(item.details),
+    bookingUrl: asString(item.bookingUrl),
     flight: item.kind === 'flight' ? normalizeFlightDetails(item.flight) : undefined,
   };
 }
@@ -108,10 +105,10 @@ export function normalizeTravelParticipants(value: unknown): TravelParticipant[]
     return [{
       id: participant.id,
       name: participant.name.trim(),
-      email: stringValue(participant.email)?.trim() || undefined,
+      email: asString(participant.email)?.trim() || undefined,
       inviteCode: participant.inviteCode,
       invitedAt: participant.invitedAt,
-      acceptedAt: stringValue(participant.acceptedAt),
+      acceptedAt: asString(participant.acceptedAt),
     }];
   });
 }
@@ -146,11 +143,11 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
       repairedImport.correctedEndDate > plan.endDate
         ? repairedImport.correctedEndDate
         : plan.endDate,
-    notes: stringValue(plan.notes),
+    notes: asString(plan.notes),
     itinerary: repairedImport.itinerary,
     participants: normalizeTravelParticipants(plan.participants),
-    createdAt: stringValue(plan.createdAt) ?? stringValue(plan.updatedAt) ?? fallbackTimestamp,
-    updatedAt: stringValue(plan.updatedAt) ?? stringValue(plan.createdAt) ?? fallbackTimestamp,
+    createdAt: asString(plan.createdAt) ?? asString(plan.updatedAt) ?? fallbackTimestamp,
+    updatedAt: asString(plan.updatedAt) ?? asString(plan.createdAt) ?? fallbackTimestamp,
   };
 }
 

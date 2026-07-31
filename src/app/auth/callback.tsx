@@ -1,16 +1,14 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, Screen } from '@/components/primitives';
+import { AppText, Button, ErrorMessage, LoadingBlock, Screen } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { useTheme } from '@/hooks/use-theme';
 import { accessibleAuthError } from '@/services/cloud/account';
 
 export default function OAuthCallbackScreen() {
-  const theme = useTheme();
   const router = useRouter();
   const incomingUrl = Linking.useURL();
   const { phase, error, isGuest, completeOAuthCallback, clearError } = useAuthSession();
@@ -53,8 +51,7 @@ export default function OAuthCallbackScreen() {
           </>
         ) : (
           <>
-            <ActivityIndicator size="large" color={theme.accentPrimary} />
-            <AppText variant="heading" align="center">Finishing sign-in…</AppText>
+            <LoadingBlock label="Finishing sign-in…" />
             <AppText variant="body" color="secondary" align="center">
               Your plans are staying put while we open your account.
             </AppText>

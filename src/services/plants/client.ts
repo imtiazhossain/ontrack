@@ -1,76 +1,62 @@
-import Constants from 'expo-constants';
-import { fetch } from 'expo/fetch';
-import { Platform } from 'react-native';
-
-import { authHeader } from '@/services/cloud/access-token';
+import { apiRequest } from '@/services/http/api-client';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
 import type { PlantCarePlan, PlantHealthAssessment, PlantIdentity, RoomProfile } from '@/types/models';
 import { PlantServiceError } from './client-error';
 import { preparePlantImage } from './media';
 import type { PlantTaxonSearchResult } from './taxonomy';
 import type {
-    PlantApiErrorBody,
-    PlantCareResponse,
-    PlantCheckInResponse,
-    PlantIdentificationResponse,
-    PlantServiceErrorCode,
+  PlantCareResponse,
+  PlantCheckInResponse,
+  PlantIdentificationResponse,
+  PlantServiceErrorCode,
 } from './types';
 
 export function plantApiUrl(path: string): string {
-  if (Platform.OS === 'web') return path;
-  const developmentHost = __DEV__ ? Constants.expoConfig?.hostUri : undefined;
-  const baseUrl = developmentHost
-    ? `http://${developmentHost}`
-    : process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-  if (baseUrl) return `${baseUrl}${path}`;
-  throw new PlantServiceError('Plant analysis is not configured for this build.', 'NOT_CONFIGURED');
+  return resolveExpoApiUrl(path, {
+    configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+    createNotConfiguredError: () =>
+      new PlantServiceError('Plant analysis is not configured for this build.', 'NOT_CONFIGURED'),
+  });
+}
+
+
+function createPlantError(
+  message: string,
+  code?: string,
+  status?: number,
+): PlantServiceError {
+  return new PlantServiceError(
+    message,
+    (code as PlantServiceErrorCode | undefined) ?? 'PROVIDER_FAILURE',
+    status ?? 0,
+  );
 }
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(plantApiUrl(path), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-    if (error instanceof PlantServiceError) throw error;
-    throw new PlantServiceError(
-      __DEV__
-        ? 'Plant analysis needs the Expo server on this Mac. Keep Metro running and make sure the iPhone is on the same network.'
-        : 'Unable to connect. Check your internet connection.',
-      'OFFLINE',
-    );
-  }
-  if (!response.ok) {
-    const parsed = await response.json().catch(() => undefined) as PlantApiErrorBody | undefined;
-    throw new PlantServiceError(
-      parsed?.error ?? 'Plant analysis is temporarily unavailable.',
-      parsed?.code ?? 'PROVIDER_FAILURE' as PlantServiceErrorCode,
-      response.status,
-    );
-  }
-  return response.json() as Promise<T>;
+  return apiRequest<T, PlantServiceError>({
+    url: plantApiUrl(path),
+    method: 'POST',
+    body,
+    signal,
+    offlineMessage: __DEV__
+      ? 'Plant analysis needs the Expo server on this Mac. Keep Metro running and make sure the iPhone is on the same network.'
+      : 'Unable to connect. Check your internet connection.',
+    unavailableMessage: 'Plant analysis is temporarily unavailable.',
+    defaultErrorCode: 'PROVIDER_FAILURE',
+    createError: createPlantError,
+  });
 }
 
 export async function searchPlants(query: string, signal?: AbortSignal): Promise<PlantTaxonSearchResult[]> {
-  let response: Response;
-  try {
-    response = await fetch(plantApiUrl(`/plant-analysis/search?q=${encodeURIComponent(query.trim())}`), {
-      signal,
-      headers: await authHeader(),
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-    throw new PlantServiceError('Plant search is unavailable. You can still enter the name manually.', 'OFFLINE');
-  }
-  if (!response.ok) {
-    const parsed = await response.json().catch(() => undefined) as PlantApiErrorBody | undefined;
-    throw new PlantServiceError(parsed?.error ?? 'Plant search is temporarily unavailable.', parsed?.code ?? 'PROVIDER_FAILURE', response.status);
-  }
-  const body = await response.json() as { results?: PlantTaxonSearchResult[] };
+  const body = await apiRequest<{ results?: PlantTaxonSearchResult[] }, PlantServiceError>({
+    url: plantApiUrl(`/plant-analysis/search?q=${encodeURIComponent(query.trim())}`),
+    method: 'GET',
+    signal,
+    offlineMessage: 'Plant search is unavailable. You can still enter the name manually.',
+    unavailableMessage: 'Plant search is temporarily unavailable.',
+    defaultErrorCode: 'PROVIDER_FAILURE',
+    createError: createPlantError,
+  });
   return Array.isArray(body.results) ? body.results : [];
 }
 

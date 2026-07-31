@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   Keyboard,
@@ -13,13 +13,11 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, appPrompt, DragHandle, Screen, Symbol } from '@/components/primitives';
+import { AppText, appPrompt, Screen, Symbol } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import {
-  collaboratorInitial,
-  todoListIcon,
-} from '@/features/todos/list-icon';
+import { EmptyChecklists } from '@/features/todos/empty-checklists';
+import { TodoListCard } from '@/features/todos/todo-list-card';
 import { useTheme } from '@/hooks/use-theme';
 import {
   deleteSharedTodoList,
@@ -31,6 +29,7 @@ import {
   type TodoList,
   type TodoListKind,
 } from '@/store/todos';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { haptics } from '@/utils/haptics';
 
 export function TodoListsOverview() {
@@ -179,14 +178,12 @@ export function TodoListsOverview() {
           });
       };
 
-      appPrompt.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: leaving ? 'Leave' : 'Delete',
-          style: 'destructive',
-          onPress: remove,
-        },
-      ]);
+      confirmDestructiveAction({
+        title,
+        message,
+        actionLabel: leaving ? 'Leave' : 'Delete',
+        onConfirm: remove,
+      });
     },
     [deletePrivateList, recipes],
   );
@@ -409,6 +406,7 @@ export function TodoListsOverview() {
                       }
                       placeholderTextColor={theme.textTertiary}
                       returnKeyType="done"
+                      underlineColorAndroid="transparent"
                       style={[styles.input, { color: theme.textPrimary }]}
                       value={draft}
                     />
@@ -447,331 +445,6 @@ export function TodoListsOverview() {
   );
 }
 
-function EmptyChecklists() {
-  const theme = useTheme();
-
-  return (
-    <View
-      style={[
-        styles.emptyState,
-        {
-          backgroundColor: theme.backgroundSecondary,
-          borderColor: theme.separator,
-        },
-      ]}>
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.emptyIllustration}>
-        <View
-          style={[
-            styles.emptyPaperBack,
-            styles.emptyPaperBackLeft,
-            {
-              backgroundColor: theme.accentFaint,
-              borderColor: theme.separator,
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.emptyPaperBack,
-            styles.emptyPaperBackRight,
-            {
-              backgroundColor: theme.backgroundSunken,
-              borderColor: theme.separator,
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.emptyPaper,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: theme.separator,
-            },
-          ]}>
-          <View
-            style={[
-              styles.emptyPaperBadge,
-              { backgroundColor: theme.accentFaint },
-            ]}>
-            <Symbol name="tasks" size={24} color={theme.accentPrimary} />
-          </View>
-          {[0.72, 0.9, 0.58].map((width, index) => (
-            <View key={width} style={styles.emptyPaperRow}>
-              <View
-                style={[
-                  styles.emptyPaperCheck,
-                  {
-                    borderColor:
-                      index === 0 ? theme.accentPrimary : theme.separator,
-                    backgroundColor:
-                      index === 0 ? theme.accentFaint : 'transparent',
-                  },
-                ]}>
-                {index === 0 ? (
-                  <Symbol name="check" size={11} color={theme.accentPrimary} />
-                ) : null}
-              </View>
-              <View
-                style={[
-                  styles.emptyPaperLine,
-                  {
-                    width: `${width * 100}%`,
-                    backgroundColor:
-                      index === 0 ? theme.accentSoft : theme.separator,
-                  },
-                ]}
-              />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.emptyCopy}>
-        <AppText variant="heading" align="center">
-          A clear slate
-        </AppText>
-        <AppText
-          variant="body"
-          color="secondary"
-          align="center"
-          style={styles.emptyMessage}>
-          Give your first list a name above. Groceries, weekend plans, packing—
-          whatever helps quiet your mind.
-        </AppText>
-      </View>
-
-      <View
-        style={[
-          styles.emptyHint,
-          {
-            backgroundColor: theme.accentFaint,
-          },
-        ]}>
-        <Symbol name="arrow-up" size={15} color={theme.accentPrimary} />
-        <AppText variant="caption" color="accent">
-          Start with the field above
-        </AppText>
-      </View>
-    </View>
-  );
-}
-
-function TodoListCard({
-  editMode,
-  list,
-  nameDraft,
-  collaboratorNames,
-  open,
-  total,
-  onPress,
-  onDragStart,
-  onNameChange,
-  onNameSubmit,
-  onMoveDown,
-  onMoveUp,
-  onRemove,
-  canMoveDown,
-  canMoveUp,
-  isActive,
-}: {
-  editMode: boolean;
-  list: TodoList;
-  nameDraft: string;
-  collaboratorNames?: string[];
-  open: number;
-  total: number;
-  onPress: () => void;
-  onDragStart: () => void;
-  onNameChange: (name: string) => void;
-  onNameSubmit: (name: string) => void;
-  onMoveDown: () => void;
-  onMoveUp: () => void;
-  onRemove: () => void;
-  canMoveDown: boolean;
-  canMoveUp: boolean;
-  isActive: boolean;
-}) {
-  const theme = useTheme();
-  const nameInputRef = useRef<TextInput>(null);
-  const icon = todoListIcon(list.name, list.kind);
-  const collaboratorLabel = collaboratorNames?.join(', ');
-  const leaving = list.mode === 'shared' && list.role === 'member';
-  const canRename = editMode && list.role === 'owner';
-  const cardContents = (
-    <>
-      <View
-        style={[
-          styles.cardIcon,
-          {
-            backgroundColor: theme.backgroundSunken,
-          },
-        ]}>
-        <Symbol name={icon} size={22} color={theme.textSecondary} />
-      </View>
-      <View style={styles.cardCopy}>
-        {canRename ? (
-          <View style={styles.nameEditor}>
-            <TextInput
-              ref={nameInputRef}
-              accessibilityLabel="Checklist name"
-              maxLength={80}
-              onChangeText={onNameChange}
-              onSubmitEditing={() => onNameSubmit(nameDraft)}
-              placeholder="Checklist name"
-              placeholderTextColor={theme.textTertiary}
-              returnKeyType="done"
-              selectTextOnFocus
-              selectionColor={theme.accentPrimary}
-              style={[styles.nameInput, { color: theme.textPrimary }]}
-              value={nameDraft}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Edit ${list.name} name`}
-              onPress={() => nameInputRef.current?.focus()}
-              style={({ pressed }) => [
-                styles.nameEditButton,
-                pressed && styles.pressed,
-              ]}>
-              <Symbol name="edit" size={16} color={theme.accentPrimary} />
-            </Pressable>
-          </View>
-        ) : (
-          <>
-            <AppText variant="subheading" numberOfLines={1}>
-              {list.name}
-            </AppText>
-            {list.kind === 'grocery' ? (
-              <AppText variant="caption" color="accent">
-                Grocery
-              </AppText>
-            ) : null}
-          </>
-        )}
-        {collaboratorNames ? (
-          <View style={styles.collaborators}>
-            <View style={styles.collaboratorAvatars}>
-              {collaboratorNames.slice(0, 2).map((name, index) => (
-                <View
-                  key={`${name}-${index}`}
-                  style={[
-                    styles.collaboratorAvatar,
-                    {
-                      backgroundColor: theme.accentFaint,
-                      borderColor: theme.backgroundElevated,
-                    },
-                    index > 0 && styles.collaboratorAvatarOverlap,
-                  ]}>
-                  <AppText
-                    style={[
-                      styles.collaboratorInitial,
-                      { color: theme.accentPrimary },
-                    ]}>
-                    {collaboratorInitial(name)}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {collaboratorNames.length > 2
-                ? `${collaboratorNames.slice(0, 2).join(', ')} +${collaboratorNames.length - 2}`
-                : collaboratorLabel}
-            </AppText>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.count}>
-        <AppText variant="heading" color={open ? 'accent' : 'success'}>
-          {open}
-        </AppText>
-        <AppText variant="caption" color="tertiary">
-          open
-        </AppText>
-      </View>
-    </>
-  );
-
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.backgroundElevated,
-          borderColor: isActive ? theme.accentPrimary : theme.separator,
-        },
-        isActive && styles.activeCard,
-      ]}>
-      {editMode ? (
-        <View style={styles.cardMain}>{cardContents}</View>
-      ) : (
-        <Pressable
-          accessibilityHint="Tap to open."
-          accessibilityRole="button"
-          accessibilityLabel={`${list.name}, ${open} open of ${total}${
-            collaboratorLabel ? `, shared with ${collaboratorLabel}` : ''
-          }`}
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.cardMain,
-            { opacity: pressed && !isActive ? 0.72 : 1 },
-          ]}>
-          {cardContents}
-        </Pressable>
-      )}
-      {editMode ? (
-        <View style={styles.cardEditActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${leaving ? 'Leave' : 'Delete'} ${list.name}`}
-            accessibilityHint={`${leaving ? 'Leaves' : 'Deletes'} after confirmation`}
-            onPress={onRemove}
-            style={({ pressed }) => [
-              styles.cardActionButton,
-              { backgroundColor: `${theme.danger}18` },
-              pressed && styles.pressed,
-            ]}>
-            <Symbol
-              name={leaving ? 'minus-circle' : 'delete'}
-              size={18}
-              color={theme.danger}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityActions={[
-              ...(canMoveUp ? [{ name: 'moveUp', label: 'Move up' }] : []),
-              ...(canMoveDown ? [{ name: 'moveDown', label: 'Move down' }] : []),
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Drag to reorder ${list.name}`}
-            accessibilityHint="Long press and drag, or use the move actions"
-            delayLongPress={180}
-            disabled={isActive}
-            onAccessibilityAction={(event) => {
-              if (event.nativeEvent.actionName === 'moveUp') onMoveUp();
-              if (event.nativeEvent.actionName === 'moveDown') onMoveDown();
-            }}
-            onLongPress={onDragStart}
-            style={({ pressed }) => [
-              styles.cardActionButton,
-              (pressed || isActive) && styles.pressed,
-            ]}>
-            <DragHandle
-              size={20}
-              color={
-                theme.name === 'dark'
-                  ? theme.textOnAccent
-                  : theme.textSecondary
-              }
-            />
-          </Pressable>
-        </View>
-      ) : null}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   screenContent: {
@@ -857,179 +530,6 @@ const styles = StyleSheet.create({
   addButton: {
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  emptyState: {
-    alignItems: 'center',
-    gap: spacing.xl,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.xl,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  emptyIllustration: {
-    width: 176,
-    height: 142,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyPaperBack: {
-    position: 'absolute',
-    width: 122,
-    height: 116,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-  },
-  emptyPaperBackLeft: {
-    transform: [{ rotate: '-8deg' }, { translateX: -12 }],
-  },
-  emptyPaperBackRight: {
-    transform: [{ rotate: '8deg' }, { translateX: 12 }],
-  },
-  emptyPaper: {
-    width: 132,
-    minHeight: 126,
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-    boxShadow: '0 10px 24px rgba(27, 24, 21, 0.10)',
-  },
-  emptyPaperBadge: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    borderRadius: radii.pill,
-  },
-  emptyPaperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  emptyPaperCheck: {
-    width: 17,
-    height: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: radii.pill,
-  },
-  emptyPaperLine: {
-    maxWidth: 70,
-    height: 5,
-    borderRadius: radii.pill,
-    opacity: 0.7,
-  },
-  emptyCopy: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  emptyMessage: {
-    maxWidth: 360,
-  },
-  emptyHint: {
-    minHeight: 36,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
-  },
-  card: {
-    minHeight: 88,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-  },
-  cardMain: {
-    minHeight: 86,
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  activeCard: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  cardIcon: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-  },
-  cardCopy: { flex: 1, gap: spacing.xs },
-  nameEditor: {
-    minHeight: layout.minTapTarget,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-  },
-  nameInput: {
-    ...typography.subheading,
-    flex: 1,
-    minWidth: 0,
-    minHeight: layout.minTapTarget,
-    paddingVertical: 0,
-  },
-  nameEditButton: {
-    width: layout.minTapTarget,
-    height: layout.minTapTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  collaborators: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  collaboratorAvatars: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  collaboratorAvatar: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: radii.pill,
-  },
-  collaboratorAvatarOverlap: { marginLeft: -5 },
-  collaboratorInitial: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '700',
-  },
-  count: { alignItems: 'center', minWidth: 44 },
-  cardEditActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-  },
-  cardActionButton: {
-    width: layout.minTapTarget,
-    height: layout.minTapTarget,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,

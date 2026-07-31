@@ -355,6 +355,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
           multiline
           maxLength={2000}
           accessibilityLabel="Trip message"
+          underlineColorAndroid="transparent"
           style={[
             styles.input,
             typography.body,

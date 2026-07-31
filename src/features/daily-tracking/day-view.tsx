@@ -16,7 +16,7 @@ import { useSchedule } from '@/store/schedule';
 import { useUI } from '@/store/ui';
 import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
 import type { Activity } from '@/types/models';
-import { addDays, isToday, nowMinutes } from '@/utils/date';
+import { addDays, isToday, nowMinutes, todayKey } from '@/utils/date';
 import { confirmDeleteActivity, showActivityActions, type ActivityAction } from '@/utils/activity-actions';
 
 interface DayViewProps {
@@ -86,7 +86,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
 
   const [summary, setSummary] = useState<{ date: string; line: string } | undefined>();
   const canSummarize =
-    aiEnabled && activities.length > 0 && date <= new Date().toISOString().slice(0, 10);
+    aiEnabled && activities.length > 0 && date <= todayKey();
   useEffect(() => {
     let cancelled = false;
     if (!canSummarize) return;

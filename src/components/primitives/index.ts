@@ -13,6 +13,7 @@ export { ProgressRing } from './progress-ring';
 export { Input } from './input';
 export { SectionHeader } from './section-header';
 export { EmptyState } from './empty-state';
+export { LoadingBlock } from './loading-block';
 export { ErrorMessage } from './error-message';
 export { BackButton, HeaderBackButton } from './back-button';
 export { SettingsActionRow, SettingsRow, SettingsToggleRow } from './settings-row';

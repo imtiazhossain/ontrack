@@ -6,7 +6,7 @@ import { AppText, Button, Card, EmptyState, Screen } from '@/components/primitiv
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePlants } from '@/store/plants';
-import { formatDateLong, toDateKey, todayKey } from '@/utils/date';
+import { formatDueLabel, toDateKey, todayKey } from '@/utils/date';
 
 /** Primary carousel section for plant care. */
 export default function PlantsScreen() {
@@ -37,7 +37,7 @@ export default function PlantsScreen() {
         .sort((a, b) => a.nextWateringAt.localeCompare(b.nextWateringAt))
         .map((plant) => {
           const dueKey = toDateKey(new Date(plant.nextWateringAt));
-          const dueLabel = dueKey < todayKey() ? 'Overdue' : dueKey === todayKey() ? 'Due today' : `Due ${formatDateLong(dueKey)}`;
+          const dueLabel = formatDueLabel(dueKey);
           return (
             <Card
               key={plant.id}

@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
@@ -21,6 +20,7 @@ import {
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import type { Meal, MealAnalysis } from '@/types/models';
+import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 
 export default function FoodDetailScreen() {
   const router = useRouter();
@@ -88,22 +88,23 @@ export default function FoodDetailScreen() {
 
   const takePhoto = async () => {
     setError(null);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return setError('Camera access is required to photograph a meal.');
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
-    if (!result.canceled && result.assets[0]?.uri) {
-      await persistAndAnalyzeAsset(result.assets[0].uri);
-    }
+    const uri = await pickCameraImage({
+      allowsEditing: true,
+      aspect: [4, 3],
+      onDenied: () => setError('Camera access is required to photograph a meal.'),
+    });
+    if (uri) await persistAndAnalyzeAsset(uri);
   };
 
   const choosePhoto = async () => {
     setError(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return setError('Photo library access is required to choose a meal photo.');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [4, 3] });
-    if (!result.canceled && result.assets[0]?.uri) {
-      await persistAndAnalyzeAsset(result.assets[0].uri);
-    }
+    const uri = await pickLibraryImage({
+      allowsEditing: true,
+      aspect: [4, 3],
+      onDenied: () =>
+        setError('Photo library access is required to choose a meal photo.'),
+    });
+    if (uri) await persistAndAnalyzeAsset(uri);
   };
 
   const showMealSources = () => {
