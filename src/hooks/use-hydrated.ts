@@ -8,6 +8,7 @@ import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTodos } from '@/store/todos';
 import { useTravel } from '@/store/travel';
+import { useVehicles } from '@/store/vehicles';
 import { useVisionBoard } from '@/store/vision-board';
 
 /** Hard ceiling so a stuck persist never leaves the user on a blank shell. */
@@ -46,6 +47,7 @@ export function useHydrated(): boolean {
       rehydrateStore(() => useAuthAccess.persist.rehydrate()),
       rehydrateStore(() => useTodos.persist.rehydrate()),
       rehydrateStore(() => useVisionBoard.persist.rehydrate()),
+      rehydrateStore(() => useVehicles.persist.rehydrate()),
     ]).then(release);
 
     return () => {

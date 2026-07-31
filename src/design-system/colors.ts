@@ -45,6 +45,14 @@ export const palette = {
   plantGreenSoftDark: '#4E8A60',
   plantGreenFaintDark: '#1B3021',
 
+  // Vehicles — steel blues, scoped to the Vehicles feature
+  vehicleSteel: '#3A5F7A',
+  vehicleSteelSoft: '#5A7F99',
+  vehicleSteelFaint: '#D9E4EC',
+  vehicleSteelDark: '#7AA0BC',
+  vehicleSteelSoftDark: '#4A7290',
+  vehicleSteelFaintDark: '#1A2B38',
+
   // Status
   green: '#4E7A54',
   greenBright: '#6FA276',

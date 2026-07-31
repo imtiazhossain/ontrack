@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   todos: 'ontrack/todos/v1',
   authAccess: 'ontrack/auth-access/v1',
   visionBoard: 'ontrack/vision-board/v1',
+  vehicles: 'ontrack/vehicles/v1',
 } as const;
 
 const MIGRATION_FLAG = 'ontrack/storage/mmkv-migrated/v1';

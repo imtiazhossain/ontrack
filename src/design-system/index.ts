@@ -21,6 +21,8 @@ export {
   darkTravelTheme,
   lightPlantTheme,
   darkPlantTheme,
+  lightVehicleTheme,
+  darkVehicleTheme,
   categoryColors,
   timeOfDayGradient,
   type Theme,

@@ -42,6 +42,7 @@ describe('authentication navigation invariants', () => {
       'travel',
       'vision-board',
       'games',
+      'vehicles',
     ]) {
       expect(tabsLayout).toContain(`<Tabs.Screen name="${route}"`);
     }

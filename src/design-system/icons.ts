@@ -27,6 +27,7 @@ export const appIcons = {
   insights: { ios: 'chart.line.uptrend.xyaxis', android: 'monitoring', web: 'monitoring' },
   'vision-board': { ios: 'square.grid.2x2.fill', android: 'dashboard', web: 'dashboard' },
   games: { ios: 'gamecontroller.fill', android: 'sports_esports', web: 'sports_esports' },
+  vehicles: { ios: 'car.fill', android: 'directions_car', web: 'directions_car' },
   tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
   groceries: { ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' },
   maintenance: {

@@ -4,14 +4,21 @@ import type {
   EntitlementState,
 } from '@/entitlements/types';
 
-export type AddonId = 'food' | 'fitness' | 'plants' | 'travel' | 'vision-board' | 'games';
+export type AddonId =
+  | 'food'
+  | 'fitness'
+  | 'plants'
+  | 'travel'
+  | 'vision-board'
+  | 'games'
+  | 'vehicles';
 
 export interface AddonDefinition {
   id: AddonId;
   name: string;
   description: string;
   categoryIds: readonly string[];
-  tabRoute?: 'workouts' | 'plants' | 'travel' | 'vision-board' | 'games';
+  tabRoute?: 'workouts' | 'plants' | 'travel' | 'vision-board' | 'games' | 'vehicles';
 }
 
 export type AddonEnabledState = Record<AddonId, boolean>;

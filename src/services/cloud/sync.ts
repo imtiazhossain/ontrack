@@ -26,6 +26,7 @@ import { useSchedule } from '@/store/schedule';
 import { privateTodoPayload, useTodos } from '@/store/todos';
 import { useTravel } from '@/store/travel';
 import { useUI } from '@/store/ui';
+import { privateVehiclePayload, useVehicles } from '@/store/vehicles';
 import { useVisionBoard } from '@/store/vision-board';
 import type { Plant } from '@/types/models';
 
@@ -42,7 +43,8 @@ export type SyncDomainName =
   | 'plants'
   | 'travel'
   | 'todos'
-  | 'vision-board';
+  | 'vision-board'
+  | 'vehicles';
 export type InitialSyncResult = 'ready' | 'conflict';
 type JsonObject = Record<string, unknown>;
 
@@ -250,6 +252,22 @@ const domains: {
     reset: () => useVisionBoard.getState().reset(),
     subscribe: (onChange) => useVisionBoard.subscribe(onChange),
   },
+  {
+    name: 'vehicles',
+    read: () => ({
+      vehicles: privateVehiclePayload(useVehicles.getState().vehicles),
+    }),
+    write: (payload) => {
+      if (!Array.isArray(payload.vehicles)) return;
+      const shared = useVehicles.getState().vehicles.filter((item) => item.mode === 'shared');
+      useVehicles.getState().replaceVehicles([
+        ...shared,
+        ...payload.vehicles,
+      ]);
+    },
+    reset: () => useVehicles.getState().reset(),
+    subscribe: (onChange) => useVehicles.subscribe(onChange),
+  },
 ];
 
 let stopSubscriptions: (() => void) | undefined;
@@ -451,6 +469,7 @@ export function hasMeaningfulLocalData(): boolean {
   if (Object.keys(useAgents.getState().installations).length > 0) return true;
   if (Object.keys(useAgents.getState().conversations).length > 0) return true;
   if (useTravel.getState().plans.some((plan) => plan.id !== ALL_ACCOUNTS_TEST_TRIP.id)) return true;
+  if (useVehicles.getState().vehicles.length > 0) return true;
   const visionBoard = useVisionBoard.getState();
   if (
     hasCustomizedVisionBoardItems(visionBoard.items) ||
