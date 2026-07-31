@@ -73,12 +73,18 @@ describe('accessible authentication errors', () => {
     );
   });
 
-  it('preserves messages from Supabase error objects', () => {
+  it('maps schema and constraint failures to actionable copy', () => {
     expect(
       accessibleAuthError({
         code: '23514',
-        message: 'new row violates check constraint "app_state_domain_check"',
+        message: 'new row for relation "app_state" violates check constraint "app_state_domain_check"',
       }),
-    ).toBe('new row violates check constraint "app_state_domain_check"');
+    ).toContain('database update');
+    expect(
+      accessibleAuthError({
+        code: '23514',
+        message: 'new row violates check constraint "other_check"',
+      }),
+    ).toContain('could not save');
   });
 });

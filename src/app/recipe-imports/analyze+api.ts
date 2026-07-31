@@ -2,6 +2,7 @@ import { compressResponse } from '@/services/http/compression';
 import {
   analyzeRecipeImport,
   assertRecipeAnalysisEnabled,
+  assertRecipeAuthenticated,
   recipeCorsHeaders,
   recipeError,
   recipeOptionsResponse,
@@ -15,6 +16,8 @@ export function OPTIONS() {
 export async function POST(request: Request) {
   const disabled = assertRecipeAnalysisEnabled();
   if (disabled) return disabled;
+  const unauthorized = await assertRecipeAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = (await request.json().catch(() => undefined)) as
     | Partial<RecipeImportRequest>
     | undefined;

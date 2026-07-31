@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -50,14 +51,35 @@ export function VisionBoardCanvasItem({
   const startHeight = useSharedValue(0);
   const startRotation = useSharedValue(0);
 
+  useEffect(() => {
+    x.set(item.frame.x * posterWidth);
+    y.set(item.frame.y * posterHeight);
+    width.set(item.frame.width * posterWidth);
+    height.set(item.frame.height * posterHeight);
+    rotation.set(item.frame.rotation);
+  }, [
+    height,
+    item.frame.height,
+    item.frame.rotation,
+    item.frame.width,
+    item.frame.x,
+    item.frame.y,
+    posterHeight,
+    posterWidth,
+    rotation,
+    width,
+    x,
+    y,
+  ]);
+
   const commit = () => {
     onCommit(
       clampCanvasFrame({
-        x: x.value / posterWidth,
-        y: y.value / posterHeight,
-        width: width.value / posterWidth,
-        height: height.value / posterHeight,
-        rotation: rotation.value,
+        x: x.get() / posterWidth,
+        y: y.get() / posterHeight,
+        width: width.get() / posterWidth,
+        height: height.get() / posterHeight,
+        rotation: rotation.get(),
         zIndex: item.frame.zIndex,
       }),
     );
@@ -75,56 +97,56 @@ export function VisionBoardCanvasItem({
 
   const pan = Gesture.Pan()
     .onBegin(() => {
-      startX.value = x.value;
-      startY.value = y.value;
+      startX.set(x.get());
+      startY.set(y.get());
       runOnJS(begin)();
     })
     .onUpdate((event) => {
-      x.value = Math.min(
-        posterWidth - width.value,
-        Math.max(0, startX.value + event.translationX),
-      );
-      y.value = Math.min(
-        posterHeight - height.value,
-        Math.max(0, startY.value + event.translationY),
-      );
+      x.set(Math.min(
+        posterWidth - width.get(),
+        Math.max(0, startX.get() + event.translationX),
+      ));
+      y.set(Math.min(
+        posterHeight - height.get(),
+        Math.max(0, startY.get() + event.translationY),
+      ));
     })
     .onFinalize((_event, successful) => runOnJS(finish)(successful));
 
   const pinch = Gesture.Pinch()
     .onBegin(() => {
-      startWidth.value = width.value;
-      startHeight.value = height.value;
+      startWidth.set(width.get());
+      startHeight.set(height.get());
       runOnJS(begin)();
     })
     .onUpdate((event) => {
-      const nextWidth = Math.min(posterWidth * 0.72, Math.max(posterWidth * 0.18, startWidth.value * event.scale));
-      const nextHeight = Math.min(posterHeight * 0.65, Math.max(posterHeight * 0.12, startHeight.value * event.scale));
-      width.value = nextWidth;
-      height.value = nextHeight;
-      x.value = Math.min(x.value, posterWidth - nextWidth);
-      y.value = Math.min(y.value, posterHeight - nextHeight);
+      const nextWidth = Math.min(posterWidth * 0.72, Math.max(posterWidth * 0.18, startWidth.get() * event.scale));
+      const nextHeight = Math.min(posterHeight * 0.65, Math.max(posterHeight * 0.12, startHeight.get() * event.scale));
+      width.set(nextWidth);
+      height.set(nextHeight);
+      x.set(Math.min(x.get(), posterWidth - nextWidth));
+      y.set(Math.min(y.get(), posterHeight - nextHeight));
     })
     .onFinalize((_event, successful) => runOnJS(finish)(successful));
 
   const rotate = Gesture.Rotation()
     .onBegin(() => {
-      startRotation.value = rotation.value;
+      startRotation.set(rotation.get());
       runOnJS(begin)();
     })
     .onUpdate((event) => {
-      rotation.value = startRotation.value + (event.rotation * 180) / Math.PI;
+      rotation.set(startRotation.get() + (event.rotation * 180) / Math.PI);
     })
     .onFinalize((_event, successful) => runOnJS(finish)(successful));
 
   const tap = Gesture.Tap().onEnd(() => runOnJS(onSelect)());
   const gesture = Gesture.Simultaneous(pan, pinch, rotate, tap);
   const animatedStyle = useAnimatedStyle(() => ({
-    left: x.value,
-    top: y.value,
-    width: width.value,
-    height: height.value,
-    transform: [{ rotate: `${rotation.value}deg` }],
+    left: x.get(),
+    top: y.get(),
+    width: width.get(),
+    height: height.get(),
+    transform: [{ rotate: `${rotation.get()}deg` }],
   }));
 
   return (

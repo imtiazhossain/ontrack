@@ -94,7 +94,7 @@ export function TodoListsOverview() {
     setDraft('');
     Keyboard.dismiss();
     haptics.success();
-    router.push(`/todos/${list.id}` as never);
+    router.push(`/(tabs)/to-do/${list.id}` as never);
   };
 
   const moveList = useCallback((id: string, offset: number) => {
@@ -179,11 +179,6 @@ export function TodoListsOverview() {
           });
       };
 
-      if (Platform.OS === 'web') {
-        if (globalThis.confirm(`${title}\n\n${message}`)) remove();
-        return;
-      }
-
       appPrompt.alert(title, message, [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -228,7 +223,7 @@ export function TodoListsOverview() {
             onRemove={() => removeList(item)}
             canMoveDown={index < lists.length - 1}
             canMoveUp={index > 0}
-            onPress={() => router.push(`/todos/${item.id}` as never)}
+            onPress={() => router.push(`/(tabs)/to-do/${item.id}` as never)}
           />
         </View>
       );

@@ -227,6 +227,17 @@ function cleanOptional(value: unknown, limit = 160) {
     : undefined;
 }
 
+/** Recipe source links must be https so synced lists cannot plant custom schemes. */
+function cleanHttpsUrl(value: unknown, limit = 2_000) {
+  const cleaned = cleanOptional(value, limit);
+  if (!cleaned) return undefined;
+  try {
+    return new URL(cleaned).protocol === 'https:' ? cleaned : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function finiteNonNegative(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? value
@@ -333,7 +344,7 @@ function normalizeRecipe(value: unknown): TodoRecipe | undefined {
     listId,
     name,
     sourceKind: candidate.sourceKind === 'image' ? 'image' : 'url',
-    sourceUrl: cleanOptional(candidate.sourceUrl, 2_000),
+    sourceUrl: cleanHttpsUrl(candidate.sourceUrl, 2_000),
     sourceImageUri: cleanOptional(candidate.sourceImageUri, 6_000_000),
     sourceImagePath: cleanOptional(candidate.sourceImagePath, 500),
     originalServings: positiveNumber(candidate.originalServings),
@@ -886,7 +897,7 @@ export const useTodos = create<TodoState>()(
           listId,
           name,
           sourceKind: input.sourceKind === 'image' ? 'image' : 'url',
-          sourceUrl: cleanOptional(input.sourceUrl, 2_000),
+          sourceUrl: cleanHttpsUrl(input.sourceUrl, 2_000),
           sourceImageUri:
             typeof input.sourceImageUri === 'string' && input.sourceImageUri.trim()
               ? input.sourceImageUri.trim()
@@ -953,7 +964,7 @@ export const useTodos = create<TodoState>()(
           sourceUrl:
             patch.sourceUrl === undefined
               ? recipe.sourceUrl
-              : cleanOptional(patch.sourceUrl, 2_000),
+              : cleanHttpsUrl(patch.sourceUrl, 2_000),
           targetServings:
             patch.targetServings === undefined
               ? recipe.targetServings

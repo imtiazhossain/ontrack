@@ -19,4 +19,9 @@ describe('authentication return route', () => {
     useAuthAccess.getState().setAuthReturnTo('https://example.com');
     expect(useAuthAccess.getState().takeAuthReturnTo()).toBeUndefined();
   });
+
+  it('rejects protocol-relative return locations', () => {
+    useAuthAccess.getState().setAuthReturnTo('//evil.example/phish');
+    expect(useAuthAccess.getState().takeAuthReturnTo()).toBeUndefined();
+  });
 });

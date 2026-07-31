@@ -2,50 +2,49 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  ErrorMessage,
-  ProgressRing,
-  Screen,
-  Symbol,
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    ErrorMessage,
+    IconButton,
+    ProgressRing,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
-  buildCombinedIngredients,
-  type CombinedCompletion,
+    buildCombinedIngredients,
+    type CombinedCompletion,
 } from '@/features/todos/grocery-utils';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
-  canCompleteTodo,
-  useTodos,
-  type TodoRecipe,
-  type TodoTask,
+    canCompleteTodo,
+    useTodos,
+    type TodoRecipe,
+    type TodoTask,
 } from '@/store/todos';
+import { useUI } from '@/store/ui';
 import { haptics } from '@/utils/haptics';
+import { openHttpsUrl, safeHttpsUrl } from '@/utils/safe-url';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type GroceryView = 'meal' | 'combined';
 
 function confirmDeleteRecipe(recipe: TodoRecipe, onDelete: () => void) {
   const title = `Delete “${recipe.name}”?`;
   const message = 'The meal and all of its ingredient items will be removed.';
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm(`${title}\n\n${message}`)) onDelete();
-    return;
-  }
   appPrompt.alert(title, message, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: onDelete },
@@ -55,6 +54,11 @@ function confirmDeleteRecipe(recipe: TodoRecipe, onDelete: () => void) {
 export function GroceryListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
+  const tabBarHeight =
+    measuredTabBarHeight ||
+    layout.floatingTabBarBaseHeight + insets.bottom;
   const { user } = useAuthSession();
   const list = useTodos((state) =>
     state.lists.find((item) => item.id === listId),
@@ -137,8 +141,23 @@ export function GroceryListScreen({ listId }: { listId: string }) {
   };
 
   return (
-    <Screen contentStyle={styles.screen}>
+    <Screen
+      bottomInset={false}
+      contentStyle={{
+        ...styles.screen,
+        paddingBottom: tabBarHeight + spacing.lg,
+      }}>
       <View style={styles.heading}>
+        <IconButton
+          icon="chevron-left"
+          size={40}
+          background="transparent"
+          accessibilityLabel="Back to checklists"
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)/to-do' as never);
+          }}
+        />
         <View style={styles.headingCopy}>
           <AppText variant="overline" color="accent">
             Grocery list
@@ -375,18 +394,14 @@ export function GroceryListScreen({ listId }: { listId: string }) {
               }
               clearCompleted(listId);
             };
-            if (Platform.OS === 'web') {
-              if (globalThis.confirm('Remove all checked items?')) clear();
-            } else {
-              appPrompt.alert(
-                'Clear checked items?',
-                `This removes ${completedCount} underlying ${completedCount === 1 ? 'item' : 'items'}.`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Clear', style: 'destructive', onPress: clear },
-                ],
-              );
-            }
+            appPrompt.alert(
+              'Clear checked items?',
+              `This removes ${completedCount} underlying ${completedCount === 1 ? 'item' : 'items'}.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Clear', style: 'destructive', onPress: clear },
+              ],
+            );
           }}>
           Clear {completedCount} checked
         </Button>
@@ -531,12 +546,12 @@ function MealCard({
       </Pressable>
       {!collapsed ? (
         <>
-          {(recipe.sourceUrl || listOwner) ? (
+          {(safeHttpsUrl(recipe.sourceUrl) || listOwner) ? (
             <View style={styles.mealActions}>
-              {recipe.sourceUrl ? (
+              {safeHttpsUrl(recipe.sourceUrl) ? (
                 <Pressable
                   accessibilityRole="link"
-                  onPress={() => void Linking.openURL(recipe.sourceUrl as string)}
+                  onPress={() => void openHttpsUrl(recipe.sourceUrl)}
                   style={styles.sourceLink}>
                   <Symbol
                     name="open-external"
@@ -713,10 +728,10 @@ const styles = StyleSheet.create({
   },
   heading: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
-  headingCopy: { flex: 1, gap: spacing.xs },
+  headingCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
   title: {
     fontFamily: fontFamilies.serif,
     fontSize: 35,

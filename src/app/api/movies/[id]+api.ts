@@ -1,11 +1,13 @@
-import { corsHeaders, normalizeMovieDetails, optionsResponse, tmdbRequest } from '@/services/movies/server';
 import { compressResponse } from '@/services/http/compression';
+import { assertMoviesAuthenticated, corsHeaders, normalizeMovieDetails, optionsResponse, tmdbRequest } from '@/services/movies/server';
 
-export function OPTIONS() {
-  return optionsResponse();
+export function OPTIONS(request: Request) {
+  return optionsResponse(request);
 }
 
 export async function GET(request: Request, { id }: { id: string }) {
+  const unauthorized = await assertMoviesAuthenticated(request);
+  if (unauthorized) return unauthorized;
   if (!/^\d+$/.test(id)) return Response.json({ error: 'Invalid movie ID.' }, { status: 400, headers: corsHeaders });
   const type = new URL(request.url).searchParams.get('type') ?? 'movie';
   if (type !== 'movie' && type !== 'tv') {

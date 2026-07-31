@@ -15,6 +15,7 @@ import {
 } from '@/utils/date';
 
 import { AppText } from './app-text';
+import { IconButton } from './button';
 import { Symbol } from './symbol';
 
 interface DateFieldProps {
@@ -119,22 +120,22 @@ export function DateField({
               },
             ]}>
             <Pressable
-              accessibilityLabel="Close calendar"
+              accessible={false}
               onPress={() => setShowPicker(false)}
               style={StyleSheet.absoluteFill}
             />
             <View style={[styles.calendarSheet, { backgroundColor: theme.backgroundElevated }]}>
               <View style={styles.calendarHeader}>
-                <AppText variant="subheading">{label}</AppText>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Done choosing date"
-                  hitSlop={8}
-                  onPress={() => setShowPicker(false)}>
-                  <AppText variant="callout" color="accent">
-                    Done
-                  </AppText>
-                </Pressable>
+                <AppText variant="subheading" style={styles.calendarTitle}>
+                  {label}
+                </AppText>
+                <IconButton
+                  icon="close"
+                  size={36}
+                  accessibilityLabel="Close calendar"
+                  background={theme.backgroundSunken}
+                  onPress={() => setShowPicker(false)}
+                />
               </View>
               <NativeDateTimePicker
                 value={date}
@@ -190,6 +191,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  calendarTitle: {
+    flex: 1,
+    minWidth: 0,
   },
   calendar: {
     width: '100%',

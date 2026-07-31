@@ -2,7 +2,7 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 import { DEFAULT_CATEGORIES } from '@/constants/categories';
 import { STORAGE_KEYS } from '@/services/storage';
 import { useSchedule } from '@/store/schedule';
-import type { Activity, Meal, Movie } from '@/types/models';
+import type { Activity, Meal, Movie, Workout, WorkSession } from '@/types/models';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
@@ -70,6 +70,75 @@ describe('schedule event saves', () => {
     const state = useSchedule.getState();
     expect(state.activities[0]).toMatchObject({ title: 'Updated lunch', startMinutes: 750 });
     expect(state.meals[0].items).toHaveLength(1);
+  });
+
+  it('copies meal details when duplicating a food event', () => {
+    useSchedule.getState().duplicateActivity(activity.id);
+    const state = useSchedule.getState();
+    expect(state.activities).toHaveLength(2);
+    expect(state.meals).toHaveLength(2);
+    expect(state.meals[1]).toMatchObject({
+      activityId: state.activities[1].id,
+      name: 'Lunch',
+      mealType: 'lunch',
+    });
+    expect(state.meals[1].items).not.toBe(meal.items);
+  });
+
+  it('resets execution state when duplicating completed sessions', () => {
+    const workoutActivity: Activity = {
+      ...activity,
+      id: 'workout-event',
+      categoryId: 'gym',
+      status: 'completed',
+    };
+    const workActivity: Activity = {
+      ...activity,
+      id: 'work-event',
+      categoryId: 'work',
+      status: 'completed',
+    };
+    const workout: Workout = {
+      activityId: workoutActivity.id,
+      type: 'strength',
+      name: 'Strength',
+      startedAt: '2026-07-10T12:00:00.000Z',
+      finishedAt: '2026-07-10T12:45:00.000Z',
+      exercises: [{
+        id: 'exercise-1',
+        name: 'Squat',
+        icon: 'figure-strengthtraining-traditional',
+        restSeconds: 60,
+        sets: [{ id: 'set-1', reps: 8, weightKg: 60, done: true }],
+      }],
+    };
+    const workSession: WorkSession = {
+      activityId: workActivity.id,
+      focusMinutes: 45,
+      tasks: [{ id: 'work-task-1', title: 'Outline', done: true, priority: 'high' }],
+    };
+    useSchedule.setState({
+      activities: [workoutActivity, workActivity],
+      meals: [],
+      workouts: [workout],
+      workSessions: [workSession],
+      movies: [],
+    });
+
+    useSchedule.getState().duplicateActivity(workoutActivity.id);
+    useSchedule.getState().duplicateActivity(workActivity.id);
+
+    const state = useSchedule.getState();
+    expect(state.activities.slice(2).every((item) => item.status === 'upcoming')).toBe(true);
+    expect(state.workouts[1]).toMatchObject({
+      startedAt: undefined,
+      finishedAt: undefined,
+      exercises: [{ sets: [{ done: false }] }],
+    });
+    expect(state.workSessions[1]).toMatchObject({
+      focusMinutes: 0,
+      tasks: [{ done: false }],
+    });
   });
 
   it('removes incompatible detail records after a type change', () => {

@@ -4,6 +4,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
+import { authHeader } from '@/services/cloud/access-token';
 import type {
   RecipeImportApiError,
   RecipeImportDraft,
@@ -45,7 +46,7 @@ export async function analyzeRecipe(
   try {
     response = await fetch(apiUrl('/recipe-imports/analyze'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(request),
       signal,
     });

@@ -15,6 +15,12 @@ export default function RootHtml({ children }: PropsWithChildren) {
           name="description"
           content="Open shared checklists, travel plans, dates, and itineraries in onTrack."
         />
+        {/* Defense-in-depth against XSS on the web invite shell. Prefer HTTP
+            headers at the edge when available; meta cannot set frame-ancestors. */}
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'"
+        />
         <style
           dangerouslySetInnerHTML={{
             __html:

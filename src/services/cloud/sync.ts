@@ -265,6 +265,27 @@ async function pushDomain(userId: string, domain: (typeof domains)[number]) {
   await pushDomains(userId, [domain]);
 }
 
+/** Serialize per-domain uploads so a slower older snapshot cannot overwrite a newer one. */
+const domainPushChains = new Map<SyncDomainName, Promise<void>>();
+
+function enqueueDomainPush(userId: string, domain: (typeof domains)[number]) {
+  const previous = domainPushChains.get(domain.name) ?? Promise.resolve();
+  const next = previous
+    .catch(() => undefined)
+    .then(() => {
+      if (activeUserId !== userId) return;
+      return pushDomain(userId, domain);
+    });
+  domainPushChains.set(domain.name, next);
+  const cleanup = () => {
+    if (domainPushChains.get(domain.name) === next) {
+      domainPushChains.delete(domain.name);
+    }
+  };
+  void next.then(cleanup, cleanup);
+  return next;
+}
+
 function startSubscriptions(userId: string, email?: string) {
   stopSubscriptions?.();
   const timers = new Map<SyncDomainName, ReturnType<typeof setTimeout>>();
@@ -276,8 +297,9 @@ function startSubscriptions(userId: string, email?: string) {
         domain.name,
         setTimeout(() => {
           timers.delete(domain.name);
-          void pushDomain(userId, domain)
+          void enqueueDomainPush(userId, domain)
             .then(() => {
+              if (activeUserId !== userId) return;
               useCloudSyncStatus.setState({
                 state: 'synced',
                 email,
@@ -286,6 +308,7 @@ function startSubscriptions(userId: string, email?: string) {
               });
             })
             .catch((error: unknown) => {
+              if (activeUserId !== userId) return;
               useCloudSyncStatus.setState({
                 state: 'error',
                 email,
@@ -351,9 +374,10 @@ async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
   stopSubscriptions = undefined;
 
   // Only replace domains the account already stores. Newly added domains
-  // (or domains that failed to upload) keep local device data and sync up
-  // once subscriptions resume.
+  // (or domains that failed to upload) keep local device data and are returned
+  // so the caller can upload them before subscriptions start.
   const replacing = domains.filter((domain) => resolved.has(domain.name));
+  const retained = domains.filter((domain) => !resolved.has(domain.name));
   const replacingPlants = replacing.some((domain) => domain.name === 'plants');
   const replacingSchedule = replacing.some((domain) => domain.name === 'schedule');
   await deleteAppOwnedMedia({
@@ -365,9 +389,15 @@ async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
     domain.reset();
     domain.write(resolved.get(domain.name)!);
   }
+  // Refresh any signed URLs still living in retained local domains (e.g. an
+  // older vision-board row that never made it to this account).
+  for (const domain of retained) {
+    domain.write(await resolveCloudMedia(domain.read()));
+  }
   if (replacingSchedule) {
     useNutrition.getState().reset();
   }
+  return retained;
 }
 
 export function hasMeaningfulLocalData(): boolean {
@@ -432,7 +462,10 @@ export async function prepareAccountSync(
     pendingRemote = remote;
     return 'conflict';
   } else {
-    await applyRemote(remote);
+    const retained = await applyRemote(remote);
+    if (retained.length > 0) {
+      await pushDomains(userId, retained);
+    }
   }
 
   pendingRemote = undefined;
@@ -451,7 +484,10 @@ export async function resolveAccountSync(choice: 'cloud' | 'device') {
   if (!activeUserId || !pendingRemote) throw new Error('There is no data choice to resolve.');
   useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
   if (choice === 'cloud') {
-    await applyRemote(pendingRemote);
+    const retained = await applyRemote(pendingRemote);
+    if (retained.length > 0) {
+      await pushDomains(activeUserId, retained);
+    }
   } else {
     await pushDomains(activeUserId, domains);
   }

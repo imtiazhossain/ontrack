@@ -5,6 +5,8 @@ import { addDays, fromDateKey, toDateKey, todayKey } from '@/utils/date';
 import { cancelPlantNotification, scheduleWateringNotification } from './notifications';
 import { deletePlantPhotos } from './media';
 
+const wateringInFlight = new Set<string>();
+
 export function wateringDueAt(from: string | Date, intervalDays: number, reminderMinutes: number): string {
   const dateKey = addDays(toDateKey(new Date(from)), Math.max(1, Math.round(intervalDays)));
   const date = fromDateKey(dateKey);
@@ -49,27 +51,33 @@ export async function activatePlantSchedule(plantId: string, requestPermission =
 }
 
 export async function logPlantWatering(plantId: string, amountMl?: number, wateredAt = new Date()) {
-  const plant = usePlants.getState().plants.find((item) => item.id === plantId);
-  if (!plant) return;
-  await cancelPlantNotification(plant.notificationId);
-  if (plant.wateringActivityId) useSchedule.getState().setStatus(plant.wateringActivityId, 'completed');
-  const log: WateringLog = {
-    id: newId('watering'),
-    wateredAt: wateredAt.toISOString(),
-    amountMl,
-    activityId: plant.wateringActivityId,
-    priorNextWateringAt: plant.nextWateringAt,
-  };
-  const nextWateringAt = wateringDueAt(wateredAt, plant.carePlan.watering.intervalDays, plant.reminderMinutes);
-  usePlants.getState().addWateringLog(plant.id, log);
-  usePlants.getState().updatePlant(plant.id, {
-    lastWateredAt: log.wateredAt,
-    nextWateringAt,
-    notificationId: undefined,
-    wateringActivityId: undefined,
-  });
-  const updated = usePlants.getState().plants.find((item) => item.id === plant.id);
-  if (updated) await createPendingActivity(updated, false);
+  if (wateringInFlight.has(plantId)) return;
+  wateringInFlight.add(plantId);
+  try {
+    const plant = usePlants.getState().plants.find((item) => item.id === plantId);
+    if (!plant) return;
+    await cancelPlantNotification(plant.notificationId);
+    if (plant.wateringActivityId) useSchedule.getState().setStatus(plant.wateringActivityId, 'completed');
+    const log: WateringLog = {
+      id: newId('watering'),
+      wateredAt: wateredAt.toISOString(),
+      amountMl,
+      activityId: plant.wateringActivityId,
+      priorNextWateringAt: plant.nextWateringAt,
+    };
+    const nextWateringAt = wateringDueAt(wateredAt, plant.carePlan.watering.intervalDays, plant.reminderMinutes);
+    usePlants.getState().addWateringLog(plant.id, log);
+    usePlants.getState().updatePlant(plant.id, {
+      lastWateredAt: log.wateredAt,
+      nextWateringAt,
+      notificationId: undefined,
+      wateringActivityId: undefined,
+    });
+    const updated = usePlants.getState().plants.find((item) => item.id === plant.id);
+    if (updated) await createPendingActivity(updated, false);
+  } finally {
+    wateringInFlight.delete(plantId);
+  }
 }
 
 export async function undoPlantWatering(activityId: string) {

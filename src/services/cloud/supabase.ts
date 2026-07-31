@@ -1,5 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
 
 const secureStorage = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
@@ -7,6 +7,8 @@ const secureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+// Web cannot use SecureStore. localStorage remains XSS-readable; keep the web
+// surface minimal, enforce CSP, and prefer native builds for full auth sessions.
 const webStorage = {
   getItem: (key: string) =>
     typeof localStorage === 'undefined' ? null : localStorage.getItem(key),

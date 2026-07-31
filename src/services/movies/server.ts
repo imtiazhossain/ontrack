@@ -1,18 +1,35 @@
+import { gatePaidApiRequest } from '@/services/http/api-gate';
+import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
 
 import { normalizeMovieDetails, normalizeSearchMovie } from './normalize';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'no-store',
-};
+export const corsHeaders = apiCorsHeaders(undefined, 'GET, OPTIONS');
 
-export function optionsResponse() {
-  return new Response(null, { status: 204, headers: corsHeaders });
+export function optionsResponse(request?: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: apiCorsHeaders(request, 'GET, OPTIONS'),
+  });
+}
+
+export async function assertMoviesAuthenticated(request: Request) {
+  const gate = await gatePaidApiRequest(request, 'movies');
+  if (gate === 'unauthenticated') {
+    return Response.json(
+      { error: 'Sign in to search movies.' },
+      { status: 401, headers: corsHeaders },
+    );
+  }
+  if (gate === 'rate_limited') {
+    return Response.json(
+      { error: 'Too many movie searches. Please try again later.' },
+      { status: 429, headers: corsHeaders },
+    );
+  }
+  return undefined;
 }
 
 export async function tmdbRequest(path: string) {

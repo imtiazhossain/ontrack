@@ -1,18 +1,19 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, appPrompt, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
+import { appPrompt, AppText, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import {
-  addPruningActivity,
-  deletePlant,
-  logPlantWatering,
-  undoPlantWatering,
+    addPruningActivity,
+    deletePlant,
+    logPlantWatering,
+    undoPlantWatering,
 } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
 import { formatDateLong, formatMinutes, toDateKey, todayKey } from '@/utils/date';
+import { openHttpsUrl } from '@/utils/safe-url';
 
 export default function PlantDetailScreen() {
   const router = useRouter();
@@ -94,7 +95,14 @@ export default function PlantDetailScreen() {
       {plant.wateringLogs.slice().reverse().slice(0, 5).map((log) => <AppText key={log.id} variant="caption" color="secondary">Watered {new Date(log.wateredAt).toLocaleString()}{log.amountMl ? ` · ${log.amountMl} mL` : ''}</AppText>)}
 
       <SectionHeader title="Care sources" />
-      {plant.carePlan.sources.map((source) => <AppText key={source.url} color="accent" onPress={() => Linking.openURL(source.url)}>{source.title}</AppText>)}
+      {plant.carePlan.sources.map((source) => (
+        <AppText
+          key={source.url}
+          color="accent"
+          onPress={() => void openHttpsUrl(source.url)}>
+          {source.title}
+        </AppText>
+      ))}
       <AppText variant="caption" color="tertiary">{plant.carePlan.disclaimer}</AppText>
       <Button variant="danger" onPress={remove}>Delete plant</Button>
     </Screen>

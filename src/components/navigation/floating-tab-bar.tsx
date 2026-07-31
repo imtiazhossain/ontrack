@@ -1,25 +1,25 @@
+import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { Tabs, type Href, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Symbol } from '@/components/primitives';
-import { borders, layout, radii, spacing, typography } from '@/design-system';
 import type { AppIconName } from '@/design-system';
+import { borders, layout, radii, spacing, typography } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { useTodos } from '@/store/todos';
@@ -370,12 +370,15 @@ export function FloatingTabBar({
                   theme.name === 'dark'
                     ? theme.separator
                     : theme.backgroundSunken,
+                // Soft copper glow matching the selected tab accent.
+                // Kept on the outer capsule (no overflow clip) so it paints.
                 boxShadow:
                   theme.name === 'dark'
-                    ? '0 8px 28px rgba(0, 0, 0, 0.30)'
-                    : '0 5px 22px rgba(54, 43, 33, 0.11)',
+                    ? '0 8px 28px rgba(177, 138, 101, 0.32)'
+                    : '0 5px 22px rgba(154, 118, 84, 0.22)',
               },
             ]}>
+            <View style={styles.capsuleClip}>
             <Animated.View
               style={[
                 styles.carouselTrack,
@@ -407,9 +410,8 @@ export function FloatingTabBar({
                 carouselSwipeClaimed: true,
               });
               // Navigate immediately; menu centering finishes after.
-              if (route.name !== selectedRoute.name) {
-                router.navigate(TAB_META[route.name].href);
-              }
+              // Re-selecting a tab also returns a nested stack to its root.
+              router.navigate(TAB_META[route.name].href);
               const targetItems = centerSlot - slotIndex;
               positionItems.value = withSpring(
                 targetItems,
@@ -476,6 +478,7 @@ export function FloatingTabBar({
           );
         })}
             </Animated.View>
+            </View>
           </Animated.View>
         </GestureDetector>
       )}
@@ -497,9 +500,14 @@ const styles = StyleSheet.create({
   },
   capsule: {
     flex: 1,
+    borderWidth: borders.hairline,
+    borderRadius: radii.xl,
+    borderCurve: 'continuous',
+  },
+  capsuleClip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderWidth: borders.hairline,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
     overflow: 'hidden',

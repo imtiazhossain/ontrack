@@ -38,7 +38,16 @@ function isNutrientValue(v: unknown): boolean {
 function isSource(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false;
   const o = v as Record<string, unknown>;
-  return isNonEmptyString(o.id) && isNonEmptyString(o.kind) && isNonEmptyString(o.title);
+  if (!isNonEmptyString(o.id) || !isNonEmptyString(o.kind) || !isNonEmptyString(o.title)) {
+    return false;
+  }
+  if (o.url === undefined) return true;
+  if (typeof o.url !== 'string') return false;
+  try {
+    return new URL(o.url).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /**

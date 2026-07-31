@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { fetch } from 'expo/fetch';
 import { Platform } from 'react-native';
 
+import { authHeader } from '@/services/cloud/access-token';
 import type { FlightApiError, FlightSearchInput, FlightSearchResponse } from './types';
 
 const FLIGHT_SEARCH_TIMEOUT_MS = 25_000;
@@ -50,7 +51,7 @@ export async function searchFlights(
   try {
     response = await fetch(apiUrl('/travel/flights/search'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(input),
       signal: requestController.signal,
     });

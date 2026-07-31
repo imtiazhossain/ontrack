@@ -6,52 +6,35 @@ import { travelChatAccessCode } from '@/features/travel/chat';
 
 jest.mock('expo-notifications', () => ({}));
 
-const migrationPath = path.join(
+const hardeningMigrationPath = path.join(
   process.cwd(),
-  'supabase/migrations/202607270007_all_accounts_test_trip_chat.sql',
-);
-const anonymousMigrationPath = path.join(
-  process.cwd(),
-  'supabase/migrations/202607270008_anonymous_test_trip_chat.sql',
+  'supabase/migrations/202607300001_security_hardening.sql',
 );
 
 describe('all-accounts test trip chat', () => {
-  const migration = fs.readFileSync(migrationPath, 'utf8');
-  const anonymousMigration = fs.readFileSync(anonymousMigrationPath, 'utf8');
+  const hardening = fs.readFileSync(hardeningMigrationPath, 'utf8');
 
-  it('ships the shared chat capability with the test fixture', () => {
+  it('ships the shared chat capability with the test fixture for signed-in local testing', () => {
     expect(travelChatAccessCode(ALL_ACCOUNTS_TEST_TRIP)).toBe(
       '00000000000000000001',
     );
   });
 
-  it('allows a signed-in account to resolve only the test trip capability', () => {
-    expect(migration).toContain(
-      "chat_access_code = '00000000000000000001'",
+  it('removes the anonymous fixture and restricts chat RPCs to authenticated users', () => {
+    expect(hardening).toContain(
+      "delete from public.travel_invites\nwhere code = '00000000000000000001'",
     );
-    expect(migration).toContain(
-      "select 'trip-all-accounts-test'::text as trip_id",
+    expect(hardening).toContain(
+      'revoke all on function public.travel_chat_messages(text) from public, anon',
     );
-    expect(migration).toMatch(
-      /chat_access_code = '00000000000000000001'[\s\S]*?auth\.uid\(\) is not null/,
+    expect(hardening).toContain(
+      'grant execute on function public.travel_chat_messages(text) to authenticated',
     );
-    expect(migration).toMatch(
-      /invite\.code <> '00000000000000000001'[\s\S]*?invite\.inviter_user_id = auth\.uid\(\)[\s\S]*?invite\.accepted_by_user_id = auth\.uid\(\)/,
+    expect(hardening).toMatch(
+      /invite\.inviter_user_id = auth\.uid\(\)[\s\S]*?invite\.accepted_by_user_id = auth\.uid\(\)/,
     );
-  });
-
-  it('lets signed-out app sessions use only the fixed test capability', () => {
-    expect(anonymousMigration).toMatch(
-      /chat_access_code = '00000000000000000001'\s*\n/,
-    );
-    expect(anonymousMigration).toMatch(
-      /invite\.code <> '00000000000000000001'[\s\S]*?auth\.uid\(\) is not null/,
-    );
-    expect(anonymousMigration).toContain(
-      'grant execute on function public.travel_chat_messages(text)',
-    );
-    expect(anonymousMigration).toContain(
-      'grant execute on function public.send_travel_chat_message(text, uuid, text, text)',
+    expect(hardening).not.toMatch(
+      /grant execute on function public\.travel_chat_messages\(text\)\s+to anon/,
     );
   });
 });

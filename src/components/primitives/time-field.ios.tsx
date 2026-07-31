@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { formatMinutes, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
+import { IconButton } from './button';
 import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
@@ -72,22 +73,22 @@ export function TimeField({
             },
           ]}>
           <Pressable
-            accessibilityLabel="Close time picker"
+            accessible={false}
             onPress={() => setShowPicker(false)}
             style={StyleSheet.absoluteFill}
           />
           <View style={[styles.pickerSheet, { backgroundColor: theme.backgroundElevated }]}>
             <View style={styles.pickerHeader}>
-              <AppText variant="subheading">{label}</AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Done choosing time"
-                hitSlop={8}
-                onPress={() => setShowPicker(false)}>
-                <AppText variant="callout" color="accent">
-                  Done
-                </AppText>
-              </Pressable>
+              <AppText variant="subheading" style={styles.pickerTitle}>
+                {label}
+              </AppText>
+              <IconButton
+                icon="close"
+                size={36}
+                accessibilityLabel="Close time picker"
+                background={theme.backgroundSunken}
+                onPress={() => setShowPicker(false)}
+              />
             </View>
             <ExpoDateTimePicker
               value={minutesToDate(minutes)}
@@ -141,6 +142,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  pickerTitle: {
+    flex: 1,
+    minWidth: 0,
   },
   timePicker: {
     width: '100%',

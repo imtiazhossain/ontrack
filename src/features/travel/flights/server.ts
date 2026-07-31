@@ -1,27 +1,41 @@
-import { normalizeFlightOffers } from './normalize';
-import type { FlightSearchInput, FlightSearchResponse } from './types';
+import { gatePaidApiRequest } from '@/services/http/api-gate';
+import { apiCorsHeaders } from '@/services/http/cors';
 import { guardedFetch } from '@/services/http/dependency-guard';
 import { isDateKey } from '@/utils/date';
+import { normalizeFlightOffers } from './normalize';
+import type { FlightSearchInput, FlightSearchResponse } from './types';
 
 const TEST_BASE_URL = 'https://test.api.amadeus.com';
 const LIVE_BASE_URL = 'https://api.amadeus.com';
 
 let cachedToken: { value: string; expiresAt: number } | undefined;
 
-export const flightCorsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'no-store',
-};
+export const flightCorsHeaders = apiCorsHeaders();
 
-export function flightOptionsResponse() {
-  return new Response(null, { status: 204, headers: flightCorsHeaders });
+export function flightOptionsResponse(request?: Request) {
+  return new Response(null, { status: 204, headers: apiCorsHeaders(request) });
+}
+
+export async function assertFlightsAuthenticated(request: Request) {
+  const gate = await gatePaidApiRequest(request, 'flights');
+  if (gate === 'unauthenticated') {
+    return Response.json(
+      { error: 'Sign in to search flights.', code: 'PERMISSION_DENIED' },
+      { status: 401, headers: flightCorsHeaders },
+    );
+  }
+  if (gate === 'rate_limited') {
+    return Response.json(
+      { error: 'Too many flight searches. Try again later.', code: 'RATE_LIMITED' },
+      { status: 429, headers: flightCorsHeaders },
+    );
+  }
+  return undefined;
 }
 
 function errorResponse(
   error: string,
-  code: 'INVALID_SEARCH' | 'NOT_CONFIGURED' | 'NO_AIRPORT' | 'RATE_LIMITED' | 'PROVIDER_FAILURE',
+  code: 'INVALID_SEARCH' | 'NOT_CONFIGURED' | 'NO_AIRPORT' | 'RATE_LIMITED' | 'PROVIDER_FAILURE' | 'PERMISSION_DENIED',
   status: number,
 ) {
   return Response.json({ error, code }, { status, headers: flightCorsHeaders });

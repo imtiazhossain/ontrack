@@ -1,5 +1,6 @@
 import {
   assertAnalysisEnabled,
+  assertNutritionAuthenticated,
   nutritionCorsHeaders,
   nutritionError,
   nutritionOptionsResponse,
@@ -12,6 +13,8 @@ export function OPTIONS() { return nutritionOptionsResponse(); }
 export async function POST(request: Request) {
   const disabled = assertAnalysisEnabled();
   if (disabled) return disabled;
+  const unauthorized = await assertNutritionAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = await request.json().catch(() => undefined) as { url?: string } | undefined;
   if (!input?.url || input.url.length > 2_000) return nutritionError('Enter a valid meal link.', 'INVALID_URL', 400);
   try {

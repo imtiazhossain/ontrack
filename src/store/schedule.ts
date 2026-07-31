@@ -288,13 +288,56 @@ export const useSchedule = create<ScheduleState>()(
         if (!src) return;
         const now = new Date().toISOString();
         const duplicateId = newId();
+        const meal = get().meals.find((item) => item.activityId === id);
+        const workout = get().workouts.find((item) => item.activityId === id);
+        const workSession = get().workSessions.find((item) => item.activityId === id);
         const movie = get().movies.find((item) => item.activityId === id);
         set((s) => ({
           activities: [
             ...s.activities,
             { ...src, id: duplicateId, status: 'upcoming', createdAt: now, updatedAt: now },
           ],
-          movies: movie ? [...s.movies, { ...movie, activityId: duplicateId, genres: [...movie.genres] }] : s.movies,
+          meals: meal
+            ? [
+                ...s.meals,
+                {
+                  ...meal,
+                  activityId: duplicateId,
+                  hungerBefore: undefined,
+                  fullnessAfter: undefined,
+                  items: meal.items.map((item) => ({ ...item })),
+                },
+              ]
+            : s.meals,
+          workouts: workout
+            ? [
+                ...s.workouts,
+                {
+                  ...workout,
+                  activityId: duplicateId,
+                  startedAt: undefined,
+                  finishedAt: undefined,
+                  exercises: workout.exercises.map((exercise) => ({
+                    ...exercise,
+                    sets: exercise.sets.map((set) => ({ ...set, done: false })),
+                  })),
+                },
+              ]
+            : s.workouts,
+          workSessions: workSession
+            ? [
+                ...s.workSessions,
+                {
+                  ...workSession,
+                  activityId: duplicateId,
+                  focusMinutes: 0,
+                  tasks: workSession.tasks.map((task) => ({ ...task, done: false })),
+                },
+              ]
+            : s.workSessions,
+          movies: movie
+            ? [...s.movies, { ...movie, activityId: duplicateId, genres: [...movie.genres] }]
+            : s.movies,
         }));
       },
 

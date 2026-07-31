@@ -1,11 +1,13 @@
-import { corsHeaders, normalizeSearchMovie, optionsResponse, tmdbRequest } from '@/services/movies/server';
 import { compressResponse } from '@/services/http/compression';
+import { assertMoviesAuthenticated, corsHeaders, normalizeSearchMovie, optionsResponse, tmdbRequest } from '@/services/movies/server';
 
-export function OPTIONS() {
-  return optionsResponse();
+export function OPTIONS(request: Request) {
+  return optionsResponse(request);
 }
 
 export async function GET(request: Request) {
+  const unauthorized = await assertMoviesAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const query = new URL(request.url).searchParams.get('q')?.trim() ?? '';
   if (query.length < 2 || query.length > 100) {
     return Response.json({ error: 'Search must be between 2 and 100 characters.' }, { status: 400, headers: corsHeaders });

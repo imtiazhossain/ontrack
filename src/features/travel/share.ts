@@ -5,10 +5,10 @@ import { formatDateLong } from '@/utils/date';
 
 import { normalizeTravelItinerary } from './normalize';
 import type {
-  TravelFlightDetails,
-  TravelItineraryItem,
-  TravelItemKind,
-  TravelPlan,
+    TravelFlightDetails,
+    TravelItemKind,
+    TravelItineraryItem,
+    TravelPlan,
 } from './types';
 
 export const ONTRACK_APP_STORE_URL = 'https://apps.apple.com/app/id6789723522';
@@ -66,13 +66,13 @@ function decodeBase64Url(value: string): string {
 
 function compactFlightDetails(details?: TravelFlightDetails) {
   if (!details) return undefined;
+  // Omit confirmation codes and seats from shareable invite payloads — those
+  // are capability-bearing PII and must not live in base64url links.
   return [
     details.airline,
     details.flightNumber,
-    details.confirmationCode,
     details.departureAirport,
     details.arrivalAirport,
-    details.seat,
   ];
 }
 
@@ -86,7 +86,8 @@ function compactItineraryItem(item: TravelItineraryItem) {
     item.startMinutes,
     item.durationMinutes,
     item.details,
-    item.bookingUrl,
+    // bookingUrl omitted from encoded invites (open redirect / tracking risk)
+    undefined,
     compactFlightDetails(item.flight),
   ];
 }
@@ -110,15 +111,24 @@ function stringAt(value: unknown[], index: number): string | undefined {
 function expandItineraryItem(value: unknown): unknown {
   if (!Array.isArray(value)) return value;
   const kind = { f: 'flight', s: 'stay', a: 'activity' }[stringAt(value, 1) ?? ''];
-  const flight = Array.isArray(value[8])
-    ? {
-        airline: stringAt(value[8], 0),
-        flightNumber: stringAt(value[8], 1),
-        confirmationCode: stringAt(value[8], 2),
-        departureAirport: stringAt(value[8], 3),
-        arrivalAirport: stringAt(value[8], 4),
-        seat: stringAt(value[8], 5),
-      }
+  const flightRaw = Array.isArray(value[8]) ? value[8] : undefined;
+  // New encodes omit confirmation/seat (4 fields). Legacy encodes had 6.
+  const flight = flightRaw
+    ? flightRaw.length >= 6
+      ? {
+          airline: stringAt(flightRaw, 0),
+          flightNumber: stringAt(flightRaw, 1),
+          confirmationCode: stringAt(flightRaw, 2),
+          departureAirport: stringAt(flightRaw, 3),
+          arrivalAirport: stringAt(flightRaw, 4),
+          seat: stringAt(flightRaw, 5),
+        }
+      : {
+          airline: stringAt(flightRaw, 0),
+          flightNumber: stringAt(flightRaw, 1),
+          departureAirport: stringAt(flightRaw, 2),
+          arrivalAirport: stringAt(flightRaw, 3),
+        }
     : undefined;
   return {
     id: stringAt(value, 0),
@@ -241,6 +251,11 @@ export function findMatchingTravelPlan(
 ): TravelPlan | undefined {
   const identity = travelPlanIdentity(candidate);
   return plans.find((plan) => travelPlanIdentity(plan) === identity);
+}
+
+/** Local id for a short invite code so distinct trips never collapse on title/dates. */
+export function travelInviteLocalId(inviteCode: string): string {
+  return `trip-invite-${inviteCode}`;
 }
 
 export class TravelInviteError extends Error {

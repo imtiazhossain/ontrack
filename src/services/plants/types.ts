@@ -1,8 +1,8 @@
 import type {
-  PlantCarePlan,
-  PlantHealthAssessment,
-  PlantIdentity,
-  RoomProfile,
+    PlantCarePlan,
+    PlantHealthAssessment,
+    PlantIdentity,
+    RoomProfile,
 } from '@/types/models';
 
 export type PlantServiceErrorCode =
@@ -11,6 +11,8 @@ export type PlantServiceErrorCode =
   | 'INVALID_INPUT'
   | 'OFFLINE'
   | 'PROVIDER_FAILURE'
+  | 'PERMISSION_DENIED'
+  | 'RATE_LIMITED'
   | 'NOT_CONFIGURED';
 
 export interface PlantApiErrorBody {

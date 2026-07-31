@@ -5,8 +5,11 @@ import { getSupabaseClient } from './supabase';
 const BUCKET = 'app-media';
 const MARKER_PREFIX = 'ontrack-media:';
 const MISSING_LOCAL_MEDIA = Symbol('missing-local-media');
+/** Signed URLs are minted for 30 days; refresh from cache well before expiry. */
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30;
+const SIGNED_URL_CACHE_MS = 60 * 60 * 24 * 7 * 1000;
 const localUploadCache = new Map<string, string>();
-const signedUrlCache = new Map<string, string>();
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 function stableHash(value: string) {
   let hash = 2166136261;
@@ -40,6 +43,10 @@ function markerFromSignedUrl(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function isImageItem(value: object): boolean {
+  return (value as { kind?: unknown }).kind === 'image';
 }
 
 async function uploadLocalUri(userId: string, domain: string, uri: string) {
@@ -84,32 +91,50 @@ async function prepareValue(userId: string, domain: string, value: unknown): Pro
     return items.filter((item) => item !== MISSING_LOCAL_MEDIA);
   }
   if (value && typeof value === 'object') {
-    const entries = (await Promise.all(
+    const entries = await Promise.all(
       Object.entries(value).map(async ([key, item]) => [
         key,
         await prepareValue(userId, domain, item),
       ] as const),
-    )).filter(([, item]) => item !== MISSING_LOCAL_MEDIA);
-    return Object.fromEntries(entries);
+    );
+    // Vision-board image cards are useless without their media. Drop the whole
+    // item instead of uploading a kind:'image' record with no uri.
+    if (
+      isImageItem(value) &&
+      entries.some(([key, item]) => key === 'uri' && item === MISSING_LOCAL_MEDIA)
+    ) {
+      return MISSING_LOCAL_MEDIA;
+    }
+    return Object.fromEntries(entries.filter(([, item]) => item !== MISSING_LOCAL_MEDIA));
   }
   return value;
 }
 
 async function resolveMarker(marker: string) {
   const cached = signedUrlCache.get(marker);
-  if (cached) return cached;
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
   const client = getSupabaseClient();
   if (!client) return marker;
   const path = marker.slice(MARKER_PREFIX.length);
-  const { data, error } = await client.storage.from(BUCKET).createSignedUrl(path, 60 * 60 * 24 * 30);
+  const { data, error } = await client.storage
+    .from(BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
   if (error) throw error;
-  signedUrlCache.set(marker, data.signedUrl);
+  signedUrlCache.set(marker, {
+    url: data.signedUrl,
+    expiresAt: Date.now() + SIGNED_URL_CACHE_MS,
+  });
   return data.signedUrl;
 }
 
 async function resolveValue(value: unknown): Promise<unknown> {
-  if (typeof value === 'string' && value.startsWith(MARKER_PREFIX)) {
-    return resolveMarker(value);
+  if (typeof value === 'string') {
+    if (value.startsWith(MARKER_PREFIX)) return resolveMarker(value);
+    // Persisted board/meal state may still hold an older signed URL. Re-mint
+    // from the embedded storage path so cold launches and long sessions stay valid.
+    const marker = markerFromSignedUrl(value);
+    if (marker) return resolveMarker(marker);
+    return value;
   }
   if (Array.isArray(value)) return Promise.all(value.map(resolveValue));
   if (value && typeof value === 'object') {

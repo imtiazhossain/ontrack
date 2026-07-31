@@ -30,8 +30,8 @@ export const fontFamilies = Platform.select({
 export type TypeVariant = keyof typeof typography;
 
 /**
- * Editorial type scale: serif display faces for headlines and dates,
- * the system sans for body and UI chrome.
+ * Editorial type scale: the serif display face is used for all readable UI
+ * text. Mono remains reserved for technical/code content.
  */
 export const typography = {
   display: {
@@ -55,13 +55,13 @@ export const typography = {
     fontWeight: '400',
     letterSpacing: -0.2,
   },
-  subheading: { fontFamily: fontFamilies.sans, fontSize: 17, lineHeight: 23, fontWeight: '500' },
-  body: { fontFamily: fontFamilies.sans, fontSize: 15.5, lineHeight: 22, fontWeight: '400' },
-  bodyMedium: { fontFamily: fontFamilies.sans, fontSize: 15.5, lineHeight: 22, fontWeight: '500' },
-  callout: { fontFamily: fontFamilies.sans, fontSize: 14, lineHeight: 19, fontWeight: '400' },
-  caption: { fontFamily: fontFamilies.sans, fontSize: 12.5, lineHeight: 17, fontWeight: '400' },
+  subheading: { fontFamily: fontFamilies.serif, fontSize: 17, lineHeight: 23, fontWeight: '500' },
+  body: { fontFamily: fontFamilies.serif, fontSize: 15.5, lineHeight: 22, fontWeight: '400' },
+  bodyMedium: { fontFamily: fontFamilies.serif, fontSize: 15.5, lineHeight: 22, fontWeight: '500' },
+  callout: { fontFamily: fontFamilies.serif, fontSize: 14, lineHeight: 19, fontWeight: '400' },
+  caption: { fontFamily: fontFamilies.serif, fontSize: 12.5, lineHeight: 17, fontWeight: '400' },
   overline: {
-    fontFamily: fontFamilies.sans,
+    fontFamily: fontFamilies.serif,
     fontSize: 11.5,
     lineHeight: 15,
     fontWeight: '500',

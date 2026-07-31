@@ -2,6 +2,7 @@ import { canUsePlantIdentityForCare, validatePlantHealth, validatePlantIdentity 
 import { compressResponse } from '@/services/http/compression';
 import {
   assertPlantAnalysisEnabled,
+  assertPlantAuthenticated,
   createCarePlan,
   plantCorsHeaders,
   plantError,
@@ -15,6 +16,8 @@ export function OPTIONS() { return plantOptionsResponse(); }
 export async function POST(request: Request) {
   const disabled = assertPlantAnalysisEnabled();
   if (disabled) return disabled;
+  const unauthorized = await assertPlantAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = await request.json().catch(() => undefined) as Record<string, unknown> | undefined;
   const identity = validatePlantIdentity(input?.identity);
   const health = validatePlantHealth(input?.health);

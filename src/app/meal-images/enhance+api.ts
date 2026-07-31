@@ -1,5 +1,6 @@
 import {
   assertAnalysisEnabled,
+  assertNutritionAuthenticated,
   enhanceMealImage,
   nutritionCorsHeaders,
   nutritionError,
@@ -13,6 +14,8 @@ export function OPTIONS() { return nutritionOptionsResponse(); }
 export async function POST(request: Request) {
   const disabled = assertAnalysisEnabled('cloud');
   if (disabled) return disabled;
+  const unauthorized = await assertNutritionAuthenticated(request);
+  if (unauthorized) return unauthorized;
   const input = await request.json().catch(() => undefined) as { imageDataUrl?: string; mealName?: string } | undefined;
   if (!input?.imageDataUrl) return nutritionError('A meal image is required.', 'INVALID_IMAGE', 400);
   try {
