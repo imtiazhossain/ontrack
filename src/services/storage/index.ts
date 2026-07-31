@@ -19,4 +19,5 @@ export const STORAGE_KEYS = {
   travel: 'ontrack/travel/v1',
   todos: 'ontrack/todos/v1',
   authAccess: 'ontrack/auth-access/v1',
+  visionBoard: 'ontrack/vision-board/v1',
 } as const;

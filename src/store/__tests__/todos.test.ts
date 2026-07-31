@@ -58,6 +58,34 @@ describe('to-do store', () => {
     ).toEqual(['Replace air filter']);
   });
 
+  it('renames a checklist and normalizes its name', () => {
+    const list = useTodos.getState().lists[0];
+
+    useTodos.getState().renameList(list.id, '  Weekend   errands  ');
+
+    expect(useTodos.getState().lists[0].name).toBe('Weekend errands');
+  });
+
+  it('persists a manual task order inside its checklist', () => {
+    const list = useTodos.getState().lists[0];
+    const first = useTodos.getState().addTask(list.id, 'First')!;
+    const second = useTodos.getState().addTask(list.id, 'Second')!;
+    const third = useTodos.getState().addTask(list.id, 'Third')!;
+
+    useTodos.getState().reorderTasks(list.id, [
+      first.id,
+      third.id,
+      second.id,
+    ]);
+
+    expect(
+      [...useTodos.getState().tasks]
+        .filter((task) => task.listId === list.id)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((task) => task.title),
+    ).toEqual(['First', 'Third', 'Second']);
+  });
+
   it('persists an explicit list order without changing list contents', () => {
     const groceries = useTodos.getState().createList('Groceries')!;
     const maintenance = useTodos.getState().createList('Maintenance')!;
@@ -172,6 +200,122 @@ describe('to-do store', () => {
     ).toBe(true);
     expect(
       canCompleteTodo(list, { ...baseTask, assigneeUserId: 'member-b' }, 'member-a'),
+    ).toBe(false);
+  });
+
+  it('migrates recognized grocery names but preserves explicit checklist kinds', () => {
+    const migrated = normalizeTodoState({
+      groceryMigrationVersion: 1,
+      lists: [
+        {
+          id: 'list-grocery',
+          name: 'Weekly Groceries',
+          mode: 'private',
+          role: 'owner',
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+        {
+          id: 'list-explicit',
+          name: 'Supermarket planning',
+          kind: 'checklist',
+          mode: 'private',
+          role: 'owner',
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(migrated.lists.find((list) => list.id === 'list-grocery')?.kind)
+      .toBe('grocery');
+    expect(migrated.lists.find((list) => list.id === 'list-explicit')?.kind)
+      .toBe('checklist');
+  });
+
+  it('repairs grocery lists from the pre-feature in-memory schema once', () => {
+    const legacy = {
+      lists: [{
+        id: 'legacy-groceries',
+        name: 'Groceries',
+        kind: 'checklist',
+        mode: 'private',
+        role: 'owner',
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-01T00:00:00.000Z',
+      }],
+    };
+    expect(normalizeTodoState(legacy).lists[0].kind).toBe('grocery');
+    expect(
+      normalizeTodoState({
+        ...legacy,
+        groceryMigrationVersion: 1,
+      }).lists[0].kind,
+    ).toBe('checklist');
+  });
+
+  it('adds a recipe and prevents converting back while its group exists', () => {
+    const list = useTodos.getState().createList('Meal shop', 'grocery')!;
+    const recipe = useTodos.getState().addRecipe(list.id, {
+      name: 'Pasta',
+      sourceKind: 'url',
+      sourceUrl: 'https://example.com/pasta',
+      originalServings: 2,
+      targetServings: 4,
+      ingredients: [
+        {
+          name: 'Tomato',
+          canonicalKey: 'tomato',
+          quantityValue: 4,
+          quantityText: '4',
+          unit: 'count',
+        },
+        { name: 'Salt', quantityText: 'to taste' },
+      ],
+    });
+
+    expect(recipe).toBeDefined();
+    expect(
+      useTodos.getState().tasks.filter((task) => task.recipeId === recipe?.id),
+    ).toHaveLength(2);
+    expect(useTodos.getState().setListKind(list.id, 'checklist')).toBe(false);
+
+    useTodos.getState().deleteRecipe(recipe!.id);
+    expect(useTodos.getState().setListKind(list.id, 'checklist')).toBe(true);
+  });
+
+  it('batch completion updates every permitted occurrence only', () => {
+    const list = useTodos.getState().createList('Shop', 'grocery')!;
+    const recipe = useTodos.getState().addRecipe(list.id, {
+      name: 'Dinner',
+      sourceKind: 'url',
+      ingredients: [{ name: 'Onion' }, { name: 'Garlic' }],
+    })!;
+    const tasks = useTodos
+      .getState()
+      .tasks.filter((task) => task.recipeId === recipe.id);
+    useTodos.setState((state) => ({
+      lists: state.lists.map((item) =>
+        item.id === list.id
+          ? { ...item, mode: 'shared', role: 'member' }
+          : item,
+      ),
+      tasks: state.tasks.map((task) =>
+        task.id === tasks[1].id
+          ? { ...task, assigneeUserId: 'someone-else' }
+          : task,
+      ),
+    }));
+
+    useTodos
+      .getState()
+      .setTasksCompletion(tasks.map((task) => task.id), true, 'member-a');
+
+    expect(
+      useTodos.getState().tasks.find((task) => task.id === tasks[0].id)?.completed,
+    ).toBe(true);
+    expect(
+      useTodos.getState().tasks.find((task) => task.id === tasks[1].id)?.completed,
     ).toBe(false);
   });
 });

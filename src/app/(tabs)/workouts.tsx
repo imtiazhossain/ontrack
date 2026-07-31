@@ -43,6 +43,7 @@ interface ExercisePreview {
   primaryTarget: MuscleTarget;
 }
 
+/** Primary carousel section for workout planning. */
 export default function WorkoutsScreen() {
   const router = useRouter();
   const theme = useTheme();

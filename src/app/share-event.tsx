@@ -7,7 +7,6 @@ import type { NavigationAction } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   View,
@@ -15,6 +14,7 @@ import {
 
 import {
   AppText,
+  appPrompt,
   Button,
   DateField,
   ErrorMessage,
@@ -115,7 +115,7 @@ export default function ShareEventScreen() {
 
   const confirmDiscard = useCallback(
     (action?: NavigationAction) => {
-      Alert.alert(
+      appPrompt.alert(
         'Discard shared events?',
         'Nothing from this share will be added to your calendar.',
         [

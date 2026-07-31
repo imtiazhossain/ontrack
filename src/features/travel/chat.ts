@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 
+import { getNotificationsModule } from '@/services/notifications/runtime';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import type { TravelPlan } from '@/features/travel/types';
 
@@ -116,8 +116,9 @@ export async function sendTravelChatMessage(input: {
 }
 
 export async function chatNotificationsAreEnabled(): Promise<boolean> {
-  if (process.env.EXPO_OS === 'web') return false;
-  return (await Notifications.getPermissionsAsync()).granted;
+  const notifications = await getNotificationsModule();
+  if (!notifications) return false;
+  return (await notifications.getPermissionsAsync()).granted;
 }
 
 export async function enableTravelChatNotifications(
@@ -127,17 +128,23 @@ export async function enableTravelChatNotifications(
   if (process.env.EXPO_OS === 'web') {
     throw new TravelChatError('Push notifications are available in the mobile app.');
   }
+  const notifications = await getNotificationsModule();
+  if (!notifications) {
+    throw new TravelChatError(
+      'Push alerts require a development or production app build. Chat messages still work normally.',
+    );
+  }
   if (process.env.EXPO_OS === 'android') {
-    await Notifications.setNotificationChannelAsync(EVENT_CHAT_NOTIFICATION_CHANNEL, {
+    await notifications.setNotificationChannelAsync(EVENT_CHAT_NOTIFICATION_CHANNEL, {
       name: 'Trip chat',
       description: 'New messages from members of your trips',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 180],
     });
   }
-  let permission = await Notifications.getPermissionsAsync();
+  let permission = await notifications.getPermissionsAsync();
   if (!permission.granted && permission.canAskAgain) {
-    permission = await Notifications.requestPermissionsAsync();
+    permission = await notifications.requestPermissionsAsync();
   }
   if (!permission.granted) {
     throw new TravelChatError('Notifications are off. Enable them in system settings to continue.');
@@ -150,7 +157,7 @@ export async function enableTravelChatNotifications(
   }
   let token: string;
   try {
-    token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    token = (await notifications.getExpoPushTokenAsync({ projectId })).data;
   } catch {
     throw new TravelChatError(
       'Push alerts are unavailable in this app build. Chat messages still work normally.',

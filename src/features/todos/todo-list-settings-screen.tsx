@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
+  appPrompt,
   Button,
   Card,
   ErrorMessage,
@@ -28,6 +29,7 @@ import {
   revokeTodoShareLink,
   type PendingTodoEmailInvite,
 } from '@/services/todos/collaboration';
+import { deletePersistedRecipeImage } from '@/services/recipes';
 import { useTodos } from '@/store/todos';
 
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
@@ -41,6 +43,11 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     [allMembers, listId],
   );
   const renameList = useTodos((state) => state.renameList);
+  const setListKind = useTodos((state) => state.setListKind);
+  const recipeCount = useTodos(
+    (state) =>
+      state.recipes.filter((recipe) => recipe.listId === listId).length,
+  );
   const deletePrivateList = useTodos((state) => state.deleteList);
   const [name, setName] = useState(list?.name ?? '');
   const [email, setEmail] = useState('');
@@ -106,7 +113,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   };
 
   const removeList = () => {
-    Alert.alert(
+    appPrompt.alert(
       'Delete this list?',
       'The list and every item in it will be permanently deleted.',
       [
@@ -116,6 +123,14 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           style: 'destructive',
           onPress: () => {
             void run('delete', async () => {
+              if (list.mode === 'private') {
+                useTodos
+                  .getState()
+                  .recipes.filter((recipe) => recipe.listId === list.id)
+                  .forEach((recipe) =>
+                    deletePersistedRecipeImage(recipe.sourceImageUri),
+                  );
+              }
               if (list.mode === 'shared') await deleteSharedTodoList(list.id);
               else deletePrivateList(list.id);
               router.replace('/(tabs)/to-do' as never);
@@ -149,6 +164,60 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
             onPress={() => renameList(list.id, name)}>
             Save name
           </Button>
+          <AppText variant="overline" color="tertiary">
+            List type
+          </AppText>
+          <View style={styles.kindChoices}>
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: list.kind === 'checklist' }}
+              disabled={list.kind === 'grocery' && recipeCount > 0}
+              onPress={() => setListKind(list.id, 'checklist')}
+              style={[
+                styles.kindChoice,
+                {
+                  borderColor:
+                    list.kind === 'checklist'
+                      ? theme.accentPrimary
+                      : theme.separator,
+                  backgroundColor:
+                    list.kind === 'checklist'
+                      ? theme.accentFaint
+                      : theme.backgroundSunken,
+                  opacity:
+                    list.kind === 'grocery' && recipeCount > 0 ? 0.45 : 1,
+                },
+              ]}>
+              <Symbol name="tasks" size={18} color={theme.textSecondary} />
+              <AppText variant="caption">Checklist</AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: list.kind === 'grocery' }}
+              onPress={() => setListKind(list.id, 'grocery')}
+              style={[
+                styles.kindChoice,
+                {
+                  borderColor:
+                    list.kind === 'grocery'
+                      ? theme.accentPrimary
+                      : theme.separator,
+                  backgroundColor:
+                    list.kind === 'grocery'
+                      ? theme.accentFaint
+                      : theme.backgroundSunken,
+                },
+              ]}>
+              <Symbol name="groceries" size={18} color={theme.textSecondary} />
+              <AppText variant="caption">Grocery</AppText>
+            </Pressable>
+          </View>
+          {list.kind === 'grocery' && recipeCount > 0 ? (
+            <AppText variant="caption" color="secondary">
+              Delete the {recipeCount === 1 ? 'recipe' : `${recipeCount} recipes`}{' '}
+              before converting this list back to a checklist.
+            </AppText>
+          ) : null}
         </Card>
       ) : (
         <Card variant="sunken" style={styles.card}>
@@ -216,7 +285,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                       await createTodoEmailInvite(list.id, email);
                       await refreshPending();
                       setEmail('');
-                      Alert.alert('Invitation ready', 'It now appears in their onTrack invitation inbox.');
+                      appPrompt.alert('Invitation ready', 'It now appears in their onTrack invitation inbox.');
                     })
                   }>
                   {working === 'email' ? 'Inviting…' : 'Send in-app invite'}
@@ -275,7 +344,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                     accessibilityLabel={`Remove ${member.displayName}`}
                     disabled={Boolean(working)}
                     onPress={() =>
-                      Alert.alert(
+                      appPrompt.alert(
                         'Remove member?',
                         `${member.displayName} will lose access. Their assigned items become available to anyone.`,
                         [
@@ -315,7 +384,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           variant="danger"
           disabled={Boolean(working)}
           onPress={() =>
-            Alert.alert('Leave this list?', 'It will disappear from your account.', [
+            appPrompt.alert('Leave this list?', 'It will disappear from your account.', [
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Leave',
@@ -351,6 +420,17 @@ const styles = StyleSheet.create({
   },
   heading: { gap: spacing.xs },
   card: { gap: spacing.md },
+  kindChoices: { flexDirection: 'row', gap: spacing.sm },
+  kindChoice: {
+    minHeight: 44,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+  },
   memberList: { gap: spacing.sm },
   memberRow: {
     minHeight: 58,

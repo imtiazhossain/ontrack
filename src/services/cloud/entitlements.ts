@@ -13,7 +13,7 @@ import { useAgents } from '@/store/agents';
 
 import { getSupabaseClient } from './supabase';
 
-const ADDON_IDS: AddonId[] = ['food', 'fitness', 'plants', 'travel'];
+const ADDON_IDS: AddonId[] = ['food', 'fitness', 'plants', 'travel', 'vision-board'];
 const SOURCES: EntitlementSource[] = ['included', 'testing', 'purchase', 'bundle', 'admin'];
 
 interface EntitlementRow {

@@ -35,15 +35,29 @@ describe('goBackOrReplace', () => {
 });
 
 describe('feature route ownership', () => {
-  it.each(['plants', 'travel'])(
-    'keeps /%s in the root stack without a duplicate tab-group route',
+  it.each(['profile', 'workouts', 'plants', 'travel', 'vision-board'])(
+    'keeps /%s in the tab carousel without a duplicate root route',
     (feature) => {
       const appDirectory = join(process.cwd(), 'src/app');
 
-      expect(existsSync(join(appDirectory, `${feature}.tsx`))).toBe(true);
-      expect(existsSync(join(appDirectory, '(tabs)', `${feature}.tsx`))).toBe(false);
+      const rootRoute =
+        feature === 'vision-board'
+          ? join(appDirectory, feature, 'index.tsx')
+          : join(appDirectory, `${feature}.tsx`);
+      expect(existsSync(rootRoute)).toBe(false);
+      const tabRoute =
+        feature === 'vision-board'
+          ? join(appDirectory, '(tabs)', feature, 'index.tsx')
+          : join(appDirectory, '(tabs)', `${feature}.tsx`);
+      expect(existsSync(tabRoute)).toBe(true);
     },
   );
+
+  it('removes the legacy More section from the tab carousel', () => {
+    expect(
+      existsSync(join(process.cwd(), 'src/app', '(tabs)', 'more.tsx')),
+    ).toBe(false);
+  });
 
   it('keeps day selection in the tab navigator instead of a root-stack route', () => {
     const appDirectory = join(process.cwd(), 'src/app');

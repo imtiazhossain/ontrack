@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
-import { Alert } from 'react-native';
 
+import { appPrompt } from '@/components/primitives';
 const APPLE_HEALTH_URL = 'x-apple-health://';
 const HEALTH_CONNECT_URL = 'https://health.google/health-connect-android/';
 
@@ -22,7 +22,7 @@ export async function openSleepData(): Promise<void> {
 
     await Linking.openURL(HEALTH_CONNECT_URL);
   } catch {
-    Alert.alert(
+    appPrompt.alert(
       'Sleep data app unavailable',
       process.env.EXPO_OS === 'ios'
         ? 'Open the Health app to review your sleep data.'

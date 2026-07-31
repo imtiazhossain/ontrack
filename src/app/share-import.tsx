@@ -1,0 +1,284 @@
+import {
+  clearSharedPayloads,
+  getSharedPayloads,
+  type SharePayload,
+} from 'expo-sharing';
+import { useNavigation, useRouter } from 'expo-router';
+import type { NavigationAction } from 'expo-router/react-navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import {
+  AppText,
+  appPrompt,
+  Button,
+  Card,
+  Input,
+  Screen,
+  Symbol,
+} from '@/components/primitives';
+import { layout, radii, spacing } from '@/design-system';
+import { useTheme } from '@/hooks/use-theme';
+import { useTodos } from '@/store/todos';
+
+function isCalendarPayload(payload: SharePayload) {
+  return (
+    payload.mimeType?.toLocaleLowerCase() === 'text/calendar' ||
+    /\.ics(?:$|[?#])/i.test(payload.value)
+  );
+}
+
+function payloadDescription(payload: SharePayload) {
+  if (payload.shareType === 'image') return 'Shared image';
+  if (payload.shareType === 'url') return payload.value;
+  if (payload.shareType === 'text') {
+    return payload.value.replace(/\s+/g, ' ').slice(0, 180);
+  }
+  return payload.mimeType || 'Shared file';
+}
+
+export default function ShareImportScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const lists = useTodos((state) =>
+    state.lists.filter(
+      (list) => list.kind === 'grocery' && list.role === 'owner',
+    ),
+  );
+  const createList = useTodos((state) => state.createList);
+  const [payloads] = useState(() => getSharedPayloads());
+  const [mode, setMode] = useState<'destination' | 'recipe'>();
+  const [newListName, setNewListName] = useState('Groceries');
+  const allowLeave = useRef(false);
+  const calendarOnly =
+    payloads.length > 0 && payloads.every(isCalendarPayload);
+
+  useEffect(() => {
+    if (!calendarOnly) return;
+    allowLeave.current = true;
+    router.replace('/share-event');
+  }, [calendarOnly, router]);
+
+  const discard = useCallback(
+    (action?: NavigationAction) => {
+      clearSharedPayloads();
+      allowLeave.current = true;
+      if (action) navigation.dispatch(action);
+      else router.replace('/(tabs)/calendar');
+    },
+    [navigation, router],
+  );
+
+  const confirmDiscard = useCallback(
+    (action?: NavigationAction) => {
+      appPrompt.alert(
+        'Discard shared content?',
+        'Nothing from this share will be saved.',
+        [
+          { text: 'Keep choosing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => discard(action),
+          },
+        ],
+      );
+    },
+    [discard],
+  );
+
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (event) => {
+        if (allowLeave.current) return;
+        event.preventDefault();
+        confirmDiscard(event.data.action);
+      }),
+    [confirmDiscard, navigation],
+  );
+
+  const preview = useMemo(
+    () => payloads.map(payloadDescription).join('\n').slice(0, 500),
+    [payloads],
+  );
+
+  const openRecipe = (listId: string) => {
+    allowLeave.current = true;
+    router.push({
+      pathname: '/todos/[id]/recipe-import',
+      params: { id: listId, source: 'share' },
+    } as never);
+  };
+
+  if (calendarOnly) {
+    return (
+      <Screen contentStyle={styles.center}>
+        <Symbol name="calendar" size={36} color={theme.accentPrimary} />
+        <AppText variant="subheading">Opening Calendar…</AppText>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen contentStyle={styles.screen}>
+      <View style={styles.header}>
+        <View style={styles.headerCopy}>
+          <AppText variant="overline" color="accent">
+            Incoming share
+          </AppText>
+          <AppText variant="display">
+            {mode === 'recipe' ? 'Choose a Grocery list' : 'What are you adding?'}
+          </AppText>
+          <AppText variant="body" color="secondary">
+            The shared payload stays available until you save it or confirm
+            discard.
+          </AppText>
+        </View>
+        <Button variant="ghost" onPress={() => confirmDiscard()}>
+          Discard
+        </Button>
+      </View>
+
+      {preview ? (
+        <Card variant="sunken" style={styles.preview}>
+          <AppText variant="overline" color="tertiary">
+            Shared content
+          </AppText>
+          <AppText variant="caption" color="secondary" numberOfLines={5}>
+            {preview}
+          </AppText>
+        </Card>
+      ) : null}
+
+      {mode !== 'recipe' ? (
+        <View style={styles.choices}>
+          <Card
+            onPress={() => setMode('recipe')}
+            accessibilityLabel="Add shared content as a recipe"
+            style={styles.choice}>
+            <View style={[styles.choiceIcon, { backgroundColor: theme.accentFaint }]}>
+              <Symbol name="groceries" size={28} color={theme.accentPrimary} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="heading">Add recipe</AppText>
+              <AppText variant="body" color="secondary">
+                Extract a meal and review its grocery ingredients.
+              </AppText>
+            </View>
+            <Symbol name="chevron-right" size={20} color={theme.textTertiary} />
+          </Card>
+          <Card
+            onPress={() => {
+              allowLeave.current = true;
+              router.push('/share-event');
+            }}
+            accessibilityLabel="Add shared content as a calendar event"
+            style={styles.choice}>
+            <View style={[styles.choiceIcon, { backgroundColor: theme.backgroundSunken }]}>
+              <Symbol name="calendar-add" size={28} color={theme.textSecondary} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="heading">Add calendar event</AppText>
+              <AppText variant="body" color="secondary">
+                Read dates and times, then review calendar fields.
+              </AppText>
+            </View>
+            <Symbol name="chevron-right" size={20} color={theme.textTertiary} />
+          </Card>
+        </View>
+      ) : (
+        <View style={styles.destinations}>
+          {lists.map((list) => (
+            <Pressable
+              key={list.id}
+              accessibilityRole="button"
+              onPress={() => openRecipe(list.id)}
+              style={[
+                styles.listChoice,
+                {
+                  backgroundColor: theme.backgroundElevated,
+                  borderColor: theme.separator,
+                },
+              ]}>
+              <View style={[styles.choiceIcon, { backgroundColor: theme.accentFaint }]}>
+                <Symbol name="groceries" size={22} color={theme.accentPrimary} />
+              </View>
+              <AppText variant="subheading" style={styles.flex}>
+                {list.name}
+              </AppText>
+              <Symbol name="chevron-right" size={19} color={theme.textTertiary} />
+            </Pressable>
+          ))}
+          <Card style={styles.newList}>
+            <AppText variant="subheading">Create a Grocery list</AppText>
+            <Input
+              label="List name"
+              value={newListName}
+              maxLength={80}
+              onChangeText={setNewListName}
+            />
+            <Button
+              disabled={!newListName.trim()}
+              onPress={() => {
+                const list = createList(newListName, 'grocery');
+                if (list) openRecipe(list.id);
+              }}>
+              Create and continue
+            </Button>
+          </Card>
+          <Button variant="ghost" onPress={() => setMode(undefined)}>
+            Back
+          </Button>
+        </View>
+      )}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+    gap: spacing.xl,
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: { flex: 1, gap: spacing.xs },
+  preview: { gap: spacing.sm },
+  choices: { gap: spacing.md },
+  choice: {
+    minHeight: 110,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  choiceIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flex: { flex: 1 },
+  destinations: { gap: spacing.md },
+  listChoice: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+  },
+  newList: { gap: spacing.md },
+});

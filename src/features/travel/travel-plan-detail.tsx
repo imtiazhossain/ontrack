@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -11,6 +11,7 @@ import Animated, {
 
 import {
   AppText,
+  appPrompt,
   Button,
   Card,
   DateField,
@@ -286,7 +287,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   };
 
   const confirmRemoveItem = (item: TravelPlan['itinerary'][number]) => {
-    Alert.alert('Remove itinerary item?', item.title, [
+    appPrompt.alert('Remove itinerary item?', item.title, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.id) },
     ]);
@@ -322,7 +323,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   };
 
   const chooseConfirmationImport = (target: 'new' | string) => {
-    Alert.alert(
+    appPrompt.alert(
       'Import flight confirmation',
       'Choose a document, saved email, or up to 6 screenshots from Photos.',
       [
@@ -534,7 +535,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         participant.inviteCode,
       );
     } catch (reason) {
-      Alert.alert(
+      appPrompt.alert(
         'Couldn’t resend invitation',
         reason instanceof Error
           ? reason.message
@@ -555,7 +556,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         updatedAt: new Date().toISOString(),
       });
     } catch (reason) {
-      Alert.alert(
+      appPrompt.alert(
         participant.acceptedAt ? 'Couldn’t remove friend' : 'Couldn’t remove invitation',
         reason instanceof Error
           ? reason.message
@@ -568,7 +569,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
 
   const confirmRemoveParticipant = (participant: TravelParticipant) => {
     const accepted = Boolean(participant.acceptedAt);
-    Alert.alert(
+    appPrompt.alert(
       accepted ? 'Remove friend?' : 'Remove invitation?',
       accepted
         ? `${participant.name} will be removed from this trip and their invite link will stop working.`

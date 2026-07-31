@@ -1,5 +1,4 @@
-import { ActionSheetIOS, Alert, Platform } from 'react-native';
-
+import { appPrompt } from '@/components/primitives';
 import type { Activity } from '@/types/models';
 
 export type ActivityAction = 'edit' | 'skip' | 'unskip' | 'delete' | 'duplicate' | 'move-tomorrow';
@@ -43,31 +42,19 @@ export function showActivityActions({ activity, onAction }: ShowActivityActionsI
     }
   };
 
-  if (Platform.OS === 'ios') {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: cancelIndex,
-        destructiveButtonIndex: destructiveIndex,
-        title: activity.title,
-      },
-      handle,
-    );
-    return;
-  }
-
-  Alert.alert(activity.title, undefined, [
-    { text: 'Edit', onPress: () => onAction('edit') },
-    { text: isSkipped ? 'Unskip' : 'Skip', onPress: () => onAction(isSkipped ? 'unskip' : 'skip') },
-    { text: 'Duplicate', onPress: () => onAction('duplicate') },
-    { text: 'Move to tomorrow', onPress: () => onAction('move-tomorrow') },
-    { text: 'Delete', style: 'destructive', onPress: () => onAction('delete') },
-    { text: 'Cancel', style: 'cancel' },
-  ]);
+  appPrompt.actionSheet(
+    {
+      options,
+      cancelButtonIndex: cancelIndex,
+      destructiveButtonIndex: destructiveIndex,
+      title: activity.title,
+    },
+    handle,
+  );
 }
 
 export function confirmDeleteActivity(title: string, onConfirm: () => void) {
-  Alert.alert('Delete activity', `Remove "${title}" from your schedule?`, [
+  appPrompt.alert('Delete activity', `Remove "${title}" from your schedule?`, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: onConfirm },
   ]);

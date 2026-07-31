@@ -3,6 +3,10 @@ import { join } from 'node:path';
 
 describe('authentication navigation invariants', () => {
   const rootLayout = readFileSync(join(process.cwd(), 'src/app/_layout.tsx'), 'utf8');
+  const tabsLayout = readFileSync(
+    join(process.cwd(), 'src/app/(tabs)/_layout.tsx'),
+    'utf8',
+  );
 
   it('keeps the OAuth callback outside protected route groups', () => {
     expect(rootLayout).toContain('name="auth/callback"');
@@ -25,15 +29,20 @@ describe('authentication navigation invariants', () => {
       '(tabs)',
       'account',
       'onboarding',
-      'workouts',
-      'plants',
-      'travel',
       'agents',
-      'profile',
       'nutrition-profile',
       'travel/[id]/flights',
     ]) {
       expect(appGroup).toContain(`name="${route}"`);
+    }
+    for (const route of [
+      'profile',
+      'workouts',
+      'plants',
+      'travel',
+      'vision-board',
+    ]) {
+      expect(tabsLayout).toContain(`<Tabs.Screen name="${route}"`);
     }
   });
 

@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { AppText, appPrompt, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
 import {
@@ -109,7 +109,7 @@ export default function NewPlantScreen() {
   const capturePhoto = async (target: PhotoTarget) => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Camera access needed', 'Allow camera access in Settings to photograph your plant.', [
+      appPrompt.alert('Camera access needed', 'Allow camera access in Settings to photograph your plant.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Open Settings', onPress: () => Linking.openSettings() },
       ]);

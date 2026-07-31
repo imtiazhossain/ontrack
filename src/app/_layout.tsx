@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import { getSharedPayloads } from 'expo-sharing';
 import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
@@ -8,7 +7,11 @@ import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AppSafeArea, HeaderBackButton } from '@/components/primitives';
+import {
+  AppPromptHost,
+  AppSafeArea,
+  HeaderBackButton,
+} from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
@@ -16,6 +19,7 @@ import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
 import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
 import { useTheme } from '@/hooks/use-theme';
+import { getNotificationsModule } from '@/services/notifications/runtime';
 import { configurePlantNotifications } from '@/services/plants/notifications';
 import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { usePreferences } from '@/store/preferences';
@@ -35,6 +39,7 @@ export default function RootLayout() {
           <AppSafeArea>
             <AuthSessionProvider hydrated={hydrated}>
               <RootNavigator hydrated={hydrated} />
+              <AppPromptHost />
             </AuthSessionProvider>
           </AppSafeArea>
         </ThemeProvider>
@@ -69,7 +74,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   useEffect(() => {
     if (!hydrated || !appAccess || !hasOnboarded || Platform.OS === 'web') return;
     try {
-      if (getSharedPayloads().length > 0) router.replace('/share-event');
+      if (getSharedPayloads().length > 0) router.replace('/share-import' as never);
     } catch {
       // Older native builds do not include incoming sharing.
     }
@@ -79,7 +84,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
     if (!hydrated || !appAccess) return;
     void configurePlantNotifications().catch(() => undefined).then(reconcilePlantSchedules);
     if (Platform.OS === 'web') return;
-    const redirect = (response: Notifications.NotificationResponse | null) => {
+    const redirect = (
+      response: import('expo-notifications').NotificationResponse | null,
+    ) => {
       const url = response?.notification.request.content.data?.url;
       if (typeof url === 'string' && url.startsWith('/plants/')) {
         router.push(url as never);
@@ -95,9 +102,17 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         if (plan) router.push(`/travel/${plan.id}/chat` as never);
       }
     };
-    void Notifications.getLastNotificationResponseAsync().then(redirect);
-    const subscription = Notifications.addNotificationResponseReceivedListener(redirect);
-    return () => subscription.remove();
+    let active = true;
+    let subscription: { remove: () => void } | undefined;
+    void getNotificationsModule().then((notifications) => {
+      if (!notifications || !active) return;
+      void notifications.getLastNotificationResponseAsync().then(redirect);
+      subscription = notifications.addNotificationResponseReceivedListener(redirect);
+    });
+    return () => {
+      active = false;
+      subscription?.remove();
+    };
   }, [appAccess, hydrated, router]);
 
   if (!hydrated || phase === 'loading') {
@@ -171,13 +186,32 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
             contentStyle: { backgroundColor: theme.backgroundPrimary },
           }}
         />
-        <Stack.Screen name="workouts" />
-        <Stack.Screen name="plants" />
-        <Stack.Screen name="travel" />
+        <Stack.Screen
+          name="vision-board/[id]"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+        <Stack.Screen
+          name="vision-board/all"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.backgroundPrimary },
+          }}
+        />
+        <Stack.Screen
+          name="vision-board/category-editor"
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="vision-board/item-editor"
+          options={{ presentation: 'modal' }}
+        />
         <Stack.Screen name="agents" />
-        <Stack.Screen name="profile" />
         <Stack.Screen name="todos/[id]" />
         <Stack.Screen name="todos/[id]/settings" />
+        <Stack.Screen name="todos/[id]/recipe-import" />
         <Stack.Screen name="todo-collaborators" />
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
@@ -204,8 +238,12 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
       </Stack.Protected>
       <Stack.Protected guard={appAccess && hasOnboarded}>
         <Stack.Screen
+          name="share-import"
+          options={{ gestureEnabled: false }}
+        />
+        <Stack.Screen
           name="share-event"
-          options={{ presentation: 'modal', gestureEnabled: false }}
+          options={{ gestureEnabled: false }}
         />
       </Stack.Protected>
       <Stack.Screen

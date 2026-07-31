@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActionSheetIOS, ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, EmptyState, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, appPrompt, Button, EmptyState, ErrorMessage, Input, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { MealAnalysisReview } from '@/features/nutrition/analysis-review';
@@ -114,13 +114,13 @@ export default function FoodDetailScreen() {
       if (index === 3 && activity) router.push({ pathname: '/activity-form', params: { id: activity.id } });
     };
     if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions({
+      appPrompt.actionSheet({
         options: ['Take photo', 'Choose photo', 'Paste meal link', 'Enter manually', 'Cancel'],
         cancelButtonIndex: 4,
         title: 'Add meal nutrition',
       }, select);
     } else {
-      Alert.alert('Add meal nutrition', undefined, [
+      appPrompt.alert('Add meal nutrition', undefined, [
         { text: 'Take photo', onPress: takePhoto },
         { text: 'Choose photo', onPress: choosePhoto },
         { text: 'Paste meal link', onPress: () => setShowLinkInput(true) },
