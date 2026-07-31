@@ -16,6 +16,13 @@ describe('collaborative to-do access contract', () => {
     ),
     'utf8',
   );
+  const transferOwnershipMigration = readFileSync(
+    join(
+      process.cwd(),
+      'supabase/migrations/202607310001_transfer_todo_ownership.sql',
+    ),
+    'utf8',
+  );
 
   it('keeps shared tables behind RLS and authenticated RPCs', () => {
     for (const table of [
@@ -55,6 +62,24 @@ describe('collaborative to-do access contract', () => {
   it('adds todos to the account-domain constraint', () => {
     expect(migration).toContain(
       "'addons', 'agents', 'preferences', 'schedule', 'plants', 'travel', 'todos'",
+    );
+  });
+
+  it('allows owners to transfer ownership to a current member then leave', () => {
+    expect(transferOwnershipMigration).toContain(
+      'create or replace function public.transfer_todo_list_ownership',
+    );
+    expect(transferOwnershipMigration).toContain(
+      'Ownership can only be transferred to a current member.',
+    );
+    expect(transferOwnershipMigration).toContain(
+      'Transfer ownership first, or delete the list instead.',
+    );
+    expect(transferOwnershipMigration).toContain(
+      'grant execute on function public.transfer_todo_list_ownership(uuid, uuid) to authenticated',
+    );
+    expect(transferOwnershipMigration).not.toMatch(
+      /grant execute on function public\.transfer_todo_list_ownership[\s\S]*?to anon/,
     );
   });
 
