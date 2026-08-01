@@ -17,6 +17,7 @@ import {
   travelInviteLocalId,
   travelPlanIdentityKey,
 } from '@/features/travel/share';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
@@ -208,8 +209,8 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
   return (
     <Screen contentStyle={styles.webPage} bottomInset={false}>
       <View style={styles.brand}>
-        <AppText variant="overline" color="accent">
-          onTrack travel
+        <AppText variant="overline" color="accent" style={travelOverlineStyle}>
+          onTrack Travel
         </AppText>
         <AppText variant="display">You’re invited ✈️</AppText>
         <AppText variant="body" color="secondary">

@@ -7,6 +7,7 @@ const ITEM_ICON: Record<TravelItemKind, string> = {
   flight: '✈️',
   stay: '🛏️',
   activity: '📍',
+  rental: '🚗',
 };
 
 export function travelCalendarDrafts(plan: TravelPlan): ActivityDraft[] {

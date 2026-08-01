@@ -1,5 +1,11 @@
+import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
+
+import { applyImportedFlightsToPlan } from '../apply-imported-flights';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import { mergeImportedFlights } from '../flight-confirmation-itinerary';
+import type { TravelPlan } from '../types';
+
+jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
 const FARHANA_CHASE_PDFKIT_TEXT = `
 Imtiaz Hossain <imtihoss@gmail.com>
@@ -194,6 +200,8 @@ describe('flight confirmation parser', () => {
         seat: '',
       },
     });
+    expect(parsed.amount).toBe(916.46);
+    expect(parsed.currency).toBe('USD');
 
     let nextId = 0;
     const imported = mergeImportedFlights({
@@ -225,5 +233,63 @@ describe('flight confirmation parser', () => {
       }),
     ]);
     expect(reimported).toHaveLength(2);
+  });
+});
+
+describe('flight confirmation expense', () => {
+  const basePlan = (): TravelPlan => ({
+    id: 'trip-1',
+    title: 'Iceland',
+    destination: 'Iceland',
+    startDate: '2026-09-08',
+    endDate: '2026-09-14',
+    itinerary: [],
+    participants: [],
+    baseCurrency: 'USD',
+    expenses: [],
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+  });
+
+  it('adds a flight expense for the parsed total', () => {
+    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
+    let nextId = 0;
+    const next = applyImportedFlightsToPlan({
+      plan: basePlan(),
+      imported: parsed,
+      createId: () => `flight-${++nextId}`,
+    });
+    expect(next.itinerary).toHaveLength(2);
+    expect(next.expenses).toHaveLength(1);
+    expect(next.expenses[0]).toMatchObject({
+      category: 'flight',
+      amount: 916.46,
+      currency: 'USD',
+      notes: 'Confirmation: AB2ZQV',
+    });
+  });
+
+  it('updates an existing flight expense when the confirmation matches', () => {
+    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
+    let nextId = 0;
+    const first = applyImportedFlightsToPlan({
+      plan: basePlan(),
+      imported: parsed,
+      createId: () => `flight-${++nextId}`,
+    });
+    const second = applyImportedFlightsToPlan({
+      plan: first,
+      imported: { ...parsed, amount: 950 },
+      createId: () => `flight-${++nextId}`,
+    });
+    expect(second.expenses).toHaveLength(1);
+    expect(second.expenses[0].amount).toBe(950);
+    expect(second.expenses[0].id).toBe(first.expenses[0].id);
   });
 });

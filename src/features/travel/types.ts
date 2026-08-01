@@ -1,4 +1,4 @@
-export type TravelItemKind = 'flight' | 'stay' | 'activity';
+export type TravelItemKind = 'flight' | 'stay' | 'activity' | 'rental';
 
 export interface TravelFlightDetails {
   airline?: string;
@@ -7,6 +7,22 @@ export interface TravelFlightDetails {
   departureAirport?: string;
   arrivalAirport?: string;
   seat?: string;
+  /** Durable file:// URIs for the uploaded confirmation document/screenshots. */
+  confirmationUris?: string[];
+}
+
+export interface TravelRentalDetails {
+  company?: string;
+  confirmationCode?: string;
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  vehicleClass?: string;
+  /** Local calendar day YYYY-MM-DD for return/drop-off. */
+  dropoffDate?: string;
+  /** Minutes from midnight for drop-off local time. */
+  dropoffMinutes?: number;
+  /** Durable file:// URIs for the uploaded confirmation document/screenshots. */
+  confirmationUris?: string[];
 }
 
 export interface TravelItineraryItem {
@@ -19,6 +35,7 @@ export interface TravelItineraryItem {
   details?: string;
   bookingUrl?: string;
   flight?: TravelFlightDetails;
+  rental?: TravelRentalDetails;
 }
 
 export interface TravelParticipant {
@@ -65,6 +82,8 @@ export interface TravelPlan {
   id: string;
   /** Hosted invite capability used by an invited member to join this trip's chat. */
   chatAccessCode?: string;
+  /** Open join link code; anyone can request, host must approve. */
+  openJoinCode?: string;
   title: string;
   destination: string;
   startDate: string;
@@ -77,4 +96,28 @@ export interface TravelPlan {
   expenses: TravelExpense[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type TravelOpenJoinStatus =
+  | 'none'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'host';
+
+export interface TravelOpenJoinPreview {
+  title: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  tripId: string;
+}
+
+export interface TravelOpenJoinRequest {
+  id: string;
+  requesterName: string;
+  requesterEmail: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  grantedInviteCode?: string;
 }

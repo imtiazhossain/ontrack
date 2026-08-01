@@ -88,8 +88,119 @@ describe('travel plan normalization', () => {
         details: undefined,
         bookingUrl: undefined,
         flight: undefined,
+        rental: undefined,
       },
     ]);
+  });
+
+  it('keeps car rental itinerary details', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        itinerary: [
+          {
+            id: 'rental-1',
+            kind: 'rental',
+            title: 'Hertz rental',
+            date: '2026-09-09',
+            startMinutes: 600,
+            durationMinutes: 60,
+            rental: {
+              company: 'Hertz',
+              confirmationCode: 'K98M7X2PQ1',
+              pickupLocation: 'KEF',
+              dropoffDate: '2026-09-14',
+              dropoffMinutes: 480,
+            },
+          },
+        ],
+      })?.itinerary,
+    ).toEqual([
+      {
+        id: 'rental-1',
+        kind: 'rental',
+        title: 'Hertz rental',
+        date: '2026-09-09',
+        startMinutes: 600,
+        durationMinutes: 60,
+        details: undefined,
+        bookingUrl: undefined,
+        flight: undefined,
+        rental: {
+          company: 'Hertz',
+          confirmationCode: 'K98M7X2PQ1',
+          pickupLocation: 'KEF',
+          dropoffDate: '2026-09-14',
+          dropoffMinutes: 480,
+        },
+      },
+    ]);
+  });
+
+  it('repairs the broken Hertz L666EBA86A0 rental import (wrong pickup, missing drop-off)', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+      itinerary: [
+        {
+          id: 'trip-item-ms9jg1he-1',
+          kind: 'rental',
+          title: 'Hertz rental',
+          date: '2026-09-08',
+          startMinutes: 18 * 60 + 52,
+          durationMinutes: 60,
+          rental: {
+            company: 'Hertz',
+            confirmationCode: 'L666EBA86A0',
+            vehicleClass: 'Compact Elite',
+          },
+        },
+      ],
+    });
+    expect(normalized?.itinerary[0]).toMatchObject({
+      date: '2026-09-09',
+      startMinutes: 6 * 60 + 30,
+      rental: {
+        confirmationCode: 'L666EBA86A0',
+        pickupLocation: 'Keflavik International Airport (KEF)',
+        dropoffLocation: 'Keflavik International Airport (KEF)',
+        dropoffDate: '2026-09-14',
+        dropoffMinutes: 15 * 60,
+        vehicleClass: 'Compact Elite',
+      },
+    });
+  });
+
+  it('corrects a previously repaired L666EBA86A0 rental that still had wrong times', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+      itinerary: [
+        {
+          id: 'trip-item-ms9jg1he-1',
+          kind: 'rental',
+          title: 'Hertz rental · Keflavik International Airport (KEF)',
+          date: '2026-09-09',
+          startMinutes: 10 * 60,
+          durationMinutes: 60,
+          rental: {
+            company: 'Hertz',
+            confirmationCode: 'L666EBA86A0',
+            pickupLocation: 'Keflavik International Airport (KEF)',
+            dropoffLocation: 'Keflavik International Airport (KEF)',
+            vehicleClass: 'Compact Elite',
+            dropoffDate: '2026-09-14',
+            dropoffMinutes: 8 * 60,
+          },
+        },
+      ],
+    });
+    expect(normalized?.itinerary[0]).toMatchObject({
+      startMinutes: 6 * 60 + 30,
+      rental: { dropoffMinutes: 15 * 60 },
+    });
   });
 
   it('repairs the previously persisted Icelandair return flight import', () => {
@@ -150,6 +261,41 @@ describe('travel plan normalization', () => {
           },
         },
       ],
+    });
+  });
+
+  it('repairs FI 623 already on Sep 14 with swapped airports', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+      itinerary: [
+        {
+          id: 'return',
+          kind: 'flight',
+          title: 'Flight EWR → KEF',
+          date: '2026-09-14',
+          startMinutes: 17 * 60,
+          durationMinutes: 6 * 60 + 15,
+          flight: {
+            airline: 'Icelandair',
+            flightNumber: 'FI 623',
+            confirmationCode: 'AB2ZQV',
+            departureAirport: 'EWR',
+            arrivalAirport: 'KEF',
+          },
+        },
+      ],
+    });
+    expect(normalized?.itinerary[0]).toMatchObject({
+      title: 'Flight KEF → EWR',
+      date: '2026-09-14',
+      startMinutes: 17 * 60,
+      durationMinutes: 6 * 60 + 15,
+      flight: {
+        departureAirport: 'KEF',
+        arrivalAirport: 'EWR',
+      },
     });
   });
 

@@ -1,3 +1,4 @@
+import { findConfirmationMoney } from './confirmation-money';
 import {
   emptyFlightDetailsDraft,
   type FlightDetailsDraft,
@@ -14,6 +15,8 @@ export interface ParsedFlightSegment {
 
 export interface ParsedFlightConfirmation extends ParsedFlightSegment {
   segments: ParsedFlightSegment[];
+  amount?: number;
+  currency?: string;
 }
 
 const AIRLINES: Record<string, string> = {
@@ -400,12 +403,14 @@ export function parseFlightConfirmation(
           })
         : [parseSegment(text, tripRange, confirmationCode)];
   const first = segments[0];
+  const money = findConfirmationMoney(text);
   return {
     ...first,
     segments,
-    detectedFieldCount: segments.reduce(
-      (count, segment) => count + segment.detectedFieldCount,
-      0,
-    ),
+    amount: money.amount,
+    currency: money.currency,
+    detectedFieldCount:
+      segments.reduce((count, segment) => count + segment.detectedFieldCount, 0) +
+      (money.amount !== undefined ? 1 : 0),
   };
 }

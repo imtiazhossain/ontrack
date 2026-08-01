@@ -27,6 +27,7 @@ import {
   currencyOptionsForTrip,
   type FxRates,
 } from '@/features/travel/expenses/fx-rates';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
@@ -106,7 +107,7 @@ function PersonToggleRow({
   const theme = useTheme();
   return (
     <View style={[styles.block, style]}>
-      <AppText variant="overline" color="tertiary">
+      <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
         {label}
       </AppText>
       <View style={styles.personWrap}>
@@ -228,7 +229,7 @@ export function TravelExpenseForm({
 
       <View style={styles.row}>
         <PersonToggleRow
-          label="Paid by"
+          label="Paid By"
           people={people}
           selectedIds={[form.paidById]}
           single
@@ -241,7 +242,7 @@ export function TravelExpenseForm({
           }}
         />
         <PersonToggleRow
-          label="Split with"
+          label="Split With"
           people={people}
           selectedIds={form.splitWithIds}
           style={styles.flex}

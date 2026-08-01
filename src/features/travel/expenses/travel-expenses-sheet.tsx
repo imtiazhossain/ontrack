@@ -39,9 +39,9 @@ import {
 import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import type { TravelExpense, TravelExpenseCategory, TravelPlan } from '@/features/travel/types';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { formatDateKey } from '@/utils/date';const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
   stay: 'lodging',
@@ -81,6 +81,7 @@ export function TravelExpensesSheet({
   const [ratesStale, setRatesStale] = useState(false);
   const [form, setForm] = useState<ExpenseFormState | undefined>();
   const [formError, setFormError] = useState<string>();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -98,6 +99,7 @@ export function TravelExpensesSheet({
     if (!visible) {
       setForm(undefined);
       setFormError(undefined);
+      setConfirmingDelete(false);
     }
   }, [visible]);
 
@@ -117,11 +119,13 @@ export function TravelExpensesSheet({
 
   const beginAdd = () => {
     setFormError(undefined);
+    setConfirmingDelete(false);
     setForm(emptyExpenseForm(plan));
   };
 
   const beginEdit = (expense: TravelExpense) => {
     setFormError(undefined);
+    setConfirmingDelete(false);
     setForm(expenseFormFromExpense(expense));
   };
 
@@ -135,19 +139,23 @@ export function TravelExpensesSheet({
     onSavePlan(upsertTravelExpense(plan, built.expense));
     setForm(undefined);
     setFormError(undefined);
+    setConfirmingDelete(false);
   };
 
-  const deleteCurrent = () => {
+  const requestDelete = () => {
     if (!form?.existing) return;
-    confirmDestructiveAction({
-      title: 'Delete expense?',
-      message: `Remove “${form.existing.title}”?`,
-      onConfirm: () => {
-        onSavePlan(removeTravelExpense(plan, form.existing!.id));
-        setForm(undefined);
-        setFormError(undefined);
-      },
-    });
+    // Confirm inside this Modal. Root appPrompt sits behind RN Modal windows,
+    // so a nested confirm there is invisible / untappable.
+    setConfirmingDelete(true);
+  };
+
+  const confirmDelete = () => {
+    if (!form?.existing) return;
+    const expenseId = form.existing.id;
+    onSavePlan(removeTravelExpense(plan, expenseId));
+    setForm(undefined);
+    setFormError(undefined);
+    setConfirmingDelete(false);
   };
 
   return (
@@ -180,7 +188,7 @@ export function TravelExpensesSheet({
           </View>
           <View style={styles.sheetHeader}>
             <View style={styles.flex}>
-              <AppText variant="overline" color="accent">
+              <AppText variant="overline" color="accent" style={travelOverlineStyle}>
                 Expenses
               </AppText>
               <AppText variant="title">{plan.title}</AppText>
@@ -201,19 +209,47 @@ export function TravelExpensesSheet({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetContent}>
             {form ? (
-              <TravelExpenseForm
-                plan={plan}
-                form={form}
-                rates={rates}
-                error={formError}
-                onChange={setForm}
-                onSave={saveForm}
-                onCancel={() => {
-                  setForm(undefined);
-                  setFormError(undefined);
-                }}
-                onDelete={form.existing ? deleteCurrent : undefined}
-              />
+              confirmingDelete && form.existing ? (
+                <View style={styles.deleteConfirm} accessibilityLabel="Confirm delete expense">
+                  <Symbol name="delete" size="lg" color={theme.danger} />
+                  <AppText variant="subheading" fit>
+                    Delete expense?
+                  </AppText>
+                  <AppText variant="body" color="secondary" style={styles.deleteConfirmCopy}>
+                    Remove “{form.existing.title}”? This can’t be undone.
+                  </AppText>
+                  <Button
+                    variant="danger"
+                    accessibilityLabel="Confirm delete expense"
+                    onPress={confirmDelete}>
+                    Delete expense
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    accessibilityLabel="Cancel delete expense"
+                    onPress={() => setConfirmingDelete(false)}>
+                    Keep expense
+                  </Button>
+                </View>
+              ) : (
+                <TravelExpenseForm
+                  plan={plan}
+                  form={form}
+                  rates={rates}
+                  error={formError}
+                  onChange={(next) => {
+                    setConfirmingDelete(false);
+                    setForm(next);
+                  }}
+                  onSave={saveForm}
+                  onCancel={() => {
+                    setForm(undefined);
+                    setFormError(undefined);
+                    setConfirmingDelete(false);
+                  }}
+                  onDelete={form.existing ? requestDelete : undefined}
+                />
+              )
             ) : (
               <View style={styles.listBody}>
                 <MetricDisplay
@@ -241,7 +277,11 @@ export function TravelExpensesSheet({
 
                 {transfers.length > 0 ? (
                   <View style={styles.block}>
-                    <SectionHeader title="Settle up" detail={`${transfers.length}`} />
+                    <SectionHeader
+                      title="Settle Up"
+                      detail={`${transfers.length}`}
+                      titleStyle={travelOverlineStyle}
+                    />
                     {transfers.map((transfer) => (
                       <Card key={`${transfer.fromId}-${transfer.toId}`} variant="sunken" style={styles.settleCard}>
                         <AppText variant="callout">
@@ -257,13 +297,14 @@ export function TravelExpensesSheet({
                 ) : null}
 
                 <SectionHeader
-                  title="All expenses"
+                  title="All Expenses"
                   detail={`${sortedExpenses.length}`}
+                  titleStyle={travelOverlineStyle}
                 />
                 {sortedExpenses.length === 0 ? (
                   <Card variant="sunken" style={styles.emptyCard}>
                     <Symbol name="receipt" size="lg" color={theme.accentPrimary} />
-                    <AppText variant="subheading">Start tracking</AppText>
+                    <AppText variant="subheading">Start Tracking</AppText>
                     <AppText variant="body" color="secondary" style={styles.emptyCopy}>
                       Add flights, food, taxis — in ISK, USD, or whatever you paid. We’ll convert
                       amounts for you.
@@ -391,4 +432,10 @@ const styles = StyleSheet.create({
   },
   expenseCopy: { flex: 1, gap: spacing.xxs },
   amountCol: { alignItems: 'flex-end', gap: 2 },
+  deleteConfirm: {
+    gap: spacing.md,
+    alignItems: 'stretch',
+    paddingVertical: spacing.md,
+  },
+  deleteConfirmCopy: { textAlign: 'center' },
 });

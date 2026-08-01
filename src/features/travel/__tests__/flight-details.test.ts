@@ -25,6 +25,28 @@ describe('travel flight details', () => {
     });
   });
 
+  it('keeps durable confirmation file URIs', () => {
+    expect(
+      normalizeFlightDetails({
+        airline: 'Icelandair',
+        confirmationUris: [
+          'file:///var/mobile/Containers/Data/Application/x/Documents/travel-confirmations/flight/page-1.jpg',
+          'https://evil.example/ignore.jpg',
+        ],
+      }),
+    ).toEqual({
+      airline: 'Icelandair',
+      flightNumber: undefined,
+      confirmationCode: undefined,
+      departureAirport: undefined,
+      arrivalAirport: undefined,
+      seat: undefined,
+      confirmationUris: [
+        'file:///var/mobile/Containers/Data/Application/x/Documents/travel-confirmations/flight/page-1.jpg',
+      ],
+    });
+  });
+
   it('accepts an empty optional flight record', () => {
     expect(validateFlightDetails(emptyFlightDetailsDraft())).toEqual({
       ok: true,

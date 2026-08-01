@@ -1,9 +1,12 @@
 import ExpoModulesCore
 import PDFKit
+import QuickLook
 import UIKit
 import Vision
 
 public class TravelDocumentReaderModule: Module {
+  private var previewSession: DocumentPreviewSession?
+
   public func definition() -> ModuleDefinition {
     Name("TravelDocumentReader")
 
@@ -12,6 +15,35 @@ public class TravelDocumentReaderModule: Module {
         throw InvalidDocumentUrlException()
       }
       return try recognizeDocument(at: url)
+    }
+
+    AsyncFunction("previewDocumentsAsync") { (uris: [String]) in
+      let urls = uris.compactMap { URL(string: $0) }.filter(\.isFileURL)
+      guard !urls.isEmpty else {
+        throw InvalidDocumentUrlException()
+      }
+
+      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        let utilities = self.appContext?.utilities
+        DispatchQueue.main.async {
+          guard let viewController = utilities?.currentViewController() else {
+            continuation.resume(throwing: InvalidDocumentUrlException())
+            return
+          }
+
+          let session = DocumentPreviewSession(urls: urls) { [weak self] in
+            self?.previewSession = nil
+          }
+          self.previewSession = session
+
+          let previewController = QLPreviewController()
+          previewController.dataSource = session
+          previewController.delegate = session
+          viewController.present(previewController, animated: true) {
+            continuation.resume()
+          }
+        }
+      }
     }
   }
 
@@ -64,6 +96,28 @@ public class TravelDocumentReaderModule: Module {
       return $0.boundingBox.minX < $1.boundingBox.minX
     }
     return observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+  }
+}
+
+private final class DocumentPreviewSession: NSObject, QLPreviewControllerDataSource, QLPreviewControllerDelegate {
+  private let urls: [URL]
+  private let onFinish: () -> Void
+
+  init(urls: [URL], onFinish: @escaping () -> Void) {
+    self.urls = urls
+    self.onFinish = onFinish
+  }
+
+  func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+    urls.count
+  }
+
+  func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+    urls[index] as NSURL
+  }
+
+  func previewControllerDidDismiss(_ controller: QLPreviewController) {
+    onFinish()
   }
 }
 

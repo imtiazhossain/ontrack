@@ -10,14 +10,19 @@ describe('travel document reader build invariant', () => {
       ),
       'utf8',
     );
-    const importSource = readFileSync(
+    const flightImportSource = readFileSync(
       join(process.cwd(), 'src/features/travel/flight-confirmation-import.ts'),
+      'utf8',
+    );
+    const rentalImportSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/rental-confirmation-import.ts'),
       'utf8',
     );
 
     expect(moduleSource).toContain('requireOptionalNativeModule');
     expect(moduleSource).not.toMatch(/\brequireNativeModule\b/);
-    expect(importSource).toContain('if (!TravelDocumentReader)');
+    expect(flightImportSource).toContain('if (!TravelDocumentReader)');
+    expect(rentalImportSource).toContain('if (!TravelDocumentReader)');
   });
 
   it('keeps local native module sources in EAS build archives', () => {
@@ -44,6 +49,7 @@ describe('travel document reader build invariant', () => {
     expect(source).toContain('allowsMultipleSelection: true');
     expect(source).toContain('selectionLimit: MAX_SCREENSHOTS');
     expect(source).toContain("source === 'screenshots'");
+    expect(source).toContain('persistConfirmationAssets');
     expect(pickImageSource).toContain("mediaTypes: ['images']");
     expect(pickImageSource).toContain('allowsMultipleSelection');
   });

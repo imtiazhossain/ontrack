@@ -293,6 +293,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         }}
       />
       <Stack.Screen name="i/[code]" />
+      <Stack.Screen name="j/[code]" />
       <Stack.Screen name="l/[code]" />
       <Stack.Screen name="c/[code]" />
       <Stack.Screen name="v/[code]" />

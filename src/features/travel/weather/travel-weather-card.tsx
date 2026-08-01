@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, ErrorMessage, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
 import { formatDateKey } from '@/utils/date';
@@ -81,7 +82,9 @@ export function TravelWeatherCard({
         <View style={styles.titleRow}>
           <Symbol name="cloud.sun.fill" size="md" color={theme.accentPrimary} />
           <View style={styles.flex}>
-            <AppText variant="overline" color="tertiary">Destination weather</AppText>
+            <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+              Destination Weather
+            </AppText>
             <AppText variant="callout" color="accent">
               {weather?.locationLabel ?? destination}
             </AppText>

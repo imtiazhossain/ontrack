@@ -2,6 +2,7 @@ import { NativeModule, requireOptionalNativeModule } from 'expo';
 
 declare class TravelDocumentReaderModule extends NativeModule<{}> {
   recognizeTextAsync(uri: string): Promise<string>;
+  previewDocumentsAsync(uris: string[]): Promise<void>;
 }
 
 // Keep screens that offer document import usable in binaries that were built

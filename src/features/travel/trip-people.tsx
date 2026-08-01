@@ -11,6 +11,7 @@ import {
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import type { TravelParticipant } from '@/features/travel/types';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTheme } from '@/hooks/use-theme';
 
 interface TripPeopleProps {
@@ -20,6 +21,8 @@ interface TripPeopleProps {
   email: string;
   error?: string;
   inviting: boolean;
+  /** When false, omit the Friends section header (e.g. sheet already titles the surface). */
+  showHeader?: boolean;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onBeginInvite: () => void;
@@ -137,6 +140,7 @@ export function TripPeople({
   email,
   error,
   inviting,
+  showHeader = true,
   onNameChange,
   onEmailChange,
   onBeginInvite,
@@ -151,11 +155,13 @@ export function TripPeople({
 
   return (
     <View style={styles.container}>
-      <SectionHeader
-        title="Friends"
-        detail={pending.length > 0 ? `${pending.length} pending` : undefined}
-      />
-
+      {showHeader ? (
+        <SectionHeader
+          title="Friends"
+          detail={pending.length > 0 ? `${pending.length} pending` : undefined}
+          titleStyle={travelOverlineStyle}
+        />
+      ) : null}
       {accepted.length > 0 ? (
         <Card variant="sunken" style={styles.list}>
           {accepted.map((person) => (
@@ -173,7 +179,9 @@ export function TripPeople({
 
       {pending.length > 0 ? (
         <Card variant="sunken" style={styles.list}>
-          <AppText variant="overline" color="secondary">Invited</AppText>
+          <AppText variant="overline" color="secondary" style={travelOverlineStyle}>
+            Invited
+          </AppText>
           {pending.map((person) => (
             <PersonRow
               key={person.id}

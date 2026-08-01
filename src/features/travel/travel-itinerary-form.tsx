@@ -12,11 +12,15 @@ import { ChipRow } from '@/components/shared';
 import { spacing } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
+import type { RentalDetailsDraft } from '@/features/travel/rental-details';
+import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import type { TravelItemKind } from '@/features/travel/types';
 
 export const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'flight', label: 'Flight' },
   { value: 'stay', label: 'Stay' },
+  { value: 'rental', label: 'Rental' },
   { value: 'activity', label: 'Activity' },
 ];
 
@@ -32,6 +36,10 @@ export function TravelItineraryForm({
   flightDetailsError,
   importedFlightFileName,
   importingFlight,
+  rentalDetails,
+  rentalDetailsError,
+  importedRentalFileName,
+  importingRental,
   error,
   planStartDate,
   planEndDate,
@@ -44,6 +52,8 @@ export function TravelItineraryForm({
   onBookingUrlChange,
   onFlightDetailsChange,
   onImportFlight,
+  onRentalDetailsChange,
+  onImportRental,
   onAdd,
 }: {
   kind: TravelItemKind;
@@ -57,6 +67,10 @@ export function TravelItineraryForm({
   flightDetailsError?: string;
   importedFlightFileName?: string;
   importingFlight: boolean;
+  rentalDetails: RentalDetailsDraft;
+  rentalDetailsError?: string;
+  importedRentalFileName?: string;
+  importingRental: boolean;
   error?: string;
   planStartDate: string;
   planEndDate: string;
@@ -69,11 +83,13 @@ export function TravelItineraryForm({
   onBookingUrlChange: (value: string) => void;
   onFlightDetailsChange: (value: FlightDetailsDraft) => void;
   onImportFlight: () => void;
+  onRentalDetailsChange: (value: RentalDetailsDraft) => void;
+  onImportRental: () => void;
   onAdd: () => void;
 }) {
   return (
     <>
-      <SectionHeader title="Add to the Plan" />
+      <SectionHeader title="Add to the Plan" titleStyle={travelOverlineStyle} />
       <ChipRow options={ITEM_KINDS} selected={kind} onSelect={onKindChange} />
       <Input
         label="Name"
@@ -84,13 +100,15 @@ export function TravelItineraryForm({
             ? 'Flight to Lisbon'
             : kind === 'stay'
               ? 'Hotel check-in'
-              : 'Dinner in Alfama'
+              : kind === 'rental'
+                ? 'Hertz at KEF'
+                : 'Dinner in Alfama'
         }
       />
       <View style={styles.twoColumns}>
         <View style={styles.flex}>
           <DateField
-            label="Date"
+            label={kind === 'rental' ? 'Pick-up Date' : 'Date'}
             value={date}
             minimumDate={planStartDate}
             maximumDate={planEndDate}
@@ -98,7 +116,11 @@ export function TravelItineraryForm({
           />
         </View>
         <View style={styles.flex}>
-          <TimeField label="Time" value={startMinutes} onChange={onStartMinutesChange} />
+          <TimeField
+            label={kind === 'rental' ? 'Pick-up Time' : 'Time'}
+            value={startMinutes}
+            onChange={onStartMinutesChange}
+          />
         </View>
       </View>
       <Input
@@ -117,6 +139,18 @@ export function TravelItineraryForm({
           onImport={onImportFlight}
         />
       ) : null}
+      {kind === 'rental' ? (
+        <RentalDetailsEditor
+          value={rentalDetails}
+          onChange={onRentalDetailsChange}
+          error={rentalDetailsError}
+          importedFileName={importedRentalFileName}
+          importing={importingRental}
+          onImport={onImportRental}
+          planStartDate={planStartDate}
+          planEndDate={planEndDate}
+        />
+      ) : null}
       <Input
         label="Details"
         value={details}
@@ -124,7 +158,9 @@ export function TravelItineraryForm({
         placeholder={
           kind === 'flight'
             ? 'Terminal, baggage, or check-in notes…'
-            : 'Confirmation number, meeting point, ideas…'
+            : kind === 'rental'
+              ? 'Insurance, driver, or desk notes…'
+              : 'Confirmation number, meeting point, ideas…'
         }
         multiline
       />
@@ -145,5 +181,5 @@ export function TravelItineraryForm({
 
 const styles = StyleSheet.create({
   twoColumns: { flexDirection: 'row', gap: spacing.sm },
-  flex: { flex: 1, gap: spacing.xxs },
+  flex: { flex: 1, minWidth: 0, gap: spacing.xxs },
 });

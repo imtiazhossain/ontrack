@@ -7,6 +7,7 @@ interface MergeImportedFlightsOptions {
   tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>;
   createId: () => string;
   targetItemId?: string;
+  confirmationUris?: string[];
 }
 
 export function expandedTripRangeForFlights(
@@ -56,6 +57,7 @@ function importedItemValues(
   segment: ParsedFlightSegment,
   index: number,
   tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
+  confirmationUris?: string[],
 ) {
   const date =
     segment.date ??
@@ -77,6 +79,7 @@ function importedItemValues(
       departureAirport: segment.flight.departureAirport || undefined,
       arrivalAirport: segment.flight.arrivalAirport || undefined,
       seat: segment.flight.seat || undefined,
+      ...(confirmationUris?.length ? { confirmationUris } : {}),
     },
   };
 }
@@ -87,11 +90,17 @@ export function mergeImportedFlights({
   tripRange,
   createId,
   targetItemId,
+  confirmationUris,
 }: MergeImportedFlightsOptions): TravelItineraryItem[] {
   const merged = [...itinerary];
 
   segments.forEach((segment, index) => {
-    const values = importedItemValues(segment, index, tripRange);
+    const values = importedItemValues(
+      segment,
+      index,
+      tripRange,
+      confirmationUris,
+    );
     const targetIndex =
       index === 0 && targetItemId
         ? merged.findIndex((item) => item.id === targetItemId)

@@ -13,16 +13,15 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
+import { applyImportedRentalToPlan } from '@/features/travel/apply-imported-rental';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import {
   importFlightConfirmation,
   type FlightConfirmationImportSource,
 } from '@/features/travel/flight-confirmation-import';
-import {
-  expandedTripRangeForFlights,
-  mergeImportedFlights,
-} from '@/features/travel/flight-confirmation-itinerary';
+import { applyFlightExpenseFromImport } from '@/features/travel/flight-expense-from-import';
 import {
   emptyFlightDetailsDraft,
   flightDetailsDraft,
@@ -31,24 +30,22 @@ import {
 } from '@/features/travel/flight-details';
 import { normalizeTravelPlan } from '@/features/travel/normalize';
 import {
-  loadTravelInviteStatuses,
-  resendTravelInvite,
-  revokeTravelInvite,
-  shareTravelPlan,
-} from '@/features/travel/share';
-import { TripPeople } from '@/features/travel/trip-people';
-import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
+  importRentalConfirmation,
+  type RentalConfirmationImportSource,
+} from '@/features/travel/rental-confirmation-import';
+import {
+  emptyRentalDetailsDraft,
+  rentalDetailsDraft,
+  validateRentalDetails,
+  type RentalDetailsDraft,
+} from '@/features/travel/rental-details';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { TravelItineraryForm } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryItem } from '@/features/travel/travel-itinerary-item';
-import { TravelPlanActions } from '@/features/travel/travel-plan-actions';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
-import type {
-  TravelItemKind,
-  TravelParticipant,
-  TravelPlan,
-} from '@/features/travel/types';
+import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
@@ -76,7 +73,6 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const savePlan = useTravel((state) => state.savePlan);
   const activities = useSchedule((state) => state.activities);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
-  const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [editingDates, setEditingDates] = useState(false);
   const [editStartDate, setEditStartDate] = useState(plan?.startDate ?? '');
@@ -104,77 +100,51 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const [editedFlightDetailsError, setEditedFlightDetailsError] = useState<string>();
   const [editedFlightFileName, setEditedFlightFileName] = useState<string>();
   const [importingFlightTarget, setImportingFlightTarget] = useState<string>();
+  const [rentalDetails, setRentalDetails] = useState<RentalDetailsDraft>(
+    emptyRentalDetailsDraft,
+  );
+  const [rentalDetailsError, setRentalDetailsError] = useState<string>();
+  const [importedRentalFileName, setImportedRentalFileName] = useState<string>();
+  const [editingRentalItemId, setEditingRentalItemId] = useState<string>();
+  const [editedRentalDetails, setEditedRentalDetails] = useState<RentalDetailsDraft>(
+    emptyRentalDetailsDraft,
+  );
+  const [editedRentalDetailsError, setEditedRentalDetailsError] = useState<string>();
+  const [editedRentalFileName, setEditedRentalFileName] = useState<string>();
+  const [importingRentalTarget, setImportingRentalTarget] = useState<string>();
   const [error, setError] = useState<string>();
   const [dateError, setDateError] = useState<string>();
   const [detailsError, setDetailsError] = useState<string>();
-  const [sharingInvite, setSharingInvite] = useState(false);
-  const [editingInvite, setEditingInvite] = useState(false);
-  const [inviteName, setInviteName] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteError, setInviteError] = useState<string>();
-  const [managingParticipantId, setManagingParticipantId] = useState<string>();
   const [minimizedItemIds, setMinimizedItemIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [showExpenses, setShowExpenses] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      let current = useTravel.getState().plans.find((item) => item.id === planId);
+      const current = useTravel.getState().plans.find((item) => item.id === planId);
       const normalized = normalizeTravelPlan(current);
       if (
         current &&
         normalized &&
         JSON.stringify(normalized) !== JSON.stringify(current)
       ) {
-        current = {
+        const next = {
           ...normalized,
           updatedAt: new Date().toISOString(),
         };
-        useTravel.getState().savePlan(current);
+        useTravel.getState().savePlan(next);
         const schedule = useSchedule.getState();
         if (
           schedule.activities.some(
-            (activity) => activity.travelPlanId === current?.id,
+            (activity) => activity.travelPlanId === next.id,
           )
         ) {
           schedule.replaceTravelActivities(
-            current.id,
-            travelCalendarDrafts(current),
+            next.id,
+            travelCalendarDrafts(next),
           );
         }
       }
-      const inviteCodes = current?.participants.map((person) => person.inviteCode) ?? [];
-      if (inviteCodes.length === 0) return () => {
-        active = false;
-      };
-
-      void loadTravelInviteStatuses(inviteCodes)
-        .then((statuses) => {
-          if (!active || Object.keys(statuses).length === 0) return;
-          const latest = useTravel.getState().plans.find((item) => item.id === planId);
-          if (!latest) return;
-          let changed = false;
-          const participants = latest.participants.map((person) => {
-            const acceptedAt = statuses[person.inviteCode];
-            if (!acceptedAt || person.acceptedAt === acceptedAt) return person;
-            changed = true;
-            return { ...person, acceptedAt };
-          });
-          if (changed) {
-            useTravel.getState().savePlan({
-              ...latest,
-              participants,
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        })
-        .catch(() => undefined);
-
-      return () => {
-        active = false;
-      };
     }, [planId]),
   );
 
@@ -202,6 +172,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
   const addItem = () => {
     setError(undefined);
     setFlightDetailsError(undefined);
+    setRentalDetailsError(undefined);
     const durationMinutes = Number(duration);
     if (!title.trim()) return setError('Add a name for this itinerary item.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
@@ -223,6 +194,13 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     if (!validatedFlightDetails.ok) {
       return setFlightDetailsError(validatedFlightDetails.error);
     }
+    const validatedRentalDetails =
+      kind === 'rental'
+        ? validateRentalDetails(rentalDetails)
+        : ({ ok: true, value: undefined } as const);
+    if (!validatedRentalDetails.ok) {
+      return setRentalDetailsError(validatedRentalDetails.error);
+    }
     const now = new Date().toISOString();
     updatePlan({
       ...plan,
@@ -238,6 +216,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           details: details.trim() || undefined,
           bookingUrl: bookingUrl.trim() || undefined,
           flight: validatedFlightDetails.value,
+          rental: validatedRentalDetails.value,
         },
       ],
       updatedAt: now,
@@ -247,6 +226,8 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     setBookingUrl('');
     setFlightDetails(emptyFlightDetailsDraft());
     setImportedFlightFileName(undefined);
+    setRentalDetails(emptyRentalDetailsDraft());
+    setImportedRentalFileName(undefined);
   };
 
   const removeItem = (itemId: string) => {
@@ -270,6 +251,7 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     itemId: string,
     currentDetails: TravelPlan['itinerary'][number]['flight'],
   ) => {
+    setEditingRentalItemId(undefined);
     setEditingFlightItemId(itemId);
     setEditedFlightDetails(flightDetailsDraft(currentDetails));
     setEditedFlightDetailsError(undefined);
@@ -295,10 +277,40 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     setEditingFlightItemId(undefined);
   };
 
+  const beginEditingRentalDetails = (
+    itemId: string,
+    currentDetails: TravelPlan['itinerary'][number]['rental'],
+  ) => {
+    setEditingFlightItemId(undefined);
+    setEditingRentalItemId(itemId);
+    setEditedRentalDetails(rentalDetailsDraft(currentDetails));
+    setEditedRentalDetailsError(undefined);
+    setEditedRentalFileName(undefined);
+  };
+
+  const saveEditedRentalDetails = (itemId: string) => {
+    setEditedRentalDetailsError(undefined);
+    const validation = validateRentalDetails(editedRentalDetails);
+    if (!validation.ok) return setEditedRentalDetailsError(validation.error);
+    updatePlan({
+      ...plan,
+      itinerary: itinerary.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              rental: validation.value,
+            }
+          : item,
+      ),
+      updatedAt: new Date().toISOString(),
+    });
+    setEditingRentalItemId(undefined);
+  };
+
   const chooseConfirmationImport = (target: 'new' | string) => {
     appPrompt.alert(
       'Import Flight Confirmation',
-      'Choose a document, saved email, or up to 6 screenshots from Photos.',
+      'Choose a document, saved email, or up to 6 screenshots from Photos. The total is added to trip expenses when found.',
       [
         {
           text: 'Photo Screenshots',
@@ -307,6 +319,24 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         {
           text: 'Document or Email',
           onPress: () => void importConfirmation(target, 'document'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  };
+
+  const chooseRentalConfirmationImport = (target: 'new' | string) => {
+    appPrompt.alert(
+      'Import Rental Confirmation',
+      'Choose a document, saved email, or up to 6 screenshots from Photos. The total is added to trip expenses when found.',
+      [
+        {
+          text: 'Photo Screenshots',
+          onPress: () => void importRental(target, 'screenshots'),
+        },
+        {
+          text: 'Document or Email',
+          onPress: () => void importRental(target, 'document'),
         },
         { text: 'Cancel', style: 'cancel' },
       ],
@@ -329,20 +359,19 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         source,
       );
       if (!imported) return;
-      if (imported.segments.length > 1) {
-        const importedRange = expandedTripRangeForFlights(plan, imported.segments);
-        updatePlan({
-          ...plan,
-          ...importedRange,
-          itinerary: mergeImportedFlights({
-            itinerary,
-            segments: imported.segments,
-            tripRange: plan,
+      const expenseAlert =
+        imported.amount !== undefined && imported.amount > 0
+          ? ` Added ${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} under Expenses.`
+          : '';
+      if (imported.segments.length > 1 || target !== 'new') {
+        updatePlan(
+          applyImportedFlightsToPlan({
+            plan,
+            imported,
             createId: () => newId('trip-item'),
             targetItemId: target === 'new' ? undefined : target,
           }),
-          updatedAt: new Date().toISOString(),
-        });
+        );
         setEditingFlightItemId(undefined);
         if (target === 'new') {
           setTitle('');
@@ -351,7 +380,31 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           setFlightDetails(emptyFlightDetailsDraft());
           setImportedFlightFileName(undefined);
         }
-        return;
+        if (imported.segments.length > 1) {
+          if (expenseAlert) {
+            appPrompt.alert(
+              'Flights Added',
+              `Saved ${imported.segments.length} flights to your itinerary.${expenseAlert}`,
+            );
+          }
+          return;
+        }
+        if (target !== 'new') {
+          if (expenseAlert) {
+            appPrompt.alert(
+              'Flight Updated',
+              `Updated this flight from the confirmation.${expenseAlert}`,
+            );
+          }
+          return;
+        }
+      }
+      if (imported.amount !== undefined && imported.amount > 0 && target === 'new') {
+        updatePlan(applyFlightExpenseFromImport(plan, imported));
+        appPrompt.alert(
+          'Flight Expense Added',
+          `${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} was added under Expenses. Review the flight details before saving.`,
+        );
       }
       const mergeImportedDetails = (current: FlightDetailsDraft): FlightDetailsDraft => ({
         airline: imported.flight.airline || current.airline,
@@ -362,6 +415,9 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           imported.flight.departureAirport || current.departureAirport,
         arrivalAirport: imported.flight.arrivalAirport || current.arrivalAirport,
         seat: imported.flight.seat || current.seat,
+        confirmationUris: imported.confirmationUris?.length
+          ? imported.confirmationUris
+          : current.confirmationUris,
       });
       if (target === 'new') {
         setFlightDetails((current) => mergeImportedDetails(current));
@@ -387,6 +443,57 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
       else setEditedFlightDetailsError(message);
     } finally {
       setImportingFlightTarget(undefined);
+    }
+  };
+
+  const importRental = async (
+    target: 'new' | string,
+    source: RentalConfirmationImportSource,
+  ) => {
+    setImportingRentalTarget(target);
+    if (target === 'new') setRentalDetailsError(undefined);
+    else setEditedRentalDetailsError(undefined);
+    try {
+      const imported = await importRentalConfirmation(
+        {
+          startDate: plan.startDate,
+          endDate: plan.endDate,
+        },
+        source,
+      );
+      if (!imported) return;
+      updatePlan(
+        applyImportedRentalToPlan({
+          plan,
+          imported,
+          createId: () => newId('trip-item'),
+          targetItemId: target === 'new' ? undefined : target,
+        }),
+      );
+      setEditingRentalItemId(undefined);
+      setKind('rental');
+      if (target === 'new') {
+        setTitle('');
+        setDetails('');
+        setBookingUrl('');
+        setRentalDetails(emptyRentalDetailsDraft());
+        setImportedRentalFileName(undefined);
+      }
+      if (imported.amount !== undefined && imported.amount > 0) {
+        appPrompt.alert(
+          'Rental Added',
+          `Saved the rental to your itinerary and added ${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} under Expenses.`,
+        );
+      }
+    } catch (reason) {
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : 'The confirmation document could not be read.';
+      if (target === 'new') setRentalDetailsError(message);
+      else setEditedRentalDetailsError(message);
+    } finally {
+      setImportingRentalTarget(undefined);
     }
   };
 
@@ -456,102 +563,6 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
     });
   };
 
-  const inviteFriend = async () => {
-    setInviteError(undefined);
-    const name = inviteName.trim();
-    const email = inviteEmail.trim().toLowerCase();
-    if (!name) return setInviteError('Add your friend’s name.');
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return setInviteError(
-        'Enter the email address your friend uses to sign in to onTrack.',
-      );
-    }
-    setSharingInvite(true);
-    try {
-      const code = await shareTravelPlan(plan, { name, email });
-      if (!code) return;
-      const now = new Date().toISOString();
-      updatePlan({
-        ...plan,
-        participants: [
-          ...plan.participants,
-          {
-            id: newId('trip-person'),
-            name,
-            email,
-            inviteCode: code,
-            invitedAt: now,
-          },
-        ],
-        updatedAt: now,
-      });
-      setInviteName('');
-      setInviteEmail('');
-      setEditingInvite(false);
-    } catch (shareError) {
-      setInviteError(
-        shareError instanceof Error
-          ? shareError.message
-          : 'The invitation could not be created. Please try again.',
-      );
-    } finally {
-      setSharingInvite(false);
-    }
-  };
-
-  const resendInvite = async (participant: TravelParticipant) => {
-    setManagingParticipantId(participant.id);
-    try {
-      await resendTravelInvite(
-        plan,
-        { name: participant.name, email: participant.email ?? '' },
-        participant.inviteCode,
-      );
-    } catch (reason) {
-      appPrompt.alert(
-        'Couldn’t resend invitation',
-        reason instanceof Error
-          ? reason.message
-          : 'The invitation could not be shared. Please try again.',
-      );
-    } finally {
-      setManagingParticipantId(undefined);
-    }
-  };
-
-  const removeParticipant = async (participant: TravelParticipant) => {
-    setManagingParticipantId(participant.id);
-    try {
-      await revokeTravelInvite(participant.inviteCode);
-      updatePlan({
-        ...plan,
-        participants: plan.participants.filter((person) => person.id !== participant.id),
-        updatedAt: new Date().toISOString(),
-      });
-    } catch (reason) {
-      appPrompt.alert(
-        participant.acceptedAt ? 'Couldn’t remove friend' : 'Couldn’t remove invitation',
-        reason instanceof Error
-          ? reason.message
-          : 'This person could not be removed. Please try again.',
-      );
-    } finally {
-      setManagingParticipantId(undefined);
-    }
-  };
-
-  const confirmRemoveParticipant = (participant: TravelParticipant) => {
-    const accepted = Boolean(participant.acceptedAt);
-    confirmDestructiveAction({
-      title: accepted ? 'Remove Friend?' : 'Remove Invitation?',
-      message: accepted
-        ? `${participant.name} will be removed from this trip and their invite link will stop working.`
-        : `${participant.name}’s invite link will stop working.`,
-      actionLabel: accepted ? 'Remove Friend' : 'Remove Invite',
-      onConfirm: () => void removeParticipant(participant),
-    });
-  };
-
   return (
     <Screen contentStyle={styles.screen}>
       {editingDetails ? (
@@ -577,7 +588,11 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
             pressed ? styles.pressed : undefined,
           ]}>
           <View style={styles.flex}>
-            <AppText variant="overline" color="accent">{plan.destination}</AppText>
+            {plan.title.trim().toLowerCase() !== plan.destination.trim().toLowerCase() ? (
+              <AppText variant="overline" color="accent" style={travelOverlineStyle}>
+                {plan.destination}
+              </AppText>
+            ) : null}
             <AppText variant="title">{plan.title}</AppText>
           </View>
           <Symbol name="pencil" size="sm" color={theme.textTertiary} />
@@ -612,48 +627,14 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         </View>
       ) : null}
 
-      <TravelPlanActions
-        plan={plan}
-        dateLocale={dateLocale}
-        onOpenExpenses={() => setShowExpenses(true)}
+      <SectionHeader
+        title="Itinerary"
+        detail={`${sortedItinerary.length} planned`}
+        titleStyle={travelOverlineStyle}
       />
-
-      <Button
-        variant="secondary"
-        icon="receipt"
-        onPress={() => setShowExpenses(true)}
-        accessibilityLabel={`Track expenses for ${plan.title}`}>
-        Expenses
-        {plan.expenses.length > 0 ? ` · ${plan.expenses.length}` : ''}
-      </Button>
-
-      <TripPeople
-        participants={plan.participants}
-        editing={editingInvite}
-        name={inviteName}
-        email={inviteEmail}
-        error={inviteError}
-        inviting={sharingInvite}
-        onNameChange={setInviteName}
-        onEmailChange={setInviteEmail}
-        onBeginInvite={() => {
-          setInviteError(undefined);
-          setEditingInvite(true);
-        }}
-        onCancelInvite={() => {
-          setInviteError(undefined);
-          setEditingInvite(false);
-        }}
-        onInvite={() => void inviteFriend()}
-        managingParticipantId={managingParticipantId}
-        onResend={(participant) => void resendInvite(participant)}
-        onRemove={confirmRemoveParticipant}
-      />
-
-      <SectionHeader title="Itinerary" detail={`${sortedItinerary.length} planned`} />
       {sortedItinerary.length === 0 ? (
         <AppText variant="body" color="secondary">
-          Add flights, stays, and things to do. Each item is also added to the onTrack calendar.
+        Add flights, stays, rentals, and things to do. Each item is also added to the onTrack calendar.
         </AppText>
       ) : null}
       {sortedItinerary.map((item) => (
@@ -667,12 +648,24 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
           editedFlightDetailsError={editedFlightDetailsError}
           editedFlightFileName={editedFlightFileName}
           importingFlight={importingFlightTarget === item.id}
+          editingRentalItemId={editingRentalItemId}
+          editedRentalDetails={editedRentalDetails}
+          editedRentalDetailsError={editedRentalDetailsError}
+          editedRentalFileName={editedRentalFileName}
+          importingRental={importingRentalTarget === item.id}
+          planStartDate={plan.startDate}
+          planEndDate={plan.endDate}
           onToggle={() => toggleItineraryItem(item.id)}
           onEditedFlightDetailsChange={setEditedFlightDetails}
           onImportFlight={() => chooseConfirmationImport(item.id)}
           onSaveFlightDetails={() => saveEditedFlightDetails(item.id)}
           onCancelFlightEdit={() => setEditingFlightItemId(undefined)}
           onBeginFlightEdit={() => beginEditingFlightDetails(item.id, item.flight)}
+          onEditedRentalDetailsChange={setEditedRentalDetails}
+          onImportRental={() => chooseRentalConfirmationImport(item.id)}
+          onSaveRentalDetails={() => saveEditedRentalDetails(item.id)}
+          onCancelRentalEdit={() => setEditingRentalItemId(undefined)}
+          onBeginRentalEdit={() => beginEditingRentalDetails(item.id, item.rental)}
           onRemove={() => confirmRemoveItem(item)}
         />
       ))}
@@ -689,6 +682,10 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         flightDetailsError={flightDetailsError}
         importedFlightFileName={importedFlightFileName}
         importingFlight={importingFlightTarget === 'new'}
+        rentalDetails={rentalDetails}
+        rentalDetailsError={rentalDetailsError}
+        importedRentalFileName={importedRentalFileName}
+        importingRental={importingRentalTarget === 'new'}
         error={error}
         planStartDate={plan.startDate}
         planEndDate={plan.endDate}
@@ -701,13 +698,9 @@ function TravelPlanDetailContent({ planId }: { planId: string }) {
         onBookingUrlChange={setBookingUrl}
         onFlightDetailsChange={setFlightDetails}
         onImportFlight={() => chooseConfirmationImport('new')}
+        onRentalDetailsChange={setRentalDetails}
+        onImportRental={() => chooseRentalConfirmationImport('new')}
         onAdd={addItem}
-      />
-      <TravelExpensesSheet
-        plan={plan}
-        visible={showExpenses}
-        onClose={() => setShowExpenses(false)}
-        onSavePlan={(next) => updatePlan(next)}
       />
     </Screen>
   );

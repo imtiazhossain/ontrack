@@ -259,7 +259,7 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
       {notificationsAvailable && !notificationsEnabled ? (
         <View style={[styles.notificationBanner, { backgroundColor: theme.accentFaint }]}>
           <View style={styles.bannerCopy}>
-            <AppText variant="callout" color="accent">Get new-message alerts</AppText>
+            <AppText variant="callout" color="accent">Get New-Message Alerts</AppText>
             <AppText variant="caption" color="secondary">Stay in the loop when the app is closed.</AppText>
           </View>
           <Button

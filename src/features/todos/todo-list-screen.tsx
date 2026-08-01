@@ -87,6 +87,12 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const [inlineEditingTaskId, setInlineEditingTaskId] = useState<string | null>(
     null,
   );
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+
+  const dismissChrome = () => {
+    Keyboard.dismiss();
+    setExpandedTaskId(null);
+  };
 
   const openTasks = useMemo(
     () => sortTodoTasks(tasks.filter((task) => !task.completed), sort, 'open'),
@@ -118,6 +124,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
     if (!task) return;
     setEditingTaskIds(null);
     setInlineEditingTaskId(null);
+    setExpandedTaskId(null);
     setDraft('');
     setFilter('open');
     haptics.success();
@@ -190,9 +197,11 @@ export function TodoListScreen({ listId }: { listId: string }) {
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'
             }
             keyboardShouldPersistTaps="handled"
-            onScrollBeginDrag={Keyboard.dismiss}
+            onScrollBeginDrag={dismissChrome}
             keyExtractor={(item) => item.id}
-            ItemSeparatorComponent={ChecklistItemSeparator}
+            ItemSeparatorComponent={() => (
+              <ChecklistItemSeparator onPress={dismissChrome} />
+            )}
             ListFooterComponent={
               <Pressable
                 accessible={!!inlineEditingTaskId}
@@ -200,14 +209,14 @@ export function TodoListScreen({ listId }: { listId: string }) {
                 accessibilityLabel={
                   inlineEditingTaskId ? 'Finish editing' : undefined
                 }
-                onPress={Keyboard.dismiss}
+                onPress={dismissChrome}
                 style={styles.listDismissFooter}
               />
             }
             ListHeaderComponent={
               <Pressable
                 accessible={false}
-                onPress={Keyboard.dismiss}
+                onPress={dismissChrome}
                 style={styles.listHeader}
               >
                 <View style={styles.heading}>
@@ -351,7 +360,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     accessibilityHint="Toggles between open and closed tasks"
                     hitSlop={4}
                     onPress={() => {
-                      Keyboard.dismiss();
+                      dismissChrome();
                       setEditingTaskIds(null);
                       setInlineEditingTaskId(null);
                       setFilter(filter === 'open' ? 'completed' : 'open');
@@ -410,7 +419,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                           editMode ? 'Finish editing checklist' : 'Edit checklist'
                         }
                         onPress={() => {
-                          Keyboard.dismiss();
+                          dismissChrome();
                           setInlineEditingTaskId(null);
                           if (editMode) {
                             setEditingTaskIds(null);
@@ -584,9 +593,11 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   canComplete={canCompleteTodo(list, item, user?.id)}
                   editMode={editMode}
                   editing={inlineEditingTaskId === item.id}
+                  expanded={expandedTaskId === item.id}
                   isActive={isActive}
                   listOwner={owner}
                   members={members}
+                  onCollapseTitle={() => setExpandedTaskId(null)}
                   onDragStart={drag}
                   onDelete={() => {
                     deleteTask(item.id);
@@ -597,6 +608,11 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     if (item.completed) haptics.select();
                     else haptics.success();
                   }}
+                  onToggleExpanded={() =>
+                    setExpandedTaskId((id) =>
+                      id === item.id ? null : item.id,
+                    )
+                  }
                   onToggleImportant={() => {
                     toggleImportant(item.id);
                     haptics.select();
@@ -612,7 +628,10 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     setAssignee(item.id, choices[(index + 1) % choices.length]);
                     haptics.select();
                   }}
-                  onStartEdit={() => setInlineEditingTaskId(item.id)}
+                  onStartEdit={() => {
+                    setExpandedTaskId(null);
+                    setInlineEditingTaskId(item.id);
+                  }}
                   onEndEdit={() =>
                     setInlineEditingTaskId((id) =>
                       id === item.id ? null : id,

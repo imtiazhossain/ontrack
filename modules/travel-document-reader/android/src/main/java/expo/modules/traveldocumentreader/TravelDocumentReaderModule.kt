@@ -1,9 +1,12 @@
 package expo.modules.traveldocumentreader
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -28,6 +31,37 @@ class TravelDocumentReaderModule : Module() {
         "pdf" -> recognizePdf(file)
         else -> recognizeImage(InputImage.fromFilePath(context, uri))
       }
+    }
+
+    AsyncFunction("previewDocumentsAsync") { uris: List<String> ->
+      val context = appContext.reactContext
+        ?: throw IllegalStateException("The app is not ready to open documents.")
+      val first = uris.firstOrNull()
+        ?: throw IllegalArgumentException("The shared document could not be opened.")
+      val parsed = Uri.parse(first)
+      val file = parsed.path?.let(::File)
+        ?: throw IllegalArgumentException("The shared document could not be opened.")
+      if (!file.exists()) {
+        throw IllegalArgumentException("The shared document could not be opened.")
+      }
+      val contentUri = try {
+        FileProvider.getUriForFile(
+          context,
+          context.packageName + ".traveldocumentreader.provider",
+          file,
+        )
+      } catch (_: Exception) {
+        parsed
+      }
+      val extension = file.extension.lowercase()
+      val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+        ?: "application/octet-stream"
+      val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(contentUri, mime)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+      }
+      context.startActivity(intent)
     }
   }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   Pressable,
@@ -13,20 +13,25 @@ import { useTheme } from '@/hooks/use-theme';
 import type { TodoMember, TodoTask } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
+const TITLE_COLLAPSED_LINES = 2;
+
 export function TodoRow({
   task,
   canComplete,
   editMode,
   editing,
+  expanded,
   isActive,
   listOwner,
   members,
+  onCollapseTitle,
   onDelete,
   onDragStart,
   onCycleAssignee,
   onStartEdit,
   onEndEdit,
   onToggle,
+  onToggleExpanded,
   onToggleImportant,
   onUpdate,
 }: {
@@ -34,24 +39,57 @@ export function TodoRow({
   canComplete: boolean;
   editMode: boolean;
   editing: boolean;
+  expanded: boolean;
   isActive: boolean;
   listOwner: boolean;
   members: TodoMember[];
+  onCollapseTitle: () => void;
   onDelete: () => void;
   onDragStart: () => void;
   onCycleAssignee: () => void;
   onStartEdit: () => void;
   onEndEdit: () => void;
   onToggle: () => void;
+  onToggleExpanded: () => void;
   onToggleImportant: () => void;
   onUpdate: (title: string) => void;
 }) {
   const theme = useTheme();
   const [draft, setDraft] = useState(task.title);
+  const [lineCount, setLineCount] = useState(0);
+  const [measuredWhileExpanded, setMeasuredWhileExpanded] = useState(false);
+  const onCollapseTitleRef = useRef(onCollapseTitle);
+  onCollapseTitleRef.current = onCollapseTitle;
 
   useEffect(() => {
     if (!editing) setDraft(task.title);
   }, [editing, task.title]);
+
+  useEffect(() => {
+    setLineCount(0);
+    setMeasuredWhileExpanded(false);
+  }, [task.title]);
+
+  useEffect(() => {
+    if (!expanded) setMeasuredWhileExpanded(false);
+  }, [expanded]);
+
+  // Short titles can toggle expanded state, but snap closed once measured.
+  useEffect(() => {
+    if (
+      expanded &&
+      measuredWhileExpanded &&
+      lineCount > 0 &&
+      lineCount <= TITLE_COLLAPSED_LINES
+    ) {
+      onCollapseTitleRef.current();
+    }
+  }, [expanded, measuredWhileExpanded, lineCount]);
+
+  const dismissChrome = () => {
+    Keyboard.dismiss();
+    onCollapseTitle();
+  };
 
   const commitEdit = () => {
     const title = draft.trim();
@@ -61,7 +99,7 @@ export function TodoRow({
   };
 
   const confirmDelete = () => {
-    Keyboard.dismiss();
+    dismissChrome();
     confirmDestructiveAction({
       title: `Delete “${task.title}”?`,
       message: 'This checklist item will be permanently deleted.',
@@ -69,6 +107,22 @@ export function TodoRow({
       onConfirm: onDelete,
     });
   };
+
+  const titleText = (
+    <AppText
+      variant="bodyMedium"
+      color={task.completed ? 'tertiary' : 'primary'}
+      numberOfLines={expanded ? undefined : TITLE_COLLAPSED_LINES}
+      onTextLayout={(event) => {
+        const next = event.nativeEvent.lines.length;
+        setLineCount((prev) => (prev === next ? prev : next));
+        if (expanded) setMeasuredWhileExpanded(true);
+      }}
+      style={task.completed ? styles.completedTitle : undefined}
+    >
+      {task.title}
+    </AppText>
+  );
 
   return (
     <Pressable
@@ -87,7 +141,11 @@ export function TodoRow({
           confirmDelete();
         }
       }}
-      onPress={Keyboard.dismiss}
+      onPress={() => {
+        Keyboard.dismiss();
+        if (editMode) onCollapseTitle();
+        else onToggleExpanded();
+      }}
       style={[
         styles.taskRow,
         {
@@ -125,7 +183,7 @@ export function TodoRow({
           disabled={!canComplete}
           hitSlop={9}
           onPress={() => {
-            Keyboard.dismiss();
+            dismissChrome();
             onToggle();
           }}
           style={({ pressed }) => [
@@ -173,24 +231,10 @@ export function TodoRow({
             accessibilityLabel={`Edit ${task.title}`}
             onPress={onStartEdit}
           >
-            <AppText
-              variant="bodyMedium"
-              color={task.completed ? 'tertiary' : 'primary'}
-              numberOfLines={2}
-              style={task.completed ? styles.completedTitle : undefined}
-            >
-              {task.title}
-            </AppText>
+            {titleText}
           </Pressable>
         ) : (
-          <AppText
-            variant="bodyMedium"
-            color={task.completed ? 'tertiary' : 'primary'}
-            numberOfLines={2}
-            style={task.completed ? styles.completedTitle : undefined}
-          >
-            {task.title}
-          </AppText>
+          titleText
         )}
         {task.important && !task.completed ? (
           <AppText variant="overline" color="accent">
@@ -203,7 +247,7 @@ export function TodoRow({
             accessibilityLabel={`Assignment for ${task.title}`}
             disabled={!listOwner || editMode}
             onPress={() => {
-              Keyboard.dismiss();
+              dismissChrome();
               onCycleAssignee();
             }}>
             <AppText variant="caption" color="secondary">
@@ -250,7 +294,7 @@ export function TodoRow({
             accessibilityState={{ selected: task.important }}
             hitSlop={2}
             onPress={() => {
-              Keyboard.dismiss();
+              dismissChrome();
               onToggleImportant();
             }}
             style={({ pressed }) => [
@@ -270,11 +314,15 @@ export function TodoRow({
   );
 }
 
-export function ChecklistItemSeparator() {
+export function ChecklistItemSeparator({
+  onPress,
+}: {
+  onPress?: () => void;
+} = {}) {
   return (
     <Pressable
       accessible={false}
-      onPress={Keyboard.dismiss}
+      onPress={onPress ?? Keyboard.dismiss}
       style={styles.listSeparator}
     />
   );
@@ -301,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: radii.pill,
   },
-  taskCopy: { flex: 1, gap: spacing.xxs },
+  taskCopy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   completedTitle: { textDecorationLine: 'line-through' },
   editInput: {
     ...typography.bodyMedium,

@@ -1,3 +1,4 @@
+import { normalizeConfirmationUris } from './confirmation-attachments';
 import type { TravelFlightDetails } from './types';
 
 export interface FlightDetailsDraft {
@@ -7,6 +8,7 @@ export interface FlightDetailsDraft {
   departureAirport: string;
   arrivalAirport: string;
   seat: string;
+  confirmationUris?: string[];
 }
 
 export function emptyFlightDetailsDraft(): FlightDetailsDraft {
@@ -37,12 +39,16 @@ export function flightDetailsDraft(
     departureAirport: value?.departureAirport ?? '',
     arrivalAirport: value?.arrivalAirport ?? '',
     seat: value?.seat ?? '',
+    ...(value?.confirmationUris?.length
+      ? { confirmationUris: value.confirmationUris }
+      : {}),
   };
 }
 
 export function normalizeFlightDetails(value: unknown): TravelFlightDetails | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const input = value as Partial<Record<keyof TravelFlightDetails, unknown>>;
+  const confirmationUris = normalizeConfirmationUris(input.confirmationUris);
   const normalized: TravelFlightDetails = {
     airline: optionalText(input.airline),
     flightNumber: optionalText(input.flightNumber, true),
@@ -50,8 +56,13 @@ export function normalizeFlightDetails(value: unknown): TravelFlightDetails | un
     departureAirport: optionalText(input.departureAirport, true),
     arrivalAirport: optionalText(input.arrivalAirport, true),
     seat: optionalText(input.seat, true),
+    ...(confirmationUris ? { confirmationUris } : {}),
   };
-  return Object.values(normalized).some(Boolean) ? normalized : undefined;
+  return Object.values(normalized).some((field) =>
+    Array.isArray(field) ? field.length > 0 : Boolean(field),
+  )
+    ? normalized
+    : undefined;
 }
 
 export function validateFlightDetails(

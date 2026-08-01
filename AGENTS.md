@@ -65,7 +65,7 @@ After app-affecting changes, leave Metro healthy and verified (`/status` 200 on 
 | Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
 | Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`, `expenses/travel-expenses-sheet`) |
+| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `travel-friends-sheet`, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
 | Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`) |
 | Vehicles tab | `app/(tabs)/vehicles.tsx` (+ `features/vehicles/*`, `store/vehicles.ts`, `services/vehicles/` for VIN/parts + `collaboration.ts`, join via `app/v/[code].tsx`) |

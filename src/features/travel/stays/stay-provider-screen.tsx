@@ -13,6 +13,7 @@ import {
   stayProviders,
   staySearchInput,
 } from '@/features/travel/stays/provider';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
@@ -49,7 +50,9 @@ function StayProviderScreenContent({ planId }: { planId: string }) {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.heading}>
-        <AppText variant="overline" color="accent">Stay Search</AppText>
+        <AppText variant="overline" color="accent" style={travelOverlineStyle}>
+          Stay Search
+        </AppText>
         <AppText variant="title">Where do you want to check?</AppText>
         <AppText variant="body" color="secondary">
           Choose a provider. Your destination, dates, and travelers are ready to go.

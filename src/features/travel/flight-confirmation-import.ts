@@ -3,6 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import TravelDocumentReader from '../../../modules/travel-document-reader';
 import { pickLibraryImages } from '@/utils/pick-image';
 
+import { persistConfirmationAssets } from './confirmation-attachments';
 import {
   parseFlightConfirmation,
   type ParsedFlightConfirmation,
@@ -21,6 +22,7 @@ interface ConfirmationAsset {
 
 export interface ImportedFlightConfirmation extends ParsedFlightConfirmation {
   fileName: string;
+  confirmationUris: string[];
 }
 
 export async function importFlightConfirmation(
@@ -51,11 +53,12 @@ export async function importFlightConfirmation(
       'No flight details were recognized. Try a clearer image or enter the details manually.',
     );
   }
+  const confirmationUris = await persistConfirmationAssets(assets, 'flight');
   const fileName =
     assets.length === 1
       ? assets[0].fileName
       : `${assets.length} confirmation screenshots`;
-  return { ...parsed, fileName };
+  return { ...parsed, fileName, confirmationUris };
 }
 
 async function pickConfirmationDocument(): Promise<ConfirmationAsset[] | undefined> {

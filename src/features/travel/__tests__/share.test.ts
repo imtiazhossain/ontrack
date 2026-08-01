@@ -1,9 +1,12 @@
 import {
     createInstalledTravelInviteUrl,
+    createInstalledTravelOpenJoinUrl,
     createTravelInviteUrl,
+    createTravelOpenJoinUrl,
     decodeTravelInvite,
     encodeTravelInvite,
     findMatchingTravelPlan,
+    isOpenTravelJoinCode,
     isShortTravelInvite,
     resolveTravelInvite,
     travelInviteKey,
@@ -87,6 +90,16 @@ describe('travel invites', () => {
     const code = '0123456789abcdefabcd';
     expect(createInstalledTravelInviteUrl(`s.${code}`)).toBe(`ontrack:///i/${code}`);
     expect(createInstalledTravelInviteUrl()).toBe('ontrack:///travel');
+  });
+
+  it('creates an open join link that anyone can request and the host must approve', () => {
+    const code = '0123456789abcdefabcd';
+    expect(isOpenTravelJoinCode(code)).toBe(true);
+    expect(isOpenTravelJoinCode(`s.${code}`)).toBe(false);
+    expect(createTravelOpenJoinUrl(code, 'https://ontrack--links.expo.app/')).toBe(
+      `https://ontrack--links.expo.app/j/${code}`,
+    );
+    expect(createInstalledTravelOpenJoinUrl(code)).toBe(`ontrack:///j/${code}`);
   });
 
   it('keeps links from the original invite format working', () => {

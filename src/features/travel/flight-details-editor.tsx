@@ -4,6 +4,7 @@ import { AppText, Button, ErrorMessage, Input } from '@/components/primitives';
 import { spacing } from '@/design-system';
 
 import type { FlightDetailsDraft } from './flight-details';
+import { travelOverlineStyle } from './travel-chrome';
 
 interface FlightDetailsEditorProps {
   value: FlightDetailsDraft;
@@ -29,7 +30,9 @@ export function FlightDetailsEditor({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AppText variant="overline" color="accent">Flight Details</AppText>
+        <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+          Flight Details
+        </AppText>
         {onImport ? (
           <Button
             variant="secondary"

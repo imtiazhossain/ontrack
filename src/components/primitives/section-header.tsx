@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 
 import { useResponsive } from '@/hooks/use-responsive';
 import { AppText } from './app-text';
@@ -8,9 +8,16 @@ interface SectionHeaderProps {
   detail?: string;
   actionLabel?: string;
   onAction?: () => void;
+  titleStyle?: TextStyle;
 }
 
-export function SectionHeader({ title, detail, actionLabel, onAction }: SectionHeaderProps) {
+export function SectionHeader({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+  titleStyle,
+}: SectionHeaderProps) {
   const { spacing } = useResponsive();
   return (
     <View
@@ -22,7 +29,11 @@ export function SectionHeader({ title, detail, actionLabel, onAction }: SectionH
           marginBottom: spacing.md,
         },
       ]}>
-      <AppText variant="overline" color="tertiary" style={styles.title} fit>
+      <AppText
+        variant="overline"
+        color="tertiary"
+        style={[styles.title, titleStyle]}
+        fit>
         {title}
       </AppText>
       {actionLabel && onAction ? (

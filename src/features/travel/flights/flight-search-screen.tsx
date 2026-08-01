@@ -16,6 +16,7 @@ import {
 import { featureFlags } from '@/constants/feature-flags';
 import { spacing } from '@/design-system';
 import { compareOnGoogleFlights } from '@/features/travel/provider';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
@@ -64,7 +65,9 @@ function LegSummary({
 }) {
   return (
     <View style={styles.leg}>
-      <AppText variant="overline" color="tertiary">{label}</AppText>
+      <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+        {label}
+      </AppText>
       <View style={styles.route}>
         <View style={styles.flex}>
           <AppText variant="subheading">{leg.departureCode} → {leg.arrivalCode}</AppText>
@@ -210,7 +213,9 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.heading}>
-        <AppText variant="overline" color="accent">Flight Search</AppText>
+        <AppText variant="overline" color="accent" style={travelOverlineStyle}>
+          Flight Search
+        </AppText>
         <AppText variant="title">Flights for {plan.title}</AppText>
         <AppText variant="body" color="secondary">
           Live availability and total prices without leaving onTrack.
@@ -322,6 +327,7 @@ function FlightSearchScreenContent({ planId }: { planId: string }) {
             <SectionHeader
               title={`${result.originCode} → ${result.destinationCode}`}
               detail={`${result.offers.length} options`}
+              titleStyle={travelOverlineStyle}
             />
             <AppText variant="caption" color={result.dataMode === 'live' ? 'success' : 'secondary'}>
               {result.dataMode === 'live' ? 'Live Prices' : 'Test Data'}

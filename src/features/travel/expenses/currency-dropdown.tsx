@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { borders, radii, spacing } from '@/design-system';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 
@@ -110,7 +111,7 @@ export function ScrollableDropdown({
           },
         ]}>
         <View style={styles.fieldCopy}>
-          <AppText variant="overline" color="tertiary">
+          <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
             {label}
           </AppText>
           <AppText variant="callout" numberOfLines={1}>

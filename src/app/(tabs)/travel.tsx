@@ -9,11 +9,13 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
+import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import type { TravelPlan } from '@/features/travel/types';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { googleWeatherUrl } from '@/features/travel/weather';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
@@ -58,11 +60,33 @@ function TravelScreenContent() {
   const [editNotes, setEditNotes] = useState('');
   const [detailsError, setDetailsError] = useState<string>();
   const [expensesPlanId, setExpensesPlanId] = useState<string>();
+  const [expensesVisible, setExpensesVisible] = useState(false);
+  const [friendsPlanId, setFriendsPlanId] = useState<string>();
+  const [friendsVisible, setFriendsVisible] = useState(false);
   const sortedPlans = useMemo(
     () => [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate)),
     [plans],
   );
   const expensesPlan = sortedPlans.find((plan) => plan.id === expensesPlanId);
+  const friendsPlan = sortedPlans.find((plan) => plan.id === friendsPlanId);
+  const openExpenses = (planId: string) => {
+    setExpensesPlanId(planId);
+    setExpensesVisible(true);
+  };
+  const closeExpenses = () => {
+    // Hide Modal first; clearing the plan in the same frame unmounts an open
+    // Modal and can leave an invisible iOS touch blocker.
+    appPrompt.dismiss();
+    setExpensesVisible(false);
+  };
+  const openFriends = (planId: string) => {
+    setFriendsPlanId(planId);
+    setFriendsVisible(true);
+  };
+  const closeFriends = () => {
+    appPrompt.dismiss();
+    setFriendsVisible(false);
+  };
 
   const createPlan = () => {
     setError(undefined);
@@ -153,13 +177,15 @@ function TravelScreenContent() {
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <AppText variant="overline" color="accent">Travel</AppText>
+          <AppText variant="overline" color="accent" style={travelOverlineStyle}>
+            Travel
+          </AppText>
           {!showForm ? (
             <Button
               icon="add"
               onPress={() => setShowForm(true)}
               accessibilityLabel="Plan a new trip">
-              New trip
+              New Trip
             </Button>
           ) : null}
         </View>
@@ -185,7 +211,9 @@ function TravelScreenContent() {
           <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Ideas, budgets, must-dos…" multiline />
           {error ? <ErrorMessage message={error} /> : null}
           <View style={styles.row}>
-            <Button onPress={createPlan} style={styles.flex} accessibilityLabel="Save trip">Let’s go</Button>
+            <Button onPress={createPlan} style={styles.flex} accessibilityLabel="Save trip">
+              Let’s Go
+            </Button>
             {plans.length > 0 ? (
               <Button variant="ghost" onPress={() => setShowForm(false)} style={styles.flex} accessibilityLabel="Cancel new trip">
                 Cancel
@@ -197,7 +225,9 @@ function TravelScreenContent() {
 
       {sortedPlans.length > 0 ? (
         <View style={styles.tripsHeader}>
-          <AppText variant="overline" color="tertiary">Your Trips</AppText>
+          <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+            Your Trips
+          </AppText>
           <AppText variant="caption" color="secondary">
             {sortedPlans.length} {sortedPlans.length === 1 ? 'trip' : 'trips'}
           </AppText>
@@ -231,7 +261,9 @@ function TravelScreenContent() {
               ]}>
               <View style={styles.heading}>
                 <AppText variant="subheading">{plan.title}</AppText>
-                <AppText variant="callout" color="secondary">{plan.destination}</AppText>
+                {plan.title.trim().toLowerCase() !== plan.destination.trim().toLowerCase() ? (
+                  <AppText variant="callout" color="secondary">{plan.destination}</AppText>
+                ) : null}
               </View>
               <Symbol name="pencil" size="sm" color={theme.textTertiary} />
             </Pressable>
@@ -251,7 +283,9 @@ function TravelScreenContent() {
                 <Symbol name="calendar" size="md" color={theme.accentPrimary} />
               </View>
               <View style={styles.dateCopy}>
-                <AppText variant="overline" color="tertiary">Trip Dates</AppText>
+                <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+                  Trip Dates
+                </AppText>
                 <AppText variant="callout" color="accent">
                   {formatDateKey(plan.startDate, dateDisplayFormat)} → {formatDateKey(plan.endDate, dateDisplayFormat)}
                 </AppText>
@@ -282,13 +316,23 @@ function TravelScreenContent() {
           <View style={styles.actionGrid}>
             <Button
               variant="secondary"
+              icon="list"
+              style={styles.actionButton}
+              onPress={() =>
+                router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)
+              }
+              accessibilityLabel={`Plan itinerary for ${plan.title}`}>
+              Itinerary
+            </Button>
+            <Button
+              variant="secondary"
               icon="flight"
               style={styles.actionButton}
               onPress={() =>
                 router.push({ pathname: '/travel/[id]/flights', params: { id: plan.id } } as never)
               }
               accessibilityLabel={`Search flights for ${plan.title}`}>
-              Flights
+              Search Flights
             </Button>
             <Button
               variant="secondary"
@@ -298,7 +342,7 @@ function TravelScreenContent() {
                 router.push({ pathname: '/travel/[id]/stays', params: { id: plan.id } } as never)
               }
               accessibilityLabel={`Search stays for ${plan.title}`}>
-              Stays
+              Search Stays
             </Button>
             <Button
               variant="secondary"
@@ -306,17 +350,7 @@ function TravelScreenContent() {
               style={styles.actionButton}
               onPress={() => addTripToCalendar(plan)}
               accessibilityLabel={`Add ${plan.title} to calendar`}>
-              Add to calendar
-            </Button>
-            <Button
-              variant="secondary"
-              icon="list"
-              style={styles.actionButton}
-              onPress={() =>
-                router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)
-              }
-              accessibilityLabel={`Plan itinerary for ${plan.title}`}>
-              Itinerary
+              Add to Calendar
             </Button>
             <Button
               variant="secondary"
@@ -347,7 +381,7 @@ function TravelScreenContent() {
             variant="secondary"
             icon="receipt"
             style={styles.inviteButton}
-            onPress={() => setExpensesPlanId(plan.id)}
+            onPress={() => openExpenses(plan.id)}
             accessibilityLabel={`Open expenses for ${plan.title}`}>
             Expenses
             {plan.expenses.length > 0
@@ -355,13 +389,24 @@ function TravelScreenContent() {
               : ''}
           </Button>
           <Button
-            icon="people"
+            variant="secondary"
+            icon="chat"
             style={styles.inviteButton}
             onPress={() =>
-              router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never)
+              router.push({ pathname: '/travel/[id]/chat', params: { id: plan.id } } as never)
             }
+            accessibilityLabel={`Open group chat for ${plan.title}`}>
+            Group Chat
+          </Button>
+          <Button
+            icon="people"
+            style={styles.inviteButton}
+            onPress={() => openFriends(plan.id)}
             accessibilityLabel={`View friends on ${plan.title}`}>
             Friends
+            {plan.participants.length > 0
+              ? ` · ${plan.participants.length}`
+              : ''}
           </Button>
           <View style={[styles.cardFooter, { borderTopColor: theme.separator }]}>
             <Pressable
@@ -388,8 +433,16 @@ function TravelScreenContent() {
       {expensesPlan ? (
         <TravelExpensesSheet
           plan={expensesPlan}
-          visible
-          onClose={() => setExpensesPlanId(undefined)}
+          visible={expensesVisible}
+          onClose={closeExpenses}
+          onSavePlan={(next) => savePlan(next)}
+        />
+      ) : null}
+      {friendsPlan ? (
+        <TravelFriendsSheet
+          plan={friendsPlan}
+          visible={friendsVisible}
+          onClose={closeFriends}
           onSavePlan={(next) => savePlan(next)}
         />
       ) : null}
