@@ -1,9 +1,14 @@
 import type { PropsWithChildren, ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
@@ -69,6 +74,7 @@ export function TravelSheetHeader({
           hitSlop={8}
           onPress={() => {
             haptics.tap();
+            Keyboard.dismiss();
             onClose();
           }}
           style={({ pressed }) => [
@@ -110,7 +116,10 @@ type TravelSheetModalProps = PropsWithChildren<{
   closeAccessibilityLabel: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footer?: ReactNode;
-  maxHeight?: `${number}%` | number;
+  /** Optional cap; always clamped to the space below the status bar. */
+  maxHeight?: number;
+  /** Change to reset scroll (e.g. when switching list ↔ editor). */
+  scrollKey?: string | number;
 }>;
 
 /**
@@ -126,18 +135,39 @@ export function TravelSheetModal({
   closeAccessibilityLabel,
   contentContainerStyle,
   footer,
-  maxHeight = '96%',
+  maxHeight,
+  scrollKey,
   children,
 }: TravelSheetModalProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { spacing: rs, layout } = useResponsive();
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Cap to space below the status bar. A %-of-parent maxHeight overshoots because
+  // modalRoot already pads insets.top, which clipped the header on tall forms.
+  const availableHeight = Math.max(320, windowHeight - insets.top - rs.sm);
+  const sheetMaxHeight =
+    maxHeight !== undefined
+      ? Math.min(maxHeight, availableHeight)
+      : Math.round(availableHeight * 0.98);
+
+  useEffect(() => {
+    if (!visible) return;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [visible, scrollKey, title]);
+
+  const dismissKeyboardAndClose = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
 
   return (
     <Modal
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={dismissKeyboardAndClose}
       presentationStyle="overFullScreen"
       transparent
       visible={visible}>
@@ -148,41 +178,56 @@ export function TravelSheetModal({
         ]}>
         <Pressable
           accessibilityLabel={closeAccessibilityLabel}
-          onPress={onClose}
+          onPress={dismissKeyboardAndClose}
           style={StyleSheet.absoluteFill}
         />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: chrome.sheetBg,
-              maxHeight,
-              paddingBottom: Math.max(insets.bottom, rs.md),
-              paddingHorizontal: layout.screenPadding,
-              borderRadius: radii.xl,
-            },
-          ]}>
-          <TravelSheetHeader
-            eyebrow={eyebrow}
-            title={title}
-            subtitle={subtitle}
-            onClose={onClose}
-            closeAccessibilityLabel={closeAccessibilityLabel}
-          />
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            showsVerticalScrollIndicator={false}
-            style={styles.scroll}
-            contentContainerStyle={[
-              styles.content,
-              { gap: rs.lg, paddingBottom: footer ? rs.md : rs.xl },
-              contentContainerStyle,
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
+          pointerEvents="box-none"
+          style={styles.avoid}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: chrome.sheetBg,
+                maxHeight: sheetMaxHeight,
+                paddingBottom: Math.max(insets.bottom, rs.md),
+                paddingHorizontal: layout.screenPadding,
+                borderRadius: radii.xl,
+              },
             ]}>
-            {children}
-          </ScrollView>
-          {footer ? <View style={{ paddingTop: rs.md }}>{footer}</View> : null}
-        </View>
+            <View onStartShouldSetResponder={() => {
+              Keyboard.dismiss();
+              return false;
+            }}>
+              <TravelSheetHeader
+                eyebrow={eyebrow}
+                title={title}
+                subtitle={subtitle}
+                onClose={onClose}
+                closeAccessibilityLabel={closeAccessibilityLabel}
+              />
+            </View>
+            <ScrollView
+              key={scrollKey ?? 'sheet'}
+              ref={scrollRef}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              showsVerticalScrollIndicator={false}
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+              contentInsetAdjustmentBehavior="never"
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.content,
+                { gap: rs.lg, paddingBottom: footer ? rs.md : rs.xl },
+                contentContainerStyle,
+              ]}>
+              {children}
+            </ScrollView>
+            {footer ? <View style={{ paddingTop: rs.md }}>{footer}</View> : null}
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -191,6 +236,10 @@ export function TravelSheetModal({
 const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  avoid: {
+    width: '100%',
     justifyContent: 'flex-end',
   },
   sheet: {

@@ -1,4 +1,4 @@
-import { describeWeatherCode, forecastWindow } from '../provider';
+import { describeWeatherCode, forecastWindow, weatherIconForCode } from '../provider';
 
 describe('travel weather provider', () => {
   it('does not request forecasts before the 16-day window', () => {
@@ -30,5 +30,16 @@ describe('travel weather provider', () => {
     expect(describeWeatherCode(0)).toEqual({ condition: 'Clear', symbol: '☀️' });
     expect(describeWeatherCode(63)).toEqual({ condition: 'Rain', symbol: '🌧️' });
     expect(describeWeatherCode(95)).toEqual({ condition: 'Thunderstorms', symbol: '⛈️' });
+  });
+
+  it('maps WMO weather codes to monochrome app icons', () => {
+    expect(weatherIconForCode(0)).toBe('weather-clear');
+    expect(weatherIconForCode(2)).toBe('weather-partly-cloudy');
+    expect(weatherIconForCode(3)).toBe('weather-cloudy');
+    expect(weatherIconForCode(45)).toBe('weather-fog');
+    expect(weatherIconForCode(61)).toBe('weather-rain');
+    expect(weatherIconForCode(71)).toBe('weather-snow');
+    expect(weatherIconForCode(80)).toBe('weather-showers');
+    expect(weatherIconForCode(95)).toBe('weather-thunder');
   });
 });

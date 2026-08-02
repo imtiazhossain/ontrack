@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
@@ -14,6 +15,7 @@ import {
 import { ADDONS } from '@/addons/registry';
 import type { AddonId } from '@/addons/types';
 import { CloudAccountCard } from '@/features/account/cloud-account-card';
+import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
@@ -39,6 +41,7 @@ export default function ProfileSettingsScreen() {
   const theme = useTheme();
   const name = usePreferences((s) => s.name);
   const goal = usePreferences((s) => s.goal);
+  const homeLocation = usePreferences((s) => s.homeLocation);
   const themePreference = usePreferences((s) => s.themePreference);
   const aiEnabled = usePreferences((s) => s.aiEnabled);
   const hapticsEnabled = usePreferences((s) => s.hapticsEnabled);
@@ -58,6 +61,7 @@ export default function ProfileSettingsScreen() {
   const resetTravel = useTravel((s) => s.reset);
   const resetTodos = useTodos((s) => s.reset);
   const resetVisionBoard = useVisionBoard((s) => s.reset);
+  const [locationOpen, setLocationOpen] = useState(false);
 
   const handleReset = async () => {
     await Promise.all([
@@ -110,6 +114,13 @@ export default function ProfileSettingsScreen() {
       </View>
 
       <SectionHeader title="Preferences" />
+      <SettingsActionRow
+        label="Home location"
+        detail={homeLocation.trim() || 'Uses phone location · tap to change'}
+        icon="location"
+        onPress={() => setLocationOpen(true)}
+        accessibilityLabel="Set home location for weather"
+      />
       <SettingsToggleRow
         label="AI Summaries"
         detail="Daily insights, meal analysis, and plant analysis"
@@ -178,6 +189,8 @@ export default function ProfileSettingsScreen() {
           This product uses the TMDB API but is not endorsed or certified by TMDB.
         </AppText>
       </Pressable>
+
+      <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
     </Screen>
   );
 }

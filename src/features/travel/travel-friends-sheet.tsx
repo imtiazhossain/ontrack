@@ -35,6 +35,7 @@ import type {
   TravelPlan,
 } from '@/features/travel/types';
 import type { FriendProfile } from '@/services/friends';
+import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { useFriends } from '@/store/friends';
 import { useTravel } from '@/store/travel';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
@@ -132,11 +133,15 @@ export function TravelFriendsSheet({
         const current =
           useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
         if (current.openJoinCode !== code) {
-          onSavePlan({
+          const next = {
             ...current,
             openJoinCode: code,
             updatedAt: new Date().toISOString(),
-          });
+          };
+          onSavePlan(next);
+          void publishTravelTripExpenses(next).catch(() => undefined);
+        } else {
+          void publishTravelTripExpenses(current).catch(() => undefined);
         }
         return refreshJoinRequests(latest.id);
       })
@@ -177,7 +182,7 @@ export function TravelFriendsSheet({
       const code = await shareTravelPlan(plan, { name, email });
       if (!code) return;
       const now = new Date().toISOString();
-      onSavePlan({
+      const next: TravelPlan = {
         ...plan,
         participants: [
           ...plan.participants,
@@ -190,7 +195,9 @@ export function TravelFriendsSheet({
           },
         ],
         updatedAt: now,
-      });
+      };
+      onSavePlan(next);
+      void publishTravelTripExpenses(next).catch(() => undefined);
       setInviteName('');
       setInviteEmail('');
       setEditingInvite(false);
@@ -243,6 +250,7 @@ export function TravelFriendsSheet({
         };
         onSavePlan(current);
       }
+      void publishTravelTripExpenses(current).catch(() => undefined);
     } catch (shareError) {
       setInviteError(
         shareError instanceof Error

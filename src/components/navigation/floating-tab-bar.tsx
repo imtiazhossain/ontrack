@@ -20,6 +20,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { borders, radii } from '@/design-system';
+import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
@@ -118,6 +119,11 @@ export function FloatingTabBar({
   'use no memo';
   const theme = useTheme();
   const router = useRouter();
+  const { weather: homeWeather, icon: homeWeatherIcon } = useHomeWeather();
+  const todayTabIcon: AppIconName = homeWeatherIcon ?? 'today';
+  const todayAccessibilityExtra = homeWeather
+    ? `, ${homeWeather.condition}`
+    : '';
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { spacing, layout, s, typography } = useResponsive();
@@ -423,6 +429,14 @@ export function FloatingTabBar({
             : theme.textSecondary;
           const badge = route.name === 'to-do' ? openTaskCount : 0;
 
+          const tabIcon: AppIconName =
+            route.name === 'index' ? todayTabIcon : meta.icon;
+          const accessibilityLabel =
+            descriptors[route.key].options.tabBarAccessibilityLabel ??
+            (route.name === 'index'
+              ? `${meta.label}${todayAccessibilityExtra}`
+              : meta.label);
+
           const onPress = () => {
             if (useUI.getState().carouselSwipeClaimed) return;
             const event = navigation.emit({
@@ -459,9 +473,7 @@ export function FloatingTabBar({
               key={`${route.key}-${slotIndex}`}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
-              accessibilityLabel={
-                descriptors[route.key].options.tabBarAccessibilityLabel ?? meta.label
-              }
+              accessibilityLabel={accessibilityLabel}
               hitSlop={{ top: 4, bottom: 4 }}
               onLongPress={onLongPress}
               onPress={onPress}
@@ -476,7 +488,7 @@ export function FloatingTabBar({
                 pressed && styles.pressed,
               ]}>
               <View>
-                <Symbol name={meta.icon} size={20} color={color} />
+                <Symbol name={tabIcon} size={20} color={color} />
                 {badge > 0 ? (
                   <View
                     style={[

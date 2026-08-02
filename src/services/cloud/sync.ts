@@ -18,6 +18,7 @@ import type {
 } from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
 import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
+import { pullAllTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { loadAllSharedVehicles } from '@/services/vehicles/collaboration';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
@@ -644,6 +645,7 @@ export async function refreshAppData() {
     await Promise.all([
       loadAllSharedTodoLists().catch(() => undefined),
       loadAllSharedVehicles().catch(() => undefined),
+      pullAllTravelTripExpenses().catch(() => undefined),
       useFriends.getState().refresh().catch(() => undefined),
     ]);
 

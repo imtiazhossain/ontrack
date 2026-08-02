@@ -3,7 +3,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { fontFamilies, type AppIconName, type Theme } from '@/design-system';
+import { type AppIconName, type Theme } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -157,7 +157,8 @@ export function TravelSectionLabel({
   const chrome = itinerarySheetChrome(theme);
   const accent = travelAccent(theme);
   const { spacing: rs, s } = useResponsive();
-  const badge = Math.max(22, s(22));
+  const badge = Math.max(24, s(26));
+  const titleSize = Math.max(20, s(22));
   return (
     <View
       style={[
@@ -165,14 +166,24 @@ export function TravelSectionLabel({
         {
           paddingVertical: rs.xs,
           gap: rs.sm,
-          minHeight: Math.max(40, s(40)),
+          minHeight: Math.max(44, s(44)),
         },
       ]}>
       {icon ? <Symbol name={icon} size="sm" color={accent} /> : null}
       <AppText
-        style={[styles.sectionTitle, styles.flex, { color: theme.textPrimary }]}
-        fit
-        numberOfLines={1}>
+        variant="heading"
+        style={[
+          styles.flex,
+          {
+            color: theme.textPrimary,
+            fontSize: titleSize,
+            lineHeight: Math.max(26, s(28)),
+            fontWeight: '400',
+            letterSpacing: -0.2,
+          },
+        ]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.2}>
         {title}
       </AppText>
       {count !== undefined ? (
@@ -187,8 +198,9 @@ export function TravelSectionLabel({
             },
           ]}>
           <AppText
-            variant="caption"
+            variant="callout"
             fit
+            fitMinimumScale={0.85}
             style={{ color: chrome.ctaText, fontWeight: '600' }}>
             {count}
           </AppText>
@@ -213,13 +225,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  sectionTitle: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '400',
-    letterSpacing: -0.2,
   },
   countBadge: {
     alignItems: 'center',

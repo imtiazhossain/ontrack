@@ -1,81 +1,15 @@
-import * as Location from 'expo-location';
-import { Platform } from 'react-native';
+import {
+  formatPlaceAddress,
+  getCurrentPlaceLabel,
+  type DevicePlaceResult,
+} from '@/utils/device-location';
 
-const LAST_KNOWN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
-const LOCATION_TIMEOUT_MS = 12_000;
+export type DepartureLocationResult = DevicePlaceResult;
 
-export type DepartureLocationResult =
-  | { status: 'suggested'; label: string }
-  | { status: 'denied' }
-  | { status: 'unavailable' };
+/** @deprecated Prefer `formatPlaceAddress` from `@/utils/device-location`. */
+export const formatDepartureAddress = formatPlaceAddress;
 
-type DepartureAddress = Pick<
-  Location.LocationGeocodedAddress,
-  'city' | 'country' | 'district' | 'isoCountryCode' | 'region' | 'subregion'
->;
-
-function withTimeout<T>(promise: Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error('Location request timed out.')),
-      LOCATION_TIMEOUT_MS,
-    );
-    promise.then(
-      (value) => {
-        clearTimeout(timeout);
-        resolve(value);
-      },
-      (error: unknown) => {
-        clearTimeout(timeout);
-        reject(error);
-      },
-    );
-  });
-}
-
-export function formatDepartureAddress(address: DepartureAddress): string | undefined {
-  const locality = address.city ?? address.district ?? address.subregion ?? address.region;
-  if (!locality) return undefined;
-
-  const countryCode = address.isoCountryCode?.toUpperCase();
-  const area =
-    countryCode === 'US' || countryCode === 'CA'
-      ? address.region
-      : address.country;
-  return [locality, area]
-    .filter((part, index, parts): part is string =>
-      typeof part === 'string' && part.length > 0 && parts.indexOf(part) === index)
-    .join(', ');
-}
-
-export async function getCurrentDepartureLocation(): Promise<DepartureLocationResult> {
-  if (Platform.OS === 'web') return { status: 'unavailable' };
-
-  try {
-    let permission = await Location.getForegroundPermissionsAsync();
-    if (!permission.granted && permission.canAskAgain) {
-      permission = await Location.requestForegroundPermissionsAsync();
-    }
-    if (!permission.granted) return { status: 'denied' };
-
-    const lastKnown = await Location.getLastKnownPositionAsync({
-      maxAge: LAST_KNOWN_MAX_AGE_MS,
-      requiredAccuracy: 50_000,
-    });
-    const position =
-      lastKnown ??
-      (await withTimeout(
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
-      ));
-    const addresses = await withTimeout(
-      Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      }),
-    );
-    const label = addresses[0] ? formatDepartureAddress(addresses[0]) : undefined;
-    return label ? { status: 'suggested', label } : { status: 'unavailable' };
-  } catch {
-    return { status: 'unavailable' };
-  }
+/** Suggests a departure city from the device location. */
+export function getCurrentDepartureLocation(): Promise<DepartureLocationResult> {
+  return getCurrentPlaceLabel();
 }

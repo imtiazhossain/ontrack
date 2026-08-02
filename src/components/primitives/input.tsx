@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   iconField: {
     position: 'relative',
     flexDirection: 'row',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   stackedCopy: {
     flex: 1,

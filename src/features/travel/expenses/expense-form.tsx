@@ -1,5 +1,14 @@
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useState } from 'react';
+import {
+  InputAccessoryView,
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import {
   AppText,
@@ -9,7 +18,7 @@ import {
   Input,
 } from '@/components/primitives';
 import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
-import { radii, spacing } from '@/design-system';
+import { fontFamilies, radii, spacing } from '@/design-system';
 import {
   CurrencyDropdown,
   ScrollableDropdown,
@@ -19,6 +28,7 @@ import {
   createExpenseDraft,
   defaultSplitIds,
   expensePeople,
+  abbreviatedPersonName,
   type ExpensePerson,
 } from '@/features/travel/expenses/expense-math';
 import { formatMoney } from '@/features/travel/expenses/format-money';
@@ -52,6 +62,9 @@ const CATEGORIES: { value: TravelExpenseCategory; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+/** iOS decimal-pad has no return key — Done accessory dismisses the keyboard. */
+const AMOUNT_ACCESSORY_ID = 'travel-expense-amount-done';
+
 export interface ExpenseFormState {
   title: string;
   amountText: string;
@@ -68,6 +81,7 @@ export function emptyExpenseForm(
   plan: TravelPlan,
   preferredCurrency?: string,
 ): ExpenseFormState {
+  const isMember = Boolean(plan.chatAccessCode || plan.hostTripId);
   return {
     title: '',
     amountText: '',
@@ -76,7 +90,7 @@ export function emptyExpenseForm(
     category: 'food',
     notes: '',
     paidById: TRAVEL_EXPENSE_SELF_ID,
-    splitWithIds: defaultSplitIds(plan.participants),
+    splitWithIds: defaultSplitIds(plan.participants, isMember),
   };
 }
 
@@ -146,10 +160,13 @@ function PersonToggleRow({
       <View style={[styles.personWrap, { gap: rs.xs }]}>
         {people.map((person) => {
           const active = selectedIds.includes(person.id);
+          const shortName = abbreviatedPersonName(person.name);
+          const labelText = single ? shortName : active ? `✓ ${shortName}` : shortName;
           return (
             <Pressable
               key={person.id}
               accessibilityRole="button"
+              accessibilityLabel={person.name}
               accessibilityState={{ selected: active }}
               onPress={() => onToggle(person.id)}
               style={[
@@ -167,7 +184,7 @@ function PersonToggleRow({
                 color={active ? 'accent' : 'secondary'}
                 fit
                 numberOfLines={1}>
-                {single ? person.name : active ? `✓ ${person.name}` : person.name}
+                {labelText}
               </AppText>
             </Pressable>
           );
@@ -215,12 +232,53 @@ export function TravelExpenseForm({
 
   return (
     <View style={[styles.form, { gap: rs.sm }]}>
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={AMOUNT_ACCESSORY_ID}>
+          <View
+            style={[
+              styles.accessory,
+              {
+                backgroundColor: chrome.sheetBg,
+                borderTopColor: chrome.fieldBorder,
+                paddingHorizontal: rs.lg,
+                paddingVertical: rs.sm,
+                minHeight: Math.max(44, rs.xl + rs.md),
+              },
+            ]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss keyboard"
+              hitSlop={8}
+              onPress={Keyboard.dismiss}
+              style={({ pressed }) => [
+                styles.accessoryDone,
+                {
+                  minHeight: Math.max(44, rs.xl),
+                  paddingHorizontal: rs.md,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <AppText
+                variant="callout"
+                color="accent"
+                fit
+                numberOfLines={1}
+                style={styles.accessoryDoneLabel}>
+                Done
+              </AppText>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
       <Input
         icon="receipt"
         stackedLabel="What for?"
         value={form.title}
         onChangeText={(title) => onChange({ ...form, title })}
         placeholder="Dinner, taxi, museum…"
+        returnKeyType="done"
+        blurOnSubmit
+        onSubmitEditing={Keyboard.dismiss}
         {...itinerarySheetFieldProps(chrome, 'note')}
       />
       <Input
@@ -231,6 +289,7 @@ export function TravelExpenseForm({
         placeholder="0"
         keyboardType="decimal-pad"
         {...itinerarySheetFieldProps(chrome, 'import')}
+        inputAccessoryViewID={Platform.OS === 'ios' ? AMOUNT_ACCESSORY_ID : undefined}
       />
       <CurrencyDropdown
         label="Currency"
@@ -238,7 +297,10 @@ export function TravelExpenseForm({
         value={form.currency}
         options={currencyOptions}
         open={openDropdown === 'currency'}
-        onOpenChange={(next) => setOpenDropdown(next ? 'currency' : null)}
+        onOpenChange={(next) => {
+          Keyboard.dismiss();
+          setOpenDropdown(next ? 'currency' : null);
+        }}
         onChange={(currency) => onChange({ ...form, currency })}
         iconBackground={chrome.icons.shield.bg}
         iconColor={chrome.icons.shield.fg}
@@ -258,7 +320,10 @@ export function TravelExpenseForm({
       <DateField
         stackedLabel="Date"
         value={form.date}
-        onChange={(date) => onChange({ ...form, date })}
+        onChange={(date) => {
+          Keyboard.dismiss();
+          onChange({ ...form, date });
+        }}
         minimumDate={plan.startDate}
         maximumDate={plan.endDate}
         {...itinerarySheetFieldProps(chrome, 'calendar')}
@@ -270,7 +335,10 @@ export function TravelExpenseForm({
         value={form.category}
         options={CATEGORIES}
         open={openDropdown === 'category'}
-        onOpenChange={(next) => setOpenDropdown(next ? 'category' : null)}
+        onOpenChange={(next) => {
+          Keyboard.dismiss();
+          setOpenDropdown(next ? 'category' : null);
+        }}
         onChange={(category) =>
           onChange({ ...form, category: category as TravelExpenseCategory })
         }
@@ -290,6 +358,7 @@ export function TravelExpenseForm({
           tone="shield"
           style={styles.flex}
           onToggle={(paidById) => {
+            Keyboard.dismiss();
             const splitWithIds = form.splitWithIds.includes(paidById)
               ? form.splitWithIds
               : [...form.splitWithIds, paidById];
@@ -304,6 +373,7 @@ export function TravelExpenseForm({
           tone="lodging"
           style={styles.flex}
           onToggle={(id) => {
+            Keyboard.dismiss();
             const selected = form.splitWithIds.includes(id)
               ? form.splitWithIds.filter((item) => item !== id)
               : [...form.splitWithIds, id];
@@ -375,5 +445,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     maxWidth: '100%',
+  },
+  accessory: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  accessoryDone: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  accessoryDoneLabel: {
+    fontFamily: fontFamilies.sans,
+    fontWeight: '600',
   },
 });

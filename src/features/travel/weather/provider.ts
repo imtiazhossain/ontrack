@@ -1,5 +1,6 @@
 import { fetch } from 'expo/fetch';
 
+import type { AppIconName } from '@/design-system';
 import { addDays, todayKey } from '@/utils/date';
 
 import type {
@@ -126,6 +127,20 @@ export function describeWeatherCode(code: number): Pick<TravelWeatherDay, 'condi
   if (code === 85 || code === 86) return { condition: 'Snow showers', symbol: '🌨️' };
   if (code >= 95) return { condition: 'Thunderstorms', symbol: '⛈️' };
   return { condition: 'Mixed weather', symbol: '🌥️' };
+}
+
+/** Monochrome SF Symbol mapping for Today chrome / tab bar. */
+export function weatherIconForCode(code: number): AppIconName {
+  if (code === 0) return 'weather-clear';
+  if (code === 1 || code === 2) return 'weather-partly-cloudy';
+  if (code === 3) return 'weather-cloudy';
+  if (code === 45 || code === 48) return 'weather-fog';
+  if (code >= 51 && code <= 67) return 'weather-rain';
+  if (code >= 71 && code <= 77) return 'weather-snow';
+  if (code >= 80 && code <= 82) return 'weather-showers';
+  if (code === 85 || code === 86) return 'weather-snow';
+  if (code >= 95) return 'weather-thunder';
+  return 'weather-partly-cloudy';
 }
 
 function locationLabel(result: GeocodingResult, fallback: string): string {

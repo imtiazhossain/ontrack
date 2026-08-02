@@ -1,6 +1,7 @@
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
 import {
+  abbreviatedPersonName,
   createExpenseDraft,
   settleBalances,
   settleTransfers,
@@ -52,6 +53,12 @@ function expense(partial: Partial<TravelExpense> & Pick<TravelExpense, 'id' | 'a
 }
 
 describe('expense math', () => {
+  it('abbreviates multi-word names to initials', () => {
+    expect(abbreviatedPersonName('Farhana Tasmin')).toBe('FT');
+    expect(abbreviatedPersonName('You')).toBe('You');
+    expect(abbreviatedPersonName('Alex')).toBe('Alex');
+  });
+
   it('converts ISK totals into the trip base currency', () => {
     const expenses = [
       expense({

@@ -90,6 +90,12 @@ export type TravelExpenseCategory =
 /** Local trip owner in expense paid-by / split lists (not a TravelParticipant id). */
 export const TRAVEL_EXPENSE_SELF_ID = 'self';
 
+/**
+ * On member copies, shared expenses paid by the trip host use this id so it
+ * does not collide with the member’s local `self` (“You”).
+ */
+export const TRAVEL_EXPENSE_HOST_ID = 'host';
+
 export interface TravelExpense {
   id: string;
   title: string;
@@ -115,6 +121,14 @@ export interface TravelPlan {
   chatAccessCode?: string;
   /** Open join link code; anyone can request, host must approve. */
   openJoinCode?: string;
+  /** Host's canonical trip id when this local plan is a member copy. */
+  hostTripId?: string;
+  /** Host display name for shared expense `self` labels on member copies. */
+  hostDisplayName?: string;
+  /** Extra roster from the shared expenses document (host + members). */
+  sharedExpensePeople?: { id: string; name: string }[];
+  /** Last shared expenses document timestamp (LWW sync). */
+  sharedExpensesUpdatedAt?: string;
   title: string;
   destination: string;
   startDate: string;

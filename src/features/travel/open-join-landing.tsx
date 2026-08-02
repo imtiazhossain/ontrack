@@ -137,6 +137,7 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
           ...existing,
           ...(chatCode ? { chatAccessCode: chatCode } : {}),
           openJoinCode: code,
+          hostTripId: resolved.tripId,
           updatedAt: new Date().toISOString(),
         });
         setAddonEnabled('travel', true);
@@ -157,6 +158,7 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         id: planId,
         ...(chatCode ? { chatAccessCode: chatCode } : {}),
         openJoinCode: code,
+        hostTripId: resolved.tripId,
         createdAt: now,
         updatedAt: now,
       };

@@ -15,12 +15,15 @@ interface PreferencesState {
   hasOnboarded: boolean;
   name: string;
   goal: string;
+  /** City/place used for Today local weather (typed by the user). */
+  homeLocation: string;
   themePreference: ThemePreference;
   aiEnabled: boolean;
   hapticsEnabled: boolean;
   dateLocale: string;
   dateDisplayFormat: DateDisplayFormat;
   completeOnboarding: (input: { name: string; goal: string }) => void;
+  setHomeLocation: (location: string) => void;
   setThemePreference: (pref: ThemePreference) => void;
   setAiEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
@@ -35,6 +38,7 @@ export const usePreferences = create<PreferencesState>()(
       hasOnboarded: false,
       name: '',
       goal: '',
+      homeLocation: '',
       themePreference: 'system',
       aiEnabled: true,
       hapticsEnabled: true,
@@ -51,6 +55,7 @@ export const usePreferences = create<PreferencesState>()(
           dateDisplayFormat: dateDisplayFormatForLocale(dateLocale),
         });
       },
+      setHomeLocation: (homeLocation) => set({ homeLocation: homeLocation.trim() }),
       setThemePreference: (themePreference) => set({ themePreference }),
       setAiEnabled: (aiEnabled) => set({ aiEnabled }),
       setHapticsEnabled: (hapticsEnabled) => set({ hapticsEnabled }),
@@ -59,6 +64,7 @@ export const usePreferences = create<PreferencesState>()(
           hasOnboarded: false,
           name: '',
           goal: '',
+          homeLocation: '',
           themePreference: 'system',
           aiEnabled: true,
           hapticsEnabled: true,

@@ -20,6 +20,7 @@ import {
   type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
 import {
+  abbreviatedPersonName,
   expenseInBase,
   expensePeople,
   personName,
@@ -31,7 +32,12 @@ import {
 } from '@/features/travel/expenses/expense-math';
 import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
-import type { TravelExpense, TravelExpenseCategory, TravelPlan } from '@/features/travel/types';
+import {
+  TRAVEL_EXPENSE_SELF_ID,
+  type TravelExpense,
+  type TravelExpenseCategory,
+  type TravelPlan,
+} from '@/features/travel/types';
 import {
   travelAccent,
   TravelSectionLabel,
@@ -42,6 +48,12 @@ import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-s
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  publishTravelTripExpenses,
+  pullTravelTripExpenses,
+  isTravelExpenseMemberPlan,
+  shouldSyncTravelExpenses,
+} from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { formatDateKey } from '@/utils/date';
 
@@ -96,6 +108,30 @@ export function TravelExpensesSheet({
     return () => controller.abort();
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible || !shouldSyncTravelExpenses(plan)) return;
+    let active = true;
+    void pullTravelTripExpenses(plan)
+      .then(async (merged) => {
+        if (!active) return;
+        const current = merged ?? plan;
+        if (merged) onSavePlan(merged);
+        // Host: push local expenses so friends can pull them.
+        if (
+          !isTravelExpenseMemberPlan(current) &&
+          current.expenses.length > 0
+        ) {
+          await publishTravelTripExpenses(current).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+    // Pull when the sheet opens for a trip — not on every plan field change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open-only sync
+  }, [visible, plan.id]);
+
   const people = useMemo(() => expensePeople(plan), [plan]);
   const sortedExpenses = useMemo(
     () =>
@@ -109,6 +145,11 @@ export function TravelExpensesSheet({
   const { total, convertible } = totalInBase(plan.expenses, plan.baseCurrency, rates);
   const balances = settleBalances(plan.expenses, plan.baseCurrency, rates);
   const transfers = balances ? settleTransfers(balances) : [];
+
+  const syncSharedExpenses = (next: TravelPlan) => {
+    if (!shouldSyncTravelExpenses(next)) return;
+    void publishTravelTripExpenses(next).catch(() => undefined);
+  };
 
   const beginAdd = () => {
     setFormError(undefined);
@@ -129,7 +170,9 @@ export function TravelExpensesSheet({
       setFormError(built.error);
       return;
     }
-    onSavePlan(upsertTravelExpense(plan, built.expense));
+    const next = upsertTravelExpense(plan, built.expense);
+    onSavePlan(next);
+    syncSharedExpenses(next);
     setForm(undefined);
     setFormError(undefined);
     setConfirmingDelete(false);
@@ -145,7 +188,9 @@ export function TravelExpensesSheet({
   const confirmDelete = () => {
     if (!form?.existing) return;
     const expenseId = form.existing.id;
-    onSavePlan(removeTravelExpense(plan, expenseId));
+    const next = removeTravelExpense(plan, expenseId);
+    onSavePlan(next);
+    syncSharedExpenses(next);
     setForm(undefined);
     setFormError(undefined);
     setConfirmingDelete(false);
@@ -178,6 +223,7 @@ export function TravelExpensesSheet({
       }
       closeAccessibilityLabel={form ? 'Close expense editor' : 'Close Expenses'}
       onClose={form ? dismissForm : closeSheet}
+      scrollKey={form ? (form.existing?.id ?? 'add') : 'list'}
       footer={
         form && !confirmingDelete ? (
           <ItinerarySheetSubmitButton
@@ -268,8 +314,9 @@ export function TravelExpensesSheet({
                     {transfers.map((transfer) => (
                       <TravelSurfaceCard key={`${transfer.fromId}-${transfer.toId}`} bodyStyle={styles.settleCard}>
                         <AppText variant="callout">
-                          {personName(people, transfer.fromId)} owes{' '}
-                          {personName(people, transfer.toId)}
+                          {transfer.fromId === TRAVEL_EXPENSE_SELF_ID
+                            ? `You owe ${personName(people, transfer.toId)}`
+                            : `${personName(people, transfer.fromId)} owes ${personName(people, transfer.toId)}`}
                         </AppText>
                         <AppText variant="subheading" color="accent">
                           {formatMoney(transfer.amount, plan.baseCurrency, dateLocale)}
@@ -319,26 +366,37 @@ export function TravelExpensesSheet({
                             />
                           </View>
                           <View style={styles.expenseCopy}>
-                            <AppText variant="subheading" fit numberOfLines={1}>
-                              {expense.title}
-                            </AppText>
-                            <AppText variant="caption" color="secondary" fit numberOfLines={1}>
+                            <View style={styles.expenseTitleRow}>
+                              <AppText
+                                variant="subheading"
+                                fit
+                                numberOfLines={1}
+                                style={styles.expenseTitle}>
+                                {expense.title}
+                              </AppText>
+                              <View style={styles.amountCol}>
+                                <AppText variant="subheading" color="accent" fit numberOfLines={1}>
+                                  {formatMoney(expense.amount, expense.currency, dateLocale)}
+                                </AppText>
+                                {converted !== undefined &&
+                                expense.currency !== plan.baseCurrency ? (
+                                  <AppText
+                                    variant="callout"
+                                    color="secondary"
+                                    fit
+                                    numberOfLines={1}>
+                                    ≈ {formatMoney(converted, plan.baseCurrency, dateLocale)}
+                                  </AppText>
+                                ) : null}
+                              </View>
+                              <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+                            </View>
+                            <AppText variant="body" color="secondary" numberOfLines={1}>
                               {CATEGORY_LABELS[expense.category]} ·{' '}
                               {formatDateKey(expense.date, dateDisplayFormat)} ·{' '}
-                              {personName(people, expense.paidById)} paid
+                              {abbreviatedPersonName(personName(people, expense.paidById))} paid
                             </AppText>
                           </View>
-                          <View style={styles.amountCol}>
-                            <AppText variant="subheading" color="accent" fit numberOfLines={1}>
-                              {formatMoney(expense.amount, expense.currency, dateLocale)}
-                            </AppText>
-                            {converted !== undefined && expense.currency !== plan.baseCurrency ? (
-                              <AppText variant="caption" color="secondary">
-                                ≈ {formatMoney(converted, plan.baseCurrency, dateLocale)}
-                              </AppText>
-                            ) : null}
-                          </View>
-                          <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
                         </TravelSurfaceCard>
                       </Pressable>
                     );
@@ -383,6 +441,7 @@ const styles = StyleSheet.create({
   expenseCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   categoryBadge: {
     borderRadius: radii.pill,
@@ -391,7 +450,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   expenseCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
-  amountCol: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0, gap: 2 },
+  expenseTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  expenseTitle: { flex: 1, flexShrink: 1, minWidth: 0 },
+  amountCol: { alignItems: 'flex-end', flexShrink: 0, gap: 2 },
   deleteConfirm: {
     gap: spacing.md,
     alignItems: 'stretch',

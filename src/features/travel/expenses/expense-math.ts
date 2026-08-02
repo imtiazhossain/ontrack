@@ -1,4 +1,5 @@
 import {
+  TRAVEL_EXPENSE_HOST_ID,
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
   type TravelParticipant,
@@ -12,11 +13,34 @@ import { convertAmount } from './fx-rates';
 
 export type ExpensePerson = { id: string; name: string };
 
-export function expensePeople(plan: Pick<TravelPlan, 'participants'>): ExpensePerson[] {
-  return [
+export function expensePeople(
+  plan: Pick<
+    TravelPlan,
+    'participants' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName' | 'sharedExpensePeople'
+  >,
+): ExpensePerson[] {
+  const isMember = Boolean(plan.chatAccessCode || plan.hostTripId);
+  const people: ExpensePerson[] = [
     { id: TRAVEL_EXPENSE_SELF_ID, name: 'You' },
-    ...plan.participants.map((p) => ({ id: p.id, name: p.name })),
   ];
+  if (isMember) {
+    people.push({
+      id: TRAVEL_EXPENSE_HOST_ID,
+      name: plan.hostDisplayName?.trim() || 'Host',
+    });
+  }
+  for (const participant of plan.participants) {
+    if (!people.some((person) => person.id === participant.id)) {
+      people.push({ id: participant.id, name: participant.name });
+    }
+  }
+  for (const person of plan.sharedExpensePeople ?? []) {
+    if (person.id === TRAVEL_EXPENSE_SELF_ID) continue;
+    if (!people.some((entry) => entry.id === person.id)) {
+      people.push({ id: person.id, name: person.name });
+    }
+  }
+  return people;
 }
 
 export function personName(
@@ -24,6 +48,17 @@ export function personName(
   id: string,
 ): string {
   return people.find((p) => p.id === id)?.name ?? 'Someone';
+}
+
+/** Compact chip label: "You" stays; "Farhana Tasmin" → "FT". */
+export function abbreviatedPersonName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return name.trim();
+  if (parts.length === 1) return parts[0]!;
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 /** Convert expense amount into the trip base currency when rates allow. */
@@ -171,6 +206,11 @@ export function createExpenseDraft(input: {
   };
 }
 
-export function defaultSplitIds(participants: TravelParticipant[]): string[] {
-  return [TRAVEL_EXPENSE_SELF_ID, ...participants.map((p) => p.id)];
+export function defaultSplitIds(
+  participants: TravelParticipant[],
+  includeHost = false,
+): string[] {
+  const ids = [TRAVEL_EXPENSE_SELF_ID, ...participants.map((p) => p.id)];
+  if (includeHost) ids.splice(1, 0, TRAVEL_EXPENSE_HOST_ID);
+  return [...new Set(ids)];
 }

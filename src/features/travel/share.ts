@@ -395,14 +395,14 @@ export async function resolveTravelInvite(
   });
   if (error) throw new TravelInviteError('This invitation could not be opened.');
 
-  const payload =
-    data &&
-    typeof data === 'object' &&
-    !Array.isArray(data) &&
-    typeof (data as { invite?: unknown }).invite === 'string'
-      ? (data as { invite: string }).invite
-      : undefined;
-  return payload ? decodeTravelInvite(payload) : undefined;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
+  const row = data as { invite?: unknown; tripId?: unknown };
+  const payload = typeof row.invite === 'string' ? row.invite : undefined;
+  if (!payload) return undefined;
+  const plan = decodeTravelInvite(payload);
+  if (!plan) return undefined;
+  const tripId = typeof row.tripId === 'string' ? row.tripId.trim() : '';
+  return tripId ? { ...plan, hostTripId: tripId } : plan;
 }
 
 export async function acceptTravelInvite(value: string): Promise<void> {

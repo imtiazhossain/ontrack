@@ -12,7 +12,7 @@ import type {
   TravelParticipant,
   TravelPlan,
 } from './types';
-import { TRAVEL_EXPENSE_SELF_ID } from './types';
+import { TRAVEL_EXPENSE_HOST_ID, TRAVEL_EXPENSE_SELF_ID } from './types';
 
 const EXPENSE_CATEGORIES = new Set<TravelExpenseCategory>([
   'flight',
@@ -274,14 +274,20 @@ export function normalizeTravelExpense(
   }
 
   const allowedPayer =
-    expense.paidById === TRAVEL_EXPENSE_SELF_ID || participantIds.has(expense.paidById);
+    expense.paidById === TRAVEL_EXPENSE_SELF_ID ||
+    expense.paidById === TRAVEL_EXPENSE_HOST_ID ||
+    expense.paidById.startsWith('member:') ||
+    participantIds.has(expense.paidById);
   if (!allowedPayer) return undefined;
 
   const splitWithIds = Array.isArray(expense.splitWithIds)
     ? expense.splitWithIds.filter(
         (id): id is string =>
           typeof id === 'string' &&
-          (id === TRAVEL_EXPENSE_SELF_ID || participantIds.has(id)),
+          (id === TRAVEL_EXPENSE_SELF_ID ||
+            id === TRAVEL_EXPENSE_HOST_ID ||
+            id.startsWith('member:') ||
+            participantIds.has(id)),
       )
     : [];
   const resolvedSplit = splitWithIds.length > 0 ? [...new Set(splitWithIds)] : [expense.paidById];
@@ -305,9 +311,13 @@ export function normalizeTravelExpense(
 export function normalizeTravelExpenses(
   value: unknown,
   participants: TravelParticipant[],
+  sharedPeople?: { id: string; name: string }[],
 ): TravelExpense[] {
   if (!Array.isArray(value)) return [];
   const participantIds = new Set(participants.map((p) => p.id));
+  for (const person of sharedPeople ?? []) {
+    if (person.id) participantIds.add(person.id);
+  }
   return value.flatMap((item) => {
     const normalized = normalizeTravelExpense(item, participantIds);
     return normalized ? [normalized] : [];
@@ -342,6 +352,25 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
     /^[a-f0-9]{20}$/.test(plan.openJoinCode)
       ? { openJoinCode: plan.openJoinCode }
       : {}),
+    ...(typeof plan.hostTripId === 'string' && plan.hostTripId.trim()
+      ? { hostTripId: plan.hostTripId.trim() }
+      : {}),
+    ...(typeof plan.hostDisplayName === 'string' && plan.hostDisplayName.trim()
+      ? { hostDisplayName: plan.hostDisplayName.trim() }
+      : {}),
+    ...(() => {
+      if (!Array.isArray(plan.sharedExpensePeople)) return {};
+      const sharedExpensePeople = plan.sharedExpensePeople.flatMap((row) => {
+        if (!row || typeof row !== 'object') return [];
+        const id = typeof row.id === 'string' ? row.id.trim() : '';
+        const name = typeof row.name === 'string' ? row.name.trim() : '';
+        return id && name ? [{ id, name }] : [];
+      });
+      return sharedExpensePeople.length > 0 ? { sharedExpensePeople } : {};
+    })(),
+    ...(typeof plan.sharedExpensesUpdatedAt === 'string' && plan.sharedExpensesUpdatedAt.trim()
+      ? { sharedExpensesUpdatedAt: plan.sharedExpensesUpdatedAt.trim() }
+      : {}),
     title: plan.title,
     destination: plan.destination,
     startDate: plan.startDate,
@@ -360,7 +389,11 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
     itinerary,
     participants,
     baseCurrency: normalizeCurrencyCode(plan.baseCurrency),
-    expenses: normalizeTravelExpenses(plan.expenses, participants),
+    expenses: normalizeTravelExpenses(
+      plan.expenses,
+      participants,
+      Array.isArray(plan.sharedExpensePeople) ? plan.sharedExpensePeople : undefined,
+    ),
     createdAt: asString(plan.createdAt) ?? asString(plan.updatedAt) ?? fallbackTimestamp,
     updatedAt: asString(plan.updatedAt) ?? asString(plan.createdAt) ?? fallbackTimestamp,
   };

@@ -121,7 +121,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "onTrack uses your approximate location to suggest a departure city for travel searches."
+          "locationWhenInUsePermission": "onTrack uses your approximate location for Today weather and to suggest a departure city for travel searches."
         }
       ],
       [

@@ -111,6 +111,7 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
         savePlan({
           ...existingPlan,
           chatAccessCode: invite.slice(2),
+          ...(decoded.hostTripId ? { hostTripId: decoded.hostTripId } : {}),
           updatedAt: new Date().toISOString(),
         });
       }
