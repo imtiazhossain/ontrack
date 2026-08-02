@@ -18,6 +18,7 @@ import { fontFamilies, layout, radii, spacing, typography } from '@/design-syste
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
 import { TodoListCard } from '@/features/todos/todo-list-card';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
@@ -38,6 +39,7 @@ export function TodoListsOverview() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
+  const { refreshControl } = usePullToRefresh();
   const lists = useTodos((state) => state.lists);
   const counts = useTodos(
     (state) => {
@@ -270,6 +272,7 @@ export function TodoListsOverview() {
           contentContainerStyle={listContentStyle}
           contentInsetAdjustmentBehavior="never"
           data={lists}
+          refreshControl={refreshControl}
           dragItemOverflow={false}
           onDragBegin={() => {
             haptics.heavy();

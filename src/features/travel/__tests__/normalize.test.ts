@@ -22,6 +22,23 @@ describe('travel plan normalization', () => {
     });
   });
 
+  it('keeps a durable coverUri and drops invalid ones', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        coverUri: 'file:///Documents/travel-moments/cover-trip.jpg',
+      }),
+    ).toMatchObject({
+      coverUri: 'file:///Documents/travel-moments/cover-trip.jpg',
+    });
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        coverUri: 'https://example.com/photo.jpg',
+      })?.coverUri,
+    ).toBeUndefined();
+  });
+
   it('keeps valid expenses and drops malformed ones', () => {
     expect(
       normalizeTravelPlan({
@@ -93,6 +110,42 @@ describe('travel plan normalization', () => {
     ]);
   });
 
+  it('keeps moment entries with photos and defaults blank titles', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        itinerary: [
+          {
+            id: 'moment-1',
+            kind: 'moment',
+            title: '  ',
+            date: '2026-09-10',
+            startMinutes: 1080,
+            photoUris: [
+              'file:///Documents/travel-moments/sunset.jpg',
+              'https://evil.example/x.jpg',
+              '',
+            ],
+          },
+        ],
+      })?.itinerary,
+    ).toEqual([
+      {
+        id: 'moment-1',
+        kind: 'moment',
+        title: 'Moment',
+        date: '2026-09-10',
+        startMinutes: 1080,
+        durationMinutes: 15,
+        details: undefined,
+        bookingUrl: undefined,
+        photoUris: ['file:///Documents/travel-moments/sunset.jpg'],
+        flight: undefined,
+        rental: undefined,
+      },
+    ]);
+  });
+
   it('keeps car rental itinerary details', () => {
     expect(
       normalizeTravelPlan({
@@ -119,7 +172,7 @@ describe('travel plan normalization', () => {
       {
         id: 'rental-1',
         kind: 'rental',
-        title: 'Hertz rental',
+        title: 'Hertz Rental',
         date: '2026-09-09',
         startMinutes: 600,
         durationMinutes: 60,
@@ -159,6 +212,7 @@ describe('travel plan normalization', () => {
       ],
     });
     expect(normalized?.itinerary[0]).toMatchObject({
+      title: 'Hertz Rental · Keflavik International Airport (KEF)',
       date: '2026-09-09',
       startMinutes: 6 * 60 + 30,
       rental: {
@@ -198,9 +252,53 @@ describe('travel plan normalization', () => {
       ],
     });
     expect(normalized?.itinerary[0]).toMatchObject({
+      title: 'Hertz Rental · Keflavik International Airport (KEF)',
       startMinutes: 6 * 60 + 30,
       rental: { dropoffMinutes: 15 * 60 },
     });
+  });
+
+  it('keeps collaborative itinerary notes and drops malformed ones', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      itinerary: [
+        {
+          id: 'item-1',
+          kind: 'activity',
+          title: 'Blue Lagoon',
+          date: '2026-09-09',
+          startMinutes: 10 * 60,
+          durationMinutes: 120,
+          notes: [
+            {
+              id: 'note-1',
+              body: 'Bring towels',
+              authorId: 'self',
+              authorName: 'Rocky',
+              createdAt: '2026-08-01T12:00:00.000Z',
+              updatedAt: '2026-08-01T13:00:00.000Z',
+            },
+            {
+              id: 'bad',
+              body: '   ',
+              authorId: 'self',
+              authorName: 'Rocky',
+              createdAt: '2026-08-01T12:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    });
+    expect(normalized?.itinerary[0]?.notes).toEqual([
+      {
+        id: 'note-1',
+        body: 'Bring towels',
+        authorId: 'self',
+        authorName: 'Rocky',
+        createdAt: '2026-08-01T12:00:00.000Z',
+        updatedAt: '2026-08-01T13:00:00.000Z',
+      },
+    ]);
   });
 
   it('repairs the previously persisted Icelandair return flight import', () => {

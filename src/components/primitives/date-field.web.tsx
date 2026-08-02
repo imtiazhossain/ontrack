@@ -9,12 +9,13 @@ import { usePreferences } from '@/store/preferences';
 import { AppText } from './app-text';
 
 interface DateFieldProps {
-  label: string;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   minimumDate?: string;
   maximumDate?: string;
   disabled?: boolean;
+  placeholder?: string;
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -26,11 +27,16 @@ export function DateField({
   minimumDate,
   maximumDate,
   disabled = false,
-  accessibilityLabel = label,
+  placeholder = 'MM/DD/YYYY',
+  accessibilityLabel,
   testID,
 }: DateFieldProps) {
   const theme = useTheme();
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
+  const resolvedPlaceholder =
+    placeholder === 'MM/DD/YYYY' && dateDisplayFormat === 'iso'
+      ? 'YYYY-MM-DD'
+      : placeholder;
   const style: CSSProperties = {
     minHeight: 48,
     width: '100%',
@@ -46,11 +52,13 @@ export function DateField({
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <AppText variant="overline" color="tertiary">
-        {label}
-      </AppText>
+      {label ? (
+        <AppText variant="overline" color="tertiary">
+          {label}
+        </AppText>
+      ) : null}
       {createElement('input', {
-        'aria-label': accessibilityLabel,
+        'aria-label': accessibilityLabel ?? label ?? 'Date',
         'data-testid': testID,
         type: 'date',
         lang: dateDisplayFormat === 'mdy' ? 'en-US' : 'en-CA',
@@ -58,6 +66,7 @@ export function DateField({
         min: minimumDate,
         max: maximumDate,
         disabled,
+        placeholder: resolvedPlaceholder,
         style,
         onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value),
       })}

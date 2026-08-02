@@ -5,6 +5,10 @@ import { pickLibraryImages } from '@/utils/pick-image';
 
 import { persistConfirmationAssets } from './confirmation-attachments';
 import {
+  runConfirmationPicker,
+  type ConfirmationImportOptions,
+} from './confirmation-import-options';
+import {
   parseRentalConfirmation,
   type ParsedRentalConfirmation,
 } from './rental-confirmation-parser';
@@ -28,20 +32,23 @@ export interface ImportedRentalConfirmation extends ParsedRentalConfirmation {
 export async function importRentalConfirmation(
   tripRange: { startDate: string; endDate: string },
   source: RentalConfirmationImportSource = 'document',
+  options?: ConfirmationImportOptions,
 ): Promise<ImportedRentalConfirmation | undefined> {
   if (!TravelDocumentReader) {
     throw new Error(
       'Confirmation document import is not available in this app build. Enter the rental details manually or install the latest TestFlight build.',
     );
   }
-  const assets =
+  const assets = await runConfirmationPicker(options, () =>
     source === 'screenshots'
-      ? await pickConfirmationScreenshots()
-      : await pickConfirmationDocument();
+      ? pickConfirmationScreenshots()
+      : pickConfirmationDocument(),
+  );
   if (!assets?.length) return undefined;
   if (assets.some((asset) => asset.size && asset.size > MAX_DOCUMENT_SIZE_BYTES)) {
     throw new Error('Each confirmation file must be smaller than 20 MB.');
   }
+  options?.onPhase?.('reading');
   const recognizedPages: string[] = [];
   for (const asset of assets) {
     recognizedPages.push(await TravelDocumentReader.recognizeTextAsync(asset.uri));

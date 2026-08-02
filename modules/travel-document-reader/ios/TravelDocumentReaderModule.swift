@@ -24,14 +24,14 @@ public class TravelDocumentReaderModule: Module {
       }
 
       try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-        let utilities = self.appContext?.utilities
         DispatchQueue.main.async {
-          guard let viewController = utilities?.currentViewController() else {
+          let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+          guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first else {
             continuation.resume(throwing: InvalidDocumentUrlException())
             return
           }
 
-          let session = DocumentPreviewSession(urls: urls) { [weak self] in
+          let session = DocumentPreviewSession(urls: urls, windowScene: scene) { [weak self] in
             self?.previewSession = nil
           }
           self.previewSession = session
@@ -39,8 +39,12 @@ public class TravelDocumentReaderModule: Module {
           let previewController = QLPreviewController()
           previewController.dataSource = session
           previewController.delegate = session
-          viewController.present(previewController, animated: true) {
-            continuation.resume()
+          previewController.modalPresentationStyle = .fullScreen
+          // Present on the next runloop so the overlay window is key/visible first.
+          DispatchQueue.main.async {
+            session.hostController.present(previewController, animated: true) {
+              continuation.resume()
+            }
           }
         }
       }
@@ -102,10 +106,21 @@ public class TravelDocumentReaderModule: Module {
 private final class DocumentPreviewSession: NSObject, QLPreviewControllerDataSource, QLPreviewControllerDelegate {
   private let urls: [URL]
   private let onFinish: () -> Void
+  private let overlayWindow: UIWindow
+  let hostController: UIViewController
 
-  init(urls: [URL], onFinish: @escaping () -> Void) {
+  init(urls: [URL], windowScene: UIWindowScene, onFinish: @escaping () -> Void) {
     self.urls = urls
     self.onFinish = onFinish
+    let host = UIViewController()
+    host.view.backgroundColor = .clear
+    self.hostController = host
+    let window = UIWindow(windowScene: windowScene)
+    window.windowLevel = .alert + 1
+    window.rootViewController = host
+    window.makeKeyAndVisible()
+    self.overlayWindow = window
+    super.init()
   }
 
   func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
@@ -117,6 +132,8 @@ private final class DocumentPreviewSession: NSObject, QLPreviewControllerDataSou
   }
 
   func previewControllerDidDismiss(_ controller: QLPreviewController) {
+    overlayWindow.isHidden = true
+    overlayWindow.resignKey()
     onFinish()
   }
 }

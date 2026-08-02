@@ -64,4 +64,26 @@ describe('travel calendar adapter', () => {
     );
     expect(drafts).toHaveLength(5);
   });
+
+  it('skips moment itinerary items when building calendar drafts', () => {
+    const drafts = travelCalendarDrafts({
+      ...PLAN,
+      itinerary: [
+        ...PLAN.itinerary,
+        {
+          id: 'moment-1',
+          kind: 'moment',
+          title: 'Waterfall selfie',
+          date: '2026-09-05',
+          startMinutes: 900,
+          durationMinutes: 15,
+          details: 'Blue mist',
+          photoUris: ['file:///Documents/travel-moments/a.jpg'],
+        },
+      ],
+    });
+
+    expect(drafts.find((draft) => draft.travelItemId === 'moment-1')).toBeUndefined();
+    expect(drafts).toHaveLength(5);
+  });
 });

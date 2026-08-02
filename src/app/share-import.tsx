@@ -113,7 +113,7 @@ export default function ShareImportScreen() {
 
   if (calendarOnly) {
     return (
-      <Screen contentStyle={styles.center}>
+      <Screen contentStyle={styles.center} refresh={false}>
         <Symbol name="calendar" size={36} color={theme.accentPrimary} />
         <AppText variant="subheading">Opening Calendar…</AppText>
       </Screen>
@@ -121,7 +121,7 @@ export default function ShareImportScreen() {
   }
 
   return (
-    <Screen contentStyle={styles.screen}>
+    <Screen contentStyle={styles.screen} refresh={false}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <AppText variant="overline" color="accent">

@@ -9,6 +9,7 @@ import { AppText, EmptyState, IconButton } from '@/components/primitives';
 import { ActivityCard } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { layout, shadows, spacing } from '@/design-system';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { aiProvider } from '@/services/ai';
 import { logPlantWatering, undoPlantWatering } from '@/services/plants/schedule';
@@ -56,6 +57,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const aiEnabled = usePreferences((s) => s.aiEnabled);
   const enabledAddons = useAddons((s) => s.enabled);
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
+  const { refreshControl } = usePullToRefresh();
 
   const dayActivities = useSchedule(
     (s) => s.activities.filter((activity) => activity.date === date),
@@ -190,6 +192,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
       <FlashList
         data={activities}
         keyExtractor={(item) => item.id}
+        refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}
         ListHeaderComponent={

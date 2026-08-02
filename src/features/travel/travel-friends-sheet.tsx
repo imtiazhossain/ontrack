@@ -17,6 +17,7 @@ import {
   IconButton,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { PeoplePicker } from '@/features/social/people-picker';
 import {
   createTravelInviteUrl,
   createTravelOpenJoinUrl,
@@ -30,6 +31,9 @@ import {
   shareTravelPlan,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import {
+  TravelSkyHeader,
+} from '@/features/travel/travel-surface';
 import { TripPeople } from '@/features/travel/trip-people';
 import type {
   TravelOpenJoinRequest,
@@ -37,6 +41,8 @@ import type {
   TravelPlan,
 } from '@/features/travel/types';
 import { useTheme } from '@/hooks/use-theme';
+import type { FriendProfile } from '@/services/friends';
+import { useFriends } from '@/store/friends';
 import { useTravel } from '@/store/travel';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { newId } from '@/utils/id';
@@ -67,6 +73,8 @@ export function TravelFriendsSheet({
   const [copiedOpenJoin, setCopiedOpenJoin] = useState(false);
   const [joinRequests, setJoinRequests] = useState<TravelOpenJoinRequest[]>([]);
   const [decidingRequestId, setDecidingRequestId] = useState<string>();
+  const [pickingFriends, setPickingFriends] = useState(false);
+  const hydrateFriends = useFriends((state) => state.hydrate);
 
   const refreshJoinRequests = useCallback(async (tripId: string) => {
     try {
@@ -88,8 +96,11 @@ export function TravelFriendsSheet({
       setOpenJoinError(undefined);
       setCopiedOpenJoin(false);
       setDecidingRequestId(undefined);
+      setPickingFriends(false);
       return;
     }
+
+    void hydrateFriends().catch(() => undefined);
 
     let active = true;
     const latest =
@@ -158,7 +169,7 @@ export function TravelFriendsSheet({
       active = false;
       clearInterval(poll);
     };
-  }, [visible, plan.id, onSavePlan, refreshJoinRequests]);
+  }, [visible, plan.id, onSavePlan, refreshJoinRequests, hydrateFriends]);
 
   const inviteFriend = async () => {
     setInviteError(undefined);
@@ -197,6 +208,55 @@ export function TravelFriendsSheet({
         shareError instanceof Error
           ? shareError.message
           : 'The invitation could not be created. Please try again.',
+      );
+    } finally {
+      setSharingInvite(false);
+    }
+  };
+
+  const inviteFromFriends = async (friends: FriendProfile[]) => {
+    if (!friends.length) return;
+    setSharingInvite(true);
+    setInviteError(undefined);
+    try {
+      let current =
+        useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
+      for (const friend of friends) {
+        const email = friend.email.trim().toLowerCase();
+        if (
+          current.participants.some(
+            (person) => person.email?.toLowerCase() === email,
+          )
+        ) {
+          continue;
+        }
+        const code = await shareTravelPlan(current, {
+          name: friend.displayName,
+          email,
+        });
+        if (!code) continue;
+        const now = new Date().toISOString();
+        current = {
+          ...current,
+          participants: [
+            ...current.participants,
+            {
+              id: newId('trip-person'),
+              name: friend.displayName,
+              email,
+              inviteCode: code,
+              invitedAt: now,
+            },
+          ],
+          updatedAt: now,
+        };
+        onSavePlan(current);
+      }
+    } catch (shareError) {
+      setInviteError(
+        shareError instanceof Error
+          ? shareError.message
+          : 'Friends could not be invited. Please try again.',
       );
     } finally {
       setSharingInvite(false);
@@ -370,29 +430,27 @@ export function TravelFriendsSheet({
             {
               backgroundColor: theme.backgroundPrimary,
               paddingBottom: Math.max(insets.bottom, spacing.lg),
+              overflow: 'hidden',
             },
           ]}>
           <View style={styles.handleRow}>
             <View style={[styles.handle, { backgroundColor: theme.separator }]} />
           </View>
-          <View style={styles.sheetHeader}>
-            <View style={styles.flex}>
-              <AppText variant="overline" color="accent" style={travelOverlineStyle}>
-                Friends
-              </AppText>
-              <AppText variant="title" fit>
-                {plan.title}
-              </AppText>
-              <AppText variant="callout" color="secondary">
-                Private email invites · open link needs your approval
-              </AppText>
-            </View>
-            <IconButton
-              icon="close"
-              accessibilityLabel="Close friends"
-              onPress={onClose}
-            />
-          </View>
+          <TravelSkyHeader
+            eyebrow="Friends"
+            title={plan.title}
+            subtitle="Private Invites · Open Link Needs Your Approval"
+            trailing={
+              <IconButton
+                icon="close"
+                size={36}
+                background="transparent"
+                borderColor={theme.separator}
+                accessibilityLabel="Close Friends"
+                onPress={onClose}
+              />
+            }
+          />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -479,6 +537,14 @@ export function TravelFriendsSheet({
               </View>
             ) : null}
 
+            <Button
+              icon="people"
+              variant="secondary"
+              disabled={sharingInvite}
+              onPress={() => setPickingFriends(true)}>
+              Add from Friends
+            </Button>
+
             <TripPeople
               participants={plan.participants}
               editing={editingInvite}
@@ -547,6 +613,16 @@ export function TravelFriendsSheet({
           </ScrollView>
         </View>
       </View>
+      <PeoplePicker
+        visible={pickingFriends}
+        title="Add Trip Friends"
+        confirmLabel="Invite"
+        excludeIds={plan.participants
+          .map((person) => person.email)
+          .filter((email): email is string => Boolean(email))}
+        onClose={() => setPickingFriends(false)}
+        onConfirm={(friends) => void inviteFromFriends(friends)}
+      />
     </Modal>
   );
 }

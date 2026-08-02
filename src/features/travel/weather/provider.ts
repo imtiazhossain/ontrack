@@ -3,6 +3,7 @@ import { fetch } from 'expo/fetch';
 import { addDays, todayKey } from '@/utils/date';
 
 import type {
+  DestinationCurrentWeather,
   TemperatureUnit,
   TravelWeather,
   TravelWeatherDay,
@@ -35,6 +36,13 @@ interface ForecastResponse {
   };
 }
 
+interface CurrentForecastResponse {
+  current?: {
+    temperature_2m?: unknown;
+    weather_code?: unknown;
+  };
+}
+
 interface ForecastWindow {
   availability: TravelWeather['availability'];
   requestStart?: string;
@@ -49,6 +57,7 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+const currentCache = new Map<string, { expiresAt: number; promise: Promise<DestinationCurrentWeather> }>();
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -180,17 +189,7 @@ async function requestTravelWeather(
     };
   }
 
-  const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
-  geocodingUrl.searchParams.set('name', destination);
-  geocodingUrl.searchParams.set('count', '1');
-  geocodingUrl.searchParams.set('language', 'en');
-  geocodingUrl.searchParams.set('format', 'json');
-  const geocoding = await fetchJson<GeocodingResponse>(geocodingUrl.toString(), signal);
-  const results = Array.isArray(geocoding.results) ? geocoding.results : [];
-  const location = results[0] as GeocodingResult | undefined;
-  if (!location || !isFiniteNumber(location.latitude) || !isFiniteNumber(location.longitude)) {
-    throw new Error(`Weather could not find “${destination}”. Try a city and country.`);
-  }
+  const location = await geocodeDestination(destination, signal);
 
   const forecastUrl = new URL('https://api.open-meteo.com/v1/forecast');
   forecastUrl.searchParams.set('latitude', String(location.latitude));
@@ -242,6 +241,74 @@ export function getTravelWeather(
   return promise;
 }
 
+async function geocodeDestination(
+  destination: string,
+  signal?: AbortSignal,
+): Promise<GeocodingResult> {
+  const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+  geocodingUrl.searchParams.set('name', destination);
+  geocodingUrl.searchParams.set('count', '1');
+  geocodingUrl.searchParams.set('language', 'en');
+  geocodingUrl.searchParams.set('format', 'json');
+  const geocoding = await fetchJson<GeocodingResponse>(geocodingUrl.toString(), signal);
+  const results = Array.isArray(geocoding.results) ? geocoding.results : [];
+  const location = results[0] as GeocodingResult | undefined;
+  if (!location || !isFiniteNumber(location.latitude) || !isFiniteNumber(location.longitude)) {
+    throw new Error(`Weather could not find “${destination}”. Try a city and country.`);
+  }
+  return location;
+}
+
+async function requestDestinationCurrentWeather(
+  destination: string,
+  temperatureUnit: TemperatureUnit,
+  signal?: AbortSignal,
+): Promise<DestinationCurrentWeather> {
+  const location = await geocodeDestination(destination, signal);
+  const forecastUrl = new URL('https://api.open-meteo.com/v1/forecast');
+  forecastUrl.searchParams.set('latitude', String(location.latitude));
+  forecastUrl.searchParams.set('longitude', String(location.longitude));
+  forecastUrl.searchParams.set('current', 'temperature_2m,weather_code');
+  forecastUrl.searchParams.set('temperature_unit', temperatureUnit);
+  forecastUrl.searchParams.set('timezone', 'auto');
+  const forecast = await fetchJson<CurrentForecastResponse>(forecastUrl.toString(), signal);
+  const temperature = forecast.current?.temperature_2m;
+  const weatherCode = forecast.current?.weather_code;
+  if (!isFiniteNumber(temperature) || !isFiniteNumber(weatherCode)) {
+    throw new Error('Weather service returned incomplete current conditions.');
+  }
+  return {
+    locationLabel: locationLabel(location, destination),
+    temperature: Math.round(temperature),
+    temperatureUnit,
+    weatherCode,
+    ...describeWeatherCode(weatherCode),
+  };
+}
+
+/** Live temperature + condition for a destination (cached ~30 min). */
+export function getDestinationCurrentWeather(
+  destination: string,
+  temperatureUnit: TemperatureUnit,
+  signal?: AbortSignal,
+): Promise<DestinationCurrentWeather> {
+  const key = `current|${destination.trim().toLocaleLowerCase()}|${temperatureUnit}`;
+  const cached = currentCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+
+  const promise = requestDestinationCurrentWeather(
+    destination.trim(),
+    temperatureUnit,
+    signal,
+  ).catch((error) => {
+    currentCache.delete(key);
+    throw error;
+  });
+  currentCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, promise });
+  return promise;
+}
+
 export function clearTravelWeatherCache(): void {
   cache.clear();
+  currentCache.clear();
 }

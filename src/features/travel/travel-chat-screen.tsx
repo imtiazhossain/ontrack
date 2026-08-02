@@ -29,21 +29,17 @@ import {
   travelChatAccessCode,
   type TravelChatMessage,
 } from '@/features/travel/chat';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import {
+  travelCardBorder,
+  travelPanelTint,
+} from '@/features/travel/travel-surface';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
 export function TravelChatScreen({ planId }: { planId: string }) {
-  return (
-    <FeatureThemeProvider feature="travel">
-      <TravelChatScreenContent planId={planId} />
-    </FeatureThemeProvider>
-  );
-}
-
-function TravelChatScreenContent({ planId }: { planId: string }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const listRef =
@@ -243,29 +239,35 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
 
   return (
     <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-      <View style={[styles.header, { borderBottomColor: theme.separator }]}>
+      <View style={[styles.header, { borderBottomColor: travelCardBorder(theme), backgroundColor: theme.backgroundElevated }]}>
         <View style={styles.headerCopy}>
-          <AppText variant="heading" numberOfLines={1}>{plan.title}</AppText>
-          <AppText variant="caption" color="secondary">
+          <AppText variant="heading" numberOfLines={1} fit>
+            {plan.title}
+          </AppText>
+          <AppText variant="caption" color="secondary" fit>
             {plan.id === ALL_ACCOUNTS_TEST_TRIP.id
               ? 'Shared Test Chat'
               : `${plan.participants.length + 1} ${
-                  plan.participants.length === 0 ? 'trip member' : 'trip members'
+                  plan.participants.length === 0 ? 'Trip Member' : 'Trip Members'
                 }`}
           </AppText>
         </View>
       </View>
 
       {notificationsAvailable && !notificationsEnabled ? (
-        <View style={[styles.notificationBanner, { backgroundColor: theme.accentFaint }]}>
+        <View style={[styles.notificationBanner, { backgroundColor: travelPanelTint(theme) }]}>
           <View style={styles.bannerCopy}>
-            <AppText variant="callout" color="accent">Get New-Message Alerts</AppText>
-            <AppText variant="caption" color="secondary">Stay in the loop when the app is closed.</AppText>
+            <AppText variant="callout" color="accent" fit>
+              Get New-Message Alerts
+            </AppText>
+            <AppText variant="caption" color="secondary" fit>
+              Stay in the Loop When the App Is Closed.
+            </AppText>
           </View>
           <Button
             disabled={enablingNotifications || !deviceId}
             onPress={() => void enableNotifications()}>
-            {enablingNotifications ? 'Turning on…' : 'Turn on'}
+            {enablingNotifications ? 'Turning On…' : 'Turn On'}
           </Button>
         </View>
       ) : null}
@@ -342,8 +344,8 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
         style={[
           styles.composer,
           {
-            borderTopColor: theme.separator,
-            backgroundColor: theme.backgroundPrimary,
+            borderTopColor: travelCardBorder(theme),
+            backgroundColor: theme.backgroundElevated,
             paddingBottom: Math.max(insets.bottom, spacing.sm),
             marginBottom: keyboardInset,
           },
@@ -351,11 +353,11 @@ function TravelChatScreenContent({ planId }: { planId: string }) {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="Message the trip…"
+          placeholder="Message the Trip…"
           placeholderTextColor={theme.textTertiary}
           multiline
           maxLength={2000}
-          accessibilityLabel="Trip message"
+          accessibilityLabel="Trip Message"
           underlineColorAndroid="transparent"
           style={[
             styles.input,

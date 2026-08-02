@@ -17,8 +17,11 @@ import type {
     VisionBoardItem,
 } from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
+import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
+import { loadAllSharedVehicles } from '@/services/vehicles/collaboration';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
+import { useFriends } from '@/store/friends';
 import { useNutrition } from '@/store/nutrition';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
@@ -592,6 +595,75 @@ export async function flushCloudSync() {
     throw error;
   } finally {
     if (activeUserId) startSubscriptions(activeUserId, activeEmail);
+  }
+}
+
+/**
+ * Pull-to-refresh: flush local edits, pull cloud domains, reload shared
+ * collaboration snapshots and the friends graph.
+ */
+export async function refreshAppData() {
+  const client = getSupabaseClient();
+  if (!client || !activeUserId) {
+    await useFriends.getState().refresh().catch(() => undefined);
+    return;
+  }
+
+  const userId = activeUserId;
+  const email = activeEmail;
+  useCloudSyncStatus.setState({ state: 'syncing', email, message: undefined });
+
+  try {
+    await flushCloudSync().catch(() => undefined);
+
+    const { data, error } = await client
+      .from('app_state')
+      .select('domain,payload')
+      .eq('user_id', userId);
+    if (error) throw error;
+
+    const remote = new Map<SyncDomainName, JsonObject>();
+    for (const row of data ?? []) {
+      const payload = objectValue(row.payload);
+      if (payload && domains.some((domain) => domain.name === row.domain)) {
+        remote.set(row.domain as SyncDomainName, payload);
+      }
+    }
+
+    if (remote.size > 0) {
+      const retained = await applyRemote(remote);
+      if (retained.length > 0) {
+        await pushDomains(userId, retained).catch(() => undefined);
+      }
+      if (activeUserId === userId) {
+        startSubscriptions(userId, email);
+      }
+    }
+
+    await loadEntitlements(userId).catch(() => undefined);
+    await Promise.all([
+      loadAllSharedTodoLists().catch(() => undefined),
+      loadAllSharedVehicles().catch(() => undefined),
+      useFriends.getState().refresh().catch(() => undefined),
+    ]);
+
+    if (activeUserId === userId) {
+      useCloudSyncStatus.setState({
+        state: 'synced',
+        email,
+        lastSyncedAt: new Date().toISOString(),
+        message: undefined,
+      });
+    }
+  } catch (error) {
+    if (activeUserId === userId) {
+      useCloudSyncStatus.setState({
+        state: 'error',
+        email,
+        message: errorMessage(error),
+      });
+    }
+    throw error;
   }
 }
 

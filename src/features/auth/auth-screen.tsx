@@ -67,6 +67,7 @@ export function AuthScreen({
       <Screen
         padded={false}
         bottomInset={false}
+        refresh={false}
         style={styles.transparent}
         contentStyle={{
           ...styles.content,

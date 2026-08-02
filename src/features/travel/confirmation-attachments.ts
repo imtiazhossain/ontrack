@@ -71,7 +71,7 @@ function extensionForAsset(fileName: string, uri: string): string {
  */
 export async function persistConfirmationAssets(
   assets: { uri: string; fileName: string }[],
-  kind: 'flight' | 'rental',
+  kind: 'flight' | 'rental' | 'stay',
 ): Promise<string[]> {
   if (Platform.OS === 'web') {
     return assets.map((asset) => asset.uri).filter(Boolean);
@@ -107,7 +107,7 @@ export async function persistConfirmationAssets(
 }
 
 /** List confirmation files currently on disk for a travel kind. */
-export function listConfirmationUris(kind: 'flight' | 'rental'): string[] {
+export function listConfirmationUris(kind: 'flight' | 'rental' | 'stay'): string[] {
   if (Platform.OS === 'web') return [];
   try {
     const directory = new Directory(Paths.document, 'travel-confirmations', kind);
@@ -133,7 +133,7 @@ export function listConfirmationUris(kind: 'flight' | 'rental'): string[] {
  */
 export function confirmationUrisForDisplay(
   stored: string[] | undefined,
-  kind: 'flight' | 'rental',
+  kind: 'flight' | 'rental' | 'stay',
 ): string[] {
   const resolved = resolveConfirmationUris(stored);
   if (resolved.length) return resolved;
@@ -148,9 +148,13 @@ export async function openConfirmationAttachments(uris: string[]): Promise<void>
   const openable = existing.length ? existing : uris.filter((uri) => uri.startsWith('file://'));
   if (!openable.length) return;
 
-  if (TravelDocumentReader?.previewDocumentsAsync) {
-    await TravelDocumentReader.previewDocumentsAsync(openable);
-    return;
+  try {
+    if (TravelDocumentReader?.previewDocumentsAsync) {
+      await TravelDocumentReader.previewDocumentsAsync(openable);
+      return;
+    }
+  } catch (error) {
+    if (__DEV__) console.warn('[openConfirmationAttachments] preview failed', error);
   }
 
   await Linking.openURL(openable[0]);

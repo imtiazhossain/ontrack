@@ -43,7 +43,7 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 
 ## Agent close-out (required)
 
-After app-affecting changes, leave Metro healthy and verified (`/status` 200 on LAN + localhost) before ending the turn. See `.cursor/rules/verify-working-app.mdc`.
+After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
 
 ## Non-negotiable UI rules
 
@@ -65,9 +65,10 @@ After app-affecting changes, leave Metro healthy and verified (`/status` 200 on 
 | Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
 | Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-itinerary-*`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `travel-friends-sheet`, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
+| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-action` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `travel-friends-sheet`, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
+| Social / friends | `app/(tabs)/social.tsx` (+ `features/social/social-hub-screen`, `people-picker`, `services/friends`, `store/friends`, invite `/f/{code|slug}`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
-| Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`) |
+| Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`, `challenge-friend-button`) |
 | Vehicles tab | `app/(tabs)/vehicles.tsx` (+ `features/vehicles/*`, `store/vehicles.ts`, `services/vehicles/` for VIN/parts + `collaboration.ts`, join via `app/v/[code].tsx`) |
 | Games tab | `app/(tabs)/games.tsx` (+ `features/games/games-hub`, `balloon-pop/*`) |
 | Auth / guest | `features/auth/` |
@@ -89,6 +90,7 @@ After app-affecting changes, leave Metro healthy and verified (`/status` 200 on 
 - **Destructive confirms:** `@/utils/confirm-destructive` (`confirmDestructiveAction`). Activity delete wraps it via `confirmDeleteActivity`.
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
 - **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
+- **Pull-to-refresh:** Scrollable `Screen`s refresh by default via `usePullToRefresh` / `refreshAppData` (cloud pull + shared todos/vehicles + friends). List screens that use `scroll={false}` should attach `refreshControl` from `usePullToRefresh()`. Set `refresh={false}` on dense editors/forms.
 - **Server HTTP:** auth/rate-limit/cors/compression live under `src/services/http/`.
 
 ## State & sync
@@ -101,7 +103,7 @@ After app-affecting changes, leave Metro healthy and verified (`/status` 200 on 
 
 - Prefer focused unit tests next to the module (`__tests__/`).
 - Existing rule tests encode safe-area, DateField, appPrompt, keyboard, and auth navigation constraints — keep them green when touching those surfaces.
-- After UI changes, leave a fully loaded iOS Simulator screenshot of the changed surface (see `.cursor/rules/show-simulator-screenshot.mdc`).
+- Always test after changes: typecheck/tests for touched domains, then verify in the iOS Simulator. Leave the simulator in a working state that shows the change, with a fully loaded screenshot in the reply (see `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`).
 
 ## Pitfalls
 

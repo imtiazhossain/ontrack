@@ -60,7 +60,7 @@ function importedRentalValues(
   return {
     title:
       parsed.title ||
-      (rental.company ? `${rental.company} rental` : 'Car rental'),
+      (rental.company ? `${rental.company} Rental` : 'Car Rental'),
     date,
     startMinutes: parsed.startMinutes ?? 10 * 60,
     durationMinutes: parsed.durationMinutes ?? 60,

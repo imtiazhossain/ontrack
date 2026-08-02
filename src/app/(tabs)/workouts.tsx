@@ -32,6 +32,7 @@ import { MuscleFocusExercises } from '@/features/workouts/muscle-focus-exercises
 import { MUSCLE_HIGHLIGHT_VIEW } from '@/features/workouts/muscle-highlight-images';
 import { WorkoutSessionBuilder } from '@/features/workouts/workout-session-builder';
 import { WorkoutTodayPlan } from '@/features/workouts/workout-today-plan';
+import { ChallengeFriendButton } from '@/features/workouts/challenge-friend-button';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { newId, useSchedule } from '@/store/schedule';
@@ -453,6 +454,7 @@ export default function WorkoutsScreen() {
             <AppText variant="body" color="secondary" style={styles.headerBody}>
               Explore the anatomy, choose a focus, and shape a session that feels intentional.
             </AppText>
+            <ChallengeFriendButton style={styles.challengeFriend} />
           </View>
         </View>
       </View>
@@ -836,6 +838,10 @@ const styles = StyleSheet.create({
   },
   headerBody: {
     maxWidth: 500,
+  },
+  challengeFriend: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
   },
   headerAction: {
     flexShrink: 0,

@@ -11,6 +11,7 @@ import {
 } from '@/features/vehicles/types';
 import { isMaintenanceDue } from '@/features/vehicles/maintenance-due';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useVehicles } from '@/store/vehicles';
 import { todayKey } from '@/utils/date';
@@ -77,6 +78,7 @@ export default function VehiclesScreen() {
 function VehiclesScreenContent() {
   const router = useRouter();
   const { spacing: gap } = useResponsive();
+  const { refreshControl } = usePullToRefresh();
   const vehicles = useVehicles((state) => state.vehicles);
   const sorted = useMemo(
     () =>
@@ -91,6 +93,7 @@ function VehiclesScreenContent() {
       <FlashList
         data={sorted}
         keyExtractor={(item) => item.id}
+        refreshControl={refreshControl}
         contentContainerStyle={{ paddingBottom: gap.md }}
         ListHeaderComponent={
           <View style={[styles.header, { gap: gap.md, marginBottom: gap.lg }]}>

@@ -25,3 +25,13 @@ export interface TravelWeather {
   availableOn?: string;
   availableThrough?: string;
 }
+
+/** Live conditions at a destination (Open-Meteo current). */
+export interface DestinationCurrentWeather {
+  locationLabel: string;
+  temperature: number;
+  temperatureUnit: TemperatureUnit;
+  weatherCode: number;
+  condition: string;
+  symbol: string;
+}

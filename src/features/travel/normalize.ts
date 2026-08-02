@@ -2,10 +2,13 @@ import { asPositiveNumber, asString } from '@/utils/parse';
 import { normalizeCurrencyCode } from './expenses/format-money';
 import { normalizeFlightDetails } from './flight-details';
 import { normalizeRentalDetails } from './rental-details';
+import { normalizeStayDetails } from './stay-details';
+import { normalizeTravelPhotoUris } from './travel-moment-media';
 import type {
   TravelExpense,
   TravelExpenseCategory,
   TravelItineraryItem,
+  TravelItemNote,
   TravelParticipant,
   TravelPlan,
 } from './types';
@@ -21,7 +24,8 @@ const EXPENSE_CATEGORIES = new Set<TravelExpenseCategory>([
   'other',
 ]);
 
-const ITEM_KINDS = new Set(['flight', 'stay', 'activity', 'rental']);
+const ITEM_KINDS = new Set(['flight', 'stay', 'activity', 'rental', 'moment']);
+const DEFAULT_MOMENT_DURATION_MINUTES = 15;
 
 export function normalizeTravelItineraryItem(
   value: unknown,
@@ -31,30 +35,95 @@ export function normalizeTravelItineraryItem(
   if (
     typeof item.id !== 'string' ||
     !ITEM_KINDS.has(item.kind as string) ||
-    typeof item.title !== 'string' ||
     typeof item.date !== 'string' ||
     typeof item.startMinutes !== 'number' ||
     !Number.isFinite(item.startMinutes) ||
     item.startMinutes < 0 ||
-    item.startMinutes >= 24 * 60 ||
-    typeof item.durationMinutes !== 'number' ||
-    !Number.isFinite(item.durationMinutes) ||
-    item.durationMinutes <= 0
+    item.startMinutes >= 24 * 60
   ) {
     return undefined;
   }
+
+  const kind = item.kind as TravelItineraryItem['kind'];
+  const isMoment = kind === 'moment';
+  const rawTitle = typeof item.title === 'string' ? item.title.trim() : '';
+  if (!isMoment && typeof item.title !== 'string') return undefined;
+
+  let durationMinutes =
+    typeof item.durationMinutes === 'number' && Number.isFinite(item.durationMinutes)
+      ? item.durationMinutes
+      : undefined;
+  if (isMoment && (durationMinutes === undefined || durationMinutes <= 0)) {
+    durationMinutes = DEFAULT_MOMENT_DURATION_MINUTES;
+  }
+  if (durationMinutes === undefined || durationMinutes <= 0) return undefined;
+
+  const title = isMoment
+    ? rawTitle || 'Moment'
+    : kind === 'rental'
+      ? capitalizeRentalTitle(item.title as string)
+      : (item.title as string);
+
+  const photoUris = normalizeTravelPhotoUris(item.photoUris);
+  const notes = normalizeTravelItemNotes(item.notes);
+
   return {
     id: item.id,
-    kind: item.kind as TravelItineraryItem['kind'],
-    title: item.title,
+    kind,
+    title,
     date: item.date,
     startMinutes: Math.round(item.startMinutes),
-    durationMinutes: Math.round(item.durationMinutes),
+    durationMinutes: Math.round(durationMinutes),
     details: asString(item.details),
-    bookingUrl: asString(item.bookingUrl),
-    flight: item.kind === 'flight' ? normalizeFlightDetails(item.flight) : undefined,
-    rental: item.kind === 'rental' ? normalizeRentalDetails(item.rental) : undefined,
+    bookingUrl: isMoment ? undefined : asString(item.bookingUrl),
+    ...(photoUris ? { photoUris } : {}),
+    ...(notes ? { notes } : {}),
+    flight: kind === 'flight' ? normalizeFlightDetails(item.flight) : undefined,
+    rental: kind === 'rental' ? normalizeRentalDetails(item.rental) : undefined,
+    stay: kind === 'stay' ? normalizeStayDetails(item.stay) : undefined,
   };
+}
+
+function normalizeTravelItemNotes(value: unknown): TravelItemNote[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const notes = value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const note = entry as Partial<TravelItemNote>;
+    const body = typeof note.body === 'string' ? note.body.trim() : '';
+    const authorName =
+      typeof note.authorName === 'string' ? note.authorName.trim() : '';
+    if (
+      typeof note.id !== 'string' ||
+      !body ||
+      typeof note.authorId !== 'string' ||
+      !authorName ||
+      typeof note.createdAt !== 'string'
+    ) {
+      return [];
+    }
+    const updatedAt =
+      typeof note.updatedAt === 'string' && note.updatedAt.trim()
+        ? note.updatedAt.trim()
+        : undefined;
+    return [
+      {
+        id: note.id,
+        body,
+        authorId: note.authorId,
+        authorName,
+        createdAt: note.createdAt,
+        ...(updatedAt ? { updatedAt } : {}),
+      } satisfies TravelItemNote,
+    ];
+  });
+  return notes.length ? notes : undefined;
+}
+
+/** Title-case the kind word in rental itinerary titles (“Hertz Rental”). */
+function capitalizeRentalTitle(title: string): string {
+  return title
+    .replace(/\bCar rental\b/g, 'Car Rental')
+    .replace(/\b rental\b/g, ' Rental');
 }
 
 export function normalizeTravelItinerary(value: unknown): TravelItineraryItem[] {
@@ -126,10 +195,13 @@ function repairLegacyHertzRentalImport(
       item.rental.dropoffMinutes === HERTZ_L666_DROPOFF_MINUTES &&
       Boolean(item.rental.pickupLocation) &&
       Boolean(item.rental.dropoffLocation);
-    if (alreadyCorrect) return item;
+    if (alreadyCorrect) {
+      const title = capitalizeRentalTitle(item.title);
+      return title === item.title ? item : { ...item, title };
+    }
     return {
       ...item,
-      title: 'Hertz rental · Keflavik International Airport (KEF)',
+      title: 'Hertz Rental · Keflavik International Airport (KEF)',
       date: '2026-09-09',
       startMinutes: HERTZ_L666_PICKUP_MINUTES,
       durationMinutes: 60,
@@ -279,6 +351,12 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
         ? repairedImport.correctedEndDate
         : plan.endDate,
     notes: asString(plan.notes),
+    ...(() => {
+      const coverUri = normalizeTravelPhotoUris(
+        typeof plan.coverUri === 'string' ? [plan.coverUri] : undefined,
+      )?.[0];
+      return coverUri ? { coverUri } : {};
+    })(),
     itinerary,
     participants,
     baseCurrency: normalizeCurrencyCode(plan.baseCurrency),

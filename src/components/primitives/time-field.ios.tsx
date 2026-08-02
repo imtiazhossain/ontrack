@@ -4,11 +4,13 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, radii, spacing } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMinutes, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
 import { IconButton } from './button';
+import { FieldLeadingIcon } from './field-leading-icon';
 import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
@@ -19,42 +21,123 @@ import {
 
 /** Tappable iOS time field backed by a full-width native wheel picker. */
 export function TimeField({
-  label = 'Time',
+  label,
   value,
   onChange,
   disabled = false,
-  accessibilityLabel = label,
+  placeholder = 'Time',
+  stackedLabel,
+  iconBackground,
+  iconColor,
+  fieldBackground,
+  stackedLabelColor,
+  placeholderColor,
+  showChevron = false,
+  accessibilityLabel,
   testID,
 }: TimeFieldProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { spacing, s } = useResponsive();
   const [showPicker, setShowPicker] = useState(false);
-  const minutes = clampMinutesFromMidnight(value ?? nowMinutes());
-  const displayValue = value === null ? 'Choose time' : formatMinutes(minutes);
+  const [draftMinutes, setDraftMinutes] = useState(() =>
+    clampMinutesFromMidnight(value ?? nowMinutes()),
+  );
+  const hasValue = value !== null;
+  const displayValue = hasValue
+    ? formatMinutes(clampMinutesFromMidnight(value))
+    : placeholder;
+  const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Time';
+  const stacked = Boolean(stackedLabel);
+
+  const openPicker = () => {
+    setDraftMinutes(clampMinutesFromMidnight(value ?? nowMinutes()));
+    setShowPicker(true);
+  };
+
+  const commitDraft = () => {
+    onChange(draftMinutes);
+    setShowPicker(false);
+  };
 
   return (
-    <View style={styles.wrapper}>
-      <AppText variant="overline" color="tertiary">
-        {label}
-      </AppText>
+    <View style={[styles.wrapper, { gap: spacing.sm }]}>
+      {label && !stacked ? (
+        <AppText variant="overline" color="tertiary" fit>
+          {label}
+        </AppText>
+      ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
+        accessibilityLabel={resolvedA11yLabel}
         accessibilityValue={{ text: displayValue }}
         disabled={disabled}
-        onPress={() => setShowPicker(true)}
+        onPress={openPicker}
         style={({ pressed }) => [
           styles.field,
           {
-            backgroundColor: theme.backgroundSunken,
+            minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
+            borderRadius: stacked ? radii.lg : radii.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: stacked ? spacing.sm : 0,
+            alignItems: stacked ? 'flex-start' : 'center',
+            backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
           },
         ]}
         testID={testID}>
-        <Symbol name="clock" size="sm" color={theme.textSecondary} />
-        <AppText variant="body" style={styles.timeText}>
-          {displayValue}
-        </AppText>
+        <View style={stacked ? { paddingTop: s(2) } : undefined}>
+          <FieldLeadingIcon
+            name="clock"
+            backgroundColor={iconBackground}
+            color={iconColor}
+          />
+        </View>
+        {stacked ? (
+          <View style={styles.stackedCopy}>
+            <AppText
+              variant="caption"
+              fit
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                fontWeight: '600',
+                color: stackedLabelColor ?? theme.textPrimary,
+              }}>
+              {stackedLabel}
+            </AppText>
+            <AppText
+              variant="body"
+              fit
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                color: hasValue
+                  ? theme.textPrimary
+                  : (placeholderColor ?? theme.textTertiary),
+              }}>
+              {displayValue}
+            </AppText>
+          </View>
+        ) : (
+          <AppText
+            variant="body"
+            color={hasValue ? 'primary' : 'tertiary'}
+            style={styles.timeText}>
+            {displayValue}
+          </AppText>
+        )}
+        {showChevron ? (
+          <View style={stacked ? { paddingTop: s(10) } : undefined}>
+            <Symbol
+              name="chevron-down"
+              size="sm"
+              color={placeholderColor ?? theme.textTertiary}
+            />
+          </View>
+        ) : null}
       </Pressable>
 
       <Modal
@@ -70,6 +153,7 @@ export function TimeField({
               backgroundColor: theme.overlayScrim,
               paddingTop: insets.top,
               paddingBottom: insets.bottom,
+              paddingHorizontal: layout.screenPadding,
             },
           ]}>
           <Pressable
@@ -77,21 +161,29 @@ export function TimeField({
             onPress={() => setShowPicker(false)}
             style={StyleSheet.absoluteFill}
           />
-          <View style={[styles.pickerSheet, { backgroundColor: theme.backgroundElevated }]}>
-            <View style={styles.pickerHeader}>
-              <AppText variant="subheading" style={styles.pickerTitle}>
-                {label}
+          <View
+            style={[
+              styles.pickerSheet,
+              {
+                backgroundColor: theme.backgroundElevated,
+                padding: spacing.lg,
+                gap: spacing.sm,
+              },
+            ]}>
+            <View style={[styles.pickerHeader, { gap: spacing.md }]}>
+              <AppText variant="subheading" fit style={styles.pickerTitle}>
+                {resolvedA11yLabel}
               </AppText>
               <IconButton
                 icon="close"
-                size={36}
+                size={s(36)}
                 accessibilityLabel="Close time picker"
                 background={theme.backgroundSunken}
                 onPress={() => setShowPicker(false)}
               />
             </View>
             <ExpoDateTimePicker
-              value={minutesToDate(minutes)}
+              value={minutesToDate(draftMinutes)}
               mode="time"
               display="spinner"
               locale="en_US"
@@ -99,8 +191,27 @@ export function TimeField({
               themeVariant={theme.name}
               style={styles.timePicker}
               testID={testID ? `${testID}-picker` : undefined}
-              onValueChange={(_event, selected) => onChange(dateToMinutes(selected))}
+              onValueChange={(_event, selected) =>
+                setDraftMinutes(dateToMinutes(selected))
+              }
             />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+              onPress={commitDraft}
+              style={({ pressed }) => [
+                styles.done,
+                {
+                  minHeight: Math.max(44, s(48)),
+                  paddingHorizontal: spacing.lg,
+                  backgroundColor: theme.accentPrimary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <AppText variant="callout" color="onAccent" fit>
+                Done
+              </AppText>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -109,40 +220,40 @@ export function TimeField({
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    gap: spacing.sm,
-  },
+  wrapper: {},
   field: {
     width: '100%',
-    minHeight: 48,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
+  stackedCopy: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    gap: 2,
+    justifyContent: 'center',
+  },
   timeText: {
     flex: 1,
+    minWidth: 0,
   },
   modalRoot: {
     flex: 1,
     justifyContent: 'flex-end',
-    paddingHorizontal: layout.screenPadding,
   },
   pickerSheet: {
     width: '100%',
     maxWidth: layout.maxContentWidth,
     alignSelf: 'center',
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    gap: spacing.sm,
     overflow: 'hidden',
   },
   pickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
   pickerTitle: {
     flex: 1,
@@ -151,5 +262,10 @@ const styles = StyleSheet.create({
   timePicker: {
     width: '100%',
     height: 180,
+  },
+  done: {
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

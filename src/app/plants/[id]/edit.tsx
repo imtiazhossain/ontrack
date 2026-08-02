@@ -36,7 +36,7 @@ export default function EditPlantScreen() {
   const [reminderMinutes, setReminderMinutes] = useState(plant?.reminderMinutes ?? 9 * 60);
   const [error, setError] = useState<string>();
 
-  if (!plant) return <Screen><AppText variant="title">Plant Not Found</AppText></Screen>;
+  if (!plant) return <Screen refresh={false}><AppText variant="title">Plant Not Found</AppText></Screen>;
 
   const save = async () => {
     if (!nickname.trim() || value(minMl) <= 0 || value(maxMl) < value(minMl) || value(interval) < 1 || reminderMinutes < 0 || reminderMinutes >= 1440) {
@@ -70,7 +70,7 @@ export default function EditPlantScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen contentStyle={styles.content} refresh={false}>
       <AppText variant="title">Edit {plant.nickname}</AppText>
       <Input label="Nickname" value={nickname} onChangeText={setNickname} />
       <SectionHeader title="Watering" />

@@ -99,6 +99,7 @@ function compactItineraryItem(item: TravelItineraryItem) {
     stay: 's',
     activity: 'a',
     rental: 'r',
+    moment: 'm',
   };
   return [
     item.id,
@@ -138,6 +139,7 @@ function expandItineraryItem(value: unknown): unknown {
     s: 'stay',
     a: 'activity',
     r: 'rental',
+    m: 'moment',
   }[stringAt(value, 1) ?? ''];
   const flightRaw = Array.isArray(value[8]) ? value[8] : undefined;
   // New encodes omit confirmation/seat (4 fields). Legacy encodes had 6.

@@ -12,10 +12,12 @@ import {
   SectionHeader,
 } from '@/components/primitives';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { PeoplePicker } from '@/features/social/people-picker';
 import { shareVehicleInvite } from '@/features/vehicles/share';
 import { vehicleDisplayTitle } from '@/features/vehicles/types';
 import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
+import type { FriendProfile } from '@/services/friends';
 import {
   createVehicleShareLink,
   deleteSharedVehicle,
@@ -25,6 +27,7 @@ import {
   revokeVehicleShareLink,
   transferVehicleOwnership,
 } from '@/services/vehicles/collaboration';
+import { useFriends } from '@/store/friends';
 import { useVehicles } from '@/store/vehicles';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
@@ -45,6 +48,8 @@ function VehicleSettingsScreen() {
   const removeVehicle = useVehicles((state) => state.removeVehicle);
   const [working, setWorking] = useState<string>();
   const [error, setError] = useState<string>();
+  const [pickingFriends, setPickingFriends] = useState(false);
+  const hydrateFriends = useFriends((state) => state.hydrate);
 
   if (!vehicle) {
     return (
@@ -97,6 +102,28 @@ function VehicleSettingsScreen() {
     });
   };
 
+  const inviteFriends = (friends: FriendProfile[]) => {
+    if (!friends.length) return;
+    if (!user) return requireSignIn();
+    void run('friends', async () => {
+      if (vehicle.mode === 'private') await publishVehicle(vehicle.id);
+      const latest =
+        useVehicles.getState().vehicles.find((item) => item.id === vehicle.id) ??
+        vehicle;
+      const code =
+        latest.shareCode ?? (await createVehicleShareLink(vehicle.id));
+      await shareVehicleInvite(
+        useVehicles.getState().vehicles.find((item) => item.id === vehicle.id) ??
+          latest,
+        code,
+      );
+      appPrompt.alert(
+        'Share with Friends',
+        `Send the join link to ${friends.map((friend) => friend.displayName).join(', ')}.`,
+      );
+    });
+  };
+
   const transferTo = (userId: string, leaveAfter: boolean) => {
     confirmDestructiveAction({
       title: leaveAfter ? 'Transfer & leave?' : 'Make owner?',
@@ -146,6 +173,7 @@ function VehicleSettingsScreen() {
   };
 
   return (
+    <>
     <Screen contentStyle={{ gap: gap.lg }}>
       <View style={{ gap: gap.xs }}>
         <AppText variant="overline" color="accent" fit numberOfLines={1}>
@@ -176,6 +204,16 @@ function VehicleSettingsScreen() {
                 accessibilityLabel="Share this vehicle">
                 {working === 'publish' ? 'Preparing…' : 'Share this vehicle'}
               </Button>
+              <Button
+                variant="secondary"
+                icon="invite"
+                disabled={Boolean(working)}
+                onPress={() => {
+                  void hydrateFriends().catch(() => undefined);
+                  setPickingFriends(true);
+                }}>
+                Invite friends
+              </Button>
             </Card>
           ) : (
             <Card>
@@ -191,6 +229,16 @@ function VehicleSettingsScreen() {
                 onPress={shareLink}
                 accessibilityLabel="Share join link">
                 {working === 'link' ? 'Preparing…' : 'Share join link'}
+              </Button>
+              <Button
+                variant="secondary"
+                icon="people"
+                disabled={Boolean(working)}
+                onPress={() => {
+                  void hydrateFriends().catch(() => undefined);
+                  setPickingFriends(true);
+                }}>
+                Invite friends
               </Button>
               {vehicle.shareCode ? (
                 <Button
@@ -291,5 +339,13 @@ function VehicleSettingsScreen() {
         How sharing works
       </Button>
     </Screen>
+    <PeoplePicker
+      visible={pickingFriends}
+      title="Invite Friends"
+      confirmLabel="Share Link"
+      onClose={() => setPickingFriends(false)}
+      onConfirm={inviteFriends}
+    />
+    </>
   );
 }

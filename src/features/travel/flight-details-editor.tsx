@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ErrorMessage, Input } from '@/components/primitives';
 import { spacing } from '@/design-system';
 
+import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { FlightDetailsDraft } from './flight-details';
 import { travelOverlineStyle } from './travel-chrome';
 
@@ -13,6 +14,8 @@ interface FlightDetailsEditorProps {
   onImport?: () => void;
   importing?: boolean;
   importedFileName?: string;
+  /** When the parent already shows the Flight Details title / import. */
+  hideHeader?: boolean;
 }
 
 export function FlightDetailsEditor({
@@ -22,32 +25,37 @@ export function FlightDetailsEditor({
   onImport,
   importing = false,
   importedFileName,
+  hideHeader = false,
 }: FlightDetailsEditorProps) {
   const update = (field: keyof FlightDetailsDraft, nextValue: string) => {
     onChange({ ...value, [field]: nextValue });
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
-          Flight Details
-        </AppText>
-        {onImport ? (
-          <Button
-            variant="secondary"
-            icon="scan-document"
-            disabled={importing}
-            onPress={onImport}
-            accessibilityLabel="Import flight confirmation document or screenshots">
-            {importing ? 'Reading…' : 'Import Confirmation'}
-          </Button>
-        ) : null}
-      </View>
+    <View style={[styles.container, hideHeader ? styles.containerCompact : undefined]}>
+      {hideHeader ? null : (
+        <View style={styles.header}>
+          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+            Flight Details
+          </AppText>
+          {onImport ? (
+            <Button
+              variant="secondary"
+              icon="scan-document"
+              loading={importing}
+              onPress={onImport}
+              accessibilityLabel="Import flight confirmation document or screenshots">
+              Import Confirmation
+            </Button>
+          ) : null}
+        </View>
+      )}
       {importedFileName ? (
-        <AppText variant="caption" color="secondary" selectable>
-          Imported from {importedFileName}. Review the details before saving.
-        </AppText>
+        <ConfirmationImportBanner
+          fileName={importedFileName}
+          uris={value.confirmationUris}
+          kind="flight"
+        />
       ) : null}
       <View style={styles.twoColumns}>
         <View style={styles.flex}>
@@ -121,6 +129,7 @@ export function FlightDetailsEditor({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.md },
+  containerCompact: { gap: spacing.sm },
   header: {
     minHeight: 44,
     flexDirection: 'row',

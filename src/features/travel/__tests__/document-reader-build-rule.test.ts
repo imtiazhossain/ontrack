@@ -34,23 +34,31 @@ describe('travel document reader build invariant', () => {
     expect(easIgnore).not.toMatch(/^android\/$/m);
   });
 
-  it('accepts confirmation screenshots from the native photo library', () => {
-    const source = readFileSync(
-      join(process.cwd(), 'src/features/travel/flight-confirmation-import.ts'),
+  it('keeps the add sheet as an in-tree overlay so the system picker can open over it', () => {
+    const optionsSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/confirmation-import-options.ts'),
       'utf8',
     );
-    const pickImageSource = readFileSync(
-      join(process.cwd(), 'src/utils/pick-image.ts'),
+    const detailSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-detail.tsx'),
+      'utf8',
+    );
+    const sheetSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-itinerary-add-sheet.tsx'),
+      'utf8',
+    );
+    const stayImportSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/stay-confirmation-import.ts'),
       'utf8',
     );
 
-    expect(source).toContain("from '@/utils/pick-image'");
-    expect(source).toContain('pickLibraryImages');
-    expect(source).toContain('allowsMultipleSelection: true');
-    expect(source).toContain('selectionLimit: MAX_SCREENSHOTS');
-    expect(source).toContain("source === 'screenshots'");
-    expect(source).toContain('persistConfirmationAssets');
-    expect(pickImageSource).toContain("mediaTypes: ['images']");
-    expect(pickImageSource).toContain('allowsMultipleSelection');
+    expect(optionsSource).toContain('preparePicker');
+    expect(optionsSource).toContain('pickerDidDismiss');
+    expect(stayImportSource).toContain('runConfirmationPicker');
+    expect(detailSource).not.toContain('addSheetSuspended');
+    expect(detailSource).toContain('visible={isAddingItem}');
+    expect(sheetSource).not.toMatch(/^\s*Modal,/m);
+    expect(sheetSource).not.toMatch(/<\s*Modal\b/);
+    expect(sheetSource).toContain('absoluteFill');
   });
 });

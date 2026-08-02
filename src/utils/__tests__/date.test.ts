@@ -1,6 +1,7 @@
 import {
   dateDisplayFormatForLocale,
   formatDateKey,
+  formatDateKeyShort,
   fromDateKey,
   isDateKey,
   nativeDatePickerLocale,
@@ -29,6 +30,12 @@ describe('date keys', () => {
     const stored = '2026-07-26';
     expect(formatDateKey(stored, 'mdy')).toBe('07/26/2026');
     expect(formatDateKey(stored, 'iso')).toBe(stored);
+  });
+
+  it('formats short timeline dates without year or leading zeros', () => {
+    expect(formatDateKeyShort('2026-09-08', 'mdy')).toBe('9/8');
+    expect(formatDateKeyShort('2026-09-08', 'iso')).toBe('8/9');
+    expect(formatDateKeyShort('2026-12-31', 'mdy')).toBe('12/31');
   });
 
   it('handles legacy preferences without a native picker locale', () => {

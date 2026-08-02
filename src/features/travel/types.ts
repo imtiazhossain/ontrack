@@ -1,4 +1,4 @@
-export type TravelItemKind = 'flight' | 'stay' | 'activity' | 'rental';
+export type TravelItemKind = 'flight' | 'stay' | 'activity' | 'rental' | 'moment';
 
 export interface TravelFlightDetails {
   airline?: string;
@@ -25,6 +25,20 @@ export interface TravelRentalDetails {
   confirmationUris?: string[];
 }
 
+export interface TravelStayDetails {
+  confirmationCode?: string;
+  /** Email used when making the reservation (provider manage-booking gate). */
+  reservationEmail?: string;
+  /** Local calendar day YYYY-MM-DD for check-out. */
+  checkoutDate?: string;
+  /** Minutes from midnight for check-out local time. */
+  checkoutMinutes?: number;
+  /** Durable file:// URIs for the uploaded confirmation document/screenshots. */
+  confirmationUris?: string[];
+  /** Freeform stay notes (wifi, door codes, parking, etc.). */
+  notes?: string;
+}
+
 export interface TravelItineraryItem {
   id: string;
   kind: TravelItemKind;
@@ -34,8 +48,25 @@ export interface TravelItineraryItem {
   durationMinutes: number;
   details?: string;
   bookingUrl?: string;
+  /** Durable file:// URIs for trip photos attached to this item. */
+  photoUris?: string[];
+  /** Collaborative notes from the host and friends. */
+  notes?: TravelItemNote[];
   flight?: TravelFlightDetails;
   rental?: TravelRentalDetails;
+  stay?: TravelStayDetails;
+}
+
+/** A short collaborative note on an itinerary stop. */
+export interface TravelItemNote {
+  id: string;
+  body: string;
+  /** `TRAVEL_EXPENSE_SELF_ID` or a participant id. */
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  /** Set when the author edits the body. */
+  updatedAt?: string;
 }
 
 export interface TravelParticipant {
@@ -89,6 +120,8 @@ export interface TravelPlan {
   startDate: string;
   endDate: string;
   notes?: string;
+  /** Durable local cover thumbnail (file:// / ontrack-media:). */
+  coverUri?: string;
   itinerary: TravelItineraryItem[];
   participants: TravelParticipant[];
   /** ISO 4217 for trip totals / settle-up. */

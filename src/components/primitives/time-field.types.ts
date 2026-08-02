@@ -4,6 +4,16 @@ export interface TimeFieldProps {
   value: number | null;
   onChange: (minutesFromMidnight: number) => void;
   disabled?: boolean;
+  /** Shown when `value` is null. */
+  placeholder?: string;
+  /** Persistent label above the value (sheet stacked chrome). */
+  stackedLabel?: string;
+  iconBackground?: string;
+  iconColor?: string;
+  fieldBackground?: string;
+  stackedLabelColor?: string;
+  placeholderColor?: string;
+  showChevron?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 }

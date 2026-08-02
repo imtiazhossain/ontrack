@@ -240,7 +240,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
 
   if (!list || list.kind !== 'grocery' || list.role !== 'owner') {
     return (
-      <Screen contentStyle={styles.center}>
+      <Screen contentStyle={styles.center} refresh={false}>
         <Symbol name="groceries" size={40} color={theme.textTertiary} />
         <AppText variant="heading">Recipe Import Unavailable</AppText>
         <AppText variant="body" color="secondary" align="center">
@@ -386,7 +386,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
   };
 
   return (
-    <Screen contentStyle={styles.screen}>
+    <Screen contentStyle={styles.screen} refresh={false}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <AppText variant="overline" color="accent">

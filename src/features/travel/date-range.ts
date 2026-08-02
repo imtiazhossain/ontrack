@@ -1,9 +1,16 @@
 import type { TravelItineraryItem } from './types';
-import { isDateKey } from '@/utils/date';
+import { fromDateKey, isDateKey } from '@/utils/date';
 
 export interface TravelDateRangeValidation {
   error?: string;
   conflicts: TravelItineraryItem[];
+}
+
+/** Inclusive trip length in calendar days (same start/end = 1). */
+export function tripDayCount(startDate: string, endDate: string): number {
+  const start = fromDateKey(startDate).getTime();
+  const end = fromDateKey(endDate).getTime();
+  return Math.max(1, Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1);
 }
 
 export function validateTravelDateRange(

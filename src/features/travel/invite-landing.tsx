@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, ErrorMessage, Screen, Symbol } from '@/components/primitives';
+import { AppText, Button, ErrorMessage, Screen, Symbol } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
@@ -18,21 +18,13 @@ import {
   travelPlanIdentityKey,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { FeatureThemeProvider } from '@/hooks/use-theme';
+import { TravelSkyBackdrop, TravelSurfaceCard } from '@/features/travel/travel-surface';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 
 export function TravelInviteLanding({ invite }: { invite?: string }) {
-  return (
-    <FeatureThemeProvider feature="travel">
-      <TravelInviteLandingContent invite={invite} />
-    </FeatureThemeProvider>
-  );
-}
-
-function TravelInviteLandingContent({ invite }: { invite?: string }) {
   const router = useRouter();
   const { user, continueWithProvider, workingProvider } = useAuthSession();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
@@ -167,9 +159,11 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
     if (invite && isShortInvite && !user) {
       const returnTo = `/i/${invite.slice(2)}`;
       return (
-        <Screen contentStyle={styles.center}>
+        <View style={styles.shell}>
+          <TravelSkyBackdrop />
+          <Screen style={styles.transparent} contentStyle={styles.center}>
           <Symbol name="airplane" size={44} />
-          <AppText variant="display" align="center">You’re invited ✈️</AppText>
+          <AppText variant="display" align="center">You’re Invited</AppText>
           <AppText variant="body" color="secondary" align="center">
             Sign in with the email address that was invited. Your trip invitation will still be
             here when you return.
@@ -185,40 +179,48 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
             onPress={() => void continueWithProvider('google', returnTo)}>
             {workingProvider === 'google' ? 'Opening Google…' : 'Continue with Google'}
           </Button>
-        </Screen>
+          </Screen>
+        </View>
       );
     }
 
     return (
-      <Screen contentStyle={styles.center}>
-        <Symbol name="airplane" size={44} />
-        {nativeError ? (
-          <ErrorMessage message={nativeError} variant="heading" align="center" />
-        ) : (
-          <AppText variant="heading" align="center">Opening your trip…</AppText>
-        )}
-        {nativeError ? (
-          <Button onPress={() => router.replace('/' as never)}>Go to onTrack</Button>
-        ) : null}
-      </Screen>
+      <View style={styles.shell}>
+        <TravelSkyBackdrop />
+        <Screen style={styles.transparent} contentStyle={styles.center}>
+          <Symbol name="airplane" size={44} />
+          {nativeError ? (
+            <ErrorMessage message={nativeError} variant="heading" align="center" />
+          ) : (
+            <AppText variant="heading" align="center">
+              Opening Your Trip…
+            </AppText>
+          )}
+          {nativeError ? (
+            <Button onPress={() => router.replace('/' as never)}>Go to onTrack</Button>
+          ) : null}
+        </Screen>
+      </View>
     );
   }
 
   const customSchemeUrl = createInstalledTravelInviteUrl(invite);
 
   return (
-    <Screen contentStyle={styles.webPage} bottomInset={false}>
+    <View style={styles.shell}>
+      <TravelSkyBackdrop />
+      <Screen style={styles.transparent} contentStyle={styles.webPage} bottomInset={false}>
       <View style={styles.brand}>
         <AppText variant="overline" color="accent" style={travelOverlineStyle}>
           onTrack Travel
         </AppText>
-        <AppText variant="display">You’re invited ✈️</AppText>
+        <AppText variant="display">You’re Invited</AppText>
         <AppText variant="body" color="secondary">
           Open the trip in onTrack to add its dates and full itinerary to your calendar.
         </AppText>
       </View>
 
-      <Card style={styles.inviteCard}>
+      <TravelSurfaceCard>
         {isShortInvite ? (
           <AppText variant="body" color="secondary">
             This is a private trip invitation. Open it in onTrack and sign in with the invited
@@ -230,7 +232,7 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
             variant="body"
           />
         )}
-      </Card>
+      </TravelSurfaceCard>
 
       {isShortInvite ? (
         <View style={styles.buttons}>
@@ -253,11 +255,14 @@ function TravelInviteLandingContent({ invite }: { invite?: string }) {
         New here? Install onTrack, return to this invitation, then tap Open in onTrack. The invite
         stays in this link.
       </AppText>
-    </Screen>
+      </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: { flex: 1 },
+  transparent: { backgroundColor: 'transparent' },
   center: {
     flexGrow: 1,
     alignItems: 'center',

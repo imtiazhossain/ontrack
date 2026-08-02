@@ -14,20 +14,12 @@ import {
   staySearchInput,
 } from '@/features/travel/stays/provider';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { formatDateKey } from '@/utils/date';
 
 export function StayProviderScreen({ planId }: { planId: string }) {
-  return (
-    <FeatureThemeProvider feature="travel">
-      <StayProviderScreenContent planId={planId} />
-    </FeatureThemeProvider>
-  );
-}
-
-function StayProviderScreenContent({ planId }: { planId: string }) {
   const theme = useTheme();
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);

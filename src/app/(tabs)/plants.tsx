@@ -8,6 +8,7 @@ import { AppText, Button, Card, EmptyState, Screen } from '@/components/primitiv
 import { radii, spacing } from '@/design-system';
 import { ensurePlantSample, plantImageSource } from '@/features/plants/sample';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { usePlants } from '@/store/plants';
 import type { Plant } from '@/types/models';
 import { formatDueLabel, toDateKey, todayKey } from '@/utils/date';
@@ -61,6 +62,7 @@ export default function PlantsScreen() {
 function PlantsScreenContent() {
   const router = useRouter();
   const theme = useTheme();
+  const { refreshControl } = usePullToRefresh();
   const plants = usePlants((state) => state.plants);
   const sampleVersion = usePlants((state) => state.sampleVersion);
 
@@ -98,6 +100,7 @@ function PlantsScreenContent() {
       <FlashList
         data={sortedPlants}
         keyExtractor={(item) => item.id}
+        refreshControl={refreshControl}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.header}>

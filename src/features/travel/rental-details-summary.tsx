@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import { formatDateKey, formatMinutes, type DateDisplayFormat } from '@/utils/date';
+import { formatDateKeyShort, formatMinutes, type DateDisplayFormat } from '@/utils/date';
 
 import {
   confirmationUrisForDisplay,
@@ -19,7 +19,7 @@ function formatStamp(
   dateDisplayFormat: DateDisplayFormat,
 ): string | undefined {
   const parts = [
-    date ? formatDateKey(date, dateDisplayFormat) : undefined,
+    date ? formatDateKeyShort(date, dateDisplayFormat) : undefined,
     minutes !== undefined ? formatMinutes(minutes) : undefined,
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : undefined;
@@ -57,10 +57,10 @@ export function RentalDetailsSummary({
   return (
     <View style={[styles.container, { backgroundColor: theme.accentFaint }]}>
       <View style={styles.header}>
-        <Symbol name="vehicles" size="sm" color={theme.accentPrimary} />
+        <Symbol name="vehicles" size="sm" color={theme.textPrimary} />
         <View style={styles.flex}>
           {details.company ? (
-            <AppText variant="subheading" color="accent" fit>
+            <AppText variant="subheading" color="primary" fit>
               {details.company}
             </AppText>
           ) : null}
@@ -77,31 +77,31 @@ export function RentalDetailsSummary({
           disabled={!confirmationUris.length}
           onPress={openConfirmation}
           style={styles.detailRow}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Confirmation
           </AppText>
-          <AppText variant="callout" color="accent" selectable fit style={styles.detailValue}>
+          <AppText variant="callout" color="primary" selectable fit style={styles.detailValue}>
             {details.confirmationCode}
           </AppText>
         </Pressable>
       ) : null}
       {details.vehicleClass ? (
         <View style={styles.detailRow}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Vehicle
           </AppText>
-          <AppText variant="callout" fit style={styles.detailValue}>
+          <AppText variant="callout" color="primary" fit style={styles.detailValue}>
             {details.vehicleClass}
           </AppText>
         </View>
       ) : null}
       {pickupStamp || details.pickupLocation ? (
         <View style={styles.block}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Pick Up
           </AppText>
           {pickupStamp ? (
-            <AppText variant="callout" color="accent" fit>
+            <AppText variant="callout" color="primary" fit>
               {pickupStamp}
             </AppText>
           ) : null}
@@ -114,11 +114,11 @@ export function RentalDetailsSummary({
       ) : null}
       {dropoffStamp || details.dropoffLocation ? (
         <View style={styles.block}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Drop Off
           </AppText>
           {dropoffStamp ? (
-            <AppText variant="callout" color="accent" fit>
+            <AppText variant="callout" color="primary" fit>
               {dropoffStamp}
             </AppText>
           ) : null}
