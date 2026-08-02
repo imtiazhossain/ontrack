@@ -1,4 +1,6 @@
 import { calculateFlightArrival } from '@/features/travel/flight-arrival';
+import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { useTheme } from '@/hooks/use-theme';
 import {
   formatDateKeyShort,
   formatMinutes,
@@ -13,9 +15,6 @@ import { ConfirmationDocumentCue } from './confirmation-document-cue';
 import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelFlightDetails } from './types';
 
-const FLIGHT_ACCENT = '#A9782C';
-const FLIGHT_TINT = '#F5EAD8';
-
 export function FlightDetailsSummary({
   details,
   date,
@@ -29,6 +28,9 @@ export function FlightDetailsSummary({
   durationMinutes?: number;
   dateDisplayFormat?: DateDisplayFormat;
 }) {
+  const theme = useTheme();
+  const accent = kindAccent('flight', theme);
+  const tint = kindTint('flight', theme);
   const route = [details.departureAirport, details.arrivalAirport]
     .filter(Boolean)
     .join(' → ');
@@ -94,8 +96,8 @@ export function FlightDetailsSummary({
       title="Flight"
       subtitle={carrier || route || undefined}
       icon="flight"
-      accentColor={FLIGHT_ACCENT}
-      tintColor={FLIGHT_TINT}
+      accentColor={accent}
+      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined
@@ -104,7 +106,7 @@ export function FlightDetailsSummary({
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="flight"
-        accentColor={FLIGHT_ACCENT}
+        accentColor={accent}
         accessibilityLabel="View uploaded flight confirmation"
       />
     </TravelDetailsSummaryCard>

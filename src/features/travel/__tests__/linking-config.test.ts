@@ -22,10 +22,13 @@ interface AppleAppSiteAssociation {
   };
 }
 
+const SHARE_PATH_PREFIXES = ['/i/', '/j/', '/f/', '/c/', '/l/', '/v/'] as const;
+const SHARE_AASA_PATHS = ['/i/*', '/j/*', '/f/*', '/c/*', '/l/*', '/v/*'] as const;
+
 describe('travel invitation links', () => {
   const root = path.resolve(__dirname, '../../../..');
 
-  it('registers the hosted invitation domain and short-link path on iOS', () => {
+  it('registers the hosted invitation domain and share paths on iOS', () => {
     const app = JSON.parse(
       fs.readFileSync(path.join(root, 'app.json'), 'utf8'),
     ) as AppConfig;
@@ -39,14 +42,16 @@ describe('travel invitation links', () => {
     expect(app.expo?.ios?.associatedDomains).toContain(
       'applinks:ontrack--links.expo.app',
     );
-    expect(
+    const paths =
       association.applinks?.details?.flatMap((detail) =>
         detail.components?.map((component) => component['/']) ?? [],
-      ),
-    ).toContain('/i/*');
+      ) ?? [];
+    for (const sharePath of SHARE_AASA_PATHS) {
+      expect(paths).toContain(sharePath);
+    }
   });
 
-  it('registers the hosted short-link path on Android', () => {
+  it('registers the hosted short-link paths on Android', () => {
     const app = JSON.parse(
       fs.readFileSync(path.join(root, 'app.json'), 'utf8'),
     ) as AppConfig;
@@ -54,10 +59,12 @@ describe('travel invitation links', () => {
       (filter) => filter.data ?? [],
     );
 
-    expect(data).toContainEqual({
-      scheme: 'https',
-      host: 'ontrack--links.expo.app',
-      pathPrefix: '/i/',
-    });
+    for (const pathPrefix of SHARE_PATH_PREFIXES) {
+      expect(data).toContainEqual({
+        scheme: 'https',
+        host: 'ontrack--links.expo.app',
+        pathPrefix,
+      });
+    }
   });
 });

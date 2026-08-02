@@ -184,6 +184,8 @@ security definer
 set search_path = ''
 as $$
 declare
+  -- Local copy avoids PL/pgSQL ambiguity with requests.link_code.
+  v_link_code text := link_code;
   requester_id uuid := auth.uid();
   requester_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
   requester_name text := public.travel_open_join_display_name();
@@ -197,7 +199,7 @@ begin
 
   select * into link
   from public.travel_open_join_links as candidate
-  where candidate.code = link_code
+  where candidate.code = v_link_code
     and candidate.revoked_at is null
     and candidate.expires_at > now()
   for share;
@@ -214,7 +216,7 @@ begin
 
   select * into existing
   from public.travel_open_join_requests as request
-  where request.link_code = link_code
+  where request.link_code = v_link_code
     and request.requester_user_id = requester_id
     and request.status in ('pending', 'approved')
   order by case when request.status = 'approved' then 0 else 1 end
@@ -260,6 +262,8 @@ security definer
 set search_path = ''
 as $$
 declare
+  -- Local copy avoids PL/pgSQL ambiguity with requests.link_code.
+  v_link_code text := link_code;
   requester_id uuid := auth.uid();
   link public.travel_open_join_links%rowtype;
   existing public.travel_open_join_requests%rowtype;
@@ -270,7 +274,7 @@ begin
 
   select * into link
   from public.travel_open_join_links as candidate
-  where candidate.code = link_code
+  where candidate.code = v_link_code
     and candidate.revoked_at is null
     and candidate.expires_at > now()
   limit 1;
@@ -284,7 +288,7 @@ begin
 
   select * into existing
   from public.travel_open_join_requests as request
-  where request.link_code = link_code
+  where request.link_code = v_link_code
     and request.requester_user_id = requester_id
   order by
     case request.status
@@ -456,6 +460,8 @@ security definer
 set search_path = ''
 as $$
 declare
+  -- Local copy avoids PL/pgSQL ambiguity with requests.link_code.
+  v_link_code text := link_code;
   requester_id uuid := auth.uid();
   link public.travel_open_join_links%rowtype;
   approved public.travel_open_join_requests%rowtype;
@@ -466,7 +472,7 @@ begin
 
   select * into link
   from public.travel_open_join_links as candidate
-  where candidate.code = link_code
+  where candidate.code = v_link_code
     and candidate.revoked_at is null
     and candidate.expires_at > now()
   limit 1;
@@ -484,7 +490,7 @@ begin
 
   select * into approved
   from public.travel_open_join_requests as request
-  where request.link_code = link_code
+  where request.link_code = v_link_code
     and request.requester_user_id = requester_id
     and request.status = 'approved'
   limit 1;

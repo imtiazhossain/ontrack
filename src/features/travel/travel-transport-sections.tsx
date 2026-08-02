@@ -7,24 +7,17 @@ import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
+import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
 
-const TRANSPORT_ACCENTS = {
-  flight: '#A9782C',
-  stay: '#2F6796',
-  rental: '#557547',
-} as const;
-
-const TRANSPORT_TINTS = {
-  flight: '#F5EAD8',
-  stay: '#E1EBF5',
-  rental: '#E5ECE1',
-} as const;
+/** Warm gold for the parent transport section chrome (not a kind accent). */
+const TRANSPORT_SECTION_ACCENT = '#A9782C';
 
 type TransportHandlers = {
   plan: TravelPlan;
@@ -110,16 +103,6 @@ function TransportItemList({
           item={item}
           plan={handlers.plan}
           compact
-          accentColor={
-            item.kind === 'flight' || item.kind === 'stay' || item.kind === 'rental'
-              ? TRANSPORT_ACCENTS[item.kind]
-              : undefined
-          }
-          tintColor={
-            item.kind === 'flight' || item.kind === 'stay' || item.kind === 'rental'
-              ? TRANSPORT_TINTS[item.kind]
-              : undefined
-          }
           expanded={!handlers.minimizedItemIds.has(item.id)}
           dateDisplayFormat={handlers.dateDisplayFormat}
           editingFlightItemId={handlers.editingFlightItemId}
@@ -198,15 +181,19 @@ export function TravelTransportSections({
   onToggleRentals: () => void;
 }) {
   const { spacing: rs } = useResponsive();
+  const theme = useTheme();
   const flights = items.filter((item) => item.kind === 'flight');
   const stays = items.filter((item) => item.kind === 'stay');
   const rentals = items.filter((item) => item.kind === 'rental');
+  const flightAccent = kindAccent('flight', theme);
+  const stayAccent = kindAccent('stay', theme);
+  const rentalAccent = kindAccent('rental', theme);
 
   return (
     <TravelCollapsibleSection
       title="Flights, Stays & Rentals"
       icon="itinerary"
-      accentColor={TRANSPORT_ACCENTS.flight}
+      accentColor={TRANSPORT_SECTION_ACCENT}
       card
       compact
       expanded={transportExpanded}
@@ -216,7 +203,7 @@ export function TravelTransportSections({
         <TravelCollapsibleSection
           title="FLIGHTS"
           icon="flight"
-          accentColor={TRANSPORT_ACCENTS.flight}
+          accentColor={flightAccent}
           compact
           expanded={flightsExpanded}
           onToggle={onToggleFlights}
@@ -230,7 +217,7 @@ export function TravelTransportSections({
         <TravelCollapsibleSection
           title="STAYS"
           icon="lodging"
-          accentColor={TRANSPORT_ACCENTS.stay}
+          accentColor={stayAccent}
           compact
           expanded={staysExpanded}
           onToggle={onToggleStays}
@@ -244,7 +231,7 @@ export function TravelTransportSections({
         <TravelCollapsibleSection
           title="RENTALS"
           icon="vehicles"
-          accentColor={TRANSPORT_ACCENTS.rental}
+          accentColor={rentalAccent}
           compact
           expanded={rentalsExpanded}
           onToggle={onToggleRentals}

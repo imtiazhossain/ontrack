@@ -1,12 +1,16 @@
 .git/
 .expo/
 .claude/
+.cursor/
+.idea/
 .playwright-cli/
 .vscode/
+.eas-local-build/
 node_modules/
 dist/
 web-build/
 output/
+tmp/
 docs/
 supabase/
 **/__tests__/
@@ -16,3 +20,4 @@ supabase/
 .env*.local
 /ios/
 /android/
+scripts/__pycache__/

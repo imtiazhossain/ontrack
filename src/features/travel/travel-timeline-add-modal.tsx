@@ -3,7 +3,12 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, type AppIconName } from '@/design-system';
+import { fontFamilies, radii } from '@/design-system';
+import {
+  kindBorder,
+  kindChrome,
+  kindIcon,
+} from '@/features/travel/travel-kind-chrome';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,9 +18,6 @@ type TimelineChoice = {
   kind: TravelItemKind;
   label: string;
   description: string;
-  icon: AppIconName;
-  light: { accent: string; tint: string; border: string };
-  dark: { accent: string; tint: string; border: string };
 };
 
 const TIMELINE_CHOICES: TimelineChoice[] = [
@@ -23,41 +25,26 @@ const TIMELINE_CHOICES: TimelineChoice[] = [
     kind: 'moment',
     label: 'Moment',
     description: 'Capture a memory or highlight from your trip.',
-    icon: 'bookmark',
-    light: { accent: '#765329', tint: '#F7F0E5', border: '#E8D2AF' },
-    dark: { accent: '#D8B982', tint: '#28231C', border: '#584B38' },
   },
   {
     kind: 'activity',
     label: 'Activity',
     description: 'Add activities, tours, or things you plan to do.',
-    icon: 'location',
-    light: { accent: '#56663A', tint: '#F2F2E9', border: '#D9DBC8' },
-    dark: { accent: '#ADBF87', tint: '#22261D', border: '#48513A' },
   },
   {
     kind: 'flight',
     label: 'Flight',
     description: 'Add your flight details and travel information.',
-    icon: 'flight',
-    light: { accent: '#315A7C', tint: '#EDF3F8', border: '#C9D9E6' },
-    dark: { accent: '#8DB2CF', tint: '#1B252D', border: '#3D5262' },
   },
   {
     kind: 'stay',
     label: 'Stay',
     description: 'Add your hotel, hostel, or accommodation.',
-    icon: 'lodging',
-    light: { accent: '#765432', tint: '#F7EEE4', border: '#E8D4BB' },
-    dark: { accent: '#D7AE83', tint: '#29221C', border: '#594938' },
   },
   {
     kind: 'rental',
     label: 'Rental',
     description: 'Add your rental car or transportation details.',
-    icon: 'vehicles',
-    light: { accent: '#644A75', tint: '#F3EEF5', border: '#DDD0E3' },
-    dark: { accent: '#BCA2CC', tint: '#26202A', border: '#51445A' },
   },
 ];
 
@@ -210,7 +197,7 @@ export function TravelTimelineAddModal({
 
             <View style={{ gap: rs.xs, paddingTop: rs.sm }}>
               {TIMELINE_CHOICES.map((choice) => {
-                const colors = light ? choice.light : choice.dark;
+                const colors = kindChrome(choice.kind, theme);
                 return (
                   <Pressable
                     accessibilityHint={`Opens the add ${choice.label.toLowerCase()} form`}
@@ -228,7 +215,7 @@ export function TravelTimelineAddModal({
                         gap: rs.md,
                         paddingHorizontal: rs.md,
                         paddingVertical: rs.sm,
-                        borderColor: colors.border,
+                        borderColor: kindBorder(choice.kind, theme),
                         backgroundColor: pressed
                           ? colors.tint
                           : light
@@ -249,7 +236,7 @@ export function TravelTimelineAddModal({
                         },
                       ]}>
                       <Symbol
-                        name={choice.icon}
+                        name={kindIcon(choice.kind)}
                         size={Math.max(23, s(25))}
                         color={colors.accent}
                       />

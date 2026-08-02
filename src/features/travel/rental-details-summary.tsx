@@ -1,3 +1,5 @@
+import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { useTheme } from '@/hooks/use-theme';
 import {
   formatDateKeyShort,
   formatMinutes,
@@ -11,9 +13,6 @@ import {
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
 import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelRentalDetails } from './types';
-
-const RENTAL_ACCENT = '#557547';
-const RENTAL_TINT = '#E5ECE1';
 
 function formatStamp(
   date: string | undefined,
@@ -40,6 +39,9 @@ export function RentalDetailsSummary({
   pickupMinutes?: number;
   dateDisplayFormat?: DateDisplayFormat;
 }) {
+  const theme = useTheme();
+  const accent = kindAccent('rental', theme);
+  const tint = kindTint('rental', theme);
   const pickupStamp = formatStamp(pickupDate, pickupMinutes, dateDisplayFormat);
   const dropoffStamp = formatStamp(
     details.dropoffDate,
@@ -85,8 +87,8 @@ export function RentalDetailsSummary({
       title={details.company || 'Rental'}
       subtitle={details.company ? 'Car Rental' : undefined}
       icon="vehicles"
-      accentColor={RENTAL_ACCENT}
-      tintColor={RENTAL_TINT}
+      accentColor={accent}
+      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined
@@ -95,7 +97,7 @@ export function RentalDetailsSummary({
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="rental"
-        accentColor={RENTAL_ACCENT}
+        accentColor={accent}
         accessibilityLabel="View uploaded rental confirmation"
       />
     </TravelDetailsSummaryCard>

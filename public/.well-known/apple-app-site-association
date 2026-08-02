@@ -12,12 +12,28 @@
             "comment": "Open short onTrack travel invitations."
           },
           {
+            "/": "/j/*",
+            "comment": "Open onTrack travel open-join links."
+          },
+          {
             "/": "/invite/travel",
             "comment": "Open legacy onTrack travel invitations."
           },
           {
             "/": "/f/*",
             "comment": "Open onTrack friend invitations."
+          },
+          {
+            "/": "/c/*",
+            "comment": "Open onTrack checklist collaboration invites."
+          },
+          {
+            "/": "/l/*",
+            "comment": "Open onTrack list collaboration invites."
+          },
+          {
+            "/": "/v/*",
+            "comment": "Open onTrack vehicle collaboration invites."
           }
         ]
       }

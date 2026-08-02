@@ -1,3 +1,5 @@
+import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { useTheme } from '@/hooks/use-theme';
 import {
   formatDateKeyShort,
   formatMinutes,
@@ -11,9 +13,6 @@ import {
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
 import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelStayDetails } from './types';
-
-const STAY_ACCENT = '#2F6796';
-const STAY_TINT = '#E1EBF5';
 
 function formatStamp(
   date: string | undefined,
@@ -38,6 +37,9 @@ export function StayDetailsSummary({
   checkinMinutes?: number;
   dateDisplayFormat?: DateDisplayFormat;
 }) {
+  const theme = useTheme();
+  const accent = kindAccent('stay', theme);
+  const tint = kindTint('stay', theme);
   const checkinStamp = formatStamp(
     checkinDate,
     checkinMinutes,
@@ -89,8 +91,8 @@ export function StayDetailsSummary({
     <TravelDetailsSummaryCard
       title="Stay"
       icon="lodging"
-      accentColor={STAY_ACCENT}
-      tintColor={STAY_TINT}
+      accentColor={accent}
+      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined
@@ -99,7 +101,7 @@ export function StayDetailsSummary({
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="stay"
-        accentColor={STAY_ACCENT}
+        accentColor={accent}
         accessibilityLabel="View uploaded stay confirmation"
       />
     </TravelDetailsSummaryCard>

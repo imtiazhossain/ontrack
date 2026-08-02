@@ -54,6 +54,16 @@
               "scheme": "https",
               "host": "ontrack--links.expo.app",
               "pathPrefix": "/f/"
+            },
+            {
+              "scheme": "https",
+              "host": "ontrack--links.expo.app",
+              "pathPrefix": "/j/"
+            },
+            {
+              "scheme": "https",
+              "host": "ontrack--links.expo.app",
+              "pathPrefix": "/v/"
             }
           ],
           "category": [

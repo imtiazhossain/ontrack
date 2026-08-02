@@ -7,6 +7,7 @@ const { withXcodeProject } = require('@expo/config-plugins');
  */
 const SCRIPT_NAME = '[onTrack] Re-sign simulator app for Keychain';
 const DEV_LAUNCHER_SCRIPT_NAME = '[Expo Dev Launcher] Strip Local Network Keys for Release';
+const SHARING_EXTENSION_TARGET = 'expo-sharing-extension';
 
 const SHELL_SCRIPT = `set -e
 if [ "\${PLATFORM_NAME}" != "iphonesimulator" ]; then
@@ -64,9 +65,35 @@ function ensureResignPhase(project) {
   return project;
 }
 
+function disableCcacheForSharingExtension(project) {
+  const objects = project.hash.project.objects;
+  const targets = objects.PBXNativeTarget || {};
+  const configurationLists = objects.XCConfigurationList || {};
+  const configurations = objects.XCBuildConfiguration || {};
+
+  const target = Object.values(targets).find(
+    (candidate) => candidate && typeof candidate === 'object' && candidate.name === SHARING_EXTENSION_TARGET,
+  );
+  const configurationList = target && configurationLists[target.buildConfigurationList];
+
+  for (const configurationRef of configurationList?.buildConfigurations || []) {
+    const configuration = configurations[configurationRef.value];
+    if (!configuration?.buildSettings) continue;
+
+    // React Native enables ccache at the project level. Extension targets do not
+    // inherit PODS_ROOT, so its compiler wrapper otherwise resolves from `/../../`.
+    configuration.buildSettings.CC = 'clang';
+    configuration.buildSettings.CXX = '"clang++"';
+    configuration.buildSettings.LD = 'clang';
+    configuration.buildSettings.LDPLUSPLUS = '"clang++"';
+  }
+
+  return project;
+}
+
 module.exports = function withSimulatorKeychainCodesign(config) {
   return withXcodeProject(config, (config) => {
-    config.modResults = ensureResignPhase(config.modResults);
+    config.modResults = disableCcacheForSharingExtension(ensureResignPhase(config.modResults));
     return config;
   });
 };
