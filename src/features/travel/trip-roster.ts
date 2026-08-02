@@ -47,7 +47,7 @@ function parseRosterPerson(value: unknown): TravelTripRosterPerson | undefined {
   const row = value as Record<string, unknown>;
   const userId = asNonEmptyString(row.userId);
   const displayName = asNonEmptyString(row.displayName);
-  const role = row.role === 'host' || row.role === 'member' ? row.role : undefined;
+  const role = row.role === 'host' || row.role === 'cohost' || row.role === 'member' ? row.role : undefined;
   if (!userId || !displayName || !role) return undefined;
   return {
     userId,
@@ -138,6 +138,38 @@ function parseTransferResult(data: unknown): TransferTravelTripHostResult {
     newHostUserId: resultUserId,
     newHostDisplayName,
   };
+}
+
+export async function grantTravelTripCohost(
+  tripId: string,
+  cohostUserId: string,
+): Promise<void> {
+  const client = await requireAuthenticatedClient();
+  const { error } = await client.rpc('grant_travel_trip_cohost', {
+    requested_trip_id: tripId,
+    cohost_user_id: cohostUserId,
+  });
+  if (error) {
+    throw new TravelInviteError(
+      error.message || 'Co-host status could not be granted.',
+    );
+  }
+}
+
+export async function revokeTravelTripCohost(
+  tripId: string,
+  cohostUserId: string,
+): Promise<void> {
+  const client = await requireAuthenticatedClient();
+  const { error } = await client.rpc('revoke_travel_trip_cohost', {
+    requested_trip_id: tripId,
+    cohost_user_id: cohostUserId,
+  });
+  if (error) {
+    throw new TravelInviteError(
+      error.message || 'Co-host status could not be removed.',
+    );
+  }
 }
 
 export async function leaveTravelTrip(tripId: string): Promise<void> {

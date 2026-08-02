@@ -32,7 +32,7 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 | `src/services/` | AI, cloud, nutrition/plants/recipes clients, HTTP helpers |
 | `src/utils/` | Dates, IDs, parse helpers, image persist, haptics |
 | `src/addons/` | First-party add-on catalog |
-| `supabase/` | Migrations / RLS — apply before cross-device testing |
+| `supabase/` | Migrations / RLS — **auto-apply** with `supabase db push` after any change (see `.cursor/rules/auto-apply-migrations.mdc`) |
 
 ## Commands
 
@@ -44,6 +44,8 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 ## Agent close-out (required)
 
 After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
+
+If the change touches `supabase/migrations/` (or other DB schema), **auto-apply** with `supabase db push` in the same turn — never leave migrations pending. See `.cursor/rules/auto-apply-migrations.mdc` and the parent **Database Updates and Migrations Rule**.
 
 ## Non-negotiable UI rules
 
@@ -65,7 +67,7 @@ After **any** app-affecting change: run typecheck/tests for touched domains, ver
 | Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
 | Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ canonical `travel-sheet` frame/header for every sheet, `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-action` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-timeline-add-modal` / `flight-details-card-editor` / `flight-schedule` / `stay-details-card-editor` / `rental-details-card-editor` / `travel-range-fields` / `travel-range-schedule` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `services/travel/expense-collaboration` for shared trip expenses, `travel-friends-sheet` / `trip-people` / `trip-roster` for host roster + host transfer, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
+| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ canonical `travel-sheet` frame/header for every sheet, `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-action` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-timeline-add-modal` / `flight-details-card-editor` / `flight-schedule` / `stay-details-card-editor` / `rental-details-card-editor` / `travel-range-fields` / `travel-range-schedule` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `services/travel/expense-collaboration` for shared trip expenses, `travel-friends-sheet` / `trip-people` / `trip-roster` for host roster + co-hosts + host transfer, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
 | Social / friends | `app/(tabs)/social.tsx` (+ `features/social/social-hub-screen`, `people-picker`, `services/friends`, `store/friends`, invite `/f/{code|slug}`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
 | Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`, `challenge-friend-button`) |
@@ -90,6 +92,7 @@ After **any** app-affecting change: run typecheck/tests for touched domains, ver
 - **Destructive confirms:** `@/utils/confirm-destructive` (`confirmDestructiveAction`). Activity delete wraps it via `confirmDeleteActivity`.
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
 - **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
+- **Typography:** `@/design-system` `typeConfig` + `appTextStyle(variant, { bold? })`. One UI font app-wide; default weight is regular — only pass `bold` / `{ bold: true }` when emphasis is explicit. Prefer `AppText` (optional `bold` prop) over raw `Text` / ad-hoc `fontFamily` / `fontWeight`.
 - **Pull-to-refresh:** Scrollable `Screen`s refresh by default via `usePullToRefresh` / `refreshAppData` (cloud pull + shared todos/vehicles + friends). List screens that use `scroll={false}` should attach `refreshControl` from `usePullToRefresh()`. Set `refresh={false}` on dense editors/forms.
 - **Server HTTP:** auth/rate-limit/cors/compression live under `src/services/http/`.
 

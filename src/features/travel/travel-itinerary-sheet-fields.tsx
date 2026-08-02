@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, IconButton, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, type AppIconName } from '@/design-system';
+import { radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
   type SheetIconTone,
@@ -71,7 +71,6 @@ export function ItinerarySheetImportCard({
             styles.importTitle,
             {
               color: chrome.importTitle,
-              fontFamily: fontFamilies.serif,
               fontSize: Math.max(15, s(16)),
             },
           ]}>
@@ -182,10 +181,8 @@ export function ItinerarySheetSubmitButton({
             styles.submitLabel,
             {
               color: chrome.ctaText,
-              fontFamily: editorialGold ? fontFamilies.serif : fontFamilies.sans,
               fontSize: editorialGold ? s(19) : undefined,
               lineHeight: editorialGold ? s(24) : undefined,
-              fontWeight: editorialGold ? '400' : '600',
             },
           ]}>
           {label}
@@ -229,7 +226,6 @@ const styles = StyleSheet.create({
   importTitle: {
     flexShrink: 1,
     minWidth: 0,
-    fontWeight: '600',
     letterSpacing: -0.2,
   },
   importActions: {

@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '400',
     fontVariant: ['tabular-nums'],
   },
 });

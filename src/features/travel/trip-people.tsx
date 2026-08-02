@@ -56,8 +56,12 @@ interface TripPeopleProps {
   onResend: (participant: TravelParticipant) => void;
   onRemove: (participant: TravelParticipant) => void;
   onRemoveRosterMember?: (member: TravelTripRosterPerson) => void;
+  /** Sole host can transfer host / grant co-host. */
+  canPromoteHost?: boolean;
   onMakeHost?: (member: TravelTripRosterPerson) => void;
   onMakeHostParticipant?: (participant: TravelParticipant) => void;
+  onMakeCohost?: (member: TravelTripRosterPerson) => void;
+  onRemoveCohost?: (member: TravelTripRosterPerson) => void;
   onRenameHost?: (name: string) => void;
   onRenameParticipant?: (participant: TravelParticipant, name: string) => void;
   onRenameRosterMember?: (member: TravelTripRosterPerson, name: string) => void;
@@ -80,11 +84,13 @@ function targetKey(target: TripFriendTarget): string {
 
 function FriendActionChip({
   label,
+  accessibilityLabel,
   danger,
   disabled,
   onPress,
 }: {
   label: string;
+  accessibilityLabel?: string;
   danger?: boolean;
   disabled?: boolean;
   onPress: () => void;
@@ -94,7 +100,7 @@ function FriendActionChip({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -103,15 +109,15 @@ function FriendActionChip({
           backgroundColor: theme.backgroundElevated,
           borderColor: theme.separator,
           minHeight: Math.max(32, s(32)),
-          paddingHorizontal: rs.sm,
+          paddingHorizontal: Math.max(6, rs.xs),
           opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
         },
       ]}>
       <AppText
-        variant="caption"
+        variant="callout"
         color={danger ? 'danger' : 'primary'}
-        fit
-        numberOfLines={1}>
+        numberOfLines={1}
+        style={styles.chipLabel}>
         {label}
       </AppText>
     </Pressable>
@@ -126,6 +132,8 @@ function FriendRow({
   expanded,
   showDivider,
   showMakeHost,
+  showMakeCohost,
+  showRemoveCohost,
   showResend,
   showRemove,
   renaming,
@@ -134,18 +142,22 @@ function FriendRow({
   onPress,
   onUpdateName,
   onMakeHost,
+  onMakeCohost,
+  onRemoveCohost,
   onResend,
   onRemove,
   onSaveRename,
   onCancelRename,
 }: {
   displayName: string;
-  badge?: 'host' | 'pending';
+  badge?: 'host' | 'cohost' | 'pending';
   busy?: boolean;
   canOpenMenu: boolean;
   expanded?: boolean;
   showDivider?: boolean;
   showMakeHost?: boolean;
+  showMakeCohost?: boolean;
+  showRemoveCohost?: boolean;
   showResend?: boolean;
   showRemove?: boolean;
   renaming?: boolean;
@@ -154,6 +166,8 @@ function FriendRow({
   onPress?: () => void;
   onUpdateName?: () => void;
   onMakeHost?: () => void;
+  onMakeCohost?: () => void;
+  onRemoveCohost?: () => void;
   onResend?: () => void;
   onRemove?: () => void;
   onSaveRename?: () => void;
@@ -161,43 +175,128 @@ function FriendRow({
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
+  const avatarLabel = (renaming ? renameDraft : displayName)?.trim() || displayName;
   const header = (
-    <View style={styles.personHeader}>
+    <View
+      style={[
+        styles.personHeader,
+        renaming ? styles.personHeaderEditing : null,
+      ]}>
       <View style={[styles.avatar, { backgroundColor: theme.backgroundSunken }]}>
         <AppText variant="callout" color="accent">
-          {initials(displayName)}
+          {initials(avatarLabel)}
         </AppText>
       </View>
-      <View style={styles.nameColumn}>
-        <AppText variant="subheading" fit numberOfLines={1} style={styles.friendName}>
-          {displayName}
-        </AppText>
-      </View>
-      {badge === 'host' ? (
-        <View
-          style={[
-            styles.status,
-            {
-              backgroundColor: theme.accentFaint,
-              minHeight: Math.max(28, s(28)),
-            },
-          ]}>
-          <AppText variant="caption" color="accent" fit>
-            Host
-          </AppText>
+      {renaming ? (
+        <View style={styles.renameRow}>
+          <View style={styles.renameField}>
+            <Input
+              value={renameDraft ?? ''}
+              onChangeText={onRenameDraftChange}
+              placeholder="Friend’s name"
+              autoCapitalize="words"
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (renameDraft?.trim()) onSaveRename?.();
+              }}
+              accessibilityLabel="Friend name"
+              style={{
+                minHeight: Math.max(44, s(44)),
+                paddingVertical: rs.sm,
+                paddingHorizontal: rs.md,
+                borderRadius: radii.md,
+              }}
+            />
+            <View style={styles.renameActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save name"
+                disabled={busy || !renameDraft?.trim()}
+                hitSlop={6}
+                onPress={() => onSaveRename?.()}
+                style={({ pressed }) => [
+                  styles.renameAction,
+                  {
+                    backgroundColor: theme.accentPrimary,
+                    minHeight: Math.max(36, s(36)),
+                    paddingHorizontal: rs.md,
+                    opacity: busy || !renameDraft?.trim() ? 0.45 : pressed ? 0.75 : 1,
+                  },
+                ]}>
+                <AppText variant="callout" color="onAccent" fit>
+                  Save
+                </AppText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel rename"
+                disabled={busy}
+                hitSlop={6}
+                onPress={() => onCancelRename?.()}
+                style={({ pressed }) => [
+                  styles.renameAction,
+                  {
+                    minHeight: Math.max(36, s(36)),
+                    paddingHorizontal: rs.sm,
+                    opacity: busy ? 0.45 : pressed ? 0.7 : 1,
+                  },
+                ]}>
+                <AppText variant="callout" fit>
+                  Cancel
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
         </View>
-      ) : null}
-      {badge === 'pending' ? (
-        <View style={[styles.status, { backgroundColor: theme.backgroundSunken }]}>
-          <Symbol name="clock" size="sm" color={theme.textTertiary} />
-          <AppText variant="caption" color="secondary" fit>
-            Pending
-          </AppText>
-        </View>
-      ) : null}
-      {canOpenMenu ? (
-        <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-      ) : null}
+      ) : (
+        <>
+          <View style={styles.nameColumn}>
+            <AppText variant="subheading" fit numberOfLines={1} style={styles.friendName}>
+              {displayName}
+            </AppText>
+          </View>
+          {badge === 'host' ? (
+            <View
+              style={[
+                styles.status,
+                {
+                  backgroundColor: theme.accentFaint,
+                  minHeight: Math.max(28, s(28)),
+                },
+              ]}>
+              <AppText variant="caption" color="accent" fit>
+                Host
+              </AppText>
+            </View>
+          ) : null}
+          {badge === 'cohost' ? (
+            <View
+              style={[
+                styles.status,
+                {
+                  backgroundColor: theme.backgroundSunken,
+                  minHeight: Math.max(28, s(28)),
+                },
+              ]}>
+              <AppText variant="caption" color="secondary" fit>
+                Co-host
+              </AppText>
+            </View>
+          ) : null}
+          {badge === 'pending' ? (
+            <View style={[styles.status, { backgroundColor: theme.backgroundSunken }]}>
+              <Symbol name="clock" size="sm" color={theme.textTertiary} />
+              <AppText variant="caption" color="secondary" fit>
+                Pending
+              </AppText>
+            </View>
+          ) : null}
+          {canOpenMenu ? (
+            <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+          ) : null}
+        </>
+      )}
     </View>
   );
 
@@ -212,7 +311,7 @@ function FriendRow({
             }
           : null,
       ]}>
-      {canOpenMenu && onPress ? (
+      {canOpenMenu && onPress && !renaming ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${displayName}, manage`}
@@ -227,15 +326,33 @@ function FriendRow({
       )}
 
       {expanded && !renaming ? (
-        <View style={[styles.inlineActions, { marginLeft: AVATAR + rs.md }]}>
+        <View style={styles.inlineActions}>
           <FriendActionChip
-            label="Update Name"
+            label="Rename"
+            accessibilityLabel="Update name"
             disabled={busy}
             onPress={() => onUpdateName?.()}
           />
+          {showMakeCohost ? (
+            <FriendActionChip
+              label="Co-host"
+              accessibilityLabel="Make co-host"
+              disabled={busy}
+              onPress={() => onMakeCohost?.()}
+            />
+          ) : null}
+          {showRemoveCohost ? (
+            <FriendActionChip
+              label="Demote"
+              accessibilityLabel="Remove co-host"
+              disabled={busy}
+              onPress={() => onRemoveCohost?.()}
+            />
+          ) : null}
           {showMakeHost ? (
             <FriendActionChip
-              label="Make Host"
+              label="Host"
+              accessibilityLabel="Make host"
               disabled={busy}
               onPress={() => onMakeHost?.()}
             />
@@ -255,30 +372,6 @@ function FriendRow({
               onPress={() => onRemove?.()}
             />
           ) : null}
-        </View>
-      ) : null}
-
-      {renaming ? (
-        <View style={[styles.renameInline, { marginLeft: AVATAR + rs.md }]}>
-          <Input
-            label="Name"
-            value={renameDraft ?? ''}
-            onChangeText={onRenameDraftChange}
-            placeholder="Friend’s name"
-            autoCapitalize="words"
-            autoFocus
-          />
-          <View style={styles.actions}>
-            <Button
-              disabled={!renameDraft?.trim()}
-              onPress={() => onSaveRename?.()}
-              accessibilityLabel="Save name">
-              Save
-            </Button>
-            <Button variant="ghost" onPress={() => onCancelRename?.()}>
-              Cancel
-            </Button>
-          </View>
         </View>
       ) : null}
     </View>
@@ -307,8 +400,11 @@ export function TripPeople({
   onResend,
   onRemove,
   onRemoveRosterMember,
+  canPromoteHost = false,
   onMakeHost,
   onMakeHostParticipant,
+  onMakeCohost,
+  onRemoveCohost,
   onRenameHost,
   onRenameParticipant,
   onRenameRosterMember,
@@ -424,15 +520,19 @@ export function TripPeople({
             const target: TripFriendTarget = { kind: 'roster', member };
             const busy = transferringUserId === member.userId;
             const showDivider = ++rowIndex < rowCount;
+            const isCohost = member.role === 'cohost';
             return (
               <View key={member.userId} style={styles.rowPad}>
                 <FriendRow
                   displayName={member.displayName}
+                  badge={isCohost ? 'cohost' : undefined}
                   busy={busy}
                   canOpenMenu={canManage}
                   expanded={isExpanded(target)}
                   showDivider={showDivider}
-                  showMakeHost
+                  showMakeHost={canPromoteHost}
+                  showMakeCohost={canPromoteHost && !isCohost}
+                  showRemoveCohost={canPromoteHost && isCohost}
                   showRemove
                   renaming={isRenaming(target)}
                   renameDraft={isRenaming(target) ? renameDraft : undefined}
@@ -442,6 +542,14 @@ export function TripPeople({
                   onMakeHost={() => {
                     setMenu(undefined);
                     onMakeHost?.(member);
+                  }}
+                  onMakeCohost={() => {
+                    setMenu(undefined);
+                    onMakeCohost?.(member);
+                  }}
+                  onRemoveCohost={() => {
+                    setMenu(undefined);
+                    onRemoveCohost?.(member);
                   }}
                   onRemove={() => {
                     setMenu(undefined);
@@ -470,7 +578,7 @@ export function TripPeople({
                   canOpenMenu={canManage}
                   expanded={isExpanded(target)}
                   showDivider={showDivider}
-                  showMakeHost
+                  showMakeHost={canPromoteHost}
                   showRemove
                   renaming={isRenaming(target)}
                   renameDraft={isRenaming(target) ? renameDraft : undefined}
@@ -601,7 +709,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },  avatar: {
+  },
+  personHeaderEditing: {
+    alignItems: 'flex-start',
+  },
+  avatar: {
     width: AVATAR,
     height: AVATAR,
     borderRadius: radii.pill,
@@ -618,6 +730,33 @@ const styles = StyleSheet.create({
   friendName: {
     width: '100%',
   },
+  renameRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  renameField: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+    gap: spacing.sm,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexWrap: 'nowrap',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  renameAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+    flexShrink: 0,
+  },
   status: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -628,19 +767,24 @@ const styles = StyleSheet.create({
   },
   inlineActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.xs,
     paddingBottom: spacing.xs,
+    width: '100%',
   },
   chip: {
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
-  renameInline: {
-    gap: spacing.sm,
-    paddingBottom: spacing.xs,
+  chipLabel: {
+    textAlign: 'center',
   },
   form: { gap: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

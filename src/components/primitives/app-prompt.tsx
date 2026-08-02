@@ -11,7 +11,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { create } from 'zustand';
 
-import { borders, layout, radii, spacing, typography } from '@/design-system';
+import { appTextStyle, borders, layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 
 import { AppText } from './app-text';
@@ -341,11 +341,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   title: {
-    ...typography.title,
+    ...appTextStyle('title'),
     textAlign: 'center',
   },
   message: {
-    ...typography.body,
+    ...appTextStyle('body'),
     textAlign: 'center',
   },
   actions: {
@@ -364,8 +364,7 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   actionLabel: {
-    ...typography.callout,
+    ...appTextStyle('callout'),
     flex: 1,
-    fontWeight: '600',
   },
 });

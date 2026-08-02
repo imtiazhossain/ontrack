@@ -266,7 +266,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   compactNestedTitle: {
-    fontWeight: '500',
     letterSpacing: 1.2,
   },
 });

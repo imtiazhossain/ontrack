@@ -1,6 +1,8 @@
 import type { ErrorBoundaryProps } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { typeConfig } from '@/design-system/typography';
+
 /**
  * Recoverable route shell so render/HMR failures never leave a blank white screen.
  * Intentionally avoids app primitives (Button/useTheme) so a broken module graph
@@ -34,14 +36,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F3EC',
   },
   title: {
+    fontFamily: typeConfig.fontFamily,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: typeConfig.weight.regular,
     color: '#1B1815',
     textAlign: 'center',
   },
   message: {
+    fontFamily: typeConfig.fontFamily,
     fontSize: 15,
     lineHeight: 21,
+    fontWeight: typeConfig.weight.regular,
     color: '#6B645C',
     textAlign: 'center',
   },
@@ -59,8 +64,9 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   retryLabel: {
+    fontFamily: typeConfig.fontFamily,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: typeConfig.weight.regular,
     color: '#F7F3EC',
   },
 });

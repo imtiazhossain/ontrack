@@ -18,7 +18,7 @@ import {
   Input,
 } from '@/components/primitives';
 import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { appTextStyle, radii, spacing } from '@/design-system';
 import {
   CurrencyDropdown,
   ScrollableDropdown,
@@ -460,7 +460,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   accessoryDoneLabel: {
-    fontFamily: fontFamilies.sans,
-    fontWeight: '600',
+    ...appTextStyle('callout'),
   },
 });

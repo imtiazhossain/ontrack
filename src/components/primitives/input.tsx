@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
   stackedLabel: {
     flexShrink: 1,
     minWidth: 0,
-    fontWeight: '600',
   },
   chromeLabel: {
     flex: 1,

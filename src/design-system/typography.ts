@@ -1,73 +1,137 @@
-import { Platform } from 'react-native';
-
-export const fontFamilies = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  android: {
-    sans: 'sans-serif',
-    serif: 'serif',
-    rounded: 'sans-serif',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    serif: 'Georgia, "Times New Roman", serif',
-    rounded: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    mono: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-});
-
-export type TypeVariant = keyof typeof typography;
+import { Platform, type TextStyle } from 'react-native';
 
 /**
- * Editorial type scale: the serif display face is used for all readable UI
- * text. Mono remains reserved for technical/code content.
+ * App-wide type config. One UI face for everything readable; mono only for
+ * technical/code. Weights stay regular unless callers pass `{ bold: true }`.
  */
-export const typography = {
-  display: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 42,
-    lineHeight: 48,
-    fontWeight: '400',
-    letterSpacing: -0.9,
+export const typeConfig = {
+  fontFamily: Platform.select({
+    ios: 'ui-serif',
+    android: 'serif',
+    web: 'Georgia, "Times New Roman", serif',
+    default: 'serif',
+  }) as string,
+  monoFamily: Platform.select({
+    ios: 'ui-monospace',
+    android: 'monospace',
+    web: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    default: 'monospace',
+  }) as string,
+  weight: {
+    regular: '400' as const,
+    /** Only via `bold` / `appTextStyle(variant, { bold: true })`. */
+    bold: '700' as const,
   },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 34,
-    lineHeight: 41,
-    fontWeight: '400',
-    letterSpacing: -0.65,
-  },
-  heading: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 23,
-    lineHeight: 29,
-    fontWeight: '400',
-    letterSpacing: -0.2,
-  },
-  subheading: { fontFamily: fontFamilies.serif, fontSize: 17, lineHeight: 23, fontWeight: '500' },
-  body: { fontFamily: fontFamilies.serif, fontSize: 15.5, lineHeight: 22, fontWeight: '400' },
-  bodyMedium: { fontFamily: fontFamilies.serif, fontSize: 15.5, lineHeight: 22, fontWeight: '500' },
-  callout: { fontFamily: fontFamilies.serif, fontSize: 14, lineHeight: 19, fontWeight: '400' },
-  caption: { fontFamily: fontFamilies.serif, fontSize: 12.5, lineHeight: 17, fontWeight: '400' },
+} as const;
+
+export type AppFontWeight = (typeof typeConfig.weight)[keyof typeof typeConfig.weight];
+
+/**
+ * Legacy aliases — both `sans` and `serif` resolve to {@link typeConfig.fontFamily}
+ * so older StyleSheets still use the single app face.
+ */
+export const fontFamilies = {
+  sans: typeConfig.fontFamily,
+  serif: typeConfig.fontFamily,
+  rounded: typeConfig.fontFamily,
+  mono: typeConfig.monoFamily,
+} as const;
+
+type VariantMetrics = {
+  fontSize: number;
+  lineHeight: number;
+  letterSpacing?: number;
+  textTransform?: 'uppercase';
+};
+
+const variantMetrics = {
+  display: { fontSize: 42, lineHeight: 48, letterSpacing: -0.9 },
+  title: { fontSize: 34, lineHeight: 41, letterSpacing: -0.65 },
+  heading: { fontSize: 23, lineHeight: 29, letterSpacing: -0.2 },
+  subheading: { fontSize: 17, lineHeight: 23 },
+  body: { fontSize: 15.5, lineHeight: 22 },
+  /** Same size as body; weight stays regular — use `bold` when emphasis is needed. */
+  bodyMedium: { fontSize: 15.5, lineHeight: 22 },
+  callout: { fontSize: 14, lineHeight: 19 },
+  caption: { fontSize: 12.5, lineHeight: 17 },
   overline: {
-    fontFamily: fontFamilies.serif,
     fontSize: 11.5,
     lineHeight: 15,
-    fontWeight: '500',
     letterSpacing: 1.4,
     textTransform: 'uppercase' as const,
   },
-  metric: { fontFamily: fontFamilies.serif, fontSize: 38, lineHeight: 43, fontWeight: '400' },
-  mono: { fontFamily: fontFamilies.mono, fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  metric: { fontSize: 38, lineHeight: 43 },
+  mono: { fontSize: 13, lineHeight: 18 },
+} as const satisfies Record<string, VariantMetrics>;
+
+export type TypeVariant = keyof typeof variantMetrics;
+
+export type AppTextStyleOptions = {
+  /** Explicit emphasis — omitted/false keeps regular weight. */
+  bold?: boolean;
+};
+
+/** Strict token used by the type scale and `useResponsive` scaling. */
+export type AppTextToken = {
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  fontWeight: AppFontWeight;
+  letterSpacing?: number;
+  textTransform?: 'uppercase';
+};
+
+function faceFor(variant: TypeVariant): string {
+  return variant === 'mono' ? typeConfig.monoFamily : typeConfig.fontFamily;
+}
+
+function weightFor(bold?: boolean): AppFontWeight {
+  return bold ? typeConfig.weight.bold : typeConfig.weight.regular;
+}
+
+/**
+ * Shared text style for StyleSheets and non-AppText surfaces.
+ * Always uses {@link typeConfig}; never bold unless `options.bold` is true.
+ */
+export function appTextStyle(variant: TypeVariant, options?: AppTextStyleOptions): AppTextToken {
+  const metrics = variantMetrics[variant];
+  const token: AppTextToken = {
+    fontFamily: faceFor(variant),
+    fontSize: metrics.fontSize,
+    lineHeight: metrics.lineHeight,
+    fontWeight: weightFor(options?.bold),
+  };
+  if ('letterSpacing' in metrics && metrics.letterSpacing != null) {
+    token.letterSpacing = metrics.letterSpacing;
+  }
+  if ('textTransform' in metrics && metrics.textTransform) {
+    token.textTransform = metrics.textTransform;
+  }
+  return token;
+}
+
+/** Convenience cast when spreading into StyleSheet entries. */
+export function appTextStyleSheet(
+  variant: TypeVariant,
+  options?: AppTextStyleOptions,
+): TextStyle {
+  return appTextStyle(variant, options) as TextStyle;
+}
+
+/**
+ * Editorial type scale. Every variant defaults to regular weight; use
+ * {@link appTextStyle} / AppText `bold` for emphasis.
+ */
+export const typography = {
+  display: appTextStyle('display'),
+  title: appTextStyle('title'),
+  heading: appTextStyle('heading'),
+  subheading: appTextStyle('subheading'),
+  body: appTextStyle('body'),
+  bodyMedium: appTextStyle('bodyMedium'),
+  callout: appTextStyle('callout'),
+  caption: appTextStyle('caption'),
+  overline: appTextStyle('overline'),
+  metric: appTextStyle('metric'),
+  mono: appTextStyle('mono'),
 } as const;

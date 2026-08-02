@@ -1,6 +1,16 @@
 export { palette, categoryPalette, type CategoryColorKey } from './colors';
 export { appIcons, resolveAppIcon, type AppIconName, type PlatformIconNames } from './icons';
-export { typography, fontFamilies, type TypeVariant } from './typography';
+export {
+  typography,
+  fontFamilies,
+  typeConfig,
+  appTextStyle,
+  appTextStyleSheet,
+  type TypeVariant,
+  type AppTextStyleOptions,
+  type AppFontWeight,
+  type AppTextToken,
+} from './typography';
 export { spacing, layout, iconSizes } from './spacing';
 export {
   BASE_WIDTH,

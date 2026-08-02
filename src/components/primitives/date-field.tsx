@@ -154,7 +154,6 @@ export function DateField({
               style={{
                 flexShrink: 1,
                 minWidth: 0,
-                fontWeight: '600',
                 color: stackedLabelColor ?? theme.textPrimary,
               }}>
               {stackedLabel}

@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -14,7 +14,6 @@ import {
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { PeoplePicker } from '@/features/social/people-picker';
 import {
   createTravelInviteUrl,
   createTravelOpenJoinUrl,
@@ -29,15 +28,16 @@ import {
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import { TripPeople } from '@/features/travel/trip-people';
 import {
   canonicalTravelTripId,
+  grantTravelTripCohost,
   isTravelMemberPlan,
   leaveTravelTrip,
   listTravelTripRoster,
+  revokeTravelTripCohost,
   transferTravelTripHost,
   transferTravelTripHostByInvite,
 } from '@/features/travel/trip-roster';
@@ -47,12 +47,10 @@ import type {
   TravelPlan,
   TravelTripRosterPerson,
 } from '@/features/travel/types';
-import type { FriendProfile } from '@/services/friends';
 import {
   isTravelExpenseMemberId,
   publishTravelTripExpenses,
 } from '@/services/travel/expense-collaboration';
-import { useFriends } from '@/store/friends';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -114,9 +112,7 @@ export function TravelFriendsSheet({
   const [copiedOpenJoin, setCopiedOpenJoin] = useState(false);
   const [joinRequests, setJoinRequests] = useState<TravelOpenJoinRequest[]>([]);
   const [decidingRequestId, setDecidingRequestId] = useState<string>();
-  const [pickingFriends, setPickingFriends] = useState(false);
   const [roster, setRoster] = useState<TravelTripRosterPerson[]>([]);
-  const hydrateFriends = useFriends((state) => state.hydrate);
 
   const tripId = canonicalTravelTripId(plan);
   const memberPlan = isTravelMemberPlan(plan);
@@ -124,16 +120,19 @@ export function TravelFriendsSheet({
     if (!user?.id) return undefined;
     return roster.find((person) => person.userId === user.id)?.role;
   }, [roster, user?.id]);
-  // Roster is authoritative when present. Otherwise, invite/open-join copies
-  // usually have an empty local participants list; host plans keep invitees.
-  const canManage =
+  // Sole host owns transfer / co-host grants. Cohosts share invite + friend manage.
+  const isSoleHost =
     myRosterRole === 'host' ||
     (myRosterRole !== 'member' &&
+      myRosterRole !== 'cohost' &&
       (!memberPlan || plan.participants.length > 0));
+  const canManage = isSoleHost || myRosterRole === 'cohost';
 
   const hostFromRoster = roster.find((person) => person.role === 'host');
   const rosterMembers = useMemo(() => {
-    const fromServer = roster.filter((person) => person.role === 'member');
+    const fromServer = roster.filter(
+      (person) => person.role === 'member' || person.role === 'cohost',
+    );
     if (fromServer.length > 0) return fromServer;
     // Fallback before list_travel_trip_roster is available: expense sync
     // stores accepted friends as member:<auth_uid>.
@@ -177,7 +176,7 @@ export function TravelFriendsSheet({
     );
     // Prefer the signed-in profile name for yourself — roster/JWT helpers can
     // fall back to a generic label like "You" / "Traveler".
-    if (canManage || isSelfHost) {
+    if (isSelfHost || (isSoleHost && !hostFromRoster)) {
       return {
         name: hostFallbackName,
         email: user?.email ?? hostFromRoster?.email,
@@ -228,11 +227,8 @@ export function TravelFriendsSheet({
       setOpenJoinError(undefined);
       setCopiedOpenJoin(false);
       setDecidingRequestId(undefined);
-      setPickingFriends(false);
       return;
     }
-
-    void hydrateFriends().catch(() => undefined);
 
     let active = true;
     const latest =
@@ -332,7 +328,6 @@ export function TravelFriendsSheet({
     onSavePlan,
     refreshJoinRequests,
     refreshRoster,
-    hydrateFriends,
   ]);
 
   const inviteFriend = async () => {
@@ -375,57 +370,6 @@ export function TravelFriendsSheet({
         shareError instanceof Error
           ? shareError.message
           : 'The invitation could not be created. Please try again.',
-      );
-    } finally {
-      setSharingInvite(false);
-    }
-  };
-
-  const inviteFromFriends = async (friends: FriendProfile[]) => {
-    if (!friends.length) return;
-    setSharingInvite(true);
-    setInviteError(undefined);
-    try {
-      let current =
-        useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
-      for (const friend of friends) {
-        const email = friend.email.trim().toLowerCase();
-        if (
-          current.participants.some(
-            (person) => person.email?.toLowerCase() === email,
-          )
-        ) {
-          continue;
-        }
-        const code = await shareTravelPlan(current, {
-          name: friend.displayName,
-          email,
-        });
-        if (!code) continue;
-        const now = new Date().toISOString();
-        current = {
-          ...current,
-          participants: [
-            ...current.participants,
-            {
-              id: newId('trip-person'),
-              name: friend.displayName,
-              email,
-              inviteCode: code,
-              invitedAt: now,
-            },
-          ],
-          updatedAt: now,
-        };
-        onSavePlan(current);
-      }
-      void publishTravelTripExpenses(current).catch(() => undefined);
-      void refreshRoster(tripId);
-    } catch (shareError) {
-      setInviteError(
-        shareError instanceof Error
-          ? shareError.message
-          : 'Friends could not be invited. Please try again.',
       );
     } finally {
       setSharingInvite(false);
@@ -551,6 +495,7 @@ export function TravelFriendsSheet({
   };
 
   const transferHost = (member: TravelTripRosterPerson, leaveAfter: boolean) => {
+    if (!isSoleHost) return;
     confirmDestructiveAction({
       title: leaveAfter ? 'Transfer & leave?' : 'Make host?',
       message: leaveAfter
@@ -597,6 +542,7 @@ export function TravelFriendsSheet({
     participant: TravelParticipant,
     leaveAfter: boolean,
   ) => {
+    if (!isSoleHost) return;
     confirmDestructiveAction({
       title: leaveAfter ? 'Transfer & leave?' : 'Make host?',
       message: leaveAfter
@@ -633,6 +579,67 @@ export function TravelFriendsSheet({
               reason instanceof Error
                 ? reason.message
                 : 'Host status could not be transferred. Apply the latest travel migration, then try again.',
+            );
+          } finally {
+            setTransferringUserId(undefined);
+          }
+        })();
+      },
+    });
+  };
+
+  const makeCohost = (member: TravelTripRosterPerson) => {
+    if (!isSoleHost) return;
+    void (async () => {
+      setTransferringUserId(member.userId);
+      try {
+        await grantTravelTripCohost(tripId, member.userId);
+        setRoster((people) =>
+          people.map((person) =>
+            person.userId === member.userId
+              ? { ...person, role: 'cohost' }
+              : person,
+          ),
+        );
+        await refreshRoster(tripId);
+      } catch (reason) {
+        appPrompt.alert(
+          'Couldn’t Make Co-host',
+          reason instanceof Error
+            ? reason.message
+            : 'Co-host status could not be granted.',
+        );
+      } finally {
+        setTransferringUserId(undefined);
+      }
+    })();
+  };
+
+  const removeCohost = (member: TravelTripRosterPerson) => {
+    if (!isSoleHost) return;
+    confirmDestructiveAction({
+      title: 'Remove Co-host?',
+      message: `${member.displayName} will stay on the trip as a friend, but won’t manage invites.`,
+      actionLabel: 'Remove Co-host',
+      onConfirm: () => {
+        void (async () => {
+          setTransferringUserId(member.userId);
+          try {
+            await revokeTravelTripCohost(tripId, member.userId);
+            setRoster((people) =>
+              people.map((person) =>
+                person.userId === member.userId
+                  ? { ...person, role: 'member' }
+                  : person,
+              ),
+            );
+            await refreshRoster(tripId);
+          } catch (reason) {
+            appPrompt.alert(
+              'Couldn’t Remove Co-host',
+              reason instanceof Error
+                ? reason.message
+                : 'Co-host status could not be removed.',
             );
           } finally {
             setTransferringUserId(undefined);
@@ -733,27 +740,18 @@ export function TravelFriendsSheet({
     : undefined;
 
   return (
-    <Fragment>
-      <TravelSheetModal
+    <TravelSheetModal
         visible={visible}
-        eyebrow="Friends"
+        eyebrow="CoTravelers"
         title={plan.title}
         subtitle={
           canManage
             ? 'Plan together. Share the adventure.'
             : 'Plan together. Trip friends.'
         }
-        closeAccessibilityLabel="Close Friends"
-        onClose={onClose}
-        footer={
-          canManage && !editingInvite ? (
-            <TravelSheetPrimaryAction
-              label="Add from Friends"
-              icon="people"
-              onPress={() => setPickingFriends(true)}
-            />
-          ) : undefined
-        }>
+        lockHeight
+        closeAccessibilityLabel="Close CoTravelers"
+        onClose={onClose}>
             <TripPeople
               host={hostPerson}
               participants={plan.participants}
@@ -764,7 +762,7 @@ export function TravelFriendsSheet({
               email={inviteEmail}
               error={inviteError}
               inviting={sharingInvite}
-              showHeader
+              showHeader={false}
               showInviteButton={false}
               onNameChange={setInviteName}
               onEmailChange={setInviteEmail}
@@ -782,11 +780,14 @@ export function TravelFriendsSheet({
               onResend={(participant) => void resendInvite(participant)}
               onRemove={confirmRemoveParticipant}
               onRemoveRosterMember={confirmRemoveRosterMember}
+              canPromoteHost={isSoleHost}
               onMakeHost={(member) => transferHost(member, false)}
               onMakeHostParticipant={(participant) =>
                 transferHostByParticipant(participant, false)
               }
-              onRenameHost={(nextName) => {
+              onMakeCohost={makeCohost}
+              onRemoveCohost={removeCohost}
+              onRenameHost={isSoleHost ? (nextName) => {
                 setPreferencesName(nextName);
                 const current =
                   useTravel.getState().plans.find((item) => item.id === plan.id) ??
@@ -800,7 +801,7 @@ export function TravelFriendsSheet({
                   ...current,
                   hostDisplayName: nextName,
                 }).catch(() => undefined);
-              }}
+              } : undefined}
               onRenameParticipant={(participant, nextName) => {
                 const current =
                   useTravel.getState().plans.find((item) => item.id === plan.id) ??
@@ -1055,18 +1056,7 @@ export function TravelFriendsSheet({
                 })}
               </View>
             ) : null}
-      </TravelSheetModal>
-      <PeoplePicker
-        visible={pickingFriends}
-        title="Add Trip Friends"
-        confirmLabel="Invite"
-        excludeIds={plan.participants
-          .map((person) => person.email)
-          .filter((email): email is string => Boolean(email))}
-        onClose={() => setPickingFriends(false)}
-        onConfirm={(friends) => void inviteFromFriends(friends)}
-      />
-    </Fragment>
+    </TravelSheetModal>
   );
 }
 

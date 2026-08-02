@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
-import { type TypeVariant } from '@/design-system';
+import { typeConfig, type TypeVariant } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -9,6 +9,11 @@ export interface AppTextProps extends TextProps {
   variant?: TypeVariant;
   color?: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'danger' | 'success';
   align?: TextStyle['textAlign'];
+  /**
+   * Explicit emphasis. Default is regular weight from `typeConfig` —
+   * only set when the design calls for bold.
+   */
+  bold?: boolean;
   /**
    * Single-line chrome: shrinks to fit width instead of wrapping.
    * Use for button labels, tab labels, headers in tight rows, chips.
@@ -23,6 +28,7 @@ export const AppText = forwardRef<Text, AppTextProps>(function AppText(
     variant = 'body',
     color = 'primary',
     align,
+    bold = false,
     fit = false,
     fitMinimumScale = 0.72,
     style,
@@ -58,6 +64,7 @@ export const AppText = forwardRef<Text, AppTextProps>(function AppText(
       minimumFontScale={minimumFontScale ?? (shouldFit ? fitMinimumScale : undefined)}
       style={[
         typography[variant] as TextStyle,
+        bold ? { fontWeight: typeConfig.weight.bold } : null,
         { color: colorValue },
         align && { textAlign: align },
         shouldFit && { flexShrink: 1, minWidth: 0 },

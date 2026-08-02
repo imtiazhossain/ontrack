@@ -13,10 +13,12 @@ import {
   Screen,
 } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
+import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
+import { TravelCoTravelerStack } from '@/features/travel/travel-cotraveler-stack';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
@@ -54,6 +56,7 @@ export default function TravelScreen() {
   const chrome = itinerarySheetChrome(theme);
   const router = useRouter();
   const { spacing: rs, s } = useResponsive();
+  const { user } = useAuthSession();
   const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const removePlan = useTravel((state) => state.removePlan);
@@ -61,6 +64,20 @@ export default function TravelScreen() {
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
+  const preferencesName = usePreferences((state) => state.name);
+  const selfDisplayName = useMemo(() => {
+    const fromPrefs = preferencesName.trim();
+    if (fromPrefs && !/^you$/i.test(fromPrefs)) return fromPrefs;
+    const meta = user?.user_metadata ?? {};
+    const fromMeta =
+      (typeof meta.full_name === 'string' && meta.full_name.trim()) ||
+      (typeof meta.name === 'string' && meta.name.trim()) ||
+      '';
+    if (fromMeta && !/^you$/i.test(fromMeta)) return fromMeta;
+    const fromEmail = user?.email?.split('@')[0]?.trim();
+    if (fromEmail) return fromEmail;
+    return 'You';
+  }, [preferencesName, user]);
   const [showForm, setShowForm] = useState(plans.length === 0);
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
@@ -79,6 +96,9 @@ export default function TravelScreen() {
   const [expensesVisible, setExpensesVisible] = useState(false);
   const [friendsPlanId, setFriendsPlanId] = useState<string>();
   const [friendsVisible, setFriendsVisible] = useState(false);
+  const [expandedCoTravelerPlanId, setExpandedCoTravelerPlanId] = useState<
+    string | undefined
+  >();
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -105,6 +125,7 @@ export default function TravelScreen() {
     setExpensesVisible(false);
   };
   const openFriends = (planId: string) => {
+    setExpandedCoTravelerPlanId(undefined);
     setFriendsPlanId(planId);
     setFriendsVisible(true);
   };
@@ -375,19 +396,38 @@ export default function TravelScreen() {
                     ) : null}
                   </View>
                 </Pressable>
-                <View style={[styles.tripHeaderActions, { gap: rs.sm }]}>
-                  <TravelSheetIconControl
-                    icon="edit"
-                    size={40}
-                    accessibilityLabel={`Edit Details for ${plan.title}`}
-                    onPress={() => beginEditingDetails(plan)}
+                <View style={[styles.tripHeaderActions, { gap: rs.xs }]}>
+                  <TravelCoTravelerStack
+                    people={[
+                      {
+                        id: `${plan.id}-self`,
+                        name: selfDisplayName,
+                        isSelf: true,
+                      },
+                      ...plan.participants.map((person) => ({
+                        id: person.id,
+                        name: person.name,
+                      })),
+                    ]}
+                    expanded={expandedCoTravelerPlanId === plan.id}
+                    onExpandedChange={(next) =>
+                      setExpandedCoTravelerPlanId(next ? plan.id : undefined)
+                    }
                   />
-                  <TravelSheetIconControl
-                    icon={collapsed ? 'chevron-down' : 'chevron-up'}
-                    size={40}
-                    accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${plan.title}`}
-                    onPress={() => toggleCollapsed(plan.id)}
-                  />
+                  <View style={[styles.tripHeaderControls, { gap: rs.sm }]}>
+                    <TravelSheetIconControl
+                      icon="edit"
+                      size={40}
+                      accessibilityLabel={`Edit Details for ${plan.title}`}
+                      onPress={() => beginEditingDetails(plan)}
+                    />
+                    <TravelSheetIconControl
+                      icon={collapsed ? 'chevron-down' : 'chevron-up'}
+                      size={40}
+                      accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${plan.title}`}
+                      onPress={() => toggleCollapsed(plan.id)}
+                    />
+                  </View>
                 </View>
               </View>
               <TravelTripDatesRow
@@ -486,8 +526,8 @@ export default function TravelScreen() {
                   <TravelSheetPrimaryAction
                     label={
                       plan.participants.length > 0
-                        ? `Friends · ${plan.participants.length + 1}`
-                        : 'Friends · 1'
+                        ? `CoTravelers · ${plan.participants.length + 1}`
+                        : 'CoTravelers · 1'
                     }
                     icon="people"
                     onPress={() => openFriends(plan.id)}
@@ -566,6 +606,8 @@ const styles = StyleSheet.create({
     minHeight: 80,
     flexDirection: 'row',
     alignItems: 'center',
+    overflow: 'visible',
+    zIndex: 2,
   },
   tripHeaderToggle: {
     flex: 1,
@@ -574,8 +616,18 @@ const styles = StyleSheet.create({
     minHeight: 80,
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 0,
   },
   tripHeaderActions: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    flexShrink: 0,
+    zIndex: 6,
+    elevation: 6,
+    gap: spacing.xs,
+  },
+  tripHeaderControls: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,

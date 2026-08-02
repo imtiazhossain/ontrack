@@ -11,7 +11,7 @@ import {
   Symbol,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { appTextStyle, radii, spacing } from '@/design-system';
 import {
   buildExpenseFromForm,
   emptyExpenseForm,
@@ -413,13 +413,11 @@ const styles = StyleSheet.create({
   listBody: { gap: spacing.lg },
   summaryCard: { minHeight: 178, justifyContent: 'center' },
   summaryLabel: {
-    fontFamily: fontFamilies.sans,
-    fontWeight: '600',
+    ...appTextStyle('overline'),
     letterSpacing: 2,
   },
   summaryValue: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
+    ...appTextStyle('title'),
     letterSpacing: -1.2,
     fontVariant: ['tabular-nums'],
   },

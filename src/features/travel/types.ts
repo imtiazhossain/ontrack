@@ -83,7 +83,7 @@ export interface TravelTripRosterPerson {
   userId: string;
   displayName: string;
   email?: string;
-  role: 'host' | 'member';
+  role: 'host' | 'cohost' | 'member';
   inviteCode?: string;
   acceptedAt?: string;
 }

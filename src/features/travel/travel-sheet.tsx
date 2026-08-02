@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { fontFamilies, radii } from '@/design-system';
+import { appTextStyle, radii } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -118,6 +118,11 @@ type TravelSheetModalProps = PropsWithChildren<{
   footer?: ReactNode;
   /** Optional cap; always clamped to the space below the status bar. */
   maxHeight?: number;
+  /**
+   * After the first layout while open, keep the sheet at that height so
+   * expanding inline content scrolls inside instead of resizing the frame.
+   */
+  lockHeight?: boolean;
   /** Change to reset scroll (e.g. when switching list ↔ editor). */
   scrollKey?: string | number;
 }>;
@@ -136,6 +141,7 @@ export function TravelSheetModal({
   contentContainerStyle,
   footer,
   maxHeight,
+  lockHeight = false,
   scrollKey,
   children,
 }: TravelSheetModalProps) {
@@ -145,6 +151,7 @@ export function TravelSheetModal({
   const { height: windowHeight } = useWindowDimensions();
   const { spacing: rs, layout } = useResponsive();
   const scrollRef = useRef<ScrollView>(null);
+  const [lockedHeight, setLockedHeight] = useState<number | undefined>();
 
   // Cap to space below the status bar. A %-of-parent maxHeight overshoots because
   // modalRoot already pads insets.top, which clipped the header on tall forms.
@@ -155,7 +162,10 @@ export function TravelSheetModal({
       : Math.round(availableHeight * 0.98);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      setLockedHeight(undefined);
+      return;
+    }
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [visible, scrollKey, title]);
 
@@ -187,11 +197,17 @@ export function TravelSheetModal({
           pointerEvents="box-none"
           style={styles.avoid}>
           <View
+            onLayout={(event) => {
+              if (!lockHeight || !visible || lockedHeight != null) return;
+              const next = Math.round(event.nativeEvent.layout.height);
+              if (next > 0) setLockedHeight(next);
+            }}
             style={[
               styles.sheet,
               {
                 backgroundColor: chrome.sheetBg,
                 maxHeight: sheetMaxHeight,
+                height: lockHeight ? lockedHeight : undefined,
                 paddingBottom: Math.max(insets.bottom, rs.md),
                 paddingHorizontal: layout.screenPadding,
                 borderRadius: radii.xl,
@@ -260,19 +276,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   eyebrow: {
-    fontFamily: fontFamilies.sans,
-    fontWeight: '600',
+    ...appTextStyle('overline'),
     letterSpacing: 2.4,
-    textTransform: 'uppercase',
   },
   title: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
+    ...appTextStyle('title'),
     letterSpacing: -1.1,
   },
   subtitle: {
-    fontFamily: fontFamilies.sans,
-    fontWeight: '400',
+    ...appTextStyle('body'),
   },
   close: {
     alignItems: 'center',
