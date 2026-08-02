@@ -24,6 +24,7 @@ interface PreferencesState {
   dateDisplayFormat: DateDisplayFormat;
   completeOnboarding: (input: { name: string; goal: string }) => void;
   setHomeLocation: (location: string) => void;
+  setName: (name: string) => void;
   setThemePreference: (pref: ThemePreference) => void;
   setAiEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
@@ -56,6 +57,10 @@ export const usePreferences = create<PreferencesState>()(
         });
       },
       setHomeLocation: (homeLocation) => set({ homeLocation: homeLocation.trim() }),
+      setName: (name) => {
+        useAuthAccess.getState().markGuestDataDirty();
+        set({ name: name.trim() });
+      },
       setThemePreference: (themePreference) => set({ themePreference }),
       setAiEnabled: (aiEnabled) => set({ aiEnabled }),
       setHapticsEnabled: (hapticsEnabled) => set({ hapticsEnabled }),

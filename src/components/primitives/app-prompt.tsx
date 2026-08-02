@@ -2,6 +2,7 @@ import { BlurView } from 'expo-blur';
 import { useCallback, useEffect } from 'react';
 import {
   BackHandler,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -164,136 +165,142 @@ export function AppPromptHost() {
   );
 
   return (
-    <Animated.View
-      key={request.id}
-      accessibilityViewIsModal
-      entering={FadeIn.duration(170)}
-      pointerEvents="box-none"
-      style={styles.overlay}>
-      <BlurView
-        intensity={18}
-        tint={theme.name === 'dark' ? 'dark' : 'light'}
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      />
-      <Pressable
-        accessibilityLabel={
-          request.cancelable ? 'Dismiss prompt' : undefined
-        }
-        disabled={!request.cancelable}
-        onPress={cancel}
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: theme.overlayScrim },
-        ]}
-      />
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      onRequestClose={cancel}>
       <Animated.View
-        entering={FadeInDown.springify().damping(20).stiffness(220)}
-        style={[
-          styles.card,
-          {
-            backgroundColor: theme.backgroundElevated,
-            borderColor: theme.separator,
-            boxShadow:
-              theme.name === 'dark'
-                ? '0 18px 50px rgba(0, 0, 0, 0.48)'
-                : '0 18px 50px rgba(54, 43, 33, 0.22)',
-          },
-        ]}>
-        {request.cancelable ? (
-          <Pressable
-            accessibilityLabel="Close"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={cancel}
-            style={({ pressed }) => [
-              styles.closeButton,
-              {
-                backgroundColor: theme.backgroundSunken,
-                opacity: pressed ? 0.58 : 1,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}>
-            <Symbol name="close" size={16} color={theme.textSecondary} />
-          </Pressable>
-        ) : null}
-        <View
+        key={request.id}
+        accessibilityViewIsModal
+        entering={FadeIn.duration(170)}
+        pointerEvents="box-none"
+        style={styles.overlay}>
+        <BlurView
+          intensity={18}
+          tint={theme.name === 'dark' ? 'dark' : 'light'}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
+        <Pressable
+          accessibilityLabel={
+            request.cancelable ? 'Dismiss prompt' : undefined
+          }
+          disabled={!request.cancelable}
+          onPress={cancel}
           style={[
-            styles.brandMark,
-            { backgroundColor: theme.accentFaint },
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.overlayScrim },
+          ]}
+        />
+        <Animated.View
+          entering={FadeInDown.springify().damping(20).stiffness(220)}
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.backgroundElevated,
+              borderColor: theme.separator,
+              boxShadow:
+                theme.name === 'dark'
+                  ? '0 18px 50px rgba(0, 0, 0, 0.48)'
+                  : '0 18px 50px rgba(54, 43, 33, 0.22)',
+            },
           ]}>
-          <Symbol name="smart" size={20} color={theme.accentPrimary} />
-        </View>
-        <View style={styles.copy}>
-          <AppText
-            accessibilityRole="header"
-            style={styles.title}>
-            {request.title}
-          </AppText>
-          {request.message ? (
-            <AppText
-              selectable
-              color="secondary"
-              style={styles.message}>
-              {request.message}
-            </AppText>
+          {request.cancelable ? (
+            <Pressable
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={cancel}
+              style={({ pressed }) => [
+                styles.closeButton,
+                {
+                  backgroundColor: theme.backgroundSunken,
+                  opacity: pressed ? 0.58 : 1,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                },
+              ]}>
+              <Symbol name="close" size={16} color={theme.textSecondary} />
+            </Pressable>
           ) : null}
-        </View>
-        <ScrollView
-          bounces={false}
-          contentContainerStyle={styles.actions}
-          showsVerticalScrollIndicator={false}>
-          {visibleActions.map((action, index) => {
-            const destructive = action.style === 'destructive';
-            const foreground = destructive
-              ? theme.danger
-              : theme.textPrimary;
-            return (
-              <Pressable
-                key={`${action.text}-${index}`}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: action.disabled }}
-                disabled={action.disabled}
-                onPress={() => close(action)}
-                style={({ pressed }) => [
-                  styles.action,
-                  {
-                    backgroundColor: destructive
-                      ? theme.name === 'dark'
-                        ? '#3A2020'
-                        : '#F8E8E5'
-                      : theme.backgroundSunken,
-                    borderColor: 'transparent',
-                    opacity: action.disabled
-                      ? 0.38
-                      : pressed
-                        ? 0.62
-                        : 1,
-                    transform: [{ scale: pressed ? 0.985 : 1 }],
-                  },
-                ]}>
-                <AppText style={[styles.actionLabel, { color: foreground }]}>
-                  {action.text}
-                </AppText>
-                <Symbol
-                  name={destructive ? 'delete' : 'chevron-right'}
-                  size={17}
-                  color={foreground}
-                />
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          <View
+            style={[
+              styles.brandMark,
+              { backgroundColor: theme.accentFaint },
+            ]}>
+            <Symbol name="smart" size={20} color={theme.accentPrimary} />
+          </View>
+          <View style={styles.copy}>
+            <AppText
+              accessibilityRole="header"
+              style={styles.title}>
+              {request.title}
+            </AppText>
+            {request.message ? (
+              <AppText
+                selectable
+                color="secondary"
+                style={styles.message}>
+                {request.message}
+              </AppText>
+            ) : null}
+          </View>
+          <ScrollView
+            bounces={false}
+            contentContainerStyle={styles.actions}
+            showsVerticalScrollIndicator={false}>
+            {visibleActions.map((action, index) => {
+              const destructive = action.style === 'destructive';
+              const foreground = destructive
+                ? theme.danger
+                : theme.textPrimary;
+              return (
+                <Pressable
+                  key={`${action.text}-${index}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: action.disabled }}
+                  disabled={action.disabled}
+                  onPress={() => close(action)}
+                  style={({ pressed }) => [
+                    styles.action,
+                    {
+                      backgroundColor: destructive
+                        ? theme.name === 'dark'
+                          ? '#3A2020'
+                          : '#F8E8E5'
+                        : theme.backgroundSunken,
+                      borderColor: 'transparent',
+                      opacity: action.disabled
+                        ? 0.38
+                        : pressed
+                          ? 0.62
+                          : 1,
+                      transform: [{ scale: pressed ? 0.985 : 1 }],
+                    },
+                  ]}>
+                  <AppText style={[styles.actionLabel, { color: foreground }]}>
+                    {action.text}
+                  </AppText>
+                  <Symbol
+                    name={destructive ? 'delete' : 'chevron-right'}
+                    size={17}
+                    color={foreground}
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 1000,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: layout.screenPadding,

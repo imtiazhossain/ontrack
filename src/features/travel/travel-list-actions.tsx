@@ -118,6 +118,62 @@ export function TravelSheetPrimaryAction({
   );
 }
 
+/** Soft cream secondary CTA matching Friends sheet mock (Invite a Friend). */
+export function TravelSheetSecondaryAction({
+  label,
+  icon,
+  onPress,
+}: {
+  label: string;
+  icon?: AppIconName;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs, layout } = useResponsive();
+  const minHeight = Math.max(layout.minTapTarget, s(48));
+  const surface = theme.name === 'light' ? '#F3EEE7' : chrome.fieldBg;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
+      style={({ pressed }) => [
+        styles.secondaryAction,
+        {
+          backgroundColor: surface,
+          borderColor: chrome.fieldBorder,
+          minHeight,
+          paddingHorizontal: rs.lg,
+          gap: rs.sm,
+          borderRadius: radii.pill,
+          opacity: pressed ? 0.78 : 1,
+        },
+      ]}>
+      {icon ? <Symbol name={icon} size="sm" color={chrome.label} /> : null}
+      <AppText
+        variant="callout"
+        fit
+        numberOfLines={1}
+        style={[
+          styles.secondaryLabel,
+          {
+            color: chrome.label,
+            fontFamily: fontFamilies.serif,
+            fontSize: s(19),
+            lineHeight: s(24),
+          },
+        ]}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 /** Circular chrome control (edit / collapse / add) matching sheet close button. */
 export function TravelSheetIconControl({
   icon,
@@ -195,6 +251,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     marginLeft: 'auto',
+  },
+  secondaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  secondaryLabel: {
+    fontWeight: '400',
   },
   iconControl: {
     alignItems: 'center',

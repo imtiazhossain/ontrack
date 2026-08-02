@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -9,8 +10,9 @@ import {
   AppText,
   appPrompt,
   Button,
+  Symbol,
 } from '@/components/primitives';
-import { spacing } from '@/design-system';
+import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { PeoplePicker } from '@/features/social/people-picker';
 import {
@@ -26,9 +28,10 @@ import {
   shareTravelPlan,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { TravelSurfaceCard } from '@/features/travel/travel-surface';
+import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
+import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import { TripPeople } from '@/features/travel/trip-people';
 import {
   canonicalTravelTripId,
@@ -52,8 +55,32 @@ import {
 import { useFriends } from '@/store/friends';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { newId } from '@/utils/id';
+import { haptics } from '@/utils/haptics';
+
+function tripNameSlug(title: string): string {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'trip';
+}
+
+/** Pretty join path for display — always uses the trip name. Copy/share keep the real code URL. */
+function displayJoinLink(tripTitle: string, realUrl: string): string {
+  try {
+    const host = new URL(realUrl).host.replace(/^www\./, '');
+    return `${host}/j/${tripNameSlug(tripTitle)}`;
+  } catch {
+    return `ontrack--links.expo.app/j/${tripNameSlug(tripTitle)}`;
+  }
+}
 
 export function TravelFriendsSheet({
   plan,
@@ -67,7 +94,11 @@ export function TravelFriendsSheet({
   onSavePlan: (plan: TravelPlan) => void;
 }) {
   const { user } = useAuthSession();
+  const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
   const preferencesName = usePreferences((state) => state.name);
+  const setPreferencesName = usePreferences((state) => state.setName);
   const removePlan = useTravel((state) => state.removePlan);
   const [editingInvite, setEditingInvite] = useState(false);
   const [inviteName, setInviteName] = useState('');
@@ -457,6 +488,53 @@ export function TravelFriendsSheet({
     });
   };
 
+  const confirmRemoveRosterMember = (member: TravelTripRosterPerson) => {
+    const matched = plan.participants.find(
+      (person) =>
+        person.inviteCode === member.inviteCode ||
+        (person.email &&
+          member.email &&
+          person.email.toLowerCase() === member.email.toLowerCase()),
+    );
+    if (matched) {
+      confirmRemoveParticipant(matched);
+      return;
+    }
+    if (!member.inviteCode) {
+      appPrompt.alert(
+        'Couldn’t Remove Friend',
+        'This person can’t be removed from here. Ask them to leave the trip, or remove their invite from another device.',
+      );
+      return;
+    }
+    confirmDestructiveAction({
+      title: 'Remove Friend?',
+      message: `${member.displayName} will be removed from this trip and their invite link will stop working.`,
+      actionLabel: 'Remove Friend',
+      onConfirm: () => {
+        void (async () => {
+          setTransferringUserId(member.userId);
+          try {
+            await revokeTravelInvite(member.inviteCode!);
+            setRoster((people) =>
+              people.filter((person) => person.userId !== member.userId),
+            );
+            void refreshRoster(tripId);
+          } catch (reason) {
+            appPrompt.alert(
+              'Couldn’t Remove Friend',
+              reason instanceof Error
+                ? reason.message
+                : 'This person could not be removed. Please try again.',
+            );
+          } finally {
+            setTransferringUserId(undefined);
+          }
+        })();
+      },
+    });
+  };
+
   const applyFormerHostLocalState = (
     result: Awaited<ReturnType<typeof transferTravelTripHost>>,
   ) => {
@@ -662,13 +740,13 @@ export function TravelFriendsSheet({
         title={plan.title}
         subtitle={
           canManage
-            ? 'Plan Together · Share the Adventure'
-            : 'Plan Together · Trip Friends'
+            ? 'Plan together. Share the adventure.'
+            : 'Plan together. Trip friends.'
         }
         closeAccessibilityLabel="Close Friends"
         onClose={onClose}
         footer={
-          canManage ? (
+          canManage && !editingInvite ? (
             <TravelSheetPrimaryAction
               label="Add from Friends"
               icon="people"
@@ -676,22 +754,169 @@ export function TravelFriendsSheet({
             />
           ) : undefined
         }>
+            <TripPeople
+              host={hostPerson}
+              participants={plan.participants}
+              rosterMembers={rosterMembers}
+              canManage={canManage}
+              editing={editingInvite}
+              name={inviteName}
+              email={inviteEmail}
+              error={inviteError}
+              inviting={sharingInvite}
+              showHeader
+              showInviteButton={false}
+              onNameChange={setInviteName}
+              onEmailChange={setInviteEmail}
+              onBeginInvite={() => {
+                setInviteError(undefined);
+                setEditingInvite(true);
+              }}
+              onCancelInvite={() => {
+                setInviteError(undefined);
+                setEditingInvite(false);
+              }}
+              onInvite={() => void inviteFriend()}
+              managingParticipantId={managingParticipantId}
+              transferringUserId={transferringUserId}
+              onResend={(participant) => void resendInvite(participant)}
+              onRemove={confirmRemoveParticipant}
+              onRemoveRosterMember={confirmRemoveRosterMember}
+              onMakeHost={(member) => transferHost(member, false)}
+              onMakeHostParticipant={(participant) =>
+                transferHostByParticipant(participant, false)
+              }
+              onRenameHost={(nextName) => {
+                setPreferencesName(nextName);
+                const current =
+                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
+                  plan;
+                onSavePlan({
+                  ...current,
+                  hostDisplayName: nextName,
+                  updatedAt: new Date().toISOString(),
+                });
+                void publishTravelTripExpenses({
+                  ...current,
+                  hostDisplayName: nextName,
+                }).catch(() => undefined);
+              }}
+              onRenameParticipant={(participant, nextName) => {
+                const current =
+                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
+                  plan;
+                onSavePlan({
+                  ...current,
+                  participants: current.participants.map((person) =>
+                    person.id === participant.id
+                      ? { ...person, name: nextName }
+                      : person,
+                  ),
+                  updatedAt: new Date().toISOString(),
+                });
+              }}
+              onRenameRosterMember={(member, nextName) => {
+                const current =
+                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
+                  plan;
+                const matched = current.participants.find(
+                  (person) =>
+                    person.inviteCode === member.inviteCode ||
+                    (person.email &&
+                      member.email &&
+                      person.email.toLowerCase() === member.email.toLowerCase()),
+                );
+                if (matched) {
+                  onSavePlan({
+                    ...current,
+                    participants: current.participants.map((person) =>
+                      person.id === matched.id
+                        ? { ...person, name: nextName }
+                        : person,
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  });
+                }
+                setRoster((people) =>
+                  people.map((person) =>
+                    person.userId === member.userId
+                      ? { ...person, displayName: nextName }
+                      : person,
+                  ),
+                );
+              }}
+            />
+
             {canManage ? (
               <TravelSurfaceCard bodyStyle={styles.openJoinCard}>
-                <AppText variant="overline" color="tertiary" style={travelOverlineStyle} fit>
-                  Open Join Link
-                </AppText>
-                <AppText variant="subheading" fit>
-                  Anyone Can Request
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  Share this link freely. New friends request to join, and you approve each one before
-                  they see the itinerary. Without the app, they’ll be prompted to download it.
-                </AppText>
+                <View style={[styles.joinHeader, { gap: rs.sm }]}>
+                  <View
+                    style={[
+                      styles.joinIcon,
+                      {
+                        width: Math.max(36, s(36)),
+                        height: Math.max(36, s(36)),
+                        borderRadius: radii.pill,
+                        backgroundColor: chrome.icons.link.bg,
+                      },
+                    ]}>
+                    <Symbol name="link" size="sm" color={chrome.icons.link.fg} />
+                  </View>
+                  <View style={styles.joinHeaderCopy}>
+                    <AppText variant="subheading" fit numberOfLines={1}>
+                      Join Link
+                    </AppText>
+                    <AppText variant="caption" color="secondary" fit numberOfLines={1}>
+                      Anyone can request to join.
+                    </AppText>
+                  </View>
+                </View>
+
                 {openJoinUrl ? (
-                  <AppText variant="caption" color="secondary" selectable>
-                    {openJoinUrl}
-                  </AppText>
+                  <View
+                    style={[
+                      styles.urlField,
+                      {
+                        backgroundColor: chrome.fieldBg,
+                        borderColor: chrome.fieldBorder,
+                        minHeight: Math.max(44, s(44)),
+                        paddingLeft: rs.md,
+                        gap: rs.sm,
+                      },
+                    ]}>
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      fit
+                      numberOfLines={1}
+                      style={styles.urlText}
+                      selectable>
+                      {displayJoinLink(plan.title, openJoinUrl)}
+                    </AppText>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Copy open join link"
+                      hitSlop={8}
+                      disabled={!openJoinCode || openJoinBusy}
+                      onPress={() => {
+                        haptics.tap();
+                        void copyOpenJoinLink();
+                      }}
+                      style={({ pressed }) => [
+                        styles.urlCopy,
+                        {
+                          width: Math.max(40, s(40)),
+                          height: Math.max(40, s(40)),
+                          opacity: pressed ? 0.6 : 1,
+                        },
+                      ]}>
+                      <Symbol
+                        name="copy"
+                        size="sm"
+                        color={copiedOpenJoin ? chrome.ctaFrom : chrome.label}
+                      />
+                    </Pressable>
+                  </View>
                 ) : openJoinError ? (
                   <AppText variant="caption" color="danger">
                     {openJoinError}
@@ -701,23 +926,52 @@ export function TravelFriendsSheet({
                     {openJoinBusy ? 'Creating link…' : 'Sign in to create an open join link.'}
                   </AppText>
                 )}
+
                 <View style={styles.linkActions}>
-                  <Button
-                    variant="secondary"
-                    style={styles.linkAction}
-                    disabled={!openJoinCode || openJoinBusy}
+                  <Pressable
+                    accessibilityRole="button"
                     accessibilityLabel="Copy open join link"
-                    onPress={() => void copyOpenJoinLink()}>
-                    {copiedOpenJoin ? 'Copied' : 'Copy Link'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    style={styles.linkAction}
                     disabled={!openJoinCode || openJoinBusy}
+                    onPress={() => {
+                      haptics.tap();
+                      void copyOpenJoinLink();
+                    }}
+                    style={({ pressed }) => [
+                      styles.joinAction,
+                      {
+                        backgroundColor: chrome.fieldBg,
+                        borderColor: chrome.fieldBorder,
+                        minHeight: Math.max(44, s(48)),
+                        opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
+                      },
+                    ]}>
+                    <Symbol name="link" size="sm" color={chrome.label} />
+                    <AppText variant="callout" fit numberOfLines={1}>
+                      {copiedOpenJoin ? 'Copied' : 'Copy Link'}
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
                     accessibilityLabel="Share open join link"
-                    onPress={() => void shareOpenJoin()}>
-                    Share
-                  </Button>
+                    disabled={!openJoinCode || openJoinBusy}
+                    onPress={() => {
+                      haptics.tap();
+                      void shareOpenJoin();
+                    }}
+                    style={({ pressed }) => [
+                      styles.joinAction,
+                      {
+                        backgroundColor: chrome.fieldBg,
+                        borderColor: chrome.fieldBorder,
+                        minHeight: Math.max(44, s(48)),
+                        opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
+                      },
+                    ]}>
+                    <Symbol name="share" size="sm" color={chrome.label} />
+                    <AppText variant="callout" fit numberOfLines={1}>
+                      Share
+                    </AppText>
+                  </Pressable>
                 </View>
               </TravelSurfaceCard>
             ) : null}
@@ -759,42 +1013,6 @@ export function TravelFriendsSheet({
                 })}
               </View>
             ) : null}
-
-            <TripPeople
-              host={hostPerson}
-              participants={plan.participants}
-              rosterMembers={rosterMembers}
-              canManage={canManage}
-              editing={editingInvite}
-              name={inviteName}
-              email={inviteEmail}
-              error={inviteError}
-              inviting={sharingInvite}
-              showHeader={false}
-              onNameChange={setInviteName}
-              onEmailChange={setInviteEmail}
-              onBeginInvite={() => {
-                setInviteError(undefined);
-                setEditingInvite(true);
-              }}
-              onCancelInvite={() => {
-                setInviteError(undefined);
-                setEditingInvite(false);
-              }}
-              onInvite={() => void inviteFriend()}
-              managingParticipantId={managingParticipantId}
-              transferringUserId={transferringUserId}
-              onResend={(participant) => void resendInvite(participant)}
-              onRemove={confirmRemoveParticipant}
-              onMakeHost={(member) => transferHost(member, false)}
-              onTransferAndLeave={(member) => transferHost(member, true)}
-              onMakeHostParticipant={(participant) =>
-                transferHostByParticipant(participant, false)
-              }
-              onTransferAndLeaveParticipant={(participant) =>
-                transferHostByParticipant(participant, true)
-              }
-            />
 
             {canManage && pending.length > 0 ? (
               <View style={styles.linksSection}>
@@ -853,9 +1071,52 @@ export function TravelFriendsSheet({
 }
 
 const styles = StyleSheet.create({
-  openJoinCard: { gap: spacing.sm },
+  openJoinCard: { gap: spacing.md },
+  joinHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  joinIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  joinHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+    gap: 2,
+  },
+  urlField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  urlText: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  urlCopy: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
   linksSection: { gap: spacing.sm },
   linkCard: { gap: spacing.sm },
   linkActions: { flexDirection: 'row', gap: spacing.sm },
   linkAction: { flex: 1, minWidth: 0 },
+  joinAction: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+  },
 });
