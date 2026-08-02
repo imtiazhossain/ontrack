@@ -27,7 +27,7 @@ describe('agent registry', () => {
 
   it('validates a declarative agent manifest', () => {
     expect(createAgentRegistry([TEST_AGENT]).get(TEST_AGENT.id)).toEqual(TEST_AGENT);
-    expect(getAgentCapability('travel.read')?.name).toBe('View travel plans');
+    expect(getAgentCapability('travel.read')?.name).toBe('View Travel Plans');
   });
 
   it('rejects duplicate ids and unknown capabilities', () => {

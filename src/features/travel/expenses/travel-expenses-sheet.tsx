@@ -1,24 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppText,
   Button,
-  Card,
-  IconButton,
-  SectionHeader,
   Symbol,
 } from '@/components/primitives';
-import { MetricDisplay } from '@/components/shared';
 import type { AppIconName } from '@/design-system';
-import { layout, radii, spacing } from '@/design-system';
+import { fontFamilies, radii, spacing } from '@/design-system';
 import {
   buildExpenseFromForm,
   emptyExpenseForm,
@@ -39,10 +32,15 @@ import {
 import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import type { TravelExpense, TravelExpenseCategory, TravelPlan } from '@/features/travel/types';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
-  TravelSkyHeader,
+  travelAccent,
+  TravelSectionLabel,
+  TravelSurfaceCard,
 } from '@/features/travel/travel-surface';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
+import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
+import { TravelSheetModal } from '@/features/travel/travel-sheet';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { formatDateKey } from '@/utils/date';
@@ -51,7 +49,7 @@ const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
   stay: 'lodging',
   food: 'food',
-  transport: 'flight',
+  transport: 'vehicles',
   activity: 'list',
   shopping: 'groceries',
   other: 'receipt',
@@ -79,11 +77,10 @@ export function TravelExpensesSheet({
   onSavePlan: (plan: TravelPlan) => void;
 }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
+  const { s, spacing: rs } = useResponsive();
   const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [rates, setRates] = useState<FxRates | undefined>();
-  const [ratesStale, setRatesStale] = useState(false);
   const [form, setForm] = useState<ExpenseFormState | undefined>();
   const [formError, setFormError] = useState<string>();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -94,18 +91,9 @@ export function TravelExpensesSheet({
     void loadFxRates({ signal: controller.signal })
       .then((result) => {
         setRates(result.rates);
-        setRatesStale(result.stale);
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) {
-      setForm(undefined);
-      setFormError(undefined);
-      setConfirmingDelete(false);
-    }
   }, [visible]);
 
   const people = useMemo(() => expensePeople(plan), [plan]);
@@ -163,56 +151,44 @@ export function TravelExpensesSheet({
     setConfirmingDelete(false);
   };
 
-  return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-      transparent
-      visible={visible}>
-      <View
-        style={[
-          styles.modalRoot,
-          { backgroundColor: theme.overlayScrim, paddingTop: insets.top },
-        ]}>
-        <Pressable
-          accessibilityLabel="Close expenses"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.backgroundPrimary,
-              paddingBottom: Math.max(insets.bottom, spacing.lg),
-              overflow: 'hidden',
-            },
-          ]}>
-          <View style={styles.handleRow}>
-            <View style={[styles.handle, { backgroundColor: theme.separator }]} />
-          </View>
-          <TravelSkyHeader
-            eyebrow="Expenses"
-            title={plan.title}
-            subtitle="Track Spending · Settle Up with Friends"
-            trailing={
-              <IconButton
-                icon="close"
-                size={36}
-                background="transparent"
-                borderColor={theme.separator}
-                accessibilityLabel="Close Expenses"
-                onPress={onClose}
-              />
-            }
-          />
+  const dismissForm = () => {
+    setForm(undefined);
+    setFormError(undefined);
+    setConfirmingDelete(false);
+  };
 
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.sheetContent}>
+  const closeSheet = () => {
+    dismissForm();
+    onClose();
+  };
+
+  const editingExpense = Boolean(form?.existing);
+
+  return (
+    <TravelSheetModal
+      visible={visible}
+      eyebrow="Expenses"
+      title={form ? (editingExpense ? 'Edit Expense' : 'Add Expense') : plan.title}
+      subtitle={
+        form
+          ? editingExpense
+            ? 'Update what you spent and who shared it'
+            : 'Add what you spent and who shared it'
+          : 'Track Spending · Settle Up with Friends'
+      }
+      closeAccessibilityLabel={form ? 'Close expense editor' : 'Close Expenses'}
+      onClose={form ? dismissForm : closeSheet}
+      footer={
+        form && !confirmingDelete ? (
+          <ItinerarySheetSubmitButton
+            label={editingExpense ? 'Save Expense' : 'Add Expense'}
+            icon="receipt"
+            onPress={saveForm}
+          />
+        ) : !form ? (
+          <TravelSheetPrimaryAction label="Add expense" icon="add" onPress={beginAdd} />
+        ) : undefined
+      }>
             {form ? (
               confirmingDelete && form.existing ? (
                 <View style={styles.deleteConfirm} accessibilityLabel="Confirm delete expense">
@@ -246,49 +222,51 @@ export function TravelExpensesSheet({
                     setConfirmingDelete(false);
                     setForm(next);
                   }}
-                  onSave={saveForm}
-                  onCancel={() => {
-                    setForm(undefined);
-                    setFormError(undefined);
-                    setConfirmingDelete(false);
-                  }}
                   onDelete={form.existing ? requestDelete : undefined}
                 />
               )
             ) : (
               <View style={styles.listBody}>
-                <MetricDisplay
-                  label={`Trip total · ${plan.baseCurrency}`}
-                  value={
-                    convertible || plan.expenses.length === 0
+                <TravelSurfaceCard bodyStyle={styles.summaryCard} padding={rs.lg}>
+                  <AppText
+                    variant="overline"
+                    fit
+                    style={[styles.summaryLabel, { color: travelAccent(theme) }]}>
+                    Trip total · {plan.baseCurrency}
+                  </AppText>
+                  <AppText
+                    fit
+                    numberOfLines={1}
+                    style={[
+                      styles.summaryValue,
+                      {
+                        color: travelAccent(theme),
+                        fontSize: Math.max(43, s(52)),
+                        lineHeight: Math.max(49, s(58)),
+                      },
+                    ]}>
+                    {convertible || plan.expenses.length === 0
                       ? formatMoney(total, plan.baseCurrency, dateLocale)
-                      : '—'
-                  }
-                  detail={
-                    plan.expenses.length === 0
+                      : '—'}
+                  </AppText>
+                  <AppText variant="callout" color="secondary" fit numberOfLines={1}>
+                    {plan.expenses.length === 0
                       ? 'No expenses yet'
                       : convertible
                         ? `${plan.expenses.length} expense${plan.expenses.length === 1 ? '' : 's'}${
-                            ratesStale && rates
-                              ? ` · rates as of ${rates.date}`
-                              : rates
-                                ? ` · rates ${rates.date}`
-                                : ' · conversion pending'
+                            rates
+                              ? ` · Rate from ${formatDateKey(rates.date, 'mdy')}`
+                              : ' · conversion pending'
                           }`
-                        : 'Some amounts need exchange rates'
-                  }
-                  accent={theme.accentPrimary}
-                />
+                        : 'Some amounts need exchange rates'}
+                  </AppText>
+                </TravelSurfaceCard>
 
                 {transfers.length > 0 ? (
                   <View style={styles.block}>
-                    <SectionHeader
-                      title="Settle Up"
-                      detail={`${transfers.length}`}
-                      titleStyle={travelOverlineStyle}
-                    />
+                    <TravelSectionLabel title="Settle Up" count={transfers.length} />
                     {transfers.map((transfer) => (
-                      <Card key={`${transfer.fromId}-${transfer.toId}`} variant="sunken" style={styles.settleCard}>
+                      <TravelSurfaceCard key={`${transfer.fromId}-${transfer.toId}`} bodyStyle={styles.settleCard}>
                         <AppText variant="callout">
                           {personName(people, transfer.fromId)} owes{' '}
                           {personName(people, transfer.toId)}
@@ -296,25 +274,21 @@ export function TravelExpensesSheet({
                         <AppText variant="subheading" color="accent">
                           {formatMoney(transfer.amount, plan.baseCurrency, dateLocale)}
                         </AppText>
-                      </Card>
+                      </TravelSurfaceCard>
                     ))}
                   </View>
                 ) : null}
 
-                <SectionHeader
-                  title="All Expenses"
-                  detail={`${sortedExpenses.length}`}
-                  titleStyle={travelOverlineStyle}
-                />
+                <TravelSectionLabel title="All Expenses" count={sortedExpenses.length} />
                 {sortedExpenses.length === 0 ? (
-                  <Card variant="sunken" style={styles.emptyCard}>
+                  <TravelSurfaceCard bodyStyle={styles.emptyCard}>
                     <Symbol name="receipt" size="lg" color={theme.accentPrimary} />
                     <AppText variant="subheading">Start Tracking</AppText>
                     <AppText variant="body" color="secondary" style={styles.emptyCopy}>
                       Add flights, food, taxis — in ISK, USD, or whatever you paid. We’ll convert
                       amounts for you.
                     </AppText>
-                  </Card>
+                  </TravelSurfaceCard>
                 ) : (
                   sortedExpenses.map((expense) => {
                     const converted = expenseInBase(expense, plan.baseCurrency, rates);
@@ -328,11 +302,15 @@ export function TravelExpensesSheet({
                           styles.expensePress,
                           pressed ? styles.pressed : undefined,
                         ]}>
-                        <Card variant="sunken" style={styles.expenseCard}>
+                        <TravelSurfaceCard bodyStyle={styles.expenseCard} padding={rs.md}>
                           <View
                             style={[
                               styles.categoryBadge,
-                              { backgroundColor: theme.accentFaint },
+                              {
+                                width: Math.max(48, s(52)),
+                                height: Math.max(48, s(52)),
+                                backgroundColor: theme.accentFaint,
+                              },
                             ]}>
                             <Symbol
                               name={CATEGORY_ICONS[expense.category]}
@@ -341,15 +319,17 @@ export function TravelExpensesSheet({
                             />
                           </View>
                           <View style={styles.expenseCopy}>
-                            <AppText variant="subheading">{expense.title}</AppText>
-                            <AppText variant="caption" color="secondary">
+                            <AppText variant="subheading" fit numberOfLines={1}>
+                              {expense.title}
+                            </AppText>
+                            <AppText variant="caption" color="secondary" fit numberOfLines={1}>
                               {CATEGORY_LABELS[expense.category]} ·{' '}
                               {formatDateKey(expense.date, dateDisplayFormat)} ·{' '}
                               {personName(people, expense.paidById)} paid
                             </AppText>
                           </View>
                           <View style={styles.amountCol}>
-                            <AppText variant="subheading" color="accent">
+                            <AppText variant="subheading" color="accent" fit numberOfLines={1}>
                               {formatMoney(expense.amount, expense.currency, dateLocale)}
                             </AppText>
                             {converted !== undefined && expense.currency !== plan.baseCurrency ? (
@@ -358,56 +338,33 @@ export function TravelExpensesSheet({
                               </AppText>
                             ) : null}
                           </View>
-                        </Card>
+                          <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+                        </TravelSurfaceCard>
                       </Pressable>
                     );
                   })
                 )}
 
-                <Button icon="add" onPress={beginAdd}>
-                  Add expense
-                </Button>
               </View>
             )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </TravelSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    maxHeight: '94%',
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    paddingHorizontal: layout.screenPadding,
-    gap: spacing.md,
-  },
-  handleRow: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: radii.pill,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  flex: { flex: 1, gap: spacing.xxs },
-  sheetContent: {
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
   listBody: { gap: spacing.lg },
+  summaryCard: { minHeight: 178, justifyContent: 'center' },
+  summaryLabel: {
+    fontFamily: fontFamilies.sans,
+    fontWeight: '600',
+    letterSpacing: 2,
+  },
+  summaryValue: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    letterSpacing: -1.2,
+    fontVariant: ['tabular-nums'],
+  },
   block: { gap: spacing.sm },
   settleCard: {
     flexDirection: 'row',
@@ -426,17 +383,15 @@ const styles = StyleSheet.create({
   expenseCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
   },
   categoryBadge: {
-    width: 40,
-    height: 40,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  expenseCopy: { flex: 1, gap: spacing.xxs },
-  amountCol: { alignItems: 'flex-end', gap: 2 },
+  expenseCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
+  amountCol: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0, gap: 2 },
   deleteConfirm: {
     gap: spacing.md,
     alignItems: 'stretch',

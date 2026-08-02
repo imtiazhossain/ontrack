@@ -32,6 +32,7 @@ export function TravelSheetAction({
   const iconTone = chrome.icons[tone];
   const { s, spacing: rs, layout } = useResponsive();
   const iconBox = Math.max(28, s(30));
+  const surface = theme.name === 'light' ? '#FFFEFC' : chrome.fieldBg;
 
   return (
     <Pressable
@@ -46,7 +47,7 @@ export function TravelSheetAction({
         {
           flexGrow: wide ? 1 : undefined,
           flexBasis: wide ? '100%' : '47%',
-          backgroundColor: chrome.fieldBg,
+          backgroundColor: surface,
           borderColor: chrome.fieldBorder,
           borderRadius: radii.lg,
           minHeight: Math.max(layout.minTapTarget, s(48)),
@@ -71,13 +72,28 @@ export function TravelSheetAction({
       </View>
       <AppText
         variant="callout"
-        fit
-        numberOfLines={1}
-        style={[styles.actionLabel, { color: chrome.label, flex: 1, flexShrink: 1, minWidth: 0 }]}>
+        allowFontScaling={false}
+        maxFontSizeMultiplier={1}
+        numberOfLines={2}
+        style={[
+          styles.actionLabel,
+          {
+            color: chrome.label,
+            flex: 1,
+            flexShrink: 1,
+            minWidth: 0,
+            fontSize: s(14),
+            lineHeight: s(18),
+          },
+        ]}>
         {label}
       </AppText>
       <View style={styles.actionChevron}>
-        <Symbol name="chevron-right" size="sm" color={chrome.subtitle} />
+        <Symbol
+          name="chevron-right"
+          size={11}
+          color={theme.name === 'light' ? '#9A876C' : chrome.subtitle}
+        />
       </View>
     </Pressable>
   );
@@ -92,7 +108,14 @@ export function TravelSheetPrimaryAction({
   icon?: AppIconName;
   onPress: () => void;
 }) {
-  return <ItinerarySheetSubmitButton label={label} icon={icon} onPress={onPress} />;
+  return (
+    <ItinerarySheetSubmitButton
+      label={label}
+      icon={icon}
+      editorialGold
+      onPress={onPress}
+    />
+  );
 }
 
 /** Circular chrome control (edit / collapse / add) matching sheet close button. */
@@ -164,9 +187,12 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontFamily: fontFamilies.serif,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   actionChevron: {
+    width: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
     marginLeft: 'auto',
   },

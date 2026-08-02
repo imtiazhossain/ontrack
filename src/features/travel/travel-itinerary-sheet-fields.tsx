@@ -128,14 +128,21 @@ export function ItinerarySheetSubmitButton({
   label,
   onPress,
   icon = 'calendar-add',
+  editorialGold = false,
 }: {
   label: string;
   onPress: () => void;
   icon?: AppIconName;
+  editorialGold?: boolean;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout } = useResponsive();
+  const colors =
+    editorialGold && theme.name === 'light'
+      ? (['#D5A13E', '#A86E20'] as const)
+      : ([chrome.ctaFrom, chrome.ctaTo] as const);
+  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 48 : 52));
 
   return (
     <Pressable
@@ -149,18 +156,18 @@ export function ItinerarySheetSubmitButton({
         styles.submitWrap,
         {
           opacity: pressed ? 0.86 : 1,
-          minHeight: Math.max(layout.minTapTarget, s(52)),
+          minHeight,
           borderRadius: radii.pill,
         },
       ]}>
       <LinearGradient
-        colors={[chrome.ctaFrom, chrome.ctaTo]}
+        colors={[...colors]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={[
           styles.submitGradient,
           {
-            minHeight: Math.max(layout.minTapTarget, s(52)),
+            minHeight,
             paddingHorizontal: rs.lg,
             gap: rs.sm,
             borderRadius: radii.pill,
@@ -173,7 +180,13 @@ export function ItinerarySheetSubmitButton({
           numberOfLines={1}
           style={[
             styles.submitLabel,
-            { color: chrome.ctaText, fontWeight: '700' },
+            {
+              color: chrome.ctaText,
+              fontFamily: editorialGold ? fontFamilies.serif : fontFamilies.sans,
+              fontSize: editorialGold ? s(19) : undefined,
+              lineHeight: editorialGold ? s(24) : undefined,
+              fontWeight: editorialGold ? '400' : '600',
+            },
           ]}>
           {label}
         </AppText>

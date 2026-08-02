@@ -20,7 +20,10 @@ import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  itinerarySheetFieldProps,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
   TravelSheetAction,
   TravelSheetIconControl,
@@ -50,7 +53,7 @@ export default function TravelScreen() {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const router = useRouter();
-  const { spacing: rs } = useResponsive();
+  const { spacing: rs, s } = useResponsive();
   const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const removePlan = useTravel((state) => state.removePlan);
@@ -221,10 +224,16 @@ export default function TravelScreen() {
   return (
     <Screen
       style={{ backgroundColor: travelPageBg(theme) }}
-      contentStyle={styles.screen}>
-      <View style={[styles.header, { gap: rs.sm }]}>
+      contentStyle={{ gap: rs.sm }}>
+      <View style={[styles.header, { gap: rs.sm, paddingBottom: rs.sm }]}>
         <View style={[styles.headerTitleRow, { gap: rs.sm }]}>
-          <AppText style={[styles.title, { color: chrome.title }]} fit numberOfLines={1}>
+          <AppText
+            style={[
+              styles.title,
+              { color: chrome.title, fontSize: s(54), lineHeight: s(60) },
+            ]}
+            fit
+            numberOfLines={1}>
             Travel
           </AppText>
           {!showForm ? (
@@ -237,7 +246,13 @@ export default function TravelScreen() {
             />
           ) : null}
         </View>
-        <AppText style={[styles.subtitle, { color: chrome.subtitle }]} fit numberOfLines={1}>
+        <AppText
+          style={[
+            styles.subtitle,
+            { color: chrome.subtitle, fontSize: s(17), lineHeight: s(22) },
+          ]}
+          fit
+          numberOfLines={1}>
           Plan. Explore. Remember.
         </AppText>
       </View>
@@ -248,38 +263,41 @@ export default function TravelScreen() {
             Start a New Trip
           </AppText>
           <Input
-            label="Trip Name"
+            icon="flight"
+            stackedLabel="Trip Name"
             value={title}
             onChangeText={setTitle}
             placeholder="Birthday in Lisbon"
-            fieldBackground={chrome.fieldBg}
-            stackedLabelColor={chrome.label}
-            placeholderTextColor={chrome.placeholder}
+            accessibilityLabel="Trip Name"
+            {...itinerarySheetFieldProps(chrome, 'flight')}
           />
           <Input
-            label="Destination"
+            icon="location"
+            stackedLabel="Destination"
             value={destination}
             onChangeText={setDestination}
             placeholder="Lisbon, Portugal"
-            fieldBackground={chrome.fieldBg}
-            stackedLabelColor={chrome.label}
-            placeholderTextColor={chrome.placeholder}
+            accessibilityLabel="Destination"
+            {...itinerarySheetFieldProps(chrome, 'location')}
           />
           <TravelDateRangeEditor
             startDate={startDate}
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            stacked
           />
           <Input
-            label="Notes"
+            icon="note"
+            stackedLabel="Notes"
             value={notes}
             onChangeText={setNotes}
             placeholder="Ideas, budgets, must-dos…"
             multiline
-            fieldBackground={chrome.fieldBg}
-            stackedLabelColor={chrome.label}
-            placeholderTextColor={chrome.placeholder}
+            textAlignVertical="top"
+            style={{ minHeight: Math.max(32, s(36)) }}
+            accessibilityLabel="Notes"
+            {...itinerarySheetFieldProps(chrome, 'note')}
           />
           {error ? <ErrorMessage message={error} /> : null}
           <View style={styles.row}>
@@ -336,7 +354,11 @@ export default function TravelScreen() {
                     <AppText
                       style={[
                         styles.tripTitle,
-                        { color: theme.name === 'light' ? '#1A1410' : theme.textPrimary },
+                        {
+                          color: theme.name === 'light' ? '#1A1410' : theme.textPrimary,
+                          fontSize: s(30),
+                          lineHeight: s(36),
+                        },
                       ]}
                       fit
                       numberOfLines={1}>
@@ -394,6 +416,13 @@ export default function TravelScreen() {
                       accessibilityLabel={`Plan Itinerary for ${plan.title}`}
                     />
                     <TravelSheetAction
+                      label="Add to Calendar"
+                      icon="calendar-add"
+                      tone="calendar"
+                      onPress={() => addTripToCalendar(plan)}
+                      accessibilityLabel={`Add ${plan.title} to Calendar`}
+                    />
+                    <TravelSheetAction
                       label="Search Flights"
                       icon="flight"
                       tone="flight"
@@ -417,13 +446,6 @@ export default function TravelScreen() {
                       }
                       accessibilityLabel={`Search Stays for ${plan.title}`}
                     />
-                    <TravelSheetAction
-                      label="Add to Calendar"
-                      icon="calendar-add"
-                      tone="calendar"
-                      onPress={() => addTripToCalendar(plan)}
-                      accessibilityLabel={`Add ${plan.title} to Calendar`}
-                    />
                     <TravelWeatherAction
                       destination={plan.destination}
                       startDate={plan.startDate}
@@ -442,11 +464,7 @@ export default function TravelScreen() {
                       accessibilityLabel={`Convert Currency for ${plan.destination}`}
                     />
                     <TravelSheetAction
-                      label={
-                        plan.expenses.length > 0
-                          ? `Expenses · ${plan.expenses.length}`
-                          : 'Expenses'
-                      }
+                      label="Expenses"
                       icon="receipt"
                       tone="note"
                       onPress={() => openExpenses(plan.id)}
@@ -517,17 +535,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
     fontFamily: fontFamilies.serif,
-    fontSize: 40,
-    lineHeight: 46,
     fontWeight: '400',
-    letterSpacing: -1,
+    letterSpacing: -1.3,
   },
   subtitle: {
-    fontFamily: fontFamilies.sans,
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: fontFamilies.serif,
     fontWeight: '400',
-    letterSpacing: 0.1,
+    letterSpacing: 0,
   },
   cardHeading: {
     fontFamily: fontFamilies.serif,
@@ -541,10 +555,8 @@ const styles = StyleSheet.create({
   heading: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
   tripTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 23,
-    lineHeight: 28,
     fontWeight: '400',
-    letterSpacing: -0.4,
+    letterSpacing: -0.65,
   },
   serif: {
     fontFamily: fontFamilies.serif,

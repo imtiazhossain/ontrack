@@ -102,3 +102,19 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
 }
 
 export type SheetIconTone = keyof ItinerarySheetChrome['icons'];
+
+/** Shared stacked-field colors used by Add Stay and structured travel editors. */
+export function itinerarySheetFieldProps(
+  chrome: ItinerarySheetChrome,
+  tone: SheetIconTone,
+) {
+  const icon = chrome.icons[tone];
+  return {
+    iconBackground: icon.bg,
+    iconColor: icon.fg,
+    fieldBackground: chrome.fieldBg,
+    stackedLabelColor: chrome.label,
+    placeholderColor: chrome.placeholder,
+    placeholderTextColor: chrome.placeholder,
+  };
+}

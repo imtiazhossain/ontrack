@@ -2,6 +2,8 @@ import {
   dateDisplayFormatForLocale,
   formatDateKey,
   formatDateKeyShort,
+  formatDatePickerTitle,
+  formatTimePickerTitle,
   fromDateKey,
   isDateKey,
   nativeDatePickerLocale,
@@ -42,5 +44,16 @@ describe('date keys', () => {
     expect(nativeDatePickerLocale(undefined)).toBeUndefined();
     expect(nativeDatePickerLocale('system')).toBeUndefined();
     expect(nativeDatePickerLocale('en-US')).toBe('en_US');
+  });
+
+  it('keeps accessibility requirements out of visible picker titles', () => {
+    expect(formatDatePickerTitle('Depart date, required')).toBe('Depart Date');
+    expect(formatDatePickerTitle('Return date, optional')).toBe('Return Date');
+    expect(formatDatePickerTitle('Date of Birth')).toBe('Date of Birth');
+  });
+
+  it('keeps accessibility requirements out of visible time picker titles', () => {
+    expect(formatTimePickerTitle('Arrival time, required')).toBe('Arrival Time');
+    expect(formatTimePickerTitle('Check-out time, optional')).toBe('Check-out Time');
   });
 });

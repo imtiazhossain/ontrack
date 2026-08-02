@@ -1,35 +1,40 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { calculateFlightArrival } from '@/features/travel/flight-arrival';
 import {
-  calculateFlightArrival,
-  formatFlightLandingLabel,
-} from '@/features/travel/flight-arrival';
-import { useTheme } from '@/hooks/use-theme';
-import { formatMinutes } from '@/utils/date';
+  formatDateKeyShort,
+  formatMinutes,
+  type DateDisplayFormat,
+} from '@/utils/date';
 
-import { openConfirmationAttachments, confirmationUrisForDisplay } from './confirmation-attachments';
+import {
+  openConfirmationAttachments,
+  confirmationUrisForDisplay,
+} from './confirmation-attachments';
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
-import { travelOverlineStyle } from './travel-chrome';
+import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelFlightDetails } from './types';
+
+const FLIGHT_ACCENT = '#A9782C';
+const FLIGHT_TINT = '#F5EAD8';
 
 export function FlightDetailsSummary({
   details,
   date,
   startMinutes,
   durationMinutes,
+  dateDisplayFormat = 'mdy',
 }: {
   details: TravelFlightDetails;
   date?: string;
   startMinutes?: number;
   durationMinutes?: number;
+  dateDisplayFormat?: DateDisplayFormat;
 }) {
-  const theme = useTheme();
   const route = [details.departureAirport, details.arrivalAirport]
     .filter(Boolean)
     .join(' → ');
-  const carrier = [details.airline, details.flightNumber].filter(Boolean).join(' · ');
+  const carrier = [details.airline, details.flightNumber]
+    .filter(Boolean)
+    .join(' · ');
   const arrival =
     date !== undefined &&
     startMinutes !== undefined &&
@@ -50,86 +55,58 @@ export function FlightDetailsSummary({
     if (!confirmationUris.length) return;
     void openConfirmationAttachments(confirmationUris);
   };
+  const departureStamp =
+    date && startMinutes !== undefined
+      ? `${formatDateKeyShort(date, dateDisplayFormat)} · ${formatMinutes(startMinutes)}`
+      : undefined;
+  const arrivalStamp = arrival
+    ? `${formatDateKeyShort(arrival.date, dateDisplayFormat)} · ${formatMinutes(arrival.startMinutes)}`
+    : undefined;
+  const rows = [
+    departureStamp || details.departureAirport
+      ? {
+          label: 'Departure',
+          value: departureStamp,
+          detail: details.departureAirport,
+          icon: 'flight' as const,
+        }
+      : undefined,
+    arrivalStamp || details.arrivalAirport
+      ? {
+          label: 'Arrival',
+          value: arrivalStamp,
+          detail: [
+            details.arrivalAirport,
+            arrival?.timeZoneAware ? 'Local time' : undefined,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          icon: 'flight' as const,
+        }
+      : undefined,
+    details.seat
+      ? { label: 'Seat', value: details.seat, icon: 'personal' as const }
+      : undefined,
+  ].filter((row): row is NonNullable<typeof row> => Boolean(row));
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.accentFaint }]}>
-      <View style={styles.header}>
-        <Symbol name="airplane" size="sm" color={theme.textPrimary} />
-        <View style={styles.flex}>
-          {route ? (
-            <AppText variant="subheading" color="primary" fit>
-              {route}
-            </AppText>
-          ) : null}
-          {carrier ? (
-            <AppText variant="caption" color="secondary" fit>
-              {carrier}
-            </AppText>
-          ) : null}
-        </View>
-      </View>
-      {arrival && startMinutes !== undefined ? (
-        <View style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Lands
-          </AppText>
-          <AppText variant="callout" color="primary" fit style={styles.detailValue}>
-            {formatMinutes(startMinutes)} → {formatFlightLandingLabel(arrival)}
-            {arrival.timeZoneAware ? ' local' : ''}
-          </AppText>
-        </View>
-      ) : null}
-      {details.confirmationCode ? (
-        <Pressable
-          accessibilityRole={confirmationUris.length ? 'button' : undefined}
-          accessibilityLabel={
-            confirmationUris.length
-              ? 'View uploaded flight confirmation'
-              : undefined
-          }
-          disabled={!confirmationUris.length}
-          onPress={openConfirmation}
-          style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Confirmation
-          </AppText>
-          <AppText variant="callout" color="primary" selectable fit style={styles.detailValue}>
-            {details.confirmationCode}
-          </AppText>
-        </Pressable>
-      ) : null}
-      {details.seat ? (
-        <View style={styles.detailRow}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
-            Seat
-          </AppText>
-          <AppText variant="callout" selectable fit style={styles.detailValue}>
-            {details.seat}
-          </AppText>
-        </View>
-      ) : null}
+    <TravelDetailsSummaryCard
+      title="Flight"
+      subtitle={carrier || route || undefined}
+      icon="flight"
+      accentColor={FLIGHT_ACCENT}
+      tintColor={FLIGHT_TINT}
+      confirmationCode={details.confirmationCode}
+      onPressConfirmation={
+        confirmationUris.length ? openConfirmation : undefined
+      }
+      rows={rows}>
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="flight"
+        accentColor={FLIGHT_ACCENT}
         accessibilityLabel="View uploaded flight confirmation"
       />
-    </View>
+    </TravelDetailsSummaryCard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  detailValue: { flexShrink: 1, minWidth: 0, textAlign: 'right' },
-  flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
-});

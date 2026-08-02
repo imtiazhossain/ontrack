@@ -23,7 +23,16 @@ function unitSymbol(unit: TemperatureUnit): string {
 }
 
 function formatCurrentSummary(weather: DestinationCurrentWeather): string {
-  return `${weather.symbol} ${weather.temperature}${unitSymbol(weather.temperatureUnit)}`;
+  const alternateUnit: TemperatureUnit = weather.temperatureUnit === 'fahrenheit'
+    ? 'celsius'
+    : 'fahrenheit';
+  const alternateTemperature = Math.round(
+    weather.temperatureUnit === 'fahrenheit'
+      ? (weather.temperature - 32) * (5 / 9)
+      : (weather.temperature * 9) / 5 + 32,
+  );
+
+  return `${weather.temperature}${unitSymbol(weather.temperatureUnit)} · ${alternateTemperature}${unitSymbol(alternateUnit)}`;
 }
 
 /** Trip-card Weather action with live destination conditions above the label. */
@@ -43,6 +52,7 @@ export function TravelWeatherAction({
   const iconTone = chrome.icons.clock;
   const { s, spacing: rs, layout } = useResponsive();
   const iconBox = Math.max(28, s(30));
+  const surface = theme.name === 'light' ? '#FFFEFC' : chrome.fieldBg;
   const temperatureUnit = unitForDateFormat(dateDisplayFormat);
   const [current, setCurrent] = useState<DestinationCurrentWeather>();
 
@@ -64,7 +74,7 @@ export function TravelWeatherAction({
 
   const summary = current ? formatCurrentSummary(current) : undefined;
   const accessibilityLabel = summary
-    ? `Weather in ${destination}, currently ${current!.temperature}${unitSymbol(current!.temperatureUnit)} ${current!.condition}. Open Google Weather.`
+    ? `Weather in ${destination}, currently ${summary}, ${current!.condition}. Open Google Weather.`
     : `View Google Weather for ${destination}`;
 
   return (
@@ -80,7 +90,7 @@ export function TravelWeatherAction({
       style={({ pressed }) => [
         styles.action,
         {
-          backgroundColor: chrome.fieldBg,
+          backgroundColor: surface,
           borderColor: chrome.fieldBorder,
           borderRadius: radii.lg,
           minHeight: Math.max(layout.minTapTarget, s(48)),
@@ -104,25 +114,28 @@ export function TravelWeatherAction({
         <Symbol name="weather" size="sm" color={iconTone.fg} />
       </View>
       <View style={styles.copy}>
-        {summary ? (
-          <AppText
-            variant="callout"
-            fit
-            numberOfLines={1}
-            style={[styles.detail, { color: chrome.title }]}>
-            {summary}
-          </AppText>
-        ) : null}
         <AppText
           variant="callout"
-          fit
-          numberOfLines={1}
-          style={[styles.label, { color: chrome.label }]}>
-          Weather
+          allowFontScaling={false}
+          maxFontSizeMultiplier={1}
+          numberOfLines={2}
+          style={[
+            styles.label,
+            {
+              color: chrome.label,
+              fontSize: s(14),
+              lineHeight: s(18),
+            },
+          ]}>
+          {summary ? `Weather · ${summary}` : 'Weather'}
         </AppText>
       </View>
       <View style={styles.chevron}>
-        <Symbol name="chevron-right" size="sm" color={chrome.subtitle} />
+        <Symbol
+          name="chevron-right"
+          size={11}
+          color={theme.name === 'light' ? '#9A876C' : chrome.subtitle}
+        />
       </View>
     </Pressable>
   );
@@ -144,15 +157,14 @@ const styles = StyleSheet.create({
     gap: 1,
     justifyContent: 'center',
   },
-  detail: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '600',
-  },
   label: {
     fontFamily: fontFamilies.serif,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   chevron: {
+    width: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
     marginLeft: 'auto',
   },

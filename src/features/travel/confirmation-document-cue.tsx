@@ -24,16 +24,19 @@ import {
 export function ConfirmationDocumentCue({
   uris,
   kind,
+  accentColor,
   accessibilityLabel = 'View uploaded confirmation',
 }: {
   uris?: string[];
   kind: 'flight' | 'rental' | 'stay';
+  accentColor?: string;
   accessibilityLabel?: string;
 }) {
   const theme = useTheme();
   const { s } = useResponsive();
   const { width } = useWindowDimensions();
   const [viewerOpen, setViewerOpen] = useState(false);
+  const accent = accentColor ?? theme.accentPrimary;
   const openableUris = confirmationUrisForDisplay(uris, kind);
   if (!openableUris.length) return null;
 
@@ -58,17 +61,20 @@ export function ConfirmationDocumentCue({
         style={({ pressed }) => [
           styles.cue,
           {
-            borderColor: theme.accentPrimary,
-            backgroundColor: theme.backgroundElevated,
+            borderColor: accent,
+            backgroundColor: accent,
             minHeight: Math.max(44, s(40)),
             opacity: pressed ? 0.85 : 1,
           },
         ]}>
-        <Symbol name="receipt" size="sm" color={theme.accentPrimary} />
-        <AppText variant="callout" color="accent" fit style={styles.cueLabel}>
+        <Symbol name="receipt" size="sm" color={theme.textOnAccent} />
+        <AppText
+          variant="callout"
+          fit
+          style={[styles.cueLabel, { color: theme.textOnAccent }]}>
           View Confirmation
         </AppText>
-        <Symbol name="chevron-right" size="sm" color={theme.accentPrimary} />
+        <Symbol name="chevron-right" size="sm" color={theme.textOnAccent} />
       </Pressable>
 
       <Modal
@@ -121,7 +127,10 @@ export function ConfirmationDocumentCue({
             ))}
           </ScrollView>
           {imageUris.length > 1 ? (
-            <AppText variant="caption" color="secondary" style={styles.pageHint}>
+            <AppText
+              variant="caption"
+              color="secondary"
+              style={styles.pageHint}>
               Swipe for More Pages
             </AppText>
           ) : null}
@@ -137,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

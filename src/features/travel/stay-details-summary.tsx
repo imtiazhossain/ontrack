@@ -1,8 +1,3 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
-import { useTheme } from '@/hooks/use-theme';
 import {
   formatDateKeyShort,
   formatMinutes,
@@ -14,8 +9,11 @@ import {
   openConfirmationAttachments,
 } from './confirmation-attachments';
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
-import { travelOverlineStyle } from './travel-chrome';
+import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelStayDetails } from './types';
+
+const STAY_ACCENT = '#2F6796';
+const STAY_TINT = '#E1EBF5';
 
 function formatStamp(
   date: string | undefined,
@@ -40,8 +38,11 @@ export function StayDetailsSummary({
   checkinMinutes?: number;
   dateDisplayFormat?: DateDisplayFormat;
 }) {
-  const theme = useTheme();
-  const checkinStamp = formatStamp(checkinDate, checkinMinutes, dateDisplayFormat);
+  const checkinStamp = formatStamp(
+    checkinDate,
+    checkinMinutes,
+    dateDisplayFormat,
+  );
   const checkoutStamp = formatStamp(
     details.checkoutDate,
     details.checkoutMinutes,
@@ -65,108 +66,42 @@ export function StayDetailsSummary({
     confirmationUris.length > 0;
   if (!hasBody) return null;
 
+  const rows = [
+    checkinStamp
+      ? { label: 'Check In', value: checkinStamp, icon: 'calendar' as const }
+      : undefined,
+    checkoutStamp
+      ? { label: 'Check Out', value: checkoutStamp, icon: 'calendar' as const }
+      : undefined,
+    details.reservationEmail
+      ? {
+          label: 'Reservation Email',
+          value: details.reservationEmail,
+          icon: 'personal' as const,
+        }
+      : undefined,
+    details.notes
+      ? { label: 'Notes', detail: details.notes, icon: 'note' as const }
+      : undefined,
+  ].filter((row): row is NonNullable<typeof row> => Boolean(row));
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.accentFaint }]}>
-      <View style={styles.header}>
-        <Symbol name="lodging" size="sm" color={theme.textPrimary} />
-        <View style={styles.flex}>
-          <AppText variant="subheading" color="primary" fit>
-            Stay
-          </AppText>
-        </View>
-      </View>
-      {details.confirmationCode ? (
-        <Pressable
-          accessibilityRole={confirmationUris.length ? 'button' : undefined}
-          accessibilityLabel={
-            confirmationUris.length
-              ? 'View uploaded stay confirmation'
-              : undefined
-          }
-          disabled={!confirmationUris.length}
-          onPress={openConfirmation}
-          style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Confirmation
-          </AppText>
-          <AppText
-            variant="callout"
-            color="primary"
-            selectable
-            fit
-            style={styles.detailValue}>
-            {details.confirmationCode}
-          </AppText>
-        </Pressable>
-      ) : null}
-      {details.reservationEmail ? (
-        <View style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Email
-          </AppText>
-          <AppText
-            variant="callout"
-            color="primary"
-            selectable
-            fit
-            style={styles.detailValue}>
-            {details.reservationEmail}
-          </AppText>
-        </View>
-      ) : null}
-      {checkinStamp ? (
-        <View style={styles.block}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Check In
-          </AppText>
-          <AppText variant="callout" color="primary" fit>
-            {checkinStamp}
-          </AppText>
-        </View>
-      ) : null}
-      {checkoutStamp ? (
-        <View style={styles.block}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Check Out
-          </AppText>
-          <AppText variant="callout" color="primary" fit>
-            {checkoutStamp}
-          </AppText>
-        </View>
-      ) : null}
-      {details.notes ? (
-        <View style={styles.block}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Notes
-          </AppText>
-          <AppText variant="callout" color="primary" selectable>
-            {details.notes}
-          </AppText>
-        </View>
-      ) : null}
+    <TravelDetailsSummaryCard
+      title="Stay"
+      icon="lodging"
+      accentColor={STAY_ACCENT}
+      tintColor={STAY_TINT}
+      confirmationCode={details.confirmationCode}
+      onPressConfirmation={
+        confirmationUris.length ? openConfirmation : undefined
+      }
+      rows={rows}>
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="stay"
+        accentColor={STAY_ACCENT}
         accessibilityLabel="View uploaded stay confirmation"
       />
-    </View>
+    </TravelDetailsSummaryCard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  detailValue: { flexShrink: 1, minWidth: 0, textAlign: 'right' },
-  block: { gap: spacing.xxs },
-  flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
-});

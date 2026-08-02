@@ -1,11 +1,9 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Symbol } from '@/components/primitives';
-import type { AppIconName } from '@/design-system';
-import { fontFamilies, spacing, type Theme } from '@/design-system';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { fontFamilies, type AppIconName, type Theme } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -92,6 +90,7 @@ export function TravelSurfaceCard({
   stripeColor,
   stripe = Boolean(stripeColor),
   style,
+  bodyStyle,
   padding,
 }: PropsWithChildren<{
   /** @deprecated Prefer `stripe` — solid override when a non-gold accent is needed. */
@@ -99,6 +98,7 @@ export function TravelSurfaceCard({
   /** Metallic gold left rail (default when `stripeColor` is set). */
   stripe?: boolean;
   style?: ViewStyle;
+  bodyStyle?: ViewStyle;
   padding?: number;
 }>) {
   const theme = useTheme();
@@ -138,66 +138,7 @@ export function TravelSurfaceCard({
           )}
         </View>
       ) : null}
-      <View style={[styles.cardBody, { padding: pad, gap: rs.md }]}>{children}</View>
-    </View>
-  );
-}
-
-/**
- * Sheet / landing header — serif display title matching Add Stay chrome.
- */
-export function TravelSkyHeader({
-  eyebrow,
-  title,
-  subtitle,
-  trailing,
-}: {
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
-  trailing?: ReactNode;
-}) {
-  const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
-  const { spacing: rs, s } = useResponsive();
-  return (
-    <View
-      style={[
-        styles.editorialHeader,
-        {
-          gap: rs.xs,
-          paddingVertical: rs.sm,
-          minHeight: Math.max(72, s(72)),
-        },
-      ]}>
-      <View style={[styles.editorialHeaderRow, { gap: rs.sm }]}>
-        <View style={styles.editorialHeaderCopy}>
-          {eyebrow ? (
-            <AppText
-              variant="overline"
-              fit
-              style={[travelOverlineStyle, styles.serif, { color: chrome.subtitle }]}>
-              {eyebrow}
-            </AppText>
-          ) : null}
-          <AppText
-            style={[styles.editorialTitle, { color: chrome.title }]}
-            fit
-            numberOfLines={2}>
-            {title}
-          </AppText>
-          {subtitle ? (
-            <AppText
-              variant="callout"
-              style={[styles.serif, { color: chrome.subtitle }]}
-              numberOfLines={2}>
-              {subtitle}
-            </AppText>
-          ) : null}
-        </View>
-        {trailing}
-      </View>
-      <View style={[styles.editorialRule, { backgroundColor: chrome.fieldBorder }]} />
+      <View style={[styles.cardBody, { padding: pad, gap: rs.md }, bodyStyle]}>{children}</View>
     </View>
   );
 }
@@ -268,35 +209,6 @@ const styles = StyleSheet.create({
   cardBody: {
     flex: 1,
     minWidth: 0,
-  },
-  editorialHeader: {
-    width: '100%',
-  },
-  editorialHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  editorialHeaderCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: spacing.xxs,
-  },
-  editorialTitle: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '400',
-    letterSpacing: -0.6,
-  },
-  editorialRule: {
-    height: StyleSheet.hairlineWidth,
-    width: '100%',
-    marginTop: spacing.xs,
-  },
-  serif: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
   },
   sectionLabel: {
     flexDirection: 'row',

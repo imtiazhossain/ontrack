@@ -92,6 +92,7 @@ interface IconButtonProps {
   icon: AppIconName;
   onPress: () => void;
   color?: string;
+  iconSize?: keyof ReturnType<typeof useResponsive>['iconSizes'] | number;
   background?: string;
   borderColor?: string;
   shape?: 'circle' | 'rounded';
@@ -106,6 +107,7 @@ export function IconButton({
   icon,
   onPress,
   color,
+  iconSize = 'md',
   background,
   borderColor,
   shape = 'circle',
@@ -146,7 +148,7 @@ export function IconButton({
       {loading ? (
         <LoadingSpinner size={Math.round(iconSizes.md * 0.95)} color={spinnerColor} />
       ) : (
-        <Symbol name={icon} size="md" color={tint} />
+        <Symbol name={icon} size={iconSize} color={tint} />
       )}
     </Pressable>
   );

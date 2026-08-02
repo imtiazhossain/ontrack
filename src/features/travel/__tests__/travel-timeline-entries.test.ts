@@ -99,7 +99,7 @@ describe('travel timeline entries', () => {
 
     const [pickup, dropoff] = expandTimelineEntries([rental]);
     expect(timelineEntryCaption(pickup, 'mdy')).toMatch(/6:30 AM/);
-    expect(timelineEntryCaption(dropoff, 'mdy')).toMatch(/3 PM/);
+    expect(timelineEntryCaption(dropoff, 'mdy')).toMatch(/3:00 PM/);
   });
 
   it('keeps activities as a single marker with their title', () => {

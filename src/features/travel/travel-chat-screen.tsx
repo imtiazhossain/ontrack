@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
@@ -31,8 +32,11 @@ import {
 } from '@/features/travel/chat';
 import {
   travelCardBorder,
-  travelPanelTint,
+  travelCardFill,
+  travelPageBg,
 } from '@/features/travel/travel-surface';
+import { TravelSheetHeader } from '@/features/travel/travel-sheet';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
@@ -41,7 +45,9 @@ type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
 export function TravelChatScreen({ planId }: { planId: string }) {
   const theme = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { layout: responsiveLayout, spacing: rs } = useResponsive();
   const listRef =
     useRef<ComponentRef<typeof FlashList<OptimisticTravelChatMessage>>>(null);
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
@@ -214,7 +220,22 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
   if (!plan) {
     return (
-      <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
+      <View
+        style={[
+          styles.fill,
+          {
+            backgroundColor: travelPageBg(theme),
+            paddingTop: insets.top,
+            paddingHorizontal: responsiveLayout.screenPadding,
+          },
+        ]}>
+        <TravelSheetHeader
+          eyebrow="Group Chat"
+          title="Travel"
+          subtitle="Plan Together · Stay Connected"
+          closeAccessibilityLabel="Close Group Chat"
+          onClose={() => router.back()}
+        />
         <EmptyState icon="chat" title="Trip Not Found" message="This trip is no longer available." />
       </View>
     );
@@ -222,9 +243,19 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
   if (!accessCode) {
     return (
-      <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-        <View style={styles.paddedHeader}>
-          <AppText variant="title">Trip Chat</AppText>
+      <View
+        style={[
+          styles.fill,
+          { backgroundColor: travelPageBg(theme), paddingTop: insets.top },
+        ]}>
+        <View style={{ paddingHorizontal: responsiveLayout.screenPadding }}>
+          <TravelSheetHeader
+            eyebrow="Group Chat"
+            title={plan.title}
+            subtitle="Plan Together · Stay Connected"
+            closeAccessibilityLabel="Close Group Chat"
+            onClose={() => router.back()}
+          />
         </View>
         <View style={styles.center}>
           <EmptyState
@@ -238,24 +269,38 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   }
 
   return (
-    <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
-      <View style={[styles.header, { borderBottomColor: travelCardBorder(theme), backgroundColor: theme.backgroundElevated }]}>
-        <View style={styles.headerCopy}>
-          <AppText variant="heading" numberOfLines={1} fit>
-            {plan.title}
-          </AppText>
-          <AppText variant="caption" color="secondary" fit>
-            {plan.id === ALL_ACCOUNTS_TEST_TRIP.id
-              ? 'Shared Test Chat'
+    <View
+      style={[
+        styles.fill,
+        { backgroundColor: travelPageBg(theme), paddingTop: insets.top },
+      ]}>
+      <View style={{ paddingHorizontal: responsiveLayout.screenPadding }}>
+        <TravelSheetHeader
+          eyebrow="Group Chat"
+          title={plan.title}
+          subtitle={
+            plan.id === ALL_ACCOUNTS_TEST_TRIP.id
+              ? 'Shared Test Chat · Plan Together'
               : `${plan.participants.length + 1} ${
                   plan.participants.length === 0 ? 'Trip Member' : 'Trip Members'
-                }`}
-          </AppText>
-        </View>
+                } · Plan Together`
+          }
+          closeAccessibilityLabel="Close Group Chat"
+          onClose={() => router.back()}
+        />
       </View>
 
       {notificationsAvailable && !notificationsEnabled ? (
-        <View style={[styles.notificationBanner, { backgroundColor: travelPanelTint(theme) }]}>
+        <View
+          style={[
+            styles.notificationBanner,
+            {
+              backgroundColor: travelCardFill(theme),
+              borderColor: travelCardBorder(theme),
+              marginHorizontal: responsiveLayout.screenPadding,
+              marginBottom: rs.sm,
+            },
+          ]}>
           <View style={styles.bannerCopy}>
             <AppText variant="callout" color="accent" fit>
               Get New-Message Alerts
@@ -316,7 +361,8 @@ export function TravelChatScreen({ planId }: { planId: string }) {
                     styles.bubble,
                     item.pending ? styles.pendingBubble : undefined,
                     {
-                      backgroundColor: mine ? theme.accentPrimary : theme.backgroundSunken,
+                      backgroundColor: mine ? theme.accentPrimary : travelCardFill(theme),
+                      borderColor: mine ? 'transparent' : travelCardBorder(theme),
                     },
                   ]}>
                   <AppText selectable color={mine ? 'onAccent' : 'primary'}>
@@ -345,7 +391,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           styles.composer,
           {
             borderTopColor: travelCardBorder(theme),
-            backgroundColor: theme.backgroundElevated,
+            backgroundColor: travelPageBg(theme),
             paddingBottom: Math.max(insets.bottom, spacing.sm),
             marginBottom: keyboardInset,
           },
@@ -362,7 +408,11 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           style={[
             styles.input,
             typography.body,
-            { color: theme.textPrimary, backgroundColor: theme.backgroundSunken },
+            {
+              color: theme.textPrimary,
+              backgroundColor: travelCardFill(theme),
+              borderColor: travelCardBorder(theme),
+            },
           ]}
         />
         <IconButton
@@ -380,16 +430,6 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  paddedHeader: { paddingHorizontal: layout.screenPadding, paddingTop: spacing.sm },
-  header: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: layout.screenPadding,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerCopy: { flex: 1, gap: spacing.xxs },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -401,8 +441,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: layout.screenPadding,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+    boxShadow: '0 3px 12px rgba(51, 39, 28, 0.10)',
   },
   bannerCopy: { flex: 1, gap: spacing.xxs },
   error: { paddingHorizontal: layout.screenPadding, paddingTop: spacing.sm },
@@ -416,6 +460,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    borderWidth: StyleSheet.hairlineWidth,
   },
   pendingBubble: { opacity: 0.66 },
   myTimestamp: { textAlign: 'right' },
@@ -435,5 +480,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });

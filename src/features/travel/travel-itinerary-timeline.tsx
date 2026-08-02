@@ -4,8 +4,10 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
+import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import { formatHourLabel, hourBucketMinutes } from '@/features/travel/travel-hour-label';
 import {
   dayStripeColor,
@@ -22,6 +24,7 @@ import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
   TRAVEL_CARD_SHADOW,
   TRAVEL_EDITORIAL_ACCENT,
+  travelCardBorder,
   travelCardFill,
   travelPanelTint,
 } from '@/features/travel/travel-surface';
@@ -109,7 +112,7 @@ export function TravelItineraryTimeline({
   onToggleDay: (date: string) => void;
   onEditedFlightDetailsChange: (value: FlightDetailsDraft) => void;
   onImportFlight: (itemId: string) => void;
-  onSaveFlightDetails: (itemId: string) => void;
+  onSaveFlightDetails: (itemId: string, schedule: FlightScheduleDraft) => void;
   onCancelFlightEdit: () => void;
   onBeginFlightEdit: (
     itemId: string,
@@ -117,7 +120,10 @@ export function TravelItineraryTimeline({
   ) => void;
   onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: (itemId: string) => void;
-  onSaveRentalDetails: (itemId: string) => void;
+  onSaveRentalDetails: (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => void;
   onCancelRentalEdit: () => void;
   onBeginRentalEdit: (
     itemId: string,
@@ -125,7 +131,10 @@ export function TravelItineraryTimeline({
   ) => void;
   onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
   onImportStay: (itemId: string) => void;
-  onSaveStayDetails: (itemId: string) => void;
+  onSaveStayDetails: (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => void;
   onCancelStayEdit: () => void;
   onBeginStayEdit: (
     itemId: string,
@@ -140,12 +149,14 @@ export function TravelItineraryTimeline({
   ) => void;
 }) {
   const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const days = groupTimelineEntriesByDate(expandTimelineEntries(items));
-  const spineWidth = Math.max(28, s(32));
-  const dotSize = Math.max(22, s(24));
-  const dayTap = Math.max(44, s(48));
-  const stripeW = Math.max(4, s(5));
+  const timeWidth = Math.max(46, s(48));
+  const spineWidth = Math.max(24, s(26));
+  const dotSize = Math.max(18, s(18));
+  const dayTap = Math.max(32, s(32));
+  const stripeW = Math.max(3, s(4));
+  const trailColor = theme.name === 'light' ? '#E2D0B8' : theme.accentFaint;
 
   if (days.length === 0) {
     return (
@@ -183,7 +194,7 @@ export function TravelItineraryTimeline({
   }
 
   return (
-    <View style={[styles.timeline, { gap: rs.md }]}>
+    <View style={[styles.timeline, { gap: rs.xs }]}>
       {days.map((day, dayIndex) => {
         const dayNumber = dayNumberFor(plan.startDate, day.date);
         const dateLabel = formatDateKeyShort(day.date, dateDisplayFormat);
@@ -200,29 +211,49 @@ export function TravelItineraryTimeline({
               styles.dayCard,
               {
                 backgroundColor: travelCardFill(theme),
-                borderRadius: 18,
+                borderRadius: Math.max(8, s(9)),
                 borderCurve: 'continuous',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: travelCardBorder(theme),
                 boxShadow: TRAVEL_CARD_SHADOW,
                 overflow: 'hidden',
               },
             ]}>
             <View style={[styles.dayStripe, { width: stripeW, backgroundColor: stripe }]} />
-            <View style={[styles.dayContent, { gap: rs.sm, padding: rs.md }]}>
+            <View
+              style={[
+                styles.dayContent,
+                {
+                  gap: rs.xxs,
+                  paddingTop: rs.xxs,
+                  paddingBottom: rs.sm,
+                  paddingLeft: rs.md,
+                  paddingRight: rs.sm,
+                },
+              ]}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: dayExpanded }}
                 accessibilityLabel={dayTitle}
                 onPress={() => onToggleDay(day.date)}
-                style={[styles.dayHeader, { minHeight: dayTap, gap: rs.sm }]}>
+                hitSlop={6}
+                style={[styles.dayHeader, { minHeight: dayTap, gap: rs.xs }]}>
                 <View style={styles.dayTitleBlock}>
-                  <AppText variant="heading" fit style={styles.dayNumber}>
+                  <AppText variant="callout" fit style={styles.dayNumber}>
                     Day {dayNumber}
                   </AppText>
                   <AppText
                     variant="caption"
                     color="secondary"
                     fit
-                    style={[travelOverlineStyle, styles.dayMeta]}>
+                    style={[
+                      travelOverlineStyle,
+                      styles.dayMeta,
+                      {
+                        fontSize: typography.overline.fontSize,
+                        lineHeight: typography.overline.lineHeight,
+                      },
+                    ]}>
                     {weekday} · {dateLabel}
                   </AppText>
                 </View>
@@ -231,11 +262,15 @@ export function TravelItineraryTimeline({
                     styles.countChip,
                     {
                       backgroundColor: travelPanelTint(theme),
-                      minHeight: Math.max(28, s(28)),
+                      minHeight: Math.max(18, s(18)),
                       paddingHorizontal: rs.sm,
                     },
                   ]}>
-                  <AppText variant="caption" color="accent" fit>
+                  <AppText
+                    variant="caption"
+                    color="accent"
+                    fit
+                    style={{ fontSize: typography.overline.fontSize }}>
                     {entryCount} {entryCount === 1 ? 'Stop' : 'Stops'}
                   </AppText>
                 </View>
@@ -243,23 +278,22 @@ export function TravelItineraryTimeline({
                   style={[
                     styles.dayChevron,
                     {
-                      minHeight: Math.max(32, s(32)),
-                      minWidth: Math.max(32, s(32)),
+                      minHeight: Math.max(18, s(18)),
+                      minWidth: Math.max(18, s(18)),
                       borderRadius: radii.pill,
                       backgroundColor: theme.backgroundSunken,
                     },
                   ]}>
                   <Symbol
                     name={dayExpanded ? 'chevron-up' : 'chevron-down'}
-                    size="sm"
+                    size={10}
                     color={theme.textTertiary}
                   />
                 </View>
               </Pressable>
               {dayExpanded ? (
-                <View style={{ gap: rs.md }}>
+                <View style={{ gap: rs.xs }}>
                   {day.entries.map((entry, index) => {
-                    const isLast = index === day.entries.length - 1;
                     const { item } = entry;
                     const accent = kindAccent(item.kind, theme);
                     const hour = hourBucketMinutes(entry.startMinutes);
@@ -269,51 +303,60 @@ export function TravelItineraryTimeline({
                         : undefined;
                     const showHour = prevHour !== hour;
                     return (
-                      <View key={entry.key} style={[styles.entry, { gap: rs.xs }]}>
-                        {showHour ? (
-                          <AppText
-                            variant="caption"
-                            color="tertiary"
-                            fit
-                            style={styles.hourLabel}>
-                            {formatHourLabel(entry.startMinutes)}
-                          </AppText>
-                        ) : null}
+                      <View
+                        key={entry.key}
+                        style={[styles.entryRow, { gap: rs.xs }]}>
+                        <View style={[styles.timeColumn, { width: timeWidth }]}>
+                          {showHour ? (
+                            <AppText
+                              variant="caption"
+                              color="tertiary"
+                              fit
+                              style={[
+                                styles.hourLabel,
+                                {
+                                  fontSize: typography.overline.fontSize,
+                                  lineHeight: typography.overline.lineHeight,
+                                },
+                              ]}>
+                              {formatHourLabel(entry.startMinutes)}
+                            </AppText>
+                          ) : null}
+                        </View>
+                        <View style={[styles.spineColumn, { width: spineWidth }]}>
+                          <View
+                            style={[
+                              styles.spineLine,
+                              {
+                                top: rs.xs + dotSize / 2,
+                                bottom: -rs.sm,
+                                backgroundColor: trailColor,
+                              },
+                            ]}
+                          />
+                          <View
+                            style={[
+                              styles.dot,
+                              {
+                                width: dotSize,
+                                height: dotSize,
+                                borderRadius: dotSize / 2,
+                                backgroundColor: accent,
+                                marginTop: rs.xs,
+                              },
+                            ]}>
+                            <Symbol
+                              name={kindIcon(item.kind)}
+                              size={10}
+                              color={theme.textOnAccent}
+                            />
+                          </View>
+                        </View>
                         <View
                           style={[
                             styles.cardRow,
-                            {
-                              gap: rs.sm,
-                              paddingLeft: rs.sm,
-                            },
+                            { gap: rs.xs },
                           ]}>
-                          <View style={[styles.spineColumn, { width: spineWidth }]}>
-                            <View
-                              style={[
-                                styles.dot,
-                                {
-                                  width: dotSize,
-                                  height: dotSize,
-                                  borderRadius: dotSize / 2,
-                                  backgroundColor: accent,
-                                  marginTop: rs.xxs,
-                                },
-                              ]}>
-                              <Symbol
-                                name={kindIcon(item.kind)}
-                                size={11}
-                                color={theme.textOnAccent}
-                              />
-                            </View>
-                            {!isLast ? (
-                              <View
-                                style={[
-                                  styles.spineLine,
-                                  { backgroundColor: theme.accentFaint },
-                                ]}
-                              />
-                            ) : null}
-                          </View>
                           <TravelTimelineNode
                             item={item}
                             plan={plan}
@@ -322,6 +365,11 @@ export function TravelItineraryTimeline({
                             entryDate={entry.date}
                             entryStartMinutes={entry.startMinutes}
                             showKindBadge={false}
+                            compact
+                            dense
+                            allowStructuredEditing={false}
+                            showStructuredDetails={false}
+                            collapsedChevron="right"
                             expanded={!minimizedItemIds.has(entry.key)}
                             dateDisplayFormat={dateDisplayFormat}
                             editingFlightItemId={editingFlightItemId}
@@ -344,21 +392,27 @@ export function TravelItineraryTimeline({
                             onToggle={() => onToggle(entry.key)}
                             onEditedFlightDetailsChange={onEditedFlightDetailsChange}
                             onImportFlight={() => onImportFlight(item.id)}
-                            onSaveFlightDetails={() => onSaveFlightDetails(item.id)}
+                            onSaveFlightDetails={(schedule) =>
+                              onSaveFlightDetails(item.id, schedule)
+                            }
                             onCancelFlightEdit={onCancelFlightEdit}
                             onBeginFlightEdit={() =>
                               onBeginFlightEdit(item.id, item.flight)
                             }
                             onEditedRentalDetailsChange={onEditedRentalDetailsChange}
                             onImportRental={() => onImportRental(item.id)}
-                            onSaveRentalDetails={() => onSaveRentalDetails(item.id)}
+                            onSaveRentalDetails={(schedule) =>
+                              onSaveRentalDetails(item.id, schedule)
+                            }
                             onCancelRentalEdit={onCancelRentalEdit}
                             onBeginRentalEdit={() =>
                               onBeginRentalEdit(item.id, item.rental)
                             }
                             onEditedStayDetailsChange={onEditedStayDetailsChange}
                             onImportStay={() => onImportStay(item.id)}
-                            onSaveStayDetails={() => onSaveStayDetails(item.id)}
+                            onSaveStayDetails={(schedule) =>
+                              onSaveStayDetails(item.id, schedule)
+                            }
                             onCancelStayEdit={onCancelStayEdit}
                             onBeginStayEdit={() =>
                               onBeginStayEdit(item.id, item.stay)
@@ -424,12 +478,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  entry: {
+  entryRow: {
     width: '100%',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    minWidth: 0,
+  },
+  timeColumn: {
+    flexShrink: 0,
+    justifyContent: 'center',
   },
   hourLabel: {
     flexShrink: 1,
     minWidth: 0,
+    textAlign: 'left',
   },
   cardRow: {
     flexDirection: 'row',
@@ -439,16 +501,16 @@ const styles = StyleSheet.create({
   },
   spineColumn: {
     alignItems: 'center',
+    flexShrink: 0,
+    position: 'relative',
   },
   dot: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   spineLine: {
-    flex: 1,
+    position: 'absolute',
     width: 3,
-    marginTop: 4,
-    minHeight: 16,
     borderRadius: 2,
   },
   emptyCard: {

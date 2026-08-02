@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { layout, radii, spacing } from '@/design-system';
+import { radii, shadows, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { formatMinutes, nowMinutes } from '@/utils/date';
+import { formatMinutes, formatTimePickerTitle, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
 import { IconButton } from './button';
@@ -38,7 +38,7 @@ export function TimeField({
 }: TimeFieldProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { spacing, s } = useResponsive();
+  const { spacing: rs, layout, s } = useResponsive();
   const [showPicker, setShowPicker] = useState(false);
   const [draftMinutes, setDraftMinutes] = useState(() =>
     clampMinutesFromMidnight(value ?? nowMinutes()),
@@ -48,6 +48,7 @@ export function TimeField({
     ? formatMinutes(clampMinutesFromMidnight(value))
     : placeholder;
   const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Time';
+  const pickerTitle = formatTimePickerTitle(resolvedA11yLabel);
   const stacked = Boolean(stackedLabel);
 
   const openPicker = () => {
@@ -61,7 +62,7 @@ export function TimeField({
   };
 
   return (
-    <View style={[styles.wrapper, { gap: spacing.sm }]}>
+    <View style={[styles.wrapper, { gap: rs.sm }]}>
       {label && !stacked ? (
         <AppText variant="overline" color="tertiary" fit>
           {label}
@@ -78,8 +79,8 @@ export function TimeField({
           {
             minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
             borderRadius: stacked ? radii.lg : radii.md,
-            paddingHorizontal: spacing.md,
-            paddingVertical: stacked ? spacing.sm : 0,
+            paddingHorizontal: rs.md,
+            paddingVertical: stacked ? rs.sm : 0,
             alignItems: stacked ? 'flex-start' : 'center',
             backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
@@ -166,19 +167,20 @@ export function TimeField({
               styles.pickerSheet,
               {
                 backgroundColor: theme.backgroundElevated,
-                padding: spacing.lg,
-                gap: spacing.sm,
+                maxWidth: Math.min(layout.maxContentWidth, s(420)),
+                padding: rs.md,
+                gap: rs.sm,
               },
             ]}>
-            <View style={[styles.pickerHeader, { gap: spacing.md }]}>
-              <AppText variant="subheading" fit style={styles.pickerTitle}>
-                {resolvedA11yLabel}
+            <View style={[styles.pickerHeader, { gap: rs.sm }]}>
+              <AppText variant="heading" fit style={styles.pickerTitle}>
+                {pickerTitle}
               </AppText>
               <IconButton
                 icon="close"
-                size={s(36)}
                 accessibilityLabel="Close time picker"
                 background={theme.backgroundSunken}
+                borderColor={theme.separator}
                 onPress={() => setShowPicker(false)}
               />
             </View>
@@ -203,12 +205,13 @@ export function TimeField({
                 styles.done,
                 {
                   minHeight: Math.max(44, s(48)),
-                  paddingHorizontal: spacing.lg,
+                  paddingHorizontal: rs.md,
                   backgroundColor: theme.accentPrimary,
+                  borderColor: theme.accentSoft,
                   opacity: pressed ? 0.85 : 1,
                 },
               ]}>
-              <AppText variant="callout" color="onAccent" fit>
+              <AppText variant="subheading" color="onAccent" fit>
                 Done
               </AppText>
             </Pressable>
@@ -241,14 +244,14 @@ const styles = StyleSheet.create({
   },
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   pickerSheet: {
     width: '100%',
-    maxWidth: layout.maxContentWidth,
     alignSelf: 'center',
+    ...shadows.overlay,
     borderRadius: radii.xl,
-    overflow: 'hidden',
+    borderCurve: 'continuous',
   },
   pickerHeader: {
     flexDirection: 'row',
@@ -261,10 +264,13 @@ const styles = StyleSheet.create({
   },
   timePicker: {
     width: '100%',
-    height: 180,
+    height: 156,
   },
   done: {
-    borderRadius: radii.md,
+    ...shadows.raised,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

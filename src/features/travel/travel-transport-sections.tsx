@@ -2,8 +2,10 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
+import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
 import type { TravelPlan } from '@/features/travel/types';
@@ -11,6 +13,18 @@ import { useResponsive } from '@/hooks/use-responsive';
 import type { DateDisplayFormat } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
+
+const TRANSPORT_ACCENTS = {
+  flight: '#A9782C',
+  stay: '#2F6796',
+  rental: '#557547',
+} as const;
+
+const TRANSPORT_TINTS = {
+  flight: '#F5EAD8',
+  stay: '#E1EBF5',
+  rental: '#E5ECE1',
+} as const;
 
 type TransportHandlers = {
   plan: TravelPlan;
@@ -34,7 +48,7 @@ type TransportHandlers = {
   onToggle: (itemId: string) => void;
   onEditedFlightDetailsChange: (value: FlightDetailsDraft) => void;
   onImportFlight: (itemId: string) => void;
-  onSaveFlightDetails: (itemId: string) => void;
+  onSaveFlightDetails: (itemId: string, schedule: FlightScheduleDraft) => void;
   onCancelFlightEdit: () => void;
   onBeginFlightEdit: (
     itemId: string,
@@ -42,7 +56,10 @@ type TransportHandlers = {
   ) => void;
   onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: (itemId: string) => void;
-  onSaveRentalDetails: (itemId: string) => void;
+  onSaveRentalDetails: (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => void;
   onCancelRentalEdit: () => void;
   onBeginRentalEdit: (
     itemId: string,
@@ -50,7 +67,10 @@ type TransportHandlers = {
   ) => void;
   onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
   onImportStay: (itemId: string) => void;
-  onSaveStayDetails: (itemId: string) => void;
+  onSaveStayDetails: (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => void;
   onCancelStayEdit: () => void;
   onBeginStayEdit: (
     itemId: string,
@@ -83,12 +103,23 @@ function TransportItemList({
   }
 
   return (
-    <View style={{ gap: rs.md }}>
+    <View style={{ gap: rs.xs }}>
       {items.map((item) => (
         <TravelTimelineNode
           key={item.id}
           item={item}
           plan={handlers.plan}
+          compact
+          accentColor={
+            item.kind === 'flight' || item.kind === 'stay' || item.kind === 'rental'
+              ? TRANSPORT_ACCENTS[item.kind]
+              : undefined
+          }
+          tintColor={
+            item.kind === 'flight' || item.kind === 'stay' || item.kind === 'rental'
+              ? TRANSPORT_TINTS[item.kind]
+              : undefined
+          }
           expanded={!handlers.minimizedItemIds.has(item.id)}
           dateDisplayFormat={handlers.dateDisplayFormat}
           editingFlightItemId={handlers.editingFlightItemId}
@@ -111,21 +142,27 @@ function TransportItemList({
           onToggle={() => handlers.onToggle(item.id)}
           onEditedFlightDetailsChange={handlers.onEditedFlightDetailsChange}
           onImportFlight={() => handlers.onImportFlight(item.id)}
-          onSaveFlightDetails={() => handlers.onSaveFlightDetails(item.id)}
+          onSaveFlightDetails={(schedule) =>
+            handlers.onSaveFlightDetails(item.id, schedule)
+          }
           onCancelFlightEdit={handlers.onCancelFlightEdit}
           onBeginFlightEdit={() =>
             handlers.onBeginFlightEdit(item.id, item.flight)
           }
           onEditedRentalDetailsChange={handlers.onEditedRentalDetailsChange}
           onImportRental={() => handlers.onImportRental(item.id)}
-          onSaveRentalDetails={() => handlers.onSaveRentalDetails(item.id)}
+          onSaveRentalDetails={(schedule) =>
+            handlers.onSaveRentalDetails(item.id, schedule)
+          }
           onCancelRentalEdit={handlers.onCancelRentalEdit}
           onBeginRentalEdit={() =>
             handlers.onBeginRentalEdit(item.id, item.rental)
           }
           onEditedStayDetailsChange={handlers.onEditedStayDetailsChange}
           onImportStay={() => handlers.onImportStay(item.id)}
-          onSaveStayDetails={() => handlers.onSaveStayDetails(item.id)}
+          onSaveStayDetails={(schedule) =>
+            handlers.onSaveStayDetails(item.id, schedule)
+          }
           onCancelStayEdit={handlers.onCancelStayEdit}
           onBeginStayEdit={() => handlers.onBeginStayEdit(item.id, item.stay)}
           onAddPhotos={() => handlers.onAddPhotos(item.id)}
@@ -168,12 +205,19 @@ export function TravelTransportSections({
   return (
     <TravelCollapsibleSection
       title="Flights, Stays & Rentals"
+      icon="itinerary"
+      accentColor={TRANSPORT_ACCENTS.flight}
+      card
+      compact
       expanded={transportExpanded}
       onToggle={onToggleTransport}
       titleVariant="caption">
-      <View style={[styles.stack, { gap: rs.md, paddingLeft: rs.lg }]}>
+      <View style={[styles.stack, { gap: rs.xs, paddingHorizontal: rs.sm }]}>
         <TravelCollapsibleSection
-          title="Flights"
+          title="FLIGHTS"
+          icon="flight"
+          accentColor={TRANSPORT_ACCENTS.flight}
+          compact
           expanded={flightsExpanded}
           onToggle={onToggleFlights}
           nested>
@@ -184,7 +228,10 @@ export function TravelTransportSections({
           />
         </TravelCollapsibleSection>
         <TravelCollapsibleSection
-          title="Stays"
+          title="STAYS"
+          icon="lodging"
+          accentColor={TRANSPORT_ACCENTS.stay}
+          compact
           expanded={staysExpanded}
           onToggle={onToggleStays}
           nested>
@@ -195,7 +242,10 @@ export function TravelTransportSections({
           />
         </TravelCollapsibleSection>
         <TravelCollapsibleSection
-          title="Rentals"
+          title="RENTALS"
+          icon="vehicles"
+          accentColor={TRANSPORT_ACCENTS.rental}
+          compact
           expanded={rentalsExpanded}
           onToggle={onToggleRentals}
           nested>

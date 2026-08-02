@@ -2,8 +2,10 @@ import { useId, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { borders, radii, spacing } from '@/design-system';
+import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
+import { borders, radii, spacing, type AppIconName } from '@/design-system';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 
@@ -62,6 +64,11 @@ export function ScrollableDropdown({
   onChange,
   open,
   onOpenChange,
+  icon,
+  iconBackground,
+  iconColor,
+  fieldBackground,
+  labelColor,
 }: {
   label: string;
   value: string;
@@ -70,8 +77,14 @@ export function ScrollableDropdown({
   /** Controlled open state — when set, parent coordinates exclusive open. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  icon?: AppIconName;
+  iconBackground?: string;
+  iconColor?: string;
+  fieldBackground?: string;
+  labelColor?: string;
 }) {
   const theme = useTheme();
+  const { s, spacing: rs } = useResponsive();
   const listId = useId();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isOpen = open ?? uncontrolledOpen;
@@ -105,16 +118,35 @@ export function ScrollableDropdown({
         style={({ pressed }) => [
           styles.field,
           {
-            backgroundColor: theme.backgroundSunken,
-            borderColor: isOpen ? theme.accentPrimary : theme.separator,
+            minHeight: icon ? Math.max(56, s(60)) : 58,
+            paddingHorizontal: icon ? rs.md : spacing.md,
+            paddingVertical: icon ? rs.sm : spacing.sm,
+            backgroundColor: fieldBackground ?? theme.backgroundSunken,
+            borderColor: isOpen
+              ? theme.accentPrimary
+              : icon
+                ? 'transparent'
+                : theme.separator,
             opacity: pressed ? 0.86 : 1,
           },
         ]}>
+        {icon ? (
+          <FieldLeadingIcon
+            name={icon}
+            backgroundColor={iconBackground}
+            color={iconColor}
+          />
+        ) : null}
         <View style={styles.fieldCopy}>
-          <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+          <AppText
+            variant={icon ? 'caption' : 'overline'}
+            color={icon ? undefined : 'tertiary'}
+            fit
+            numberOfLines={1}
+            style={icon ? { color: labelColor, fontWeight: '600' } : travelOverlineStyle}>
             {label}
           </AppText>
-          <AppText variant="callout" numberOfLines={1}>
+          <AppText variant={icon ? 'body' : 'callout'} fit numberOfLines={1}>
             {selectedLabel}
           </AppText>
         </View>
@@ -184,6 +216,7 @@ export function CurrencyDropdown({
   onChange,
   open,
   onOpenChange,
+  ...chromeProps
 }: {
   label: string;
   value: string;
@@ -191,7 +224,10 @@ export function CurrencyDropdown({
   onChange: (currency: string) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-}) {
+} & Pick<
+  Parameters<typeof ScrollableDropdown>[0],
+  'icon' | 'iconBackground' | 'iconColor' | 'fieldBackground' | 'labelColor'
+>) {
   return (
     <ScrollableDropdown
       label={label}
@@ -200,6 +236,7 @@ export function CurrencyDropdown({
       onChange={onChange}
       open={open}
       onOpenChange={onOpenChange}
+      {...chromeProps}
     />
   );
 }

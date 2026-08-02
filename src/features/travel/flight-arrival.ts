@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatMinutes,
   fromDateKey,
+  minutesBetween,
   toDateKey,
 } from '@/utils/date';
 
@@ -140,6 +141,38 @@ export function calculateFlightArrival(input: {
     dayOffset: dayOffsetBetween(input.date, arrival.date),
     timeZoneAware: true,
   };
+}
+
+/** Block time between local departure and arrival clocks, using airport zones when known. */
+export function calculateFlightDuration(input: {
+  departureDate: string;
+  departureMinutes: number;
+  arrivalDate: string;
+  arrivalMinutes: number;
+  departureAirport?: string;
+  arrivalAirport?: string;
+}): number {
+  const departureZone = airportTimeZone(input.departureAirport);
+  const arrivalZone = airportTimeZone(input.arrivalAirport);
+  if (!departureZone || !arrivalZone) {
+    return minutesBetween(
+      input.departureDate,
+      input.departureMinutes,
+      input.arrivalDate,
+      input.arrivalMinutes,
+    );
+  }
+  const departureUtc = zonedLocalToUtcMs(
+    input.departureDate,
+    input.departureMinutes,
+    departureZone,
+  );
+  const arrivalUtc = zonedLocalToUtcMs(
+    input.arrivalDate,
+    input.arrivalMinutes,
+    arrivalZone,
+  );
+  return Math.round((arrivalUtc - departureUtc) / 60_000);
 }
 
 export function formatFlightLandingLabel(arrival: FlightArrival): string {
