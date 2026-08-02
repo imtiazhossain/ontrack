@@ -16,10 +16,12 @@ export type ExpensePerson = { id: string; name: string };
 export function expensePeople(
   plan: Pick<
     TravelPlan,
-    'participants' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName' | 'sharedExpensePeople'
+    'id' | 'participants' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName' | 'sharedExpensePeople'
   >,
 ): ExpensePerson[] {
-  const isMember = Boolean(plan.chatAccessCode || plan.hostTripId);
+  const isMember =
+    Boolean(plan.chatAccessCode) ||
+    Boolean(plan.hostTripId?.trim() && plan.hostTripId.trim() !== plan.id);
   const people: ExpensePerson[] = [
     { id: TRAVEL_EXPENSE_SELF_ID, name: 'You' },
   ];

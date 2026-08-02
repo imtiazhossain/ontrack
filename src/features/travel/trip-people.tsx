@@ -10,12 +10,27 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
-import type { TravelParticipant } from '@/features/travel/types';
+import type {
+  TravelParticipant,
+  TravelTripRosterPerson,
+} from '@/features/travel/types';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
+export type TripHostPerson = {
+  name: string;
+  email?: string;
+  isSelf?: boolean;
+};
+
 interface TripPeopleProps {
+  host?: TripHostPerson;
   participants: TravelParticipant[];
+  /** Accepted members from the server roster (excludes host). */
+  rosterMembers?: TravelTripRosterPerson[];
+  /** When false, hide invite/remove/transfer controls (member read-only). */
+  canManage?: boolean;
   editing: boolean;
   name: string;
   email: string;
@@ -29,8 +44,13 @@ interface TripPeopleProps {
   onCancelInvite: () => void;
   onInvite: () => void;
   managingParticipantId?: string;
+  transferringUserId?: string;
   onResend: (participant: TravelParticipant) => void;
   onRemove: (participant: TravelParticipant) => void;
+  onMakeHost?: (member: TravelTripRosterPerson) => void;
+  onTransferAndLeave?: (member: TravelTripRosterPerson) => void;
+  onMakeHostParticipant?: (participant: TravelParticipant) => void;
+  onTransferAndLeaveParticipant?: (participant: TravelParticipant) => void;
 }
 
 function initials(name: string): string {
@@ -42,20 +62,75 @@ function initials(name: string): string {
     .join('');
 }
 
+function HostRow({ host }: { host: TripHostPerson }) {
+  const theme = useTheme();
+  const { s } = useResponsive();
+  const displayName = host.name.trim() || 'Host';
+  const label =
+    host.isSelf && !/^you$/i.test(displayName)
+      ? `${displayName} (You)`
+      : displayName;
+  return (
+    <View style={styles.person}>
+      <View
+        accessibilityLabel={`${label}, trip host`}
+        style={styles.personRow}>
+        <View style={[styles.avatar, { backgroundColor: theme.backgroundSunken }]}>
+          <AppText variant="callout" color="accent">
+            {initials(displayName)}
+          </AppText>
+        </View>
+        <View style={styles.personDetails}>
+          <View style={styles.acceptedNameRow}>
+            <AppText
+              variant="subheading"
+              selectable
+              fit
+              style={styles.friendName}>
+              {label}
+            </AppText>
+            <View
+              style={[
+                styles.status,
+                {
+                  backgroundColor: theme.accentFaint,
+                  minHeight: Math.max(28, s(28)),
+                },
+              ]}>
+              <AppText variant="caption" color="accent" fit>
+                Host
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function PersonRow({
   participant,
   accepted,
   managing,
+  transferring,
+  canManage,
   onResend,
   onRemove,
+  onMakeHost,
+  onTransferAndLeave,
 }: {
   participant: TravelParticipant;
   accepted: boolean;
   managing: boolean;
+  transferring?: boolean;
+  canManage: boolean;
   onResend: () => void;
   onRemove: () => void;
+  onMakeHost?: () => void;
+  onTransferAndLeave?: () => void;
 }) {
   const theme = useTheme();
+  const { spacing: rs, s } = useResponsive();
   return (
     <View style={styles.person}>
       <View
@@ -69,38 +144,82 @@ function PersonRow({
         <View style={styles.personDetails}>
           {accepted ? (
             <View style={styles.acceptedNameRow}>
-              <AppText variant="subheading" selectable style={styles.friendName}>
+              <AppText
+                variant="subheading"
+                selectable
+                fit
+                style={styles.friendName}>
                 {participant.name}
               </AppText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove friend ${participant.name}`}
-                disabled={managing}
-                onPress={onRemove}
-                style={({ pressed }) => [
-                  styles.inlineRemoveAction,
-                  { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
-                ]}>
-                <Symbol name="close" size="sm" color={theme.danger} />
-              </Pressable>
+              {canManage ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove friend ${participant.name}`}
+                  disabled={managing || transferring}
+                  onPress={onRemove}
+                  style={({ pressed }) => [
+                    styles.inlineRemoveAction,
+                    {
+                      opacity:
+                        managing || transferring ? 0.4 : pressed ? 0.6 : 1,
+                    },
+                  ]}>
+                  <Symbol name="close" size="sm" color={theme.danger} />
+                </Pressable>
+              ) : null}
             </View>
           ) : (
-            <AppText variant="subheading" selectable>{participant.name}</AppText>
-          )}
-          {participant.email ? (
-            <AppText variant="caption" color="secondary" selectable>
-              {participant.email}
+            <AppText variant="subheading" selectable fit>
+              {participant.name}
             </AppText>
-          ) : null}
+          )}
         </View>
         {!accepted ? (
           <View style={[styles.status, { backgroundColor: theme.backgroundSunken }]}>
             <Symbol name="clock" size="sm" color={theme.textTertiary} />
-            <AppText variant="caption" color="secondary">Pending</AppText>
+            <AppText variant="caption" color="secondary" fit>
+              Pending
+            </AppText>
           </View>
         ) : null}
       </View>
-      {!accepted ? (
+      {accepted && canManage && onMakeHost && onTransferAndLeave ? (
+        <View style={[styles.personActions, { gap: rs.sm }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Make ${participant.name} the trip host`}
+            disabled={Boolean(transferring)}
+            onPress={onMakeHost}
+            style={({ pressed }) => [
+              styles.personAction,
+              {
+                minHeight: Math.max(44, s(44)),
+                opacity: transferring ? 0.4 : pressed ? 0.6 : 1,
+              },
+            ]}>
+            <AppText variant="callout" color="accent" fit>
+              {transferring ? 'Working…' : 'Make host'}
+            </AppText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Transfer host to ${participant.name} and leave`}
+            disabled={Boolean(transferring)}
+            onPress={onTransferAndLeave}
+            style={({ pressed }) => [
+              styles.personAction,
+              {
+                minHeight: Math.max(44, s(44)),
+                opacity: transferring ? 0.4 : pressed ? 0.6 : 1,
+              },
+            ]}>
+            <AppText variant="callout" color="danger" fit>
+              Transfer & leave
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
+      {!accepted && canManage ? (
         <View style={styles.personActions}>
           <Pressable
             accessibilityRole="button"
@@ -112,7 +231,7 @@ function PersonRow({
               { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
             ]}>
             <Symbol name="send" size="sm" color={theme.accentPrimary} />
-            <AppText variant="callout" color="accent">
+            <AppText variant="callout" color="accent" fit>
               {managing ? 'Working…' : 'Resend'}
             </AppText>
           </Pressable>
@@ -125,7 +244,80 @@ function PersonRow({
               styles.personAction,
               { opacity: managing ? 0.4 : pressed ? 0.6 : 1 },
             ]}>
-            <AppText variant="callout" color="danger">Remove Invite</AppText>
+            <AppText variant="callout" color="danger" fit>
+              Remove Invite
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function RosterMemberRow({
+  member,
+  canManage,
+  transferring,
+  onMakeHost,
+  onTransferAndLeave,
+}: {
+  member: TravelTripRosterPerson;
+  canManage: boolean;
+  transferring: boolean;
+  onMakeHost?: () => void;
+  onTransferAndLeave?: () => void;
+}) {
+  const theme = useTheme();
+  const { spacing: rs, s } = useResponsive();
+  return (
+    <View style={styles.person}>
+      <View
+        accessibilityLabel={`${member.displayName}, trip friend`}
+        style={styles.personRow}>
+        <View style={[styles.avatar, { backgroundColor: theme.backgroundSunken }]}>
+          <AppText variant="callout" color="accent">
+            {initials(member.displayName)}
+          </AppText>
+        </View>
+        <View style={styles.personDetails}>
+          <AppText variant="subheading" selectable fit style={styles.friendName}>
+            {member.displayName}
+          </AppText>
+        </View>
+      </View>
+      {canManage && onMakeHost && onTransferAndLeave ? (
+        <View style={[styles.personActions, { gap: rs.sm }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Make ${member.displayName} the trip host`}
+            disabled={transferring}
+            onPress={onMakeHost}
+            style={({ pressed }) => [
+              styles.personAction,
+              {
+                minHeight: Math.max(44, s(44)),
+                opacity: transferring ? 0.4 : pressed ? 0.6 : 1,
+              },
+            ]}>
+            <AppText variant="callout" color="accent" fit>
+              {transferring ? 'Working…' : 'Make host'}
+            </AppText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Transfer host to ${member.displayName} and leave`}
+            disabled={transferring}
+            onPress={onTransferAndLeave}
+            style={({ pressed }) => [
+              styles.personAction,
+              {
+                minHeight: Math.max(44, s(44)),
+                opacity: transferring ? 0.4 : pressed ? 0.6 : 1,
+              },
+            ]}>
+            <AppText variant="callout" color="danger" fit>
+              Transfer & leave
+            </AppText>
           </Pressable>
         </View>
       ) : null}
@@ -134,7 +326,10 @@ function PersonRow({
 }
 
 export function TripPeople({
+  host,
   participants,
+  rosterMembers = [],
+  canManage = true,
   editing,
   name,
   email,
@@ -147,11 +342,30 @@ export function TripPeople({
   onCancelInvite,
   onInvite,
   managingParticipantId,
+  transferringUserId,
   onResend,
   onRemove,
+  onMakeHost,
+  onTransferAndLeave,
+  onMakeHostParticipant,
+  onTransferAndLeaveParticipant,
 }: TripPeopleProps) {
-  const accepted = participants.filter((person) => person.acceptedAt);
   const pending = participants.filter((person) => !person.acceptedAt);
+  const localAccepted = participants.filter((person) => person.acceptedAt);
+  const rosterEmails = new Set(
+    rosterMembers
+      .map((person) => person.email?.toLowerCase())
+      .filter((value): value is string => Boolean(value)),
+  );
+  const acceptedWithoutRoster = localAccepted.filter((person) => {
+    const emailKey = person.email?.toLowerCase();
+    return !emailKey || !rosterEmails.has(emailKey);
+  });
+  const hasPeople =
+    Boolean(host) ||
+    rosterMembers.length > 0 ||
+    localAccepted.length > 0 ||
+    pending.length > 0;
 
   return (
     <View style={styles.container}>
@@ -162,16 +376,46 @@ export function TripPeople({
           titleStyle={travelOverlineStyle}
         />
       ) : null}
-      {accepted.length > 0 ? (
+
+      {host || rosterMembers.length > 0 || acceptedWithoutRoster.length > 0 ? (
         <Card variant="sunken" style={styles.list}>
-          {accepted.map((person) => (
+          {host ? <HostRow host={host} /> : null}
+          {rosterMembers.map((member) => (
+            <RosterMemberRow
+              key={member.userId}
+              member={member}
+              canManage={canManage}
+              transferring={transferringUserId === member.userId}
+              onMakeHost={
+                onMakeHost ? () => onMakeHost(member) : undefined
+              }
+              onTransferAndLeave={
+                onTransferAndLeave
+                  ? () => onTransferAndLeave(member)
+                  : undefined
+              }
+            />
+          ))}
+          {acceptedWithoutRoster.map((person) => (
             <PersonRow
               key={person.id}
               participant={person}
               accepted
               managing={managingParticipantId === person.id}
+              transferring={transferringUserId === person.id}
+              canManage={canManage}
               onResend={() => onResend(person)}
               onRemove={() => onRemove(person)}
+              onMakeHost={
+                onMakeHostParticipant
+                  ? () => onMakeHostParticipant(person)
+                  : undefined
+              }
+              onTransferAndLeave={
+                onTransferAndLeaveParticipant
+                  ? () => onTransferAndLeaveParticipant(person)
+                  : undefined
+              }
             />
           ))}
         </Card>
@@ -179,7 +423,7 @@ export function TripPeople({
 
       {pending.length > 0 ? (
         <Card variant="sunken" style={styles.list}>
-          <AppText variant="overline" color="secondary" style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" style={travelOverlineStyle} fit>
             Invited
           </AppText>
           {pending.map((person) => (
@@ -188,6 +432,7 @@ export function TripPeople({
               participant={person}
               accepted={false}
               managing={managingParticipantId === person.id}
+              canManage={canManage}
               onResend={() => onResend(person)}
               onRemove={() => onRemove(person)}
             />
@@ -195,49 +440,55 @@ export function TripPeople({
         </Card>
       ) : null}
 
-      {participants.length === 0 && !editing ? (
+      {!hasPeople && !editing ? (
         <AppText variant="body" color="secondary">
-          No friends are on this trip yet. Invite someone to start planning together.
+          {canManage
+            ? 'No friends are on this trip yet. Invite someone to start planning together.'
+            : 'Trip friends will show up here once everyone has joined.'}
         </AppText>
       ) : null}
 
-      {editing ? (
-        <Card style={styles.form}>
-          <AppText variant="subheading">Invite a Friend</AppText>
-          <Input
-            label="Name"
-            value={name}
-            onChangeText={onNameChange}
-            placeholder="Friend’s name"
-            autoCapitalize="words"
-          />
-          <Input
-            label="onTrack account email"
-            value={email}
-            onChangeText={onEmailChange}
-            placeholder="friend@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <AppText variant="caption" color="secondary">
-            Only this signed-in account can open and view the trip.
-          </AppText>
-          {error ? <ErrorMessage message={error} selectable /> : null}
-          <View style={styles.actions}>
-            <Button disabled={inviting} onPress={onInvite}>
-              {inviting ? 'Creating invite…' : 'Create Invite'}
-            </Button>
-            <Button variant="ghost" disabled={inviting} onPress={onCancelInvite}>
-              Cancel
-            </Button>
-          </View>
-        </Card>
-      ) : (
-        <Button icon="invite" onPress={onBeginInvite}>
-          Invite a Friend
-        </Button>
-      )}
+      {canManage ? (
+        editing ? (
+          <Card style={styles.form}>
+            <AppText variant="subheading" fit>
+              Invite a Friend
+            </AppText>
+            <Input
+              label="Name"
+              value={name}
+              onChangeText={onNameChange}
+              placeholder="Friend’s name"
+              autoCapitalize="words"
+            />
+            <Input
+              label="onTrack account email"
+              value={email}
+              onChangeText={onEmailChange}
+              placeholder="friend@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <AppText variant="caption" color="secondary">
+              Only this signed-in account can open and view the trip.
+            </AppText>
+            {error ? <ErrorMessage message={error} selectable /> : null}
+            <View style={styles.actions}>
+              <Button disabled={inviting} onPress={onInvite}>
+                {inviting ? 'Creating invite…' : 'Create Invite'}
+              </Button>
+              <Button variant="ghost" disabled={inviting} onPress={onCancelInvite}>
+                Cancel
+              </Button>
+            </View>
+          </Card>
+        ) : (
+          <Button icon="invite" onPress={onBeginInvite}>
+            Invite a Friend
+          </Button>
+        )
+      ) : null}
     </View>
   );
 }
@@ -273,14 +524,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  personDetails: { flex: 1, gap: spacing.xxs },
+  personDetails: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
   acceptedNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 0,
   },
   friendName: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   inlineRemoveAction: {
     width: 44,

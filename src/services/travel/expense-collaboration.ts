@@ -42,9 +42,12 @@ export function isTravelExpenseMemberId(id: string): boolean {
 
 /** Member copies joined via invite/open-join (not the host's canonical plan). */
 export function isTravelExpenseMemberPlan(
-  plan: Pick<TravelPlan, 'chatAccessCode' | 'hostTripId'>,
+  plan: Pick<TravelPlan, 'id' | 'chatAccessCode' | 'hostTripId'>,
 ): boolean {
-  return Boolean(plan.chatAccessCode || plan.hostTripId);
+  if (plan.chatAccessCode) return true;
+  const hostTripId = plan.hostTripId?.trim();
+  if (!hostTripId) return false;
+  return hostTripId !== plan.id;
 }
 
 export function sharedExpenseTripId(plan: TravelPlan): string | undefined {

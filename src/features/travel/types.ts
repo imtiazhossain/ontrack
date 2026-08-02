@@ -78,6 +78,16 @@ export interface TravelParticipant {
   acceptedAt?: string;
 }
 
+/** Server roster person from list_travel_trip_roster (auth user ids + roles). */
+export interface TravelTripRosterPerson {
+  userId: string;
+  displayName: string;
+  email?: string;
+  role: 'host' | 'member';
+  inviteCode?: string;
+  acceptedAt?: string;
+}
+
 export type TravelExpenseCategory =
   | 'flight'
   | 'stay'

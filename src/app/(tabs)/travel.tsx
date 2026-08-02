@@ -486,8 +486,8 @@ export default function TravelScreen() {
                   <TravelSheetPrimaryAction
                     label={
                       plan.participants.length > 0
-                        ? `Friends · ${plan.participants.length}`
-                        : 'Friends'
+                        ? `Friends · ${plan.participants.length + 1}`
+                        : 'Friends · 1'
                     }
                     icon="people"
                     onPress={() => openFriends(plan.id)}

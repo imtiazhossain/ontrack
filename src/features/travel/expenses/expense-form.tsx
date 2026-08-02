@@ -42,6 +42,7 @@ import {
   itinerarySheetFieldProps,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
@@ -81,7 +82,7 @@ export function emptyExpenseForm(
   plan: TravelPlan,
   preferredCurrency?: string,
 ): ExpenseFormState {
-  const isMember = Boolean(plan.chatAccessCode || plan.hostTripId);
+  const isMember = isTravelMemberPlan(plan);
   return {
     title: '',
     amountText: '',
