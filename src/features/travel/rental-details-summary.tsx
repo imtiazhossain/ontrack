@@ -1,17 +1,19 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
-import { useTheme } from '@/hooks/use-theme';
-import { formatDateKeyShort, formatMinutes, type DateDisplayFormat } from '@/utils/date';
+import {
+  formatDateKeyShort,
+  formatMinutes,
+  type DateDisplayFormat,
+} from '@/utils/date';
 
 import {
   confirmationUrisForDisplay,
   openConfirmationAttachments,
 } from './confirmation-attachments';
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
-import { travelOverlineStyle } from './travel-chrome';
+import { TravelDetailsSummaryCard } from './travel-details-summary-card';
 import type { TravelRentalDetails } from './types';
+
+const RENTAL_ACCENT = '#557547';
+const RENTAL_TINT = '#E5ECE1';
 
 function formatStamp(
   date: string | undefined,
@@ -38,7 +40,6 @@ export function RentalDetailsSummary({
   pickupMinutes?: number;
   dateDisplayFormat?: DateDisplayFormat;
 }) {
-  const theme = useTheme();
   const pickupStamp = formatStamp(pickupDate, pickupMinutes, dateDisplayFormat);
   const dropoffStamp = formatStamp(
     details.dropoffDate,
@@ -53,105 +54,50 @@ export function RentalDetailsSummary({
     if (!confirmationUris.length) return;
     void openConfirmationAttachments(confirmationUris);
   };
+  const rows = [
+    pickupStamp || details.pickupLocation
+      ? {
+          label: 'Pick Up',
+          value: pickupStamp,
+          detail: details.pickupLocation,
+          icon: 'calendar' as const,
+        }
+      : undefined,
+    dropoffStamp || details.dropoffLocation
+      ? {
+          label: 'Drop Off',
+          value: dropoffStamp,
+          detail: details.dropoffLocation,
+          icon: 'calendar' as const,
+        }
+      : undefined,
+    details.vehicleClass
+      ? {
+          label: 'Vehicle',
+          value: details.vehicleClass,
+          icon: 'vehicles' as const,
+        }
+      : undefined,
+  ].filter((row): row is NonNullable<typeof row> => Boolean(row));
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.accentFaint }]}>
-      <View style={styles.header}>
-        <Symbol name="vehicles" size="sm" color={theme.textPrimary} />
-        <View style={styles.flex}>
-          {details.company ? (
-            <AppText variant="subheading" color="primary" fit>
-              {details.company}
-            </AppText>
-          ) : null}
-        </View>
-      </View>
-      {details.confirmationCode ? (
-        <Pressable
-          accessibilityRole={confirmationUris.length ? 'button' : undefined}
-          accessibilityLabel={
-            confirmationUris.length
-              ? 'View uploaded rental confirmation'
-              : undefined
-          }
-          disabled={!confirmationUris.length}
-          onPress={openConfirmation}
-          style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Confirmation
-          </AppText>
-          <AppText variant="callout" color="primary" selectable fit style={styles.detailValue}>
-            {details.confirmationCode}
-          </AppText>
-        </Pressable>
-      ) : null}
-      {details.vehicleClass ? (
-        <View style={styles.detailRow}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Vehicle
-          </AppText>
-          <AppText variant="callout" color="primary" fit style={styles.detailValue}>
-            {details.vehicleClass}
-          </AppText>
-        </View>
-      ) : null}
-      {pickupStamp || details.pickupLocation ? (
-        <View style={styles.block}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Pick Up
-          </AppText>
-          {pickupStamp ? (
-            <AppText variant="callout" color="primary" fit>
-              {pickupStamp}
-            </AppText>
-          ) : null}
-          {details.pickupLocation ? (
-            <AppText variant="caption" color="secondary">
-              {details.pickupLocation}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
-      {dropoffStamp || details.dropoffLocation ? (
-        <View style={styles.block}>
-          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
-            Drop Off
-          </AppText>
-          {dropoffStamp ? (
-            <AppText variant="callout" color="primary" fit>
-              {dropoffStamp}
-            </AppText>
-          ) : null}
-          {details.dropoffLocation ? (
-            <AppText variant="caption" color="secondary">
-              {details.dropoffLocation}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
+    <TravelDetailsSummaryCard
+      title={details.company || 'Rental'}
+      subtitle={details.company ? 'Car Rental' : undefined}
+      icon="vehicles"
+      accentColor={RENTAL_ACCENT}
+      tintColor={RENTAL_TINT}
+      confirmationCode={details.confirmationCode}
+      onPressConfirmation={
+        confirmationUris.length ? openConfirmation : undefined
+      }
+      rows={rows}>
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="rental"
+        accentColor={RENTAL_ACCENT}
         accessibilityLabel="View uploaded rental confirmation"
       />
-    </View>
+    </TravelDetailsSummaryCard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  detailValue: { flexShrink: 1, minWidth: 0, textAlign: 'right' },
-  block: { gap: spacing.xxs },
-  flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
-});

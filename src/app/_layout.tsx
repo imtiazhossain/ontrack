@@ -245,7 +245,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="travel/[id]" />
         <Stack.Screen name="travel/[id]/flights" />
         <Stack.Screen name="travel/[id]/stays" />
-        <Stack.Screen name="travel/[id]/chat" />
+        <Stack.Screen name="travel/[id]/chat" options={{ headerShown: false }} />
         <Stack.Screen name="nutrition-profile" />
         <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
         <Stack.Screen name="detail/food/[id]" />

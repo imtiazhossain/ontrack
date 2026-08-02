@@ -8,12 +8,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebView as WebViewType } from 'react-native-webview';
 
-import { AppText, IconButton } from '@/components/primitives';
+import { AppText } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import {
   trivagoFindBookingInjectScript,
   type StayBookingOpen,
 } from '@/features/travel/booking-open';
+import { travelPageBg } from '@/features/travel/travel-surface';
+import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -27,7 +29,7 @@ interface BookingOpenSheetProps {
 export function BookingOpenSheet({ target, onClose }: BookingOpenSheetProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { s, spacing: rs } = useResponsive();
+  const { spacing: rs } = useResponsive();
   const [loading, setLoading] = useState(true);
   const webRef = useRef<WebViewType>(null);
   const lastInjectUrl = useRef<string>('');
@@ -68,25 +70,17 @@ export function BookingOpenSheet({ target, onClose }: BookingOpenSheetProps) {
         style={[
           styles.root,
           {
-            backgroundColor: theme.backgroundPrimary,
+            backgroundColor: travelPageBg(theme),
             paddingTop: Math.max(insets.top, rs.sm),
           },
         ]}>
-        <View style={[styles.header, { paddingHorizontal: rs.md, gap: rs.sm }]}>
-          <View style={styles.headerText}>
-            <AppText variant="subheading" fit>
-              Booking
-            </AppText>
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              Opening your itinerary…
-            </AppText>
-          </View>
-          <IconButton
-            icon="close"
-            size={Math.max(36, s(40))}
-            background={theme.backgroundSunken}
-            onPress={onClose}
-            accessibilityLabel="Close booking"
+        <View style={{ paddingHorizontal: rs.lg }}>
+          <TravelSheetHeader
+            eyebrow="Booking"
+            title="Reservation"
+            subtitle="Opening Your Itinerary · Keep Details Together"
+            onClose={onClose}
+            closeAccessibilityLabel="Close Booking"
           />
         </View>
 
@@ -127,13 +121,6 @@ export function BookingOpenSheet({ target, onClose }: BookingOpenSheetProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 52,
-    paddingBottom: spacing.sm,
-  },
-  headerText: { flex: 1, minWidth: 0, flexShrink: 1, gap: 2 },
   webWrap: { flex: 1, position: 'relative' },
   webview: { flex: 1, backgroundColor: 'transparent' },
   loading: {

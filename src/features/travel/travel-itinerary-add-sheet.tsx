@@ -13,14 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, IconButton } from '@/components/primitives';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { radii } from '@/design-system';
 import {
   ITEM_KINDS,
   TravelItineraryForm,
 } from '@/features/travel/travel-itinerary-form';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
+import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -63,8 +63,7 @@ export function TravelItineraryAddSheet({
   const chrome = itinerarySheetChrome(theme);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { s, spacing: rs } = useResponsive();
-  const closeSize = Math.max(32, s(36));
+  const { spacing: rs } = useResponsive();
   const kindLabel =
     ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
   const title = kind === 'moment' ? 'Add Moment' : `Add ${kindLabel}`;
@@ -119,50 +118,20 @@ export function TravelItineraryAddSheet({
               paddingBottom: Math.max(insets.bottom, rs.sm),
             },
           ]}>
-          <View style={styles.handleRow}>
-            <View style={[styles.handle, { backgroundColor: chrome.handle }]} />
-          </View>
-
           <View
             style={[
               styles.header,
               {
                 paddingHorizontal: rs.lg,
-                paddingTop: rs.xs,
-                paddingBottom: rs.md,
               },
             ]}>
-            <View style={[styles.headerRow, { gap: rs.xs }]}>
-              <View style={[styles.headerCopy, { gap: rs.xs }]}>
-                <AppText
-                  fit
-                  numberOfLines={1}
-                  style={[
-                    styles.title,
-                    {
-                      color: chrome.title,
-                      fontSize: Math.max(26, s(28)),
-                      lineHeight: Math.max(32, s(34)),
-                    },
-                  ]}>
-                  {title}
-                </AppText>
-                <AppText
-                  variant="caption"
-                  numberOfLines={2}
-                  style={{ color: chrome.subtitle, flexShrink: 1, minWidth: 0 }}>
-                  {sheetSubtitle(kind)}
-                </AppText>
-              </View>
-              <IconButton
-                icon="close"
-                size={closeSize}
-                background={chrome.closeBg}
-                color={chrome.closeIcon}
-                accessibilityLabel="Close add to timeline"
-                onPress={onClose}
-              />
-            </View>
+            <TravelSheetHeader
+              eyebrow="Itinerary"
+              title={title}
+              subtitle={sheetSubtitle(kind)}
+              closeAccessibilityLabel="Close add to timeline"
+              onClose={onClose}
+            />
           </View>
 
           <ScrollView
@@ -230,31 +199,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  handleRow: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: radii.pill,
-  },
   header: {},
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  headerCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-  },
   scroll: {
     flexGrow: 1,
     flexShrink: 1,

@@ -8,12 +8,7 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 
-import {
-  AppText,
-  Button,
-  IconButton,
-  Symbol,
-} from '@/components/primitives';
+import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
@@ -21,15 +16,17 @@ import {
   resolveStayBookingOpen,
   type StayBookingOpen,
 } from '@/features/travel/booking-open';
+import { addressMapUrl } from '@/features/travel/address-map-link';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
-import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
+import { FlightDetailsCardEditor } from '@/features/travel/flight-details-card-editor';
+import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
 import { googleFlightStatusUrl } from '@/features/travel/flight-status-link';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
-import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
+import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
 import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import { StayDetailsEditor } from '@/features/travel/stay-details-editor';
+import { StayDetailsCardEditor } from '@/features/travel/stay-details-card-editor';
 import { StayDetailsSummary } from '@/features/travel/stay-details-summary';
 import { titleCaseTravelKind } from '@/features/travel/travel-chrome';
 import {
@@ -43,19 +40,16 @@ import {
 } from '@/features/travel/travel-item-notes-sheet';
 import {
   TRAVEL_CARD_SHADOW,
+  travelCardBorder,
   travelCardFill,
 } from '@/features/travel/travel-surface';
-import {
-  resolveTravelPhotoUris,
-} from '@/features/travel/travel-moment-media';
+import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
 import {
   timelineEntryCaption,
   type TravelTimelinePhase,
 } from '@/features/travel/travel-timeline-entries';
-import type {
-  TravelItemNote,
-  TravelPlan,
-} from '@/features/travel/types';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import type { TravelItemNote, TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
@@ -71,12 +65,24 @@ function validBookingUrl(value: string): boolean {
 }
 
 /** Split “Company · Location” titles so the location is readable on its own line. */
-function TimelineItemTitle({ title }: { title: string }) {
+function TimelineItemTitle({
+  title,
+  compact = false,
+  dense = false,
+}: {
+  title: string;
+  compact?: boolean;
+  dense?: boolean;
+}) {
+  const primaryVariant = dense ? 'caption' : compact ? 'callout' : 'subheading';
   const separator = ' · ';
   const breakAt = title.indexOf(separator);
   if (breakAt <= 0) {
     return (
-      <AppText variant="subheading" fit>
+      <AppText
+        variant={primaryVariant}
+        fit
+        style={compact ? styles.compactTitle : undefined}>
         {title}
       </AppText>
     );
@@ -85,10 +91,16 @@ function TimelineItemTitle({ title }: { title: string }) {
   const tail = title.slice(breakAt + separator.length);
   return (
     <View style={styles.titleStack}>
-      <AppText variant="subheading" fit>
+      <AppText
+        variant={primaryVariant}
+        fit
+        style={compact ? styles.compactTitle : undefined}>
         {head}
       </AppText>
-      <AppText variant="subheading" fit>
+      <AppText
+        variant={compact ? 'caption' : 'subheading'}
+        color={compact ? 'secondary' : 'primary'}
+        fit>
         {tail}
       </AppText>
     </View>
@@ -112,7 +124,9 @@ function PhotoStrip({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.photoStrip}>
       {uris.map((uri) => (
-        <View key={uri} style={[styles.photoWrap, { width: size, height: size }]}>
+        <View
+          key={uri}
+          style={[styles.photoWrap, { width: size, height: size }]}>
           <Image
             source={{ uri }}
             style={styles.photo}
@@ -148,6 +162,13 @@ export function TravelTimelineNode({
   entryDate,
   entryStartMinutes,
   showKindBadge = true,
+  compact = false,
+  dense = false,
+  allowStructuredEditing = true,
+  showStructuredDetails = true,
+  collapsedChevron = 'down',
+  accentColor,
+  tintColor,
   editingFlightItemId,
   editedFlightDetails,
   editedFlightDetailsError,
@@ -198,6 +219,16 @@ export function TravelTimelineNode({
   entryStartMinutes?: number;
   /** Hide when the timeline spine already shows the kind icon. */
   showKindBadge?: boolean;
+  compact?: boolean;
+  /** Extra-tight timeline presentation; transport cards use regular compact density. */
+  dense?: boolean;
+  /** Structured flight/stay/rental editors belong only in the transport section. */
+  allowStructuredEditing?: boolean;
+  /** Structured summaries and transport actions belong only in the transport section. */
+  showStructuredDetails?: boolean;
+  collapsedChevron?: 'down' | 'right';
+  accentColor?: string;
+  tintColor?: string;
   editingFlightItemId?: string;
   editedFlightDetails: FlightDetailsDraft;
   editedFlightDetailsError?: string;
@@ -218,17 +249,17 @@ export function TravelTimelineNode({
   onToggle: () => void;
   onEditedFlightDetailsChange: (value: FlightDetailsDraft) => void;
   onImportFlight: () => void;
-  onSaveFlightDetails: () => void;
+  onSaveFlightDetails: (schedule: FlightScheduleDraft) => void;
   onCancelFlightEdit: () => void;
   onBeginFlightEdit: () => void;
   onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: () => void;
-  onSaveRentalDetails: () => void;
+  onSaveRentalDetails: (schedule: TravelRangeScheduleDraft) => void;
   onCancelRentalEdit: () => void;
   onBeginRentalEdit: () => void;
   onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
   onImportStay: () => void;
-  onSaveStayDetails: () => void;
+  onSaveStayDetails: (schedule: TravelRangeScheduleDraft) => void;
   onCancelStayEdit: () => void;
   onBeginStayEdit: () => void;
   onAddPhotos: () => void;
@@ -258,10 +289,14 @@ export function TravelTimelineNode({
     void WebBrowser.openBrowserAsync(resolved.url);
   };
   const isMoment = item.kind === 'moment';
-  const editingStructured =
-    editingFlightItemId === item.id ||
-    editingRentalItemId === item.id ||
-    editingStayItemId === item.id;
+  const isStructuredTravelKind =
+    item.kind === 'flight' || item.kind === 'rental' || item.kind === 'stay';
+  const editingFlight =
+    allowStructuredEditing && editingFlightItemId === item.id;
+  const editingRental =
+    allowStructuredEditing && editingRentalItemId === item.id;
+  const editingStay = allowStructuredEditing && editingStayItemId === item.id;
+  const editingStructured = editingFlight || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
   const title = displayTitle ?? item.title;
   const caption = timelineEntryCaption(
@@ -275,10 +310,18 @@ export function TravelTimelineNode({
     },
     dateDisplayFormat,
   );
-  const accent = kindAccent(item.kind, theme);
-  const tint = kindTint(item.kind, theme);
+  const accent = accentColor ?? kindAccent(item.kind, theme);
+  const tint = tintColor ?? kindTint(item.kind, theme);
+  const stripeColor = dense ? kindTint(item.kind, theme) : accent;
   const icon = kindIcon(item.kind);
-  const stripeWidth = Math.max(4, s(4));
+  const showHeaderCaption =
+    compact && isStructuredTravelKind && isExpanded && Boolean(caption);
+  const stripeWidth = dense
+    ? Math.max(2, s(2))
+    : compact
+      ? Math.max(3, s(3))
+      : Math.max(4, s(4));
+  const toolbarActionSize = Math.max(28, s(28));
 
   return (
     <Animated.View
@@ -287,50 +330,102 @@ export function TravelTimelineNode({
         styles.nodeCard,
         {
           backgroundColor: travelCardFill(theme),
-          borderRadius: 13,
+          borderRadius: dense
+            ? Math.max(8, s(9))
+            : compact
+              ? Math.max(10, s(11))
+              : 13,
           borderCurve: 'continuous',
-          boxShadow: TRAVEL_CARD_SHADOW,
+          borderWidth: dense ? StyleSheet.hairlineWidth : 0,
+          borderColor: dense ? travelCardBorder(theme) : 'transparent',
+          boxShadow: dense
+            ? '0 2px 8px rgba(51, 39, 28, 0.08)'
+            : TRAVEL_CARD_SHADOW,
           overflow: 'hidden',
         },
       ]}>
-      <View style={[styles.stripe, { width: stripeWidth, backgroundColor: accent }]} />
-      <View style={[styles.nodeBody, { padding: rs.md, gap: rs.sm }]}>
+      <View
+        style={[
+          styles.stripe,
+          { width: stripeWidth, backgroundColor: stripeColor },
+        ]}
+      />
+      <View
+        style={[
+          styles.nodeBody,
+          {
+            padding: isExpanded ? rs.md : compact ? undefined : rs.sm,
+            paddingHorizontal: !isExpanded && compact ? rs.sm : undefined,
+            paddingVertical:
+              !isExpanded && dense
+                ? Math.max(1, s(1))
+                : !isExpanded && compact
+                  ? rs.xxs
+                  : undefined,
+            gap: dense ? rs.xxs : compact ? rs.xs : rs.sm,
+          },
+        ]}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ expanded: isExpanded }}
           onPress={onToggle}
           hitSlop={8}
-          style={[styles.itemHeader, { gap: rs.sm }]}>
+          style={[
+            styles.itemHeader,
+            {
+              gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
+              alignItems: compact ? 'center' : 'flex-start',
+            },
+          ]}>
           {showKindBadge ? (
             <View
               style={[
                 styles.kindPill,
                 {
                   backgroundColor: tint,
-                  width: Math.max(28, s(28)),
-                  height: Math.max(28, s(28)),
+                  width: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
+                  height: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
                 },
               ]}
               accessibilityLabel={titleCaseTravelKind(item.kind)}>
-              <Symbol name={icon} size={12} color={accent} />
+              <Symbol name={icon} size={compact ? 10 : 12} color={accent} />
             </View>
           ) : null}
           <View style={styles.flex}>
-            <TimelineItemTitle title={title} />
+            <TimelineItemTitle title={title} compact={compact} dense={dense} />
+            {showHeaderCaption ? (
+              <AppText variant="caption" color="secondary" fit>
+                {caption}
+              </AppText>
+            ) : null}
           </View>
           <View
             style={[
               styles.itemSizeAction,
               {
-                width: Math.max(28, s(32)),
-                height: Math.max(28, s(32)),
+                width: dense
+                  ? Math.max(18, s(18))
+                  : compact
+                    ? Math.max(32, s(34))
+                    : Math.max(28, s(32)),
+                height: dense
+                  ? Math.max(18, s(18))
+                  : compact
+                    ? Math.max(32, s(34))
+                    : Math.max(28, s(32)),
                 borderRadius: radii.pill,
-                backgroundColor: theme.backgroundSunken,
+                backgroundColor: dense ? 'transparent' : theme.backgroundSunken,
               },
             ]}>
             <Symbol
-              name={isExpanded ? 'chevron-up' : 'chevron-down'}
-              size={12}
+              name={
+                isExpanded
+                  ? 'chevron-up'
+                  : collapsedChevron === 'right'
+                    ? 'chevron-right'
+                    : 'chevron-down'
+              }
+              size={dense || compact ? 10 : 12}
               color={theme.textTertiary}
             />
           </View>
@@ -345,32 +440,66 @@ export function TravelTimelineNode({
             entering={FadeIn.duration(150)}
             exiting={FadeOut.duration(120)}
             style={[styles.itemDetails, { gap: rs.md }]}>
-            {caption ? (
+            {caption && !showHeaderCaption ? (
               <AppText variant="caption" color="accent">
                 {caption}
               </AppText>
             ) : null}
-            {item.details ? (
-              <AppText variant="body" color="secondary">
-                {item.details}
-              </AppText>
+            {item.details &&
+            (!isStructuredTravelKind || showStructuredDetails) ? (
+              item.kind === 'stay' ? (
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${item.details} in Maps`}
+                  hitSlop={8}
+                  onPress={() => {
+                    const url = addressMapUrl(item.details!);
+                    if (url) void Linking.openURL(url);
+                  }}
+                  style={({ pressed }) => [
+                    styles.addressLink,
+                    {
+                      minHeight: Math.max(48, s(48)),
+                      paddingHorizontal: rs.sm,
+                      paddingVertical: rs.xs,
+                      gap: rs.sm,
+                      backgroundColor: tint,
+                    },
+                    pressed && styles.pressed,
+                  ]}>
+                  <Symbol name="location" size="sm" color={accent} />
+                  <View style={styles.addressCopy}>
+                    <AppText variant="callout" color="primary" selectable>
+                      {item.details}
+                    </AppText>
+                  </View>
+                  <Symbol name="open-external" size="sm" color={accent} />
+                </Pressable>
+              ) : (
+                <AppText variant="body" color="secondary">
+                  {item.details}
+                </AppText>
+              )
             ) : null}
 
             <PhotoStrip uris={photos} onRemove={onRemovePhoto} />
 
-            {item.kind === 'flight' &&
+            {showStructuredDetails &&
+            item.kind === 'flight' &&
             item.flight &&
-            editingFlightItemId !== item.id ? (
+            !editingFlight ? (
               <FlightDetailsSummary
                 details={item.flight}
                 date={item.date}
                 startMinutes={item.startMinutes}
                 durationMinutes={item.durationMinutes}
+                dateDisplayFormat={dateDisplayFormat}
               />
             ) : null}
-            {item.kind === 'rental' &&
+            {showStructuredDetails &&
+            item.kind === 'rental' &&
             item.rental &&
-            editingRentalItemId !== item.id ? (
+            !editingRental ? (
               <RentalDetailsSummary
                 details={item.rental}
                 pickupDate={item.date}
@@ -378,9 +507,10 @@ export function TravelTimelineNode({
                 dateDisplayFormat={dateDisplayFormat}
               />
             ) : null}
-            {item.kind === 'stay' &&
+            {showStructuredDetails &&
+            item.kind === 'stay' &&
             item.stay &&
-            editingStayItemId !== item.id ? (
+            !editingStay ? (
               <StayDetailsSummary
                 details={item.stay}
                 checkinDate={item.date}
@@ -388,171 +518,82 @@ export function TravelTimelineNode({
                 dateDisplayFormat={dateDisplayFormat}
               />
             ) : null}
-            {item.kind === 'flight' && editingFlightItemId === item.id ? (
-              <View style={styles.structuredEditor}>
-                <FlightDetailsEditor
-                  value={editedFlightDetails}
-                  onChange={onEditedFlightDetailsChange}
-                  error={editedFlightDetailsError}
-                  importedFileName={editedFlightFileName}
-                  importing={importingFlight}
-                  onImport={onImportFlight}
-                />
-                <View style={styles.structuredEditorActions}>
-                  <Button
-                    size="lg"
-                    icon="check"
-                    style={styles.fullWidthAction}
-                    onPress={onSaveFlightDetails}>
-                    Save flight details
-                  </Button>
-                  <View
-                    style={[
-                      styles.structuredEditorSecondaryActions,
-                      { borderTopColor: theme.separator },
-                    ]}>
-                    <Button
-                      variant="ghost"
-                      style={styles.flex}
-                      onPress={onCancelFlightEdit}>
-                      Cancel
-                    </Button>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove ${item.title}`}
-                      hitSlop={8}
-                      onPress={onRemove}
-                      style={({ pressed }) => [
-                        styles.removeStructuredAction,
-                        pressed ? styles.pressed : undefined,
-                      ]}>
-                      <Symbol name="delete" size="sm" color={theme.danger} />
-                      <AppText variant="callout" color="danger" fit>
-                        Remove
-                      </AppText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
+            {item.kind === 'flight' && editingFlight ? (
+              <FlightDetailsCardEditor
+                value={editedFlightDetails}
+                error={editedFlightDetailsError}
+                importedFileName={editedFlightFileName}
+                importing={importingFlight}
+                item={item}
+                onChange={onEditedFlightDetailsChange}
+                onImport={onImportFlight}
+                onSave={onSaveFlightDetails}
+                onCancel={onCancelFlightEdit}
+                onRemove={onRemove}
+              />
             ) : null}
-            {item.kind === 'rental' && editingRentalItemId === item.id ? (
-              <View style={styles.structuredEditor}>
-                <RentalDetailsEditor
-                  value={editedRentalDetails}
-                  onChange={onEditedRentalDetailsChange}
-                  error={editedRentalDetailsError}
-                  importedFileName={editedRentalFileName}
-                  importing={importingRental}
-                  onImport={onImportRental}
-                  planStartDate={planStartDate}
-                  planEndDate={planEndDate}
-                />
-                <View style={styles.structuredEditorActions}>
-                  <Button
-                    size="lg"
-                    icon="check"
-                    style={styles.fullWidthAction}
-                    onPress={onSaveRentalDetails}>
-                    Save rental details
-                  </Button>
-                  <View
-                    style={[
-                      styles.structuredEditorSecondaryActions,
-                      { borderTopColor: theme.separator },
-                    ]}>
-                    <Button
-                      variant="ghost"
-                      style={styles.flex}
-                      onPress={onCancelRentalEdit}>
-                      Cancel
-                    </Button>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove ${item.title}`}
-                      hitSlop={8}
-                      onPress={onRemove}
-                      style={({ pressed }) => [
-                        styles.removeStructuredAction,
-                        pressed ? styles.pressed : undefined,
-                      ]}>
-                      <Symbol name="delete" size="sm" color={theme.danger} />
-                      <AppText variant="callout" color="danger" fit>
-                        Remove
-                      </AppText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
+            {item.kind === 'rental' && editingRental ? (
+              <RentalDetailsCardEditor
+                key={editedRentalFileName ?? item.id}
+                value={editedRentalDetails}
+                onChange={onEditedRentalDetailsChange}
+                error={editedRentalDetailsError}
+                importedFileName={editedRentalFileName}
+                importing={importingRental}
+                item={item}
+                onImport={onImportRental}
+                planStartDate={planStartDate}
+                planEndDate={planEndDate}
+                onSave={onSaveRentalDetails}
+                onCancel={onCancelRentalEdit}
+                onRemove={onRemove}
+              />
             ) : null}
-            {item.kind === 'stay' && editingStayItemId === item.id ? (
-              <View style={styles.structuredEditor}>
-                <StayDetailsEditor
-                  value={editedStayDetails}
-                  onChange={onEditedStayDetailsChange}
-                  error={editedStayDetailsError}
-                  importedFileName={editedStayFileName}
-                  importing={importingStay}
-                  onImport={onImportStay}
-                  planStartDate={planStartDate}
-                  planEndDate={planEndDate}
-                />
-                <View style={styles.structuredEditorActions}>
-                  <Button
-                    size="lg"
-                    icon="check"
-                    style={styles.fullWidthAction}
-                    onPress={onSaveStayDetails}>
-                    Save stay details
-                  </Button>
-                  <View
-                    style={[
-                      styles.structuredEditorSecondaryActions,
-                      { borderTopColor: theme.separator },
-                    ]}>
-                    <Button
-                      variant="ghost"
-                      style={styles.flex}
-                      onPress={onCancelStayEdit}>
-                      Cancel
-                    </Button>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove ${item.title}`}
-                      hitSlop={8}
-                      onPress={onRemove}
-                      style={({ pressed }) => [
-                        styles.removeStructuredAction,
-                        pressed ? styles.pressed : undefined,
-                      ]}>
-                      <Symbol name="delete" size="sm" color={theme.danger} />
-                      <AppText variant="callout" color="danger" fit>
-                        Remove
-                      </AppText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
+            {item.kind === 'stay' && editingStay ? (
+              <StayDetailsCardEditor
+                key={editedStayFileName ?? item.id}
+                value={editedStayDetails}
+                onChange={onEditedStayDetailsChange}
+                error={editedStayDetailsError}
+                importedFileName={editedStayFileName}
+                importing={importingStay}
+                item={item}
+                onImport={onImportStay}
+                planStartDate={planStartDate}
+                planEndDate={planEndDate}
+                onSave={onSaveStayDetails}
+                onCancel={onCancelStayEdit}
+                onRemove={onRemove}
+              />
             ) : null}
             {!editingStructured ? (
               <View style={styles.itineraryActionsWrap}>
-                <View style={[styles.itineraryActions, { gap: Math.max(8, rs.xs) }]}>
+                <View
+                  style={[
+                    styles.itineraryActions,
+                    { gap: Math.max(8, rs.xs) },
+                  ]}>
                   <TravelItemNotesButton
                     hasNotes={(item.notes?.length ?? 0) > 0}
-                    size={Math.max(28, s(28))}
+                    size={toolbarActionSize}
+                    iconSize="sm"
                     onPress={() => setNotesOpen(true)}
                   />
                   <IconButton
                     icon="photo"
-                    size={Math.max(28, s(28))}
+                    size={toolbarActionSize}
+                    iconSize="sm"
                     background={theme.backgroundSunken}
                     accessibilityLabel="Add Photos"
                     onPress={onAddPhotos}
                   />
-                  {item.kind === 'flight' &&
+                  {showStructuredDetails &&
+                  item.kind === 'flight' &&
                   googleFlightStatusUrl(item.flight, item.date) ? (
                     <IconButton
                       icon="clock"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       accessibilityLabel={`Check live status for ${item.flight?.flightNumber}`}
                       onPress={() =>
@@ -562,10 +603,11 @@ export function TravelTimelineNode({
                       }
                     />
                   ) : null}
-                  {item.kind === 'flight' ? (
+                  {allowStructuredEditing && item.kind === 'flight' ? (
                     <IconButton
                       icon="edit"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       accessibilityLabel={
                         item.flight ? 'Edit Flight' : 'Add Flight Details'
@@ -573,10 +615,11 @@ export function TravelTimelineNode({
                       onPress={onBeginFlightEdit}
                     />
                   ) : null}
-                  {item.kind === 'rental' ? (
+                  {allowStructuredEditing && item.kind === 'rental' ? (
                     <IconButton
                       icon="edit"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       accessibilityLabel={
                         item.rental ? 'Edit Rental' : 'Add Rental Details'
@@ -584,10 +627,11 @@ export function TravelTimelineNode({
                       onPress={onBeginRentalEdit}
                     />
                   ) : null}
-                  {item.kind === 'stay' ? (
+                  {allowStructuredEditing && item.kind === 'stay' ? (
                     <IconButton
                       icon="edit"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       accessibilityLabel={
                         item.stay ? 'Edit Stay' : 'Add Stay Details'
@@ -595,10 +639,13 @@ export function TravelTimelineNode({
                       onPress={onBeginStayEdit}
                     />
                   ) : null}
-                  {item.bookingUrl && validBookingUrl(item.bookingUrl) ? (
+                  {showStructuredDetails &&
+                  item.bookingUrl &&
+                  validBookingUrl(item.bookingUrl) ? (
                     <IconButton
                       icon="open-external"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       accessibilityLabel="Open Booking"
                       onPress={openBooking}
@@ -610,7 +657,8 @@ export function TravelTimelineNode({
                     item.kind !== 'stay') ? (
                     <IconButton
                       icon="delete"
-                      size={Math.max(28, s(28))}
+                      size={toolbarActionSize}
+                      iconSize="sm"
                       background={theme.backgroundSunken}
                       color={theme.danger}
                       accessibilityLabel={`Remove ${item.title}`}
@@ -669,32 +717,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addressLink: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.md,
+    borderCurve: 'continuous',
+  },
+  addressCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
   itemDetails: {},
   itemSizeAction: {
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  structuredEditor: { gap: spacing.md },
-  structuredEditorActions: { gap: spacing.sm },
-  fullWidthAction: { width: '100%' },
-  structuredEditorSecondaryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: spacing.sm,
-  },
-  removeStructuredAction: {
-    flex: 1,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
   itemHeader: { flexDirection: 'row', alignItems: 'flex-start' },
   titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
+  compactTitle: { fontWeight: '400' },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
   photoStrip: { gap: spacing.sm, paddingVertical: spacing.xxs },

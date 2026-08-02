@@ -8,7 +8,7 @@ import {
   ErrorMessage,
   Input,
 } from '@/components/primitives';
-import { ChipRow } from '@/components/shared';
+import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
 import { radii, spacing } from '@/design-system';
 import {
   CurrencyDropdown,
@@ -27,7 +27,11 @@ import {
   currencyOptionsForTrip,
   type FxRates,
 } from '@/features/travel/expenses/fx-rates';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import {
+  itinerarySheetChrome,
+  itinerarySheetFieldProps,
+  type SheetIconTone,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
@@ -35,6 +39,7 @@ import {
   type TravelPlan,
 } from '@/features/travel/types';
 import { useTheme } from '@/hooks/use-theme';
+import { useResponsive } from '@/hooks/use-responsive';
 import { asPositiveNumber } from '@/utils/parse';
 
 const CATEGORIES: { value: TravelExpenseCategory; label: string }[] = [
@@ -95,6 +100,8 @@ function PersonToggleRow({
   selectedIds,
   onToggle,
   single,
+  tone,
+  icon,
   style,
 }: {
   label: string;
@@ -102,15 +109,41 @@ function PersonToggleRow({
   selectedIds: string[];
   onToggle: (id: string) => void;
   single?: boolean;
+  tone: SheetIconTone;
+  icon: 'wallet' | 'people';
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
+  const iconTone = chrome.icons[tone];
   return (
-    <View style={[styles.block, style]}>
-      <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
-        {label}
-      </AppText>
-      <View style={styles.personWrap}>
+    <View
+      style={[
+        styles.personField,
+        {
+          minHeight: Math.max(72, s(76)),
+          padding: rs.md,
+          gap: rs.sm,
+          backgroundColor: chrome.fieldBg,
+        },
+        style,
+      ]}>
+      <View style={[styles.personFieldHeader, { gap: rs.sm }]}>
+        <FieldLeadingIcon
+          name={icon}
+          backgroundColor={iconTone.bg}
+          color={iconTone.fg}
+        />
+        <AppText
+          variant="caption"
+          fit
+          numberOfLines={1}
+          style={{ color: chrome.label, fontWeight: '600' }}>
+          {label}
+        </AppText>
+      </View>
+      <View style={[styles.personWrap, { gap: rs.xs }]}>
         {people.map((person) => {
           const active = selectedIds.includes(person.id);
           return (
@@ -122,11 +155,18 @@ function PersonToggleRow({
               style={[
                 styles.personChip,
                 {
-                  backgroundColor: active ? theme.accentFaint : theme.backgroundSunken,
+                  minHeight: Math.max(36, s(38)),
+                  paddingHorizontal: rs.md,
+                  paddingVertical: rs.xs,
+                  backgroundColor: active ? theme.accentFaint : chrome.sheetBg,
                   borderColor: active ? theme.accentPrimary : 'transparent',
                 },
               ]}>
-              <AppText variant="callout" color={active ? 'accent' : 'secondary'} numberOfLines={1}>
+              <AppText
+                variant="callout"
+                color={active ? 'accent' : 'secondary'}
+                fit
+                numberOfLines={1}>
                 {single ? person.name : active ? `✓ ${person.name}` : person.name}
               </AppText>
             </Pressable>
@@ -143,8 +183,6 @@ export function TravelExpenseForm({
   rates,
   error,
   onChange,
-  onSave,
-  onCancel,
   onDelete,
 }: {
   plan: TravelPlan;
@@ -152,10 +190,11 @@ export function TravelExpenseForm({
   rates: FxRates | undefined;
   error?: string;
   onChange: (next: ExpenseFormState) => void;
-  onSave: () => void;
-  onCancel: () => void;
   onDelete?: () => void;
 }) {
+  const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { spacing: rs } = useResponsive();
   const people = expensePeople(plan);
   const [openDropdown, setOpenDropdown] = useState<'currency' | 'category' | null>(
     null,
@@ -175,28 +214,36 @@ export function TravelExpenseForm({
   }));
 
   return (
-    <View style={styles.form}>
+    <View style={[styles.form, { gap: rs.sm }]}>
       <Input
-        label="What for?"
+        icon="receipt"
+        stackedLabel="What for?"
         value={form.title}
         onChangeText={(title) => onChange({ ...form, title })}
         placeholder="Dinner, taxi, museum…"
-        autoFocus={!form.existing}
+        {...itinerarySheetFieldProps(chrome, 'note')}
       />
       <Input
-        label="Amount"
+        icon="currency"
+        stackedLabel="Amount"
         value={form.amountText}
         onChangeText={(amountText) => onChange({ ...form, amountText })}
         placeholder="0"
         keyboardType="decimal-pad"
+        {...itinerarySheetFieldProps(chrome, 'import')}
       />
       <CurrencyDropdown
         label="Currency"
+        icon="wallet"
         value={form.currency}
         options={currencyOptions}
         open={openDropdown === 'currency'}
         onOpenChange={(next) => setOpenDropdown(next ? 'currency' : null)}
         onChange={(currency) => onChange({ ...form, currency })}
+        iconBackground={chrome.icons.shield.bg}
+        iconColor={chrome.icons.shield.fg}
+        fieldBackground={chrome.fieldBg}
+        labelColor={chrome.label}
       />
       {converted !== undefined ? (
         <AppText variant="callout" color="accent">
@@ -209,15 +256,17 @@ export function TravelExpenseForm({
       ) : null}
 
       <DateField
-        label="Date"
+        stackedLabel="Date"
         value={form.date}
         onChange={(date) => onChange({ ...form, date })}
         minimumDate={plan.startDate}
         maximumDate={plan.endDate}
+        {...itinerarySheetFieldProps(chrome, 'calendar')}
       />
 
       <ScrollableDropdown
         label="Category"
+        icon="list"
         value={form.category}
         options={CATEGORIES}
         open={openDropdown === 'category'}
@@ -225,6 +274,10 @@ export function TravelExpenseForm({
         onChange={(category) =>
           onChange({ ...form, category: category as TravelExpenseCategory })
         }
+        iconBackground={chrome.icons.lodging.bg}
+        iconColor={chrome.icons.lodging.fg}
+        fieldBackground={chrome.fieldBg}
+        labelColor={chrome.label}
       />
 
       <View style={styles.row}>
@@ -233,6 +286,8 @@ export function TravelExpenseForm({
           people={people}
           selectedIds={[form.paidById]}
           single
+          icon="wallet"
+          tone="shield"
           style={styles.flex}
           onToggle={(paidById) => {
             const splitWithIds = form.splitWithIds.includes(paidById)
@@ -245,6 +300,8 @@ export function TravelExpenseForm({
           label="Split With"
           people={people}
           selectedIds={form.splitWithIds}
+          icon="people"
+          tone="lodging"
           style={styles.flex}
           onToggle={(id) => {
             const selected = form.splitWithIds.includes(id)
@@ -259,22 +316,18 @@ export function TravelExpenseForm({
       </View>
 
       <Input
-        label="Notes"
+        icon="note"
+        stackedLabel="Notes"
         value={form.notes}
         onChangeText={(notes) => onChange({ ...form, notes })}
         placeholder="Optional"
+        multiline
+        maxLength={1000}
+        {...itinerarySheetFieldProps(chrome, 'note')}
       />
 
       {error ? <ErrorMessage message={error} /> : null}
 
-      <View style={styles.actions}>
-        <Button onPress={onSave} style={styles.flex}>
-          {form.existing ? 'Save expense' : 'Add expense'}
-        </Button>
-        <Button variant="ghost" onPress={onCancel} style={styles.flex}>
-          Cancel
-        </Button>
-      </View>
       {onDelete ? (
         <Button variant="danger" onPress={onDelete}>
           Delete expense
@@ -311,19 +364,16 @@ export function buildExpenseFromForm(
 }
 
 const styles = StyleSheet.create({
-  form: { gap: spacing.md },
+  form: {},
   row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   flex: { flex: 1, minWidth: 0 },
-  block: { gap: spacing.sm },
+  personField: { borderRadius: radii.lg, borderCurve: 'continuous' },
+  personFieldHeader: { flexDirection: 'row', alignItems: 'center' },
   personWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   personChip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 38,
     justifyContent: 'center',
     maxWidth: '100%',
   },
-  actions: { flexDirection: 'row', gap: spacing.sm },
 });

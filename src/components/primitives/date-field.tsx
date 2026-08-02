@@ -3,20 +3,21 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radii } from '@/design-system';
+import { radii, shadows } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
   formatDateKey,
+  formatDatePickerTitle,
   fromDateKey,
   isDateKey,
-  nativeDatePickerLocale,
   toDateKey,
 } from '@/utils/date';
 
 import { AppText } from './app-text';
 import { IconButton } from './button';
+import { DateFieldCalendar } from './date-field-calendar';
 import { FieldLeadingIcon } from './field-leading-icon';
 
 interface DateFieldProps {
@@ -78,12 +79,15 @@ export function DateField({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { spacing, layout, s } = useResponsive();
-  const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [showPicker, setShowPicker] = useState(false);
   const [draftDate, setDraftDate] = useState(() =>
     initialPickerDate(value, minimumDate, maximumDate),
   );
+  const [calendarCursor, setCalendarCursor] = useState(() => {
+    const initial = initialPickerDate(value, minimumDate, maximumDate);
+    return new Date(initial.getFullYear(), initial.getMonth(), 1, 12);
+  });
   const min = optionalPickerDate(minimumDate);
   const max = optionalPickerDate(maximumDate);
   const hasValue = isDateKey(value);
@@ -93,10 +97,13 @@ export function DateField({
       ? 'YYYY-MM-DD'
       : placeholder;
   const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Date';
+  const pickerTitle = formatDatePickerTitle(resolvedA11yLabel);
   const stacked = Boolean(stackedLabel);
 
   const openPicker = () => {
-    setDraftDate(initialPickerDate(value, minimumDate, maximumDate));
+    const initial = initialPickerDate(value, minimumDate, maximumDate);
+    setDraftDate(initial);
+    setCalendarCursor(new Date(initial.getFullYear(), initial.getMonth(), 1, 12));
     setShowPicker(true);
   };
 
@@ -225,34 +232,30 @@ export function DateField({
                 styles.calendarSheet,
                 {
                   backgroundColor: theme.backgroundElevated,
-                  maxWidth: layout.maxContentWidth,
-                  padding: spacing.lg,
+                  maxWidth: Math.min(layout.maxContentWidth, s(420)),
+                  padding: spacing.md,
                   gap: spacing.sm,
                 },
               ]}>
-              <View style={[styles.calendarHeader, { gap: spacing.md }]}>
-                <AppText variant="subheading" fit style={styles.calendarTitle}>
-                  {resolvedA11yLabel}
+              <View style={[styles.calendarHeader, { gap: spacing.sm }]}>
+                <AppText variant="heading" fit style={styles.calendarTitle}>
+                  {pickerTitle}
                 </AppText>
                 <IconButton
                   icon="close"
-                  size={s(36)}
                   accessibilityLabel="Close calendar"
                   background={theme.backgroundSunken}
+                  borderColor={theme.separator}
                   onPress={() => setShowPicker(false)}
                 />
               </View>
-              <NativeDateTimePicker
+              <DateFieldCalendar
                 value={draftDate}
-                mode="date"
-                display="inline"
+                cursor={calendarCursor}
                 minimumDate={min}
                 maximumDate={max}
-                accentColor={theme.accentPrimary}
-                themeVariant={theme.name}
-                locale={nativeDatePickerLocale(dateLocale)}
-                onValueChange={(_event, selectedDate) => setDraftDate(selectedDate)}
-                style={styles.calendar}
+                onCursorChange={setCalendarCursor}
+                onValueChange={setDraftDate}
                 testID={testID}
               />
               <Pressable
@@ -263,12 +266,13 @@ export function DateField({
                   styles.done,
                   {
                     minHeight: Math.max(44, s(48)),
-                    paddingHorizontal: spacing.lg,
+                    paddingHorizontal: spacing.md,
                     backgroundColor: theme.accentPrimary,
+                    borderColor: theme.accentSoft,
                     opacity: pressed ? 0.85 : 1,
                   },
                 ]}>
-                <AppText variant="callout" color="onAccent" fit>
+                <AppText variant="subheading" color="onAccent" fit>
                   Done
                 </AppText>
               </Pressable>
@@ -288,8 +292,9 @@ const styles = StyleSheet.create({
   calendarSheet: {
     width: '100%',
     alignSelf: 'center',
+    ...shadows.overlay,
     borderRadius: radii.xl,
-    overflow: 'hidden',
+    borderCurve: 'continuous',
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -300,12 +305,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  calendar: {
-    width: '100%',
-    height: 340,
-  },
   done: {
-    borderRadius: radii.md,
+    ...shadows.raised,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

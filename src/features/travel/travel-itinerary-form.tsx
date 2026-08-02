@@ -20,7 +20,10 @@ import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
 import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
 import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  itinerarySheetFieldProps,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetImportCard } from '@/features/travel/travel-itinerary-sheet-fields';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -149,7 +152,7 @@ export function TravelItineraryForm({
       : kind === 'rental'
         ? 'Pick-up'
         : kind === 'flight'
-          ? 'Depart'
+          ? 'Departure'
           : undefined;
   const rangeEndLabel =
     kind === 'stay'
@@ -157,7 +160,7 @@ export function TravelItineraryForm({
       : kind === 'rental'
         ? 'Drop-off'
         : kind === 'flight'
-          ? 'Arrive'
+          ? 'Arrival'
           : undefined;
 
   const confirmationImport =
@@ -198,18 +201,6 @@ export function TravelItineraryForm({
               accessibilityLabel: 'Import car rental confirmation document or screenshots',
             }
           : undefined;
-
-  const field = (tone: keyof typeof chrome.icons) => {
-    const icon = chrome.icons[tone];
-    return {
-      iconBackground: icon.bg,
-      iconColor: icon.fg,
-      fieldBackground: chrome.fieldBg,
-      stackedLabelColor: chrome.label,
-      placeholderColor: chrome.placeholder,
-      placeholderTextColor: chrome.placeholder,
-    };
-  };
 
   const nameTone =
     kind === 'stay' ? 'lodging' : kind === 'flight' ? 'flight' : kind === 'moment' ? 'photo' : 'note';
@@ -306,7 +297,7 @@ export function TravelItineraryForm({
         accessibilityLabel={
           kind === 'stay' ? 'Stay Name, required' : isMoment ? 'Title' : 'Name, required'
         }
-        {...field(nameTone)}
+        {...itinerarySheetFieldProps(chrome, nameTone)}
       />
 
       {kind === 'stay' ? (
@@ -316,7 +307,7 @@ export function TravelItineraryForm({
           stackedLabel="Address"
           placeholder="Enter the full address"
           accessibilityLabel="Address, optional"
-          {...field('location')}
+          {...itinerarySheetFieldProps(chrome, 'location')}
         />
       ) : null}
 
@@ -333,7 +324,7 @@ export function TravelItineraryForm({
                   maximumDate={planEndDate}
                   onChange={onDateChange}
                   accessibilityLabel={`${rangeStartLabel} date, required`}
-                  {...field('calendar')}
+                  {...itinerarySheetFieldProps(chrome, 'calendar')}
                 />
               </View>
               <View style={styles.flex}>
@@ -344,7 +335,7 @@ export function TravelItineraryForm({
                   showChevron
                   onChange={onStartMinutesChange}
                   accessibilityLabel={`${rangeStartLabel} time, required`}
-                  {...field('clock')}
+                  {...itinerarySheetFieldProps(chrome, 'clock')}
                 />
               </View>
             </View>
@@ -358,7 +349,7 @@ export function TravelItineraryForm({
                   maximumDate={planEndDate}
                   onChange={onEndDateChange}
                   accessibilityLabel={`${rangeEndLabel} date, required`}
-                  {...field('calendar')}
+                  {...itinerarySheetFieldProps(chrome, 'calendar')}
                 />
               </View>
               <View style={styles.flex}>
@@ -369,7 +360,7 @@ export function TravelItineraryForm({
                   showChevron
                   onChange={onEndMinutesChange}
                   accessibilityLabel={`${rangeEndLabel} time, required`}
-                  {...field('clock')}
+                  {...itinerarySheetFieldProps(chrome, 'clock')}
                 />
               </View>
             </View>
@@ -384,7 +375,7 @@ export function TravelItineraryForm({
                 minimumDate={planStartDate}
                 maximumDate={planEndDate}
                 onChange={onDateChange}
-                {...field('calendar')}
+                {...itinerarySheetFieldProps(chrome, 'calendar')}
               />
             </View>
             <View style={styles.flex}>
@@ -394,7 +385,7 @@ export function TravelItineraryForm({
                 placeholder="Select time"
                 showChevron
                 onChange={onStartMinutesChange}
-                {...field('clock')}
+                {...itinerarySheetFieldProps(chrome, 'clock')}
               />
             </View>
           </View>
@@ -407,7 +398,7 @@ export function TravelItineraryForm({
             stackedLabel="Duration (minutes) *"
             placeholder="e.g. 60"
             keyboardType="number-pad"
-            {...field('clock')}
+            {...itinerarySheetFieldProps(chrome, 'clock')}
           />
         ) : null}
       </View>
@@ -466,7 +457,7 @@ export function TravelItineraryForm({
           style={{
             minHeight: Math.max(detailsMinHeight, detailsHeight),
           }}
-          {...field('note')}
+          {...itinerarySheetFieldProps(chrome, 'note')}
         />
       )}
 
@@ -484,7 +475,7 @@ export function TravelItineraryForm({
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={24}
-            {...field('shield')}
+            {...itinerarySheetFieldProps(chrome, 'shield')}
           />
           <Input
             value={stayDetails.reservationEmail}
@@ -504,7 +495,7 @@ export function TravelItineraryForm({
             autoComplete="email"
             textContentType="emailAddress"
             maxLength={120}
-            {...field('note')}
+            {...itinerarySheetFieldProps(chrome, 'note')}
           />
           {stayDetailsError ? (
             <ErrorMessage message={stayDetailsError} selectable />
@@ -563,7 +554,7 @@ export function TravelItineraryForm({
           keyboardType="url"
           autoCapitalize="none"
           autoCorrect={false}
-          {...field('link')}
+          {...itinerarySheetFieldProps(chrome, 'link')}
         />
       ) : null}
 
@@ -596,7 +587,7 @@ export function TravelItineraryForm({
           style={{
             minHeight: Math.max(detailsMinHeight, stayNotesHeight),
           }}
-          {...field('note')}
+          {...itinerarySheetFieldProps(chrome, 'note')}
         />
       ) : null}
 

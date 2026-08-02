@@ -1,15 +1,11 @@
 import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { AppText, IconButton } from '@/components/primitives';
+import { fontFamilies, spacing } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import {
-  TRAVEL_CARD_SHADOW,
-  TRAVEL_EDITORIAL_ACCENT,
-  travelPillBg,
-} from '@/features/travel/travel-surface';
+import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,15 +26,14 @@ export function TravelPlanHero({
   const dayCount = tripDayCount(plan.startDate, plan.endDate);
   const showDestination =
     plan.title.trim().toLowerCase() !== plan.destination.trim().toLowerCase();
-  const pillBg = travelPillBg(theme);
 
   return (
-    <View style={[styles.hero, { gap: rs.md }]}>
+    <View style={[styles.hero, { gap: rs.sm }]}>
       <View style={[styles.titleRow, { gap: rs.xs }]}>
         <IconButton
           icon="back"
-          size={36}
-          background="transparent"
+          size={Math.max(32, s(32))}
+          background={theme.backgroundElevated}
           borderColor={theme.separator}
           accessibilityLabel="Go Back"
           onPress={() => router.replace('/(tabs)/travel' as Href)}
@@ -53,15 +48,21 @@ export function TravelPlanHero({
               {plan.destination}
             </AppText>
           ) : null}
-          <AppText style={styles.title} fit numberOfLines={2}>
+          <AppText
+            style={[
+              styles.title,
+              { fontSize: Math.max(29, s(30)), lineHeight: Math.max(34, s(35)) },
+            ]}
+            fit
+            numberOfLines={1}>
             {plan.title}
           </AppText>
         </View>
         {onAddPress ? (
           <IconButton
             icon="add"
-            size={36}
-            background="transparent"
+            size={Math.max(32, s(32))}
+            background={theme.backgroundElevated}
             borderColor={theme.separator}
             accessibilityLabel="Add to Timeline"
             onPress={onAddPress}
@@ -69,35 +70,12 @@ export function TravelPlanHero({
         ) : null}
       </View>
 
-      <View
-        style={[
-          styles.datePill,
-          {
-            backgroundColor: theme.backgroundElevated,
-            borderColor: theme.separator,
-            boxShadow: TRAVEL_CARD_SHADOW,
-            minHeight: Math.max(44, s(44)),
-            gap: rs.sm,
-            paddingHorizontal: rs.md,
-          },
-        ]}>
-        <View
-          style={[
-            styles.dateIcon,
-            {
-              backgroundColor: pillBg,
-              width: Math.max(32, s(32)),
-              height: Math.max(32, s(32)),
-            },
-          ]}>
-          <Symbol name="calendar" size="sm" color={TRAVEL_EDITORIAL_ACCENT} />
-        </View>
-        <AppText variant="callout" fit style={[styles.dateText, styles.serif]}>
-          {formatDateKey(plan.startDate, dateDisplayFormat)} →{' '}
-          {formatDateKey(plan.endDate, dateDisplayFormat)}
-          {` (${dayCount} ${dayCount === 1 ? 'day' : 'days'})`}
-        </AppText>
-      </View>
+      <TravelTripDatesRow
+        startLabel={formatDateKey(plan.startDate, dateDisplayFormat)}
+        endLabel={formatDateKey(plan.endDate, dateDisplayFormat)}
+        dayCount={dayCount}
+        compact
+      />
 
       {plan.notes ? (
         <AppText variant="body" color="secondary" style={styles.serif} numberOfLines={3}>
@@ -134,23 +112,5 @@ const styles = StyleSheet.create({
   serif: {
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
-  },
-  datePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    borderRadius: 13,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  dateIcon: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dateText: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
   },
 });

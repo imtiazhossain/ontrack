@@ -57,6 +57,20 @@ export function formatDateKey(value: string, format: DateDisplayFormat): string 
   return `${month}/${day}/${year}`;
 }
 
+/** Visible calendar-sheet title derived from a spoken accessibility label. */
+export function formatDatePickerTitle(label: string): string {
+  return label
+    .replace(/,\s*(?:required|optional)\s*$/i, '')
+    .replace(/\bdate\b/gi, 'Date');
+}
+
+/** Visible time-picker title derived from a spoken accessibility label. */
+export function formatTimePickerTitle(label: string): string {
+  return label
+    .replace(/,\s*(?:required|optional)\s*$/i, '')
+    .replace(/\btime\b/gi, 'Time');
+}
+
 /** Month/day (or day/month) without year or leading zeros — for dense timeline chrome. */
 export function formatDateKeyShort(value: string, format: DateDisplayFormat): string {
   if (!isDateKey(value)) return value;

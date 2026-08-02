@@ -12,11 +12,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing, type Theme } from '@/design-system';
+import { fontFamilies, radii, type Theme } from '@/design-system';
 import {
   noteAuthorColor,
   noteAuthorTint,
 } from '@/features/travel/travel-item-note-colors';
+import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelItemNote,
@@ -153,6 +155,7 @@ export function TravelItemNotesSheet({
   onSaveNotes: (notes: TravelItemNote[]) => void;
 }) {
   const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
   const insets = useSafeAreaInsets();
   const { s, spacing: rs } = useResponsive();
   const preferenceName = usePreferences((state) => state.name).trim();
@@ -162,7 +165,6 @@ export function TravelItemNotesSheet({
   const notes = item.notes ?? [];
   const authorName = preferenceName || 'You';
   const authorId = TRAVEL_EXPENSE_SELF_ID;
-  const closeSize = Math.max(32, s(32));
   const avatarSize = Math.max(26, s(26));
   const actionSize = Math.max(28, s(28));
   const listPad = {
@@ -277,45 +279,18 @@ export function TravelItemNotesSheet({
             style={[
               styles.sheet,
               {
-                backgroundColor: theme.backgroundPrimary,
+                backgroundColor: chrome.sheetBg,
                 paddingBottom: Math.max(insets.bottom, rs.sm),
               },
             ]}>
-            <View style={styles.handleRow}>
-              <View style={[styles.handle, { backgroundColor: theme.separator }]} />
-            </View>
-
-            <View
-              style={[
-                styles.header,
-                {
-                  paddingHorizontal: rs.md,
-                  paddingBottom: rs.sm,
-                  borderBottomColor: theme.separator,
-                },
-              ]}>
-              <View style={[styles.headerRow, { gap: rs.sm }]}>
-                <View style={styles.headerCopy}>
-                  <AppText style={styles.title} fit numberOfLines={1}>
-                    Notes
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    style={styles.serif}
-                    fit
-                    numberOfLines={1}>
-                    {item.title}
-                  </AppText>
-                </View>
-                <IconButton
-                  icon="close"
-                  size={closeSize}
-                  background={theme.backgroundSunken}
-                  accessibilityLabel="Close Notes"
-                  onPress={onClose}
-                />
-              </View>
+            <View style={{ paddingHorizontal: rs.md }}>
+              <TravelSheetHeader
+                eyebrow="Notes"
+                title={item.title}
+                subtitle="Share Details · Keep Everyone in the Loop"
+                closeAccessibilityLabel="Close Notes"
+                onClose={onClose}
+              />
             </View>
 
             {deletingNote ? (
@@ -365,7 +340,10 @@ export function TravelItemNotesSheet({
                 <AppText style={styles.emptyTitle} color="secondary">
                   No notes yet
                 </AppText>
-                <AppText variant="caption" color="tertiary" style={styles.emptyCopy}>
+                <AppText
+                  variant="caption"
+                  color="tertiary"
+                  style={styles.emptyCopy}>
                   Share a quick thought with the group.
                 </AppText>
               </View>
@@ -409,7 +387,9 @@ export function TravelItemNotesSheet({
                   placeholderTextColor={theme.textTertiary}
                   multiline
                   maxLength={500}
-                  accessibilityLabel={isEditing ? 'Edit trip note' : 'Trip note'}
+                  accessibilityLabel={
+                    isEditing ? 'Edit trip note' : 'Trip note'
+                  }
                   underlineColorAndroid="transparent"
                   style={[
                     styles.input,
@@ -447,10 +427,12 @@ export function TravelItemNotesSheet({
 export function TravelItemNotesButton({
   hasNotes,
   size,
+  iconSize = 'md',
   onPress,
 }: {
   hasNotes: boolean;
   size: number;
+  iconSize?: 'sm' | 'md' | 'lg' | 'xl' | number;
   onPress: () => void;
 }) {
   const theme = useTheme();
@@ -459,6 +441,7 @@ export function TravelItemNotesButton({
       <IconButton
         icon="note"
         size={size}
+        iconSize={iconSize}
         background={theme.backgroundSunken}
         accessibilityLabel={hasNotes ? 'View notes' : 'Add notes'}
         onPress={onPress}
@@ -493,40 +476,6 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     overflow: 'hidden',
     width: '100%',
-  },
-  handleRow: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: radii.pill,
-  },
-  header: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '400',
-    letterSpacing: -0.4,
-  },
-  serif: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
   },
   list: {
     flexGrow: 0,

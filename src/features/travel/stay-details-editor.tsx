@@ -1,14 +1,21 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
   AppText,
-  Button,
   DateField,
   ErrorMessage,
   Input,
   TimeField,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { ConfirmationImportAction } from '@/features/travel/confirmation-import-action';
+import {
+  itinerarySheetChrome,
+  itinerarySheetFieldProps,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 
 import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { StayDetailsDraft } from './stay-details';
@@ -23,6 +30,7 @@ interface StayDetailsEditorProps {
   importedFileName?: string;
   planStartDate?: string;
   planEndDate?: string;
+  scheduleFields?: ReactNode;
   /** When schedule is edited in the parent form (check-out). */
   hideCheckoutFields?: boolean;
   /** When the parent already shows the Stay Details title. */
@@ -38,9 +46,14 @@ export function StayDetailsEditor({
   importedFileName,
   planStartDate,
   planEndDate,
+  scheduleFields,
   hideCheckoutFields = false,
   hideHeader = false,
 }: StayDetailsEditorProps) {
+  const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
+  const columnMinWidth = Math.max(132, s(150));
   const checkoutMinutes = value.checkoutMinutes.trim()
     ? Number(value.checkoutMinutes)
     : 11 * 60;
@@ -52,28 +65,25 @@ export function StayDetailsEditor({
       : 11 * 60;
 
   return (
-    <View style={[styles.container, hideHeader ? styles.containerCompact : undefined]}>
-      {hideHeader ? null : (
-        <View
-          style={[
-            styles.header,
-            onImport ? styles.headerWithAction : undefined,
-          ]}>
-          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
-            Stay Details
-          </AppText>
+    <View style={[styles.container, { gap: hideHeader ? rs.sm : rs.md }]}>
+      {!hideHeader || onImport ? (
+        <View style={{ gap: rs.xs }}>
+          {hideHeader ? null : (
+            <View style={styles.header}>
+              <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+                Stay Details
+              </AppText>
+            </View>
+          )}
           {onImport ? (
-            <Button
-              variant="secondary"
-              icon="scan-document"
-              loading={importing}
+            <ConfirmationImportAction
+              accessibilityLabel="Import stay confirmation document or screenshots"
+              importing={importing}
               onPress={onImport}
-              accessibilityLabel="Import stay confirmation document or screenshots">
-              Import Confirmation
-            </Button>
+            />
           ) : null}
         </View>
-      )}
+      ) : null}
       {importedFileName ? (
         <ConfirmationImportBanner
           fileName={importedFileName}
@@ -81,8 +91,10 @@ export function StayDetailsEditor({
           kind="stay"
         />
       ) : null}
+      {scheduleFields}
       <Input
-        label="Confirmation Code"
+        icon="scan-document"
+        stackedLabel="Confirmation Code"
         value={value.confirmationCode}
         onChangeText={(nextValue) =>
           onChange({ ...value, confirmationCode: nextValue })
@@ -91,9 +103,11 @@ export function StayDetailsEditor({
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={24}
+        {...itinerarySheetFieldProps(chrome, 'import')}
       />
       <Input
-        label="Reservation Email"
+        icon="note"
+        stackedLabel="Reservation Email"
         value={value.reservationEmail}
         onChangeText={(nextValue) =>
           onChange({ ...value, reservationEmail: nextValue })
@@ -105,33 +119,38 @@ export function StayDetailsEditor({
         autoComplete="email"
         textContentType="emailAddress"
         maxLength={120}
+        {...itinerarySheetFieldProps(chrome, 'note')}
       />
       {hideCheckoutFields ? null : (
-        <View style={styles.twoColumns}>
-          <View style={styles.flex}>
+        <View style={[styles.twoColumns, { gap: rs.sm }]}>
+          <View style={[styles.flex, { minWidth: columnMinWidth }]}>
             <DateField
-              label="Check Out Date"
+              stackedLabel="Check Out Date"
               value={value.checkoutDate || planStartDate || ''}
               minimumDate={planStartDate}
               maximumDate={planEndDate}
               onChange={(nextValue) =>
                 onChange({ ...value, checkoutDate: nextValue })
               }
+              {...itinerarySheetFieldProps(chrome, 'calendar')}
             />
           </View>
-          <View style={styles.flex}>
+          <View style={[styles.flex, { minWidth: columnMinWidth }]}>
             <TimeField
-              label="Check Out Time"
+              stackedLabel="Check Out Time"
               value={checkoutTimeValue}
               onChange={(nextValue) =>
                 onChange({ ...value, checkoutMinutes: String(nextValue) })
               }
+              showChevron
+              {...itinerarySheetFieldProps(chrome, 'clock')}
             />
           </View>
         </View>
       )}
       <Input
-        label="Notes"
+        icon="note"
+        stackedLabel="Notes"
         value={value.notes}
         onChangeText={(nextValue) =>
           onChange({ ...value, notes: nextValue.slice(0, 1000) })
@@ -140,6 +159,7 @@ export function StayDetailsEditor({
         multiline
         maxLength={1000}
         textAlignVertical="top"
+        {...itinerarySheetFieldProps(chrome, 'note')}
       />
       {error ? <ErrorMessage message={error} selectable /> : null}
     </View>
@@ -147,8 +167,7 @@ export function StayDetailsEditor({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.md },
-  containerCompact: { gap: spacing.sm },
+  container: {},
   header: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -156,9 +175,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  headerWithAction: {
-    minHeight: 44,
-  },
-  twoColumns: { flexDirection: 'row', gap: spacing.sm },
+  twoColumns: { flexDirection: 'row', flexWrap: 'wrap' },
   flex: { flex: 1, minWidth: 0 },
 });

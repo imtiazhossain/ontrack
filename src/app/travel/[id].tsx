@@ -36,6 +36,7 @@ export default function TravelPlanScreen() {
     typeof add === 'string' && ADD_KINDS.has(add as TravelItemKind)
       ? (add as TravelItemKind)
       : undefined;
+  const initialOpenAddPicker = __DEV__ && add === 'timeline';
   const autoOpenStayBooking =
     __DEV__ &&
     (openStayBooking === '1' || openStayBooking === 'true');
@@ -64,6 +65,7 @@ export default function TravelPlanScreen() {
       <TravelPlanDetail
         planId={id}
         initialAddKind={initialAddKind}
+        initialOpenAddPicker={initialOpenAddPicker}
         autoOpenStayBooking={autoOpenStayBooking}
         autoOpenReservationEmail={autoOpenReservationEmail}
       />

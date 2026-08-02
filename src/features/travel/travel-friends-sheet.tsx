@@ -1,22 +1,16 @@
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppText,
   appPrompt,
   Button,
-  Card,
-  IconButton,
 } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { spacing } from '@/design-system';
 import { PeoplePicker } from '@/features/social/people-picker';
 import {
   createTravelInviteUrl,
@@ -31,16 +25,15 @@ import {
   shareTravelPlan,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import {
-  TravelSkyHeader,
-} from '@/features/travel/travel-surface';
+import { TravelSurfaceCard } from '@/features/travel/travel-surface';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
+import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import { TripPeople } from '@/features/travel/trip-people';
 import type {
   TravelOpenJoinRequest,
   TravelParticipant,
   TravelPlan,
 } from '@/features/travel/types';
-import { useTheme } from '@/hooks/use-theme';
 import type { FriendProfile } from '@/services/friends';
 import { useFriends } from '@/store/friends';
 import { useTravel } from '@/store/travel';
@@ -58,8 +51,6 @@ export function TravelFriendsSheet({
   onClose: () => void;
   onSavePlan: (plan: TravelPlan) => void;
 }) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [editingInvite, setEditingInvite] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -408,56 +399,22 @@ export function TravelFriendsSheet({
     : undefined;
 
   return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-      transparent
-      visible={visible}>
-      <View
-        style={[
-          styles.modalRoot,
-          { backgroundColor: theme.overlayScrim, paddingTop: insets.top },
-        ]}>
-        <Pressable
-          accessibilityLabel="Close friends"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.backgroundPrimary,
-              paddingBottom: Math.max(insets.bottom, spacing.lg),
-              overflow: 'hidden',
-            },
-          ]}>
-          <View style={styles.handleRow}>
-            <View style={[styles.handle, { backgroundColor: theme.separator }]} />
-          </View>
-          <TravelSkyHeader
-            eyebrow="Friends"
-            title={plan.title}
-            subtitle="Private Invites · Open Link Needs Your Approval"
-            trailing={
-              <IconButton
-                icon="close"
-                size={36}
-                background="transparent"
-                borderColor={theme.separator}
-                accessibilityLabel="Close Friends"
-                onPress={onClose}
-              />
-            }
+    <Fragment>
+      <TravelSheetModal
+        visible={visible}
+        eyebrow="Friends"
+        title={plan.title}
+        subtitle="Plan Together · Share the Adventure"
+        closeAccessibilityLabel="Close Friends"
+        onClose={onClose}
+        footer={
+          <TravelSheetPrimaryAction
+            label="Add from Friends"
+            icon="people"
+            onPress={() => setPickingFriends(true)}
           />
-
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}>
-            <Card variant="sunken" style={styles.openJoinCard}>
+        }>
+            <TravelSurfaceCard bodyStyle={styles.openJoinCard}>
               <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
                 Open Join Link
               </AppText>
@@ -497,7 +454,7 @@ export function TravelFriendsSheet({
                   Share
                 </Button>
               </View>
-            </Card>
+            </TravelSurfaceCard>
 
             {joinRequests.length > 0 ? (
               <View style={styles.linksSection}>
@@ -507,7 +464,7 @@ export function TravelFriendsSheet({
                 {joinRequests.map((request) => {
                   const deciding = decidingRequestId === request.id;
                   return (
-                    <Card key={request.id} variant="sunken" style={styles.linkCard}>
+                    <TravelSurfaceCard key={request.id} bodyStyle={styles.linkCard}>
                       <AppText variant="subheading" fit>
                         {request.requesterName}
                       </AppText>
@@ -531,19 +488,11 @@ export function TravelFriendsSheet({
                           Decline
                         </Button>
                       </View>
-                    </Card>
+                    </TravelSurfaceCard>
                   );
                 })}
               </View>
             ) : null}
-
-            <Button
-              icon="people"
-              variant="secondary"
-              disabled={sharingInvite}
-              onPress={() => setPickingFriends(true)}>
-              Add from Friends
-            </Button>
 
             <TripPeople
               participants={plan.participants}
@@ -581,7 +530,7 @@ export function TravelFriendsSheet({
                   );
                   const copied = copiedCode === participant.inviteCode;
                   return (
-                    <Card key={participant.id} variant="sunken" style={styles.linkCard}>
+                    <TravelSurfaceCard key={participant.id} bodyStyle={styles.linkCard}>
                       <AppText variant="subheading" fit>
                         {participant.name}
                       </AppText>
@@ -605,14 +554,12 @@ export function TravelFriendsSheet({
                           Share
                         </Button>
                       </View>
-                    </Card>
+                    </TravelSurfaceCard>
                   );
                 })}
               </View>
             ) : null}
-          </ScrollView>
-        </View>
-      </View>
+      </TravelSheetModal>
       <PeoplePicker
         visible={pickingFriends}
         title="Add Trip Friends"
@@ -623,31 +570,11 @@ export function TravelFriendsSheet({
         onClose={() => setPickingFriends(false)}
         onConfirm={(friends) => void inviteFromFriends(friends)}
       />
-    </Modal>
+    </Fragment>
   );
 }
 
 const styles = StyleSheet.create({
-  modalRoot: { flex: 1, justifyContent: 'flex-end' },
-  sheet: {
-    maxHeight: '92%',
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  handleRow: { alignItems: 'center', paddingTop: spacing.sm },
-  handle: { width: 36, height: 4, borderRadius: radii.pill },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  flex: { flex: 1, minWidth: 0, gap: spacing.xxs },
-  content: {
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
   openJoinCard: { gap: spacing.sm },
   linksSection: { gap: spacing.sm },
   linkCard: { gap: spacing.sm },

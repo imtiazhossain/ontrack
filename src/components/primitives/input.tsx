@@ -18,6 +18,8 @@ interface InputProps extends TextInputProps {
   iconColor?: string;
   fieldBackground?: string;
   stackedLabelColor?: string;
+  /** Optional supporting copy shown below a stacked field value. */
+  helperText?: string;
   trailing?: ReactNode;
 }
 
@@ -30,6 +32,7 @@ export function Input({
   iconColor,
   fieldBackground,
   stackedLabelColor,
+  helperText,
   trailing,
   multiline,
   placeholder,
@@ -131,6 +134,11 @@ export function Input({
                 {...rest}
                 underlineColorAndroid="transparent"
               />
+              {helperText ? (
+                <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                  {helperText}
+                </AppText>
+              ) : null}
             </View>
           ) : showChromePlaceholder ? (
             <AppText

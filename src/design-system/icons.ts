@@ -38,6 +38,11 @@ export const appIcons = {
 
   // Travel
   note: { ios: 'note.text', android: 'sticky_note_2', web: 'sticky_note_2' },
+  itinerary: {
+    ios: 'calendar.badge.exclamationmark',
+    android: 'event_note',
+    web: 'event_note',
+  },
   flight: { ios: 'airplane', android: 'flight', web: 'flight' },
   lodging: { ios: 'bed.double.fill', android: 'hotel', web: 'hotel' },
   building: { ios: 'building.2.fill', android: 'apartment', web: 'apartment' },
@@ -72,6 +77,7 @@ export const appIcons = {
   'arrow-down': { ios: 'arrow.down', android: 'arrow_downward', web: 'arrow_downward' },
   alphabetical: { ios: 'textformat', android: 'sort_by_alpha', web: 'sort_by_alpha' },
   photo: { ios: 'photo', android: 'image', web: 'image' },
+  bookmark: { ios: 'bookmark', android: 'bookmark_border', web: 'bookmark_border' },
   location: { ios: 'mappin.and.ellipse', android: 'location_on', web: 'location_on' },
   link: { ios: 'link', android: 'link', web: 'link' },
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },

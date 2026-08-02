@@ -1,11 +1,35 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, Input } from '@/components/primitives';
+import {
+  AppText,
+  ErrorMessage,
+  Input,
+} from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { ConfirmationImportAction } from '@/features/travel/confirmation-import-action';
+import {
+  itinerarySheetChrome,
+  itinerarySheetFieldProps,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 
 import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { FlightDetailsDraft } from './flight-details';
 import { travelOverlineStyle } from './travel-chrome';
+
+const AIRPORT_HELPER: Record<string, string> = {
+  EWR: 'Newark Liberty Intl.',
+  JFK: 'John F. Kennedy Intl.',
+  KEF: 'Keflavik Intl.',
+  LGA: 'LaGuardia Airport',
+  LHR: 'London Heathrow',
+};
+
+function airportHelper(value: string): string | undefined {
+  return AIRPORT_HELPER[value.trim().toUpperCase()];
+}
 
 interface FlightDetailsEditorProps {
   value: FlightDetailsDraft;
@@ -14,6 +38,7 @@ interface FlightDetailsEditorProps {
   onImport?: () => void;
   importing?: boolean;
   importedFileName?: string;
+  scheduleFields?: ReactNode;
   /** When the parent already shows the Flight Details title / import. */
   hideHeader?: boolean;
 }
@@ -25,31 +50,36 @@ export function FlightDetailsEditor({
   onImport,
   importing = false,
   importedFileName,
+  scheduleFields,
   hideHeader = false,
 }: FlightDetailsEditorProps) {
+  const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { spacing: rs } = useResponsive();
   const update = (field: keyof FlightDetailsDraft, nextValue: string) => {
     onChange({ ...value, [field]: nextValue });
   };
 
   return (
-    <View style={[styles.container, hideHeader ? styles.containerCompact : undefined]}>
-      {hideHeader ? null : (
-        <View style={styles.header}>
-          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
-            Flight Details
-          </AppText>
+    <View style={[styles.container, { gap: hideHeader ? rs.sm : rs.md }]}>
+      {!hideHeader || onImport ? (
+        <View style={{ gap: rs.xs }}>
+          {hideHeader ? null : (
+            <View style={styles.header}>
+              <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+                Flight Details
+              </AppText>
+            </View>
+          )}
           {onImport ? (
-            <Button
-              variant="secondary"
-              icon="scan-document"
-              loading={importing}
+            <ConfirmationImportAction
+              accessibilityLabel="Import flight confirmation document or screenshots"
+              importing={importing}
               onPress={onImport}
-              accessibilityLabel="Import flight confirmation document or screenshots">
-              Import Confirmation
-            </Button>
+            />
           ) : null}
         </View>
-      )}
+      ) : null}
       {importedFileName ? (
         <ConfirmationImportBanner
           fileName={importedFileName}
@@ -57,87 +87,78 @@ export function FlightDetailsEditor({
           kind="flight"
         />
       ) : null}
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <Input
-            label="Airline"
-            value={value.airline}
-            onChangeText={(nextValue) => update('airline', nextValue)}
-            placeholder="Icelandair"
-          />
-        </View>
-        <View style={styles.flex}>
-          <Input
-            label="Flight Number"
-            value={value.flightNumber}
-            onChangeText={(nextValue) => update('flightNumber', nextValue)}
-            placeholder="FI 614"
-            autoCapitalize="characters"
-          />
-        </View>
-      </View>
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <Input
-            label="From"
-            value={value.departureAirport}
-            onChangeText={(nextValue) => update('departureAirport', nextValue)}
-            placeholder="JFK"
-            autoCapitalize="characters"
-            maxLength={8}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Input
-            label="To"
-            value={value.arrivalAirport}
-            onChangeText={(nextValue) => update('arrivalAirport', nextValue)}
-            placeholder="KEF"
-            autoCapitalize="characters"
-            maxLength={8}
-          />
-        </View>
-      </View>
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <Input
-            label="Confirmation Code"
-            value={value.confirmationCode}
-            onChangeText={(nextValue) => update('confirmationCode', nextValue)}
-            placeholder="ABC123"
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={12}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Input
-            label="Seat"
-            value={value.seat}
-            onChangeText={(nextValue) => update('seat', nextValue)}
-            placeholder="Seat"
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={8}
-          />
-        </View>
-      </View>
+      {scheduleFields}
+      <Input
+        icon="flight"
+        stackedLabel="Airline"
+        value={value.airline}
+        onChangeText={(nextValue) => update('airline', nextValue)}
+        placeholder="Icelandair"
+        {...itinerarySheetFieldProps(chrome, 'flight')}
+      />
+      <Input
+        icon="flight"
+        stackedLabel="Flight Number"
+        value={value.flightNumber}
+        onChangeText={(nextValue) => update('flightNumber', nextValue)}
+        placeholder="FI 614"
+        autoCapitalize="characters"
+        {...itinerarySheetFieldProps(chrome, 'flight')}
+      />
+      <Input
+        icon="location"
+        stackedLabel="From"
+        helperText={airportHelper(value.departureAirport)}
+        value={value.departureAirport}
+        onChangeText={(nextValue) => update('departureAirport', nextValue)}
+        placeholder="JFK"
+        autoCapitalize="characters"
+        maxLength={8}
+        {...itinerarySheetFieldProps(chrome, 'location')}
+      />
+      <Input
+        icon="location"
+        stackedLabel="To"
+        helperText={airportHelper(value.arrivalAirport)}
+        value={value.arrivalAirport}
+        onChangeText={(nextValue) => update('arrivalAirport', nextValue)}
+        placeholder="KEF"
+        autoCapitalize="characters"
+        maxLength={8}
+        {...itinerarySheetFieldProps(chrome, 'location')}
+      />
+      <Input
+        icon="scan-document"
+        stackedLabel="Confirmation Code"
+        value={value.confirmationCode}
+        onChangeText={(nextValue) => update('confirmationCode', nextValue)}
+        placeholder="ABC123"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={12}
+        {...itinerarySheetFieldProps(chrome, 'import')}
+      />
+      <Input
+        icon="note"
+        stackedLabel="Seat"
+        value={value.seat}
+        onChangeText={(nextValue) => update('seat', nextValue)}
+        placeholder="Seat Number"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={8}
+        {...itinerarySheetFieldProps(chrome, 'note')}
+      />
       {error ? <ErrorMessage message={error} selectable /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.md },
-  containerCompact: { gap: spacing.sm },
+  container: {},
   header: {
-    minHeight: 44,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  twoColumns: { flexDirection: 'row', gap: spacing.sm },
-  flex: { flex: 1 },
 });

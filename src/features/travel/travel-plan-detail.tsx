@@ -29,6 +29,10 @@ import {
   validateFlightDetails,
   type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
+import {
+  validateFlightSchedule,
+  type FlightScheduleDraft,
+} from '@/features/travel/flight-schedule';
 import { normalizeTravelPlan } from '@/features/travel/normalize';
 import {
   importRentalConfirmation,
@@ -52,11 +56,16 @@ import {
 } from '@/features/travel/stay-details';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
-import { DETAILS_MAX_LENGTH, ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
+import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
+import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
+import {
+  validateTravelRangeSchedule,
+  type TravelRangeScheduleDraft,
+} from '@/features/travel/travel-range-schedule';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
 import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
 import { usePreferences } from '@/store/preferences';
@@ -94,11 +103,14 @@ function validBookingUrl(value: string): boolean {
 export function TravelPlanDetail({
   planId,
   initialAddKind,
+  initialOpenAddPicker = false,
   autoOpenStayBooking = false,
   autoOpenReservationEmail,
 }: {
   planId: string;
   initialAddKind?: TravelItemKind;
+  /** DEV: open the timeline kind chooser after navigating to a trip. */
+  initialOpenAddPicker?: boolean;
   /** DEV: open the first trivago stay booking sheet after mount. */
   autoOpenStayBooking?: boolean;
   /** DEV: reservation email override when account email is unavailable. */
@@ -186,6 +198,7 @@ export function TravelPlanDetail({
     () => new Set(),
   );
   const [isAddingItem, setIsAddingItem] = useState(Boolean(initialAddKind));
+  const [isChoosingAddKind, setIsChoosingAddKind] = useState(initialOpenAddPicker);
   /** Blocks dismiss/reset while a system picker or OCR import is in flight. */
   const importInProgressRef = useRef(false);
   const [importStatusLabel, setImportStatusLabel] = useState<string>();
@@ -583,16 +596,27 @@ export function TravelPlanDetail({
     setEditedFlightFileName(undefined);
   };
 
-  const saveEditedFlightDetails = (itemId: string) => {
+  const saveEditedFlightDetails = (
+    itemId: string,
+    schedule: FlightScheduleDraft,
+  ) => {
     setEditedFlightDetailsError(undefined);
     const validation = validateFlightDetails(editedFlightDetails);
     if (!validation.ok) return setEditedFlightDetailsError(validation.error);
+    const scheduleValidation = validateFlightSchedule(
+      schedule,
+      validation.value,
+    );
+    if (!scheduleValidation.ok) {
+      return setEditedFlightDetailsError(scheduleValidation.error);
+    }
     updatePlan({
       ...plan,
       itinerary: itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
+              ...scheduleValidation.value,
               flight: validation.value,
             }
           : item,
@@ -614,16 +638,32 @@ export function TravelPlanDetail({
     setEditedRentalFileName(undefined);
   };
 
-  const saveEditedRentalDetails = (itemId: string) => {
+  const saveEditedRentalDetails = (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => {
     setEditedRentalDetailsError(undefined);
-    const validation = validateRentalDetails(editedRentalDetails);
+    const validation = validateRentalDetails({
+      ...editedRentalDetails,
+      dropoffDate: schedule.endDate,
+      dropoffMinutes:
+        schedule.endMinutes === null ? '' : String(schedule.endMinutes),
+    });
     if (!validation.ok) return setEditedRentalDetailsError(validation.error);
+    const scheduleValidation = validateTravelRangeSchedule(schedule, {
+      start: 'pick-up',
+      end: 'drop-off',
+    });
+    if (!scheduleValidation.ok) {
+      return setEditedRentalDetailsError(scheduleValidation.error);
+    }
     updatePlan({
       ...plan,
       itinerary: itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
+              ...scheduleValidation.value,
               rental: validation.value,
             }
           : item,
@@ -645,16 +685,32 @@ export function TravelPlanDetail({
     setEditedStayFileName(undefined);
   };
 
-  const saveEditedStayDetails = (itemId: string) => {
+  const saveEditedStayDetails = (
+    itemId: string,
+    schedule: TravelRangeScheduleDraft,
+  ) => {
     setEditedStayDetailsError(undefined);
-    const validation = validateStayDetails(editedStayDetails);
+    const validation = validateStayDetails({
+      ...editedStayDetails,
+      checkoutDate: schedule.endDate,
+      checkoutMinutes:
+        schedule.endMinutes === null ? '' : String(schedule.endMinutes),
+    });
     if (!validation.ok) return setEditedStayDetailsError(validation.error);
+    const scheduleValidation = validateTravelRangeSchedule(schedule, {
+      start: 'check-in',
+      end: 'check-out',
+    });
+    if (!scheduleValidation.ok) {
+      return setEditedStayDetailsError(scheduleValidation.error);
+    }
     updatePlan({
       ...plan,
       itinerary: itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
+              ...scheduleValidation.value,
               stay: validation.value,
             }
           : item,
@@ -1108,24 +1164,17 @@ export function TravelPlanDetail({
   };
 
   const beginAddToTimeline = () => {
-    const labels = ITEM_KINDS.map((entry) => entry.label);
-    appPrompt.actionSheet(
-      {
-        title: 'Add to Timeline',
-        options: [...labels, 'Cancel'],
-        cancelButtonIndex: labels.length,
-      },
-      (index) => {
-        const selected = ITEM_KINDS[index];
-        if (!selected) return;
-        prepareAddKind(selected.value);
-        setSectionExpanded((current) => ({
-          ...current,
-          timeline: true,
-        }));
-        setIsAddingItem(true);
-      },
-    );
+    setIsChoosingAddKind(true);
+  };
+
+  const chooseAddKind = (nextKind: TravelItemKind) => {
+    setIsChoosingAddKind(false);
+    prepareAddKind(nextKind);
+    setSectionExpanded((current) => ({
+      ...current,
+      timeline: true,
+    }));
+    setIsAddingItem(true);
   };
 
   const itemEditHandlers = {
@@ -1193,6 +1242,11 @@ export function TravelPlanDetail({
 
         <TravelCollapsibleSection
           title="Timeline"
+          icon="clock"
+          card
+          compact
+          tightHeader
+          flushContent
           expanded={isSectionExpanded('timeline')}
           onToggle={() => toggleSection('timeline')}>
           <TravelItineraryTimeline
@@ -1203,6 +1257,12 @@ export function TravelPlanDetail({
           />
         </TravelCollapsibleSection>
       </Screen>
+
+      <TravelTimelineAddModal
+        visible={isChoosingAddKind}
+        onClose={() => setIsChoosingAddKind(false)}
+        onSelect={chooseAddKind}
+      />
 
       <TravelItineraryAddSheet
         visible={isAddingItem}
@@ -1260,5 +1320,5 @@ export function TravelPlanDetail({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  screen: { gap: spacing.md },
+  screen: { gap: spacing.xs, paddingTop: 0 },
 });
