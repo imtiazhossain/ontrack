@@ -25,6 +25,7 @@ import {
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 import { useAuthAccess } from '@/store/auth-access';
+import { useFriends } from '@/store/friends';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -102,6 +103,9 @@ export function AuthSessionProvider({
       useAuthAccess.getState().finishAuthentication();
       setError(undefined);
       setPhase('authenticated');
+      void useFriends.getState().hydrate({
+        email: nextSession.user.email ?? undefined,
+      });
     })();
     initializedUserRef.current = nextSession.user.id;
     initializationRef.current = task;
@@ -197,6 +201,7 @@ export function AuthSessionProvider({
             })
             .finally(() => {
               if (!active) return;
+              useFriends.getState().clear();
               useAuthAccess.getState().resetAccess();
               setSession(null);
               setPhase('welcome');
@@ -355,6 +360,9 @@ export function AuthSessionProvider({
       await resolveAccountSync(choice);
       useAuthAccess.getState().finishAuthentication();
       setPhase('authenticated');
+      void useFriends.getState().hydrate({
+        email: session?.user.email ?? undefined,
+      });
     } catch (resolutionError) {
       setError(accessibleAuthError(resolutionError));
       setPhase('resolving-data');
@@ -378,6 +386,7 @@ export function AuthSessionProvider({
     try {
       await signOutLocalSession();
       await clearLocalAccountData();
+      useFriends.getState().clear();
       useAuthAccess.getState().resetAccess();
       initializedUserRef.current = undefined;
       setSession(null);

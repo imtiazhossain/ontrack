@@ -326,7 +326,7 @@ export function parseRentalConfirmation(
   );
 
   const titleParts = [
-    rental.company ? `${rental.company} rental` : 'Car rental',
+    rental.company ? `${rental.company} Rental` : 'Car Rental',
     rental.pickupLocation || undefined,
   ].filter(Boolean);
   const title = titleParts.join(' · ');

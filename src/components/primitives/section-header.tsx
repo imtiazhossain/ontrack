@@ -9,6 +9,7 @@ interface SectionHeaderProps {
   actionLabel?: string;
   onAction?: () => void;
   titleStyle?: TextStyle;
+  titleColor?: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'danger' | 'success';
 }
 
 export function SectionHeader({
@@ -17,6 +18,7 @@ export function SectionHeader({
   actionLabel,
   onAction,
   titleStyle,
+  titleColor = 'tertiary',
 }: SectionHeaderProps) {
   const { spacing } = useResponsive();
   return (
@@ -31,7 +33,7 @@ export function SectionHeader({
       ]}>
       <AppText
         variant="overline"
-        color="tertiary"
+        color={titleColor}
         style={[styles.title, titleStyle]}
         fit>
         {title}

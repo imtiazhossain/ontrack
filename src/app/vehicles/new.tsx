@@ -60,7 +60,7 @@ export default function NewVehicleScreen() {
   };
 
   return (
-    <Screen contentStyle={{ gap: gap.lg }}>
+    <Screen contentStyle={{ gap: gap.lg }} refresh={false}>
       <View style={{ gap: gap.sm }}>
         <AppText variant="title" fit numberOfLines={1}>
           New vehicle

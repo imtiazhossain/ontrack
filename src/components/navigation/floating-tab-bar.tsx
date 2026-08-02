@@ -71,6 +71,11 @@ const TAB_META: Record<
     icon: 'tasks',
     href: '/(tabs)/to-do',
   },
+  social: {
+    label: 'Social',
+    icon: 'people',
+    href: '/(tabs)/social',
+  },
   insights: {
     label: 'Insights',
     icon: 'insights',

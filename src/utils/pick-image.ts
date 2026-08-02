@@ -42,6 +42,10 @@ function launchOptions(options: PickImageOptions = {}) {
     quality: options.quality ?? 0.9,
     allowsEditing: options.allowsEditing ?? false,
     aspect: options.aspect,
+    // Avoid FailedToReadImageException on iOS for some PNG/HEIC assets
+    // ("Cannot load representation of type public.png").
+    preferredAssetRepresentationMode:
+      ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
   };
 }
 
@@ -60,22 +64,37 @@ function handleDenied(
   ]);
 }
 
+function handlePickFailure(error: unknown, action: 'camera' | 'library') {
+  if (__DEV__) {
+    console.warn(`[pick-image] ${action} failed`, error);
+  }
+  appPrompt.alert(
+    'Couldn’t add photo',
+    'That image couldn’t be read. Try another photo, or take a new one.',
+  );
+}
+
 /** Returns a local image URI from the camera, or undefined if cancelled/denied. */
 export async function pickCameraImage(
   options: PickImageOptions = {},
 ): Promise<string | undefined> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    handleDenied(
-      options,
-      'Camera access needed',
-      options.cameraDeniedMessage ?? DEFAULT_CAMERA_DENIED,
-    );
+  try {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      handleDenied(
+        options,
+        'Camera access needed',
+        options.cameraDeniedMessage ?? DEFAULT_CAMERA_DENIED,
+      );
+      return undefined;
+    }
+    const result = await ImagePicker.launchCameraAsync(launchOptions(options));
+    if (result.canceled) return undefined;
+    return result.assets[0]?.uri;
+  } catch (error) {
+    handlePickFailure(error, 'camera');
     return undefined;
   }
-  const result = await ImagePicker.launchCameraAsync(launchOptions(options));
-  if (result.canceled) return undefined;
-  return result.assets[0]?.uri;
 }
 
 /** Returns a local image URI from the library, or undefined if cancelled/denied. */
@@ -97,25 +116,30 @@ export async function pickLibraryImage(
 export async function pickLibraryImages(
   options: PickLibraryImagesOptions = {},
 ): Promise<PickedImageAsset[] | undefined> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    handleDenied(
-      options,
-      'Photos access needed',
-      options.libraryDeniedMessage ?? DEFAULT_LIBRARY_DENIED,
-    );
+  try {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      handleDenied(
+        options,
+        'Photos access needed',
+        options.libraryDeniedMessage ?? DEFAULT_LIBRARY_DENIED,
+      );
+      return undefined;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      ...launchOptions(options),
+      allowsMultipleSelection: options.allowsMultipleSelection ?? false,
+      orderedSelection: options.orderedSelection ?? false,
+      selectionLimit: options.selectionLimit,
+    });
+    if (result.canceled) return undefined;
+    return result.assets.map((asset) => ({
+      uri: asset.uri,
+      fileName: asset.fileName ?? undefined,
+      fileSize: asset.fileSize,
+    }));
+  } catch (error) {
+    handlePickFailure(error, 'library');
     return undefined;
   }
-  const result = await ImagePicker.launchImageLibraryAsync({
-    ...launchOptions(options),
-    allowsMultipleSelection: options.allowsMultipleSelection ?? false,
-    orderedSelection: options.orderedSelection ?? false,
-    selectionLimit: options.selectionLimit,
-  });
-  if (result.canceled) return undefined;
-  return result.assets.map((asset) => ({
-    uri: asset.uri,
-    fileName: asset.fileName ?? undefined,
-    fileSize: asset.fileSize,
-  }));
 }

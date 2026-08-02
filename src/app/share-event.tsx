@@ -193,7 +193,7 @@ export default function ShareEventScreen() {
   const allValid = drafts.length > 0 && drafts.every(validDraft);
 
   return (
-    <Screen contentStyle={styles.screen}>
+    <Screen contentStyle={styles.screen} refresh={false}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <AppText variant="title">Review Shared Events</AppText>

@@ -14,6 +14,10 @@
           {
             "/": "/invite/travel",
             "comment": "Open legacy onTrack travel invitations."
+          },
+          {
+            "/": "/f/*",
+            "comment": "Open onTrack friend invitations."
           }
         ]
       }

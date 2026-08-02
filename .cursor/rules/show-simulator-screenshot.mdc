@@ -1,22 +1,24 @@
 ---
-description: After app UI changes, show the result fully loaded in the iOS Simulator
+description: Always test UI changes in Simulator and leave it showing the change
 alwaysApply: true
 ---
 
 # Show UI in Simulator
 
-After any change that affects the running Expo/iOS app UI, do not end the turn until you have shown the user a **fully loaded simulator screenshot** of the relevant screen.
+After any change that affects the running Expo/iOS app UI, **always test in the iOS Simulator** and do not end the turn until the simulator is left in a **working state that shows the change**, with a fully loaded screenshot in the reply.
 
 ## Required close-out
 
 1. Confirm Metro `/status` is 200 (restart with `REACT_NATIVE_PACKAGER_HOSTNAME=<en0 IP> npm start -- --clear` if needed).
 2. Boot/open the iOS Simulator (`open -a Simulator`) with the onTrack app (`com.imtihoss.ontracknow`) or Expo Go as appropriate.
 3. Deep-link or navigate to the changed surface (e.g. `xcrun simctl openurl booted 'ontrack://workouts'`).
-4. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant).
-5. Capture a screenshot with `xcrun simctl io booted screenshot` and **read the image** so it appears in the reply.
-6. If the first capture is a splash, loading state, or wrong tab, wait/retry and capture again before finishing.
+4. **Test the change** on that surface (visible result of the edit, not just that the app launched).
+5. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant).
+6. Capture a screenshot with `xcrun simctl io booted screenshot` and **read the image** so it appears in the reply.
+7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait/retry and capture again before finishing.
 
 ## Do not
 
-- End on “reload the app” without a simulator screenshot.
-- Hand off a white screen, error boundary, or partial load as the final visual proof.
+- Skip simulator testing after UI/app changes.
+- End on “reload the app” without a simulator screenshot of the change.
+- Hand off a white screen, error boundary, partial load, or unrelated screen as the final visual proof.

@@ -15,16 +15,17 @@ function pad(value: number) {
 
 /** Web hour / minute number fields. */
 export function TimeField({
-  label = 'Time',
+  label,
   value,
   onChange,
   disabled = false,
-  accessibilityLabel = label,
+  accessibilityLabel,
   testID,
 }: TimeFieldProps) {
   const minutes = clampMinutesFromMidnight(value ?? 0);
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
+  const resolvedA11yLabel = accessibilityLabel ?? label ?? 'Time';
 
   const commit = (nextHours: string, nextMinutes: string) => {
     const h = Math.min(23, Math.max(0, Number(nextHours) || 0));
@@ -33,10 +34,12 @@ export function TimeField({
   };
 
   return (
-    <View style={styles.wrapper} accessibilityLabel={accessibilityLabel} testID={testID}>
-      <AppText variant="overline" color="tertiary">
-        {label}
-      </AppText>
+    <View style={styles.wrapper} accessibilityLabel={resolvedA11yLabel} testID={testID}>
+      {label ? (
+        <AppText variant="overline" color="tertiary" fit>
+          {label}
+        </AppText>
+      ) : null}
       <View style={styles.row}>
         <View style={styles.flex}>
           <Input

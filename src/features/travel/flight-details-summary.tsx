@@ -54,10 +54,10 @@ export function FlightDetailsSummary({
   return (
     <View style={[styles.container, { backgroundColor: theme.accentFaint }]}>
       <View style={styles.header}>
-        <Symbol name="airplane" size="sm" color={theme.accentPrimary} />
+        <Symbol name="airplane" size="sm" color={theme.textPrimary} />
         <View style={styles.flex}>
           {route ? (
-            <AppText variant="subheading" color="accent" fit>
+            <AppText variant="subheading" color="primary" fit>
               {route}
             </AppText>
           ) : null}
@@ -70,10 +70,10 @@ export function FlightDetailsSummary({
       </View>
       {arrival && startMinutes !== undefined ? (
         <View style={styles.detailRow}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Lands
           </AppText>
-          <AppText variant="callout" color="accent" fit style={styles.detailValue}>
+          <AppText variant="callout" color="primary" fit style={styles.detailValue}>
             {formatMinutes(startMinutes)} → {formatFlightLandingLabel(arrival)}
             {arrival.timeZoneAware ? ' local' : ''}
           </AppText>
@@ -90,10 +90,10 @@ export function FlightDetailsSummary({
           disabled={!confirmationUris.length}
           onPress={openConfirmation}
           style={styles.detailRow}>
-          <AppText variant="overline" color="tertiary" fit style={travelOverlineStyle}>
+          <AppText variant="overline" color="secondary" fit style={travelOverlineStyle}>
             Confirmation
           </AppText>
-          <AppText variant="callout" color="accent" selectable fit style={styles.detailValue}>
+          <AppText variant="callout" color="primary" selectable fit style={styles.detailValue}>
             {details.confirmationCode}
           </AppText>
         </Pressable>

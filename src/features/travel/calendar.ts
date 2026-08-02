@@ -3,7 +3,7 @@ import { addDays } from '@/utils/date';
 
 import type { TravelItemKind, TravelPlan } from './types';
 
-const ITEM_ICON: Record<TravelItemKind, string> = {
+const ITEM_ICON: Record<Exclude<TravelItemKind, 'moment'>, string> = {
   flight: '✈️',
   stay: '🛏️',
   activity: '📍',
@@ -33,7 +33,9 @@ export function travelCalendarDrafts(plan: TravelPlan): ActivityDraft[] {
 
   return [
     ...overviews,
-    ...plan.itinerary.map((item) => {
+    ...plan.itinerary.flatMap((item) => {
+      if (item.kind === 'moment') return [];
+      const icon = ITEM_ICON[item.kind];
       const flightRoute = item.flight
         ? [item.flight.departureAirport, item.flight.arrivalAirport]
             .filter(Boolean)
@@ -46,27 +48,29 @@ export function travelCalendarDrafts(plan: TravelPlan): ActivityDraft[] {
         ? `Confirmation: ${item.flight.confirmationCode}`
         : undefined;
       const seat = item.flight?.seat ? `Seat: ${item.flight.seat}` : undefined;
-      return {
-        date: item.date,
-        title: `${ITEM_ICON[item.kind]} ${item.title}`,
-        categoryId: 'personal',
-        startMinutes: item.startMinutes,
-        durationMinutes: item.durationMinutes,
-        travelPlanId: plan.id,
-        travelItemId: item.id,
-        notes: [
-          plan.title,
-          plan.destination,
-          flightRoute,
-          flightNumber,
-          confirmation,
-          seat,
-          item.details,
-          item.bookingUrl,
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      };
+      return [
+        {
+          date: item.date,
+          title: `${icon} ${item.title}`,
+          categoryId: 'personal' as const,
+          startMinutes: item.startMinutes,
+          durationMinutes: item.durationMinutes,
+          travelPlanId: plan.id,
+          travelItemId: item.id,
+          notes: [
+            plan.title,
+            plan.destination,
+            flightRoute,
+            flightNumber,
+            confirmation,
+            seat,
+            item.details,
+            item.bookingUrl,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        },
+      ];
     }),
   ];
 }

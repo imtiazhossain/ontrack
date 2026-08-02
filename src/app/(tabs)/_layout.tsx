@@ -37,6 +37,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="to-do" />
+      <Tabs.Screen name="social" />
       <Tabs.Screen name="insights" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="workouts" />

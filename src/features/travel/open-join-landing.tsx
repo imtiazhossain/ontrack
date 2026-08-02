@@ -6,7 +6,6 @@ import { StyleSheet, View } from 'react-native';
 import {
   AppText,
   Button,
-  Card,
   ErrorMessage,
   LoadingBlock,
   Screen,
@@ -26,8 +25,8 @@ import {
   travelInviteLocalId,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { TravelSkyBackdrop, TravelSurfaceCard } from '@/features/travel/travel-surface';
 import type { TravelOpenJoinPreview, TravelOpenJoinStatus } from '@/features/travel/types';
-import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -35,14 +34,6 @@ import { useTravel } from '@/store/travel';
 import { formatDateLong } from '@/utils/date';
 
 export function TravelOpenJoinLanding({ code }: { code?: string }) {
-  return (
-    <FeatureThemeProvider feature="travel">
-      <TravelOpenJoinLandingContent code={code} />
-    </FeatureThemeProvider>
-  );
-}
-
-function TravelOpenJoinLandingContent({ code }: { code?: string }) {
   const router = useRouter();
   const { user, continueWithProvider, workingProvider } = useAuthSession();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
@@ -241,7 +232,7 @@ function TravelOpenJoinLandingContent({ code }: { code?: string }) {
           </AppText>
         </View>
 
-        <Card style={styles.inviteCard}>
+        <TravelSurfaceCard>
           {loadingPreview ? (
             <LoadingBlock label="Loading trip…" />
           ) : previewError ? (
@@ -262,7 +253,7 @@ function TravelOpenJoinLandingContent({ code }: { code?: string }) {
           ) : (
             <ErrorMessage message="This join link is invalid or incomplete." variant="body" />
           )}
-        </Card>
+        </TravelSurfaceCard>
 
         {validCode && !previewError ? (
           <View style={styles.buttons}>
@@ -405,6 +396,8 @@ function TravelOpenJoinLandingContent({ code }: { code?: string }) {
 }
 
 const styles = StyleSheet.create({
+  shell: { flex: 1 },
+  transparent: { backgroundColor: 'transparent' },
   center: {
     flexGrow: 1,
     alignItems: 'center',

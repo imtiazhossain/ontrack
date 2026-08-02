@@ -79,6 +79,17 @@ export const darkTheme: Theme = {
 
 export const lightTravelTheme: Theme = {
   ...lightTheme,
+  // Soft sky-tinted surfaces — never pure white — so cards/buttons sit in
+  // the travel wash instead of flashing a harsh white cliff under the hero.
+  // Keep clear value steps so navy/accent text stays readable on nested blues.
+  backgroundPrimary: '#A8C4D8',
+  backgroundSecondary: '#B4CCDC',
+  backgroundElevated: '#E8F2F8',
+  backgroundSunken: '#D4E4F0',
+  separator: '#8AADC2',
+  textPrimary: '#0B1C28',
+  textSecondary: '#1E3A4D',
+  textTertiary: '#3A5568',
   accentPrimary: palette.travelBlue,
   accentSoft: palette.travelBlueSoft,
   accentFaint: palette.travelBlueFaint,
@@ -87,6 +98,14 @@ export const lightTravelTheme: Theme = {
 
 export const darkTravelTheme: Theme = {
   ...darkTheme,
+  backgroundPrimary: '#0E1A26',
+  backgroundSecondary: '#152433',
+  backgroundElevated: '#1C2E3F',
+  backgroundSunken: '#152433',
+  separator: '#2A4156',
+  textPrimary: '#EAF3F8',
+  textSecondary: '#B4C7D4',
+  textTertiary: '#8499AA',
   accentPrimary: palette.travelBlueDark,
   accentSoft: palette.travelBlueSoftDark,
   accentFaint: palette.travelBlueFaintDark,

@@ -275,7 +275,7 @@ export default function NewPlantScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen contentStyle={styles.content} refresh={false}>
       <AppText variant="title">{step === 'photo' ? 'Photograph your plant' : step === 'details' ? 'Describe its space' : 'Review the care plan'}</AppText>
       <AppText variant="callout" color="secondary">
         {step === 'photo'

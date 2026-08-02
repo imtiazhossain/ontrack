@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
+  appPrompt,
   Button,
   Card,
   ErrorMessage,
@@ -12,10 +13,13 @@ import {
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { PeoplePicker } from '@/features/social/people-picker';
 import { shareTodoCollaboratorInvite } from '@/features/todos/share';
 import { useTheme } from '@/hooks/use-theme';
+import type { FriendProfile } from '@/services/friends';
 import {
   createTodoCollaboratorLink,
+  createTodoEmailInvite,
   publishTodoList,
 } from '@/services/todos/collaboration';
 import { useTodos } from '@/store/todos';
@@ -34,6 +38,7 @@ export function TodoCollaboratorsScreen() {
   );
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string>();
+  const [pickingFriends, setPickingFriends] = useState(false);
   const allSelected =
     ownedLists.length > 0 && ownedLists.every((list) => selectedIds.has(list.id));
   const selectedLists = ownedLists.filter((list) => selectedIds.has(list.id));
@@ -80,7 +85,38 @@ export function TodoCollaboratorsScreen() {
     }
   };
 
+  const inviteFriends = async (friends: FriendProfile[]) => {
+    if (!user) {
+      requireSignIn();
+      return;
+    }
+    if (!selectedLists.length || !friends.length || working) return;
+    setWorking(true);
+    setError(undefined);
+    try {
+      for (const list of selectedLists) {
+        if (list.mode === 'private') await publishTodoList(list.id);
+        for (const friend of friends) {
+          await createTodoEmailInvite(list.id, friend.email);
+        }
+      }
+      appPrompt.alert(
+        'Invitations Ready',
+        'Selected friends will see these in their onTrack invitation inbox.',
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : 'Friends could not be invited.',
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
   return (
+    <>
     <Screen contentStyle={styles.container}>
       <View style={styles.heading}>
         <AppText variant="overline" color="accent">Checklist access</AppText>
@@ -170,12 +206,34 @@ export function TodoCollaboratorsScreen() {
       </Button>
 
       <Button
+        variant="secondary"
+        icon="people"
+        disabled={!selectedLists.length || working}
+        onPress={() => {
+          if (!user) {
+            requireSignIn();
+            return;
+          }
+          setPickingFriends(true);
+        }}>
+        Invite from Friends
+      </Button>
+
+      <Button
         variant="ghost"
         icon="invite"
         onPress={() => router.push('/todo-invites' as never)}>
         View invitations sent to me
       </Button>
     </Screen>
+    <PeoplePicker
+      visible={pickingFriends}
+      title="Invite Friends"
+      confirmLabel="Invite"
+      onClose={() => setPickingFriends(false)}
+      onConfirm={(friends) => void inviteFriends(friends)}
+    />
+    </>
   );
 }
 

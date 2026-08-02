@@ -108,7 +108,7 @@ export function VisionBoardItemEditor() {
 
   if (Platform.OS === 'web') {
     return (
-      <Screen>
+      <Screen refresh={false}>
         <AppText variant="title">Mobile Editing</AppText>
         <AppText color="secondary">
           Board editing is available in the onTrack iOS and Android apps.
@@ -128,7 +128,7 @@ export function VisionBoardItemEditor() {
           : 'Add Affirmation';
 
   return (
-    <Screen contentStyle={styles.screen}>
+    <Screen contentStyle={styles.screen} refresh={false}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <AppText style={styles.title}>{title}</AppText>

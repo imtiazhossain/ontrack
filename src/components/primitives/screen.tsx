@@ -1,7 +1,14 @@
 import type { PropsWithChildren } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
@@ -15,6 +22,13 @@ interface ScreenProps extends PropsWithChildren {
   style?: ViewStyle;
   contentStyle?: ViewStyle;
   scrollEnabled?: boolean;
+  /**
+   * Pull-to-refresh for scrollable screens (default true).
+   * Disable on dense editors/forms where a pull would fight typing.
+   */
+  refresh?: boolean;
+  /** Extra work after the shared cloud/friends refresh. */
+  onRefresh?: () => void | Promise<void>;
 }
 
 export function Screen({
@@ -25,11 +39,14 @@ export function Screen({
   style,
   contentStyle,
   scrollEnabled = true,
+  refresh = true,
+  onRefresh,
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { spacing, layout } = useResponsive();
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
+  const pull = usePullToRefresh(onRefresh);
 
   const paddingStyle: ViewStyle = {
     // The app shell owns the non-scrolling top safe area.
@@ -69,7 +86,8 @@ export function Screen({
         contentContainerStyle={[styles.scrollContent, paddingStyle, contentStyle]}
         showsVerticalScrollIndicator={false}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refresh ? pull.refreshControl : undefined}>
         {children}
       </ScrollView>
     </View>

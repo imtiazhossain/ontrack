@@ -10,6 +10,7 @@ export { EmptyState } from './empty-state';
 export { ErrorMessage } from './error-message';
 export { Input } from './input';
 export { LoadingBlock } from './loading-block';
+export { LoadingSpinner } from './loading-spinner';
 export { ProgressRing } from './progress-ring';
 export { RouteErrorBoundary } from './route-error-boundary';
 export { Screen } from './screen';

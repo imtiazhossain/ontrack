@@ -6,6 +6,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 import { AppText } from './app-text';
+import { LoadingSpinner } from './loading-spinner';
 import { Symbol } from './symbol';
 
 interface ButtonProps extends PropsWithChildren {
@@ -13,6 +14,8 @@ interface ButtonProps extends PropsWithChildren {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'md' | 'lg';
   icon?: AppIconName;
+  /** Replaces the leading icon with a spinner while work is in flight. */
+  loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -25,13 +28,14 @@ export function Button({
   variant = 'primary',
   size = 'md',
   icon,
+  loading = false,
   disabled,
   style,
   textStyle,
   accessibilityLabel,
 }: ButtonProps) {
   const theme = useTheme();
-  const { spacing, layout } = useResponsive();
+  const { spacing, layout, iconSizes } = useResponsive();
 
   const background = {
     primary: theme.accentPrimary,
@@ -44,12 +48,14 @@ export function Button({
     | 'primary';
   const iconColor =
     variant === 'primary' || variant === 'danger' ? theme.textOnAccent : theme.textPrimary;
+  const isDisabled = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      disabled={disabled}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      disabled={isDisabled}
       onPress={() => {
         haptics.tap();
         onPress();
@@ -61,12 +67,16 @@ export function Button({
           minHeight: layout.minTapTarget,
           paddingHorizontal: spacing.xl,
           paddingVertical: size === 'lg' ? spacing.lg : spacing.md,
-          opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
+          opacity: isDisabled && !loading ? 0.4 : pressed ? 0.75 : 1,
           backgroundColor: background,
         },
         style,
       ]}>
-      {icon ? <Symbol name={icon} size="sm" color={iconColor} /> : null}
+      {loading ? (
+        <LoadingSpinner size={iconSizes.sm} color={iconColor} />
+      ) : icon ? (
+        <Symbol name={icon} size="sm" color={iconColor} />
+      ) : null}
       <AppText
         variant={size === 'lg' ? 'subheading' : 'callout'}
         color={textColor}
@@ -87,6 +97,8 @@ interface IconButtonProps {
   shape?: 'circle' | 'rounded';
   size?: number;
   accessibilityLabel: string;
+  /** Replaces the icon with a spinner while work is in flight. */
+  loading?: boolean;
   disabled?: boolean;
 }
 
@@ -99,16 +111,21 @@ export function IconButton({
   shape = 'circle',
   size,
   accessibilityLabel,
+  loading = false,
   disabled,
 }: IconButtonProps) {
   const theme = useTheme();
-  const { layout } = useResponsive();
+  const { layout, iconSizes } = useResponsive();
   const resolvedSize = size ?? layout.minTapTarget;
+  const isDisabled = disabled || loading;
+  const tint = color ?? theme.textPrimary;
+  const spinnerColor = color ?? theme.accentPrimary;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      disabled={disabled}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      disabled={isDisabled}
       hitSlop={6}
       onPress={() => {
         haptics.tap();
@@ -123,10 +140,14 @@ export function IconButton({
           backgroundColor: background ?? theme.backgroundSunken,
           borderColor,
           borderWidth: borderColor ? StyleSheet.hairlineWidth : 0,
-          opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
+          opacity: isDisabled && !loading ? 0.35 : pressed ? 0.7 : 1,
         },
       ]}>
-      <Symbol name={icon} size="md" color={color ?? theme.textPrimary} />
+      {loading ? (
+        <LoadingSpinner size={Math.round(iconSizes.md * 0.95)} color={spinnerColor} />
+      ) : (
+        <Symbol name={icon} size="md" color={tint} />
+      )}
     </Pressable>
   );
 }

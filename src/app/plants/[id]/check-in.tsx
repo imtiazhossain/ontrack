@@ -25,7 +25,7 @@ export default function PlantCheckInScreen() {
   const [error, setError] = useState<string>();
   const saveInFlightRef = useRef(false);
 
-  if (!plant) return <Screen><AppText variant="title">Plant Not Found</AppText></Screen>;
+  if (!plant) return <Screen refresh={false}><AppText variant="title">Plant Not Found</AppText></Screen>;
 
   const camera = async () => {
     const uri = await pickCameraImage({
@@ -84,7 +84,7 @@ export default function PlantCheckInScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen contentStyle={styles.content} refresh={false}>
       <AppText variant="title">Check In on {plant.nickname}</AppText>
       <AppText color="secondary">Use similar lighting and framing when possible. The assessment compares only visible changes.</AppText>
       {photo ? <Image source={photo} style={styles.hero} contentFit="cover" /> : null}

@@ -57,6 +57,15 @@ export function formatDateKey(value: string, format: DateDisplayFormat): string 
   return `${month}/${day}/${year}`;
 }
 
+/** Month/day (or day/month) without year or leading zeros — for dense timeline chrome. */
+export function formatDateKeyShort(value: string, format: DateDisplayFormat): string {
+  if (!isDateKey(value)) return value;
+  const [, month, day] = value.split('-');
+  const m = String(Number(month));
+  const d = String(Number(day));
+  return format === 'iso' ? `${d}/${m}` : `${m}/${d}`;
+}
+
 export function todayKey(): string {
   return toDateKey(new Date());
 }
@@ -75,12 +84,13 @@ export function isPast(key: string): boolean {
   return key < todayKey();
 }
 
+/** 12-hour clock with minutes always shown (e.g. `9:00 AM`, `6:30 PM`). */
 export function formatMinutes(minutesFromMidnight: number): string {
   const h24 = Math.floor(minutesFromMidnight / 60) % 24;
   const m = minutesFromMidnight % 60;
   const suffix = h24 >= 12 ? 'PM' : 'AM';
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return m === 0 ? `${h12} ${suffix}` : `${h12}:${`${m}`.padStart(2, '0')} ${suffix}`;
+  return `${h12}:${`${m}`.padStart(2, '0')} ${suffix}`;
 }
 
 export function formatDuration(minutes: number): string {
@@ -88,6 +98,21 @@ export function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** Whole minutes from a local start date/time to a local end date/time. */
+export function minutesBetween(
+  startDate: string,
+  startMinutes: number,
+  endDate: string,
+  endMinutes: number,
+): number {
+  if (!isDateKey(startDate) || !isDateKey(endDate)) return NaN;
+  const start = fromDateKey(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = fromDateKey(endDate);
+  end.setHours(0, 0, 0, 0);
+  return Math.round((end.getTime() - start.getTime()) / 60_000) + (endMinutes - startMinutes);
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

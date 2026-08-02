@@ -37,6 +37,7 @@ import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { TodoEmptyState } from '@/features/todos/todo-empty-state';
 import { ChecklistItemSeparator, TodoRow } from '@/features/todos/todo-row';
 import { sortTodoTasks, type TodoFilter, type TodoSort } from '@/features/todos/todo-sort';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
@@ -53,6 +54,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { refreshControl } = usePullToRefresh();
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
@@ -192,6 +194,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
             ]}
             contentInsetAdjustmentBehavior="never"
             data={visibleTasks}
+            refreshControl={refreshControl}
             dragItemOverflow={false}
             keyboardDismissMode={
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'

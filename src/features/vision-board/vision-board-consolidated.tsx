@@ -24,6 +24,7 @@ import {
     radii,
     spacing,
 } from '@/design-system';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
@@ -47,6 +48,7 @@ import { orderedVisionBoardCategories } from './selectors';
 export function VisionBoardConsolidated() {
   const router = useRouter();
   const theme = useTheme();
+  const { refreshControl } = usePullToRefresh();
   const insets = useSafeAreaInsets();
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
@@ -216,6 +218,7 @@ export function VisionBoardConsolidated() {
         showsVerticalScrollIndicator={false}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
         contentContainerStyle={[
           styles.scrollContent,
           {

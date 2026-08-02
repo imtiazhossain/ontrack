@@ -17,7 +17,6 @@ import { featureFlags } from '@/constants/feature-flags';
 import { spacing } from '@/design-system';
 import { compareOnGoogleFlights } from '@/features/travel/provider';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { FeatureThemeProvider } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { formatDateKey } from '@/utils/date';
@@ -84,14 +83,6 @@ function LegSummary({
 }
 
 export function FlightSearchScreen({ planId }: { planId: string }) {
-  return (
-    <FeatureThemeProvider feature="travel">
-      <FlightSearchScreenContent planId={planId} />
-    </FeatureThemeProvider>
-  );
-}
-
-function FlightSearchScreenContent({ planId }: { planId: string }) {
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const controllerRef = useRef<AbortController | undefined>(undefined);

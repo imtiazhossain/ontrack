@@ -1,8 +1,9 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/design-system';
-import { useTheme } from '@/hooks/use-theme';
+import { useResponsive } from '@/hooks/use-responsive';
 import { AppText } from './app-text';
+import { LoadingSpinner } from './loading-spinner';
 
 interface LoadingBlockProps {
   label?: string;
@@ -12,12 +13,12 @@ interface LoadingBlockProps {
 
 /** Shared centered loading indicator for screens and panels. */
 export function LoadingBlock({ label, compact = false }: LoadingBlockProps) {
-  const theme = useTheme();
+  const { s } = useResponsive();
   return (
     <View style={[styles.container, compact && styles.compact]}>
-      <ActivityIndicator color={theme.accentPrimary} />
+      <LoadingSpinner size={compact ? Math.max(22, s(24)) : Math.max(28, s(32))} />
       {label ? (
-        <AppText variant="callout" color="secondary" align="center">
+        <AppText variant="callout" color="secondary" align="center" fit={compact}>
           {label}
         </AppText>
       ) : null}

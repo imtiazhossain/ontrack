@@ -45,7 +45,7 @@ export function ChipRow<T extends string>({
             borderColor: active ? theme.accentPrimary : 'transparent',
           },
         ]}>
-        <AppText variant="callout" color={active ? 'accent' : 'secondary'}>
+        <AppText variant="callout" color={active ? 'accent' : 'secondary'} fit>
           {option.label}
         </AppText>
       </Pressable>
@@ -76,9 +76,11 @@ const styles = StyleSheet.create({
   chip: {
     borderRadius: radii.pill,
     borderWidth: borders.thin,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 38,
+    minHeight: 44,
+    minWidth: 0,
+    maxWidth: 140,
     justifyContent: 'center',
   },
 });

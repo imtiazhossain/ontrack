@@ -27,7 +27,7 @@ export function ConfirmationDocumentCue({
   accessibilityLabel = 'View uploaded confirmation',
 }: {
   uris?: string[];
-  kind: 'flight' | 'rental';
+  kind: 'flight' | 'rental' | 'stay';
   accessibilityLabel?: string;
 }) {
   const theme = useTheme();

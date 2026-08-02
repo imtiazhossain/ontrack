@@ -31,9 +31,12 @@ export function BackButton({
 export function HeaderBackButton({
   accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
+  alwaysNavigateTo,
 }: {
   accessibilityLabel?: string;
   fallback?: Href;
+  /** When set, always navigate here instead of popping the stack. */
+  alwaysNavigateTo?: Href;
 }) {
   const router = useRouter();
 
@@ -42,7 +45,11 @@ export function HeaderBackButton({
       icon="back"
       accessibilityLabel={accessibilityLabel}
       background="transparent"
-      onPress={() => goBackOrReplace(router, fallback)}
+      onPress={() =>
+        alwaysNavigateTo
+          ? router.replace(alwaysNavigateTo)
+          : goBackOrReplace(router, fallback)
+      }
     />
   );
 }

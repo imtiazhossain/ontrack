@@ -17,25 +17,45 @@ import {
 
 import { AppText } from './app-text';
 import { IconButton } from './button';
-import { Symbol } from './symbol';
+import { FieldLeadingIcon } from './field-leading-icon';
 
 interface DateFieldProps {
-  label: string;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   minimumDate?: string;
   maximumDate?: string;
   disabled?: boolean;
+  /** Shown when `value` is empty / not a date key. */
+  placeholder?: string;
+  /** Persistent label above the value (sheet stacked chrome). */
+  stackedLabel?: string;
+  iconBackground?: string;
+  iconColor?: string;
+  fieldBackground?: string;
+  stackedLabelColor?: string;
+  placeholderColor?: string;
   accessibilityLabel?: string;
   testID?: string;
 }
 
-function pickerDate(value: string): Date {
-  return isDateKey(value) ? fromDateKey(value) : new Date();
-}
-
 function optionalPickerDate(value: string | undefined): Date | undefined {
   return value && isDateKey(value) ? fromDateKey(value) : undefined;
+}
+
+/** Initial calendar cursor: stored value, else min, else today (clamped to range). */
+function initialPickerDate(
+  value: string,
+  minimumDate?: string,
+  maximumDate?: string,
+): Date {
+  if (isDateKey(value)) return fromDateKey(value);
+  const min = optionalPickerDate(minimumDate);
+  const max = optionalPickerDate(maximumDate);
+  let next = min ? new Date(min) : new Date();
+  if (min && next < min) next = new Date(min);
+  if (max && next > max) next = new Date(max);
+  return next;
 }
 
 export function DateField({
@@ -45,7 +65,14 @@ export function DateField({
   minimumDate,
   maximumDate,
   disabled = false,
-  accessibilityLabel = label,
+  placeholder = 'MM/DD/YYYY',
+  stackedLabel,
+  iconBackground,
+  iconColor,
+  fieldBackground,
+  stackedLabelColor,
+  placeholderColor,
+  accessibilityLabel,
   testID,
 }: DateFieldProps) {
   const theme = useTheme();
@@ -54,48 +81,105 @@ export function DateField({
   const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [showPicker, setShowPicker] = useState(false);
-  const date = pickerDate(value);
+  const [draftDate, setDraftDate] = useState(() =>
+    initialPickerDate(value, minimumDate, maximumDate),
+  );
   const min = optionalPickerDate(minimumDate);
   const max = optionalPickerDate(maximumDate);
-  const displayValue = formatDateKey(value, dateDisplayFormat);
+  const hasValue = isDateKey(value);
+  const displayValue = hasValue ? formatDateKey(value, dateDisplayFormat) : '';
+  const resolvedPlaceholder =
+    placeholder === 'MM/DD/YYYY' && dateDisplayFormat === 'iso'
+      ? 'YYYY-MM-DD'
+      : placeholder;
+  const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Date';
+  const stacked = Boolean(stackedLabel);
 
-  const changeDate = (next: Date, close: boolean) => {
-    onChange(toDateKey(next));
-    if (close) setShowPicker(false);
+  const openPicker = () => {
+    setDraftDate(initialPickerDate(value, minimumDate, maximumDate));
+    setShowPicker(true);
+  };
+
+  const commitDraft = () => {
+    onChange(toDateKey(draftDate));
+    setShowPicker(false);
   };
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <AppText variant="overline" color="tertiary" fit>
-        {label}
-      </AppText>
+      {label && !stacked ? (
+        <AppText variant="overline" color="tertiary" fit>
+          {label}
+        </AppText>
+      ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityValue={{ text: displayValue }}
+        accessibilityLabel={resolvedA11yLabel}
+        accessibilityValue={{ text: displayValue || resolvedPlaceholder }}
         disabled={disabled}
-        onPress={() => setShowPicker(true)}
+        onPress={openPicker}
         style={({ pressed }) => [
           {
-            minHeight: Math.max(44, s(48)),
-            borderRadius: radii.md,
+            minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
+            borderRadius: stacked ? radii.lg : radii.md,
             paddingHorizontal: spacing.md,
+            paddingVertical: stacked ? spacing.sm : 0,
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: stacked ? 'flex-start' : 'center',
             gap: spacing.sm,
-            backgroundColor: theme.backgroundSunken,
+            backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
           },
         ]}>
-        <Symbol name="calendar" size="sm" color={theme.textSecondary} />
-        <AppText variant="body" fit style={{ flex: 1, minWidth: 0 }}>
-          {displayValue}
-        </AppText>
+        <View style={stacked ? { paddingTop: s(2) } : undefined}>
+          <FieldLeadingIcon
+            name="calendar"
+            backgroundColor={iconBackground}
+            color={iconColor}
+          />
+        </View>
+        {stacked ? (
+          <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' }}>
+            <AppText
+              variant="caption"
+              fit
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                fontWeight: '600',
+                color: stackedLabelColor ?? theme.textPrimary,
+              }}>
+              {stackedLabel}
+            </AppText>
+            <AppText
+              variant="body"
+              fit
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                color: hasValue
+                  ? theme.textPrimary
+                  : (placeholderColor ?? theme.textTertiary),
+              }}>
+              {hasValue ? displayValue : resolvedPlaceholder}
+            </AppText>
+          </View>
+        ) : (
+          <AppText
+            variant="body"
+            fit
+            color={hasValue ? 'primary' : 'tertiary'}
+            style={{ flex: 1, minWidth: 0 }}>
+            {hasValue ? displayValue : resolvedPlaceholder}
+          </AppText>
+        )}
       </Pressable>
 
       {process.env.EXPO_OS === 'android' && showPicker ? (
         <NativeDateTimePicker
-          value={date}
+          value={draftDate}
           mode="date"
           display="calendar"
           presentation="dialog"
@@ -105,7 +189,11 @@ export function DateField({
           positiveButton={{ label: 'Done' }}
           negativeButton={{ label: 'Cancel' }}
           onDismiss={() => setShowPicker(false)}
-          onValueChange={(_event, selectedDate) => changeDate(selectedDate, true)}
+          onValueChange={(_event, selectedDate) => {
+            setDraftDate(selectedDate);
+            onChange(toDateKey(selectedDate));
+            setShowPicker(false);
+          }}
           testID={testID}
         />
       ) : null}
@@ -144,7 +232,7 @@ export function DateField({
               ]}>
               <View style={[styles.calendarHeader, { gap: spacing.md }]}>
                 <AppText variant="subheading" fit style={styles.calendarTitle}>
-                  {label}
+                  {resolvedA11yLabel}
                 </AppText>
                 <IconButton
                   icon="close"
@@ -155,7 +243,7 @@ export function DateField({
                 />
               </View>
               <NativeDateTimePicker
-                value={date}
+                value={draftDate}
                 mode="date"
                 display="inline"
                 minimumDate={min}
@@ -163,10 +251,27 @@ export function DateField({
                 accentColor={theme.accentPrimary}
                 themeVariant={theme.name}
                 locale={nativeDatePickerLocale(dateLocale)}
-                onValueChange={(_event, selectedDate) => changeDate(selectedDate, false)}
+                onValueChange={(_event, selectedDate) => setDraftDate(selectedDate)}
                 style={styles.calendar}
                 testID={testID}
               />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Done"
+                onPress={commitDraft}
+                style={({ pressed }) => [
+                  styles.done,
+                  {
+                    minHeight: Math.max(44, s(48)),
+                    paddingHorizontal: spacing.lg,
+                    backgroundColor: theme.accentPrimary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <AppText variant="callout" color="onAccent" fit>
+                  Done
+                </AppText>
+              </Pressable>
             </View>
           </View>
         </Modal>
@@ -198,5 +303,10 @@ const styles = StyleSheet.create({
   calendar: {
     width: '100%',
     height: 340,
+  },
+  done: {
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

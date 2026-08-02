@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, DateField, ErrorMessage, Input, TimeField } from '@/components/primitives';
 import { spacing } from '@/design-system';
 
+import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { RentalDetailsDraft } from './rental-details';
 import { travelOverlineStyle } from './travel-chrome';
 
@@ -15,6 +16,10 @@ interface RentalDetailsEditorProps {
   importedFileName?: string;
   planStartDate?: string;
   planEndDate?: string;
+  /** When schedule is edited in the parent form (pick-up / drop-off). */
+  hideDropoffFields?: boolean;
+  /** When the parent already shows the Rental Details title / import. */
+  hideHeader?: boolean;
 }
 
 export function RentalDetailsEditor({
@@ -26,6 +31,8 @@ export function RentalDetailsEditor({
   importedFileName,
   planStartDate,
   planEndDate,
+  hideDropoffFields = false,
+  hideHeader = false,
 }: RentalDetailsEditorProps) {
   const update = (field: keyof RentalDetailsDraft, nextValue: string) => {
     onChange({ ...value, [field]: nextValue });
@@ -42,26 +49,30 @@ export function RentalDetailsEditor({
       : 10 * 60;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
-          Rental Details
-        </AppText>
-        {onImport ? (
-          <Button
-            variant="secondary"
-            icon="scan-document"
-            disabled={importing}
-            onPress={onImport}
-            accessibilityLabel="Import car rental confirmation document or screenshots">
-            {importing ? 'Reading…' : 'Import Confirmation'}
-          </Button>
-        ) : null}
-      </View>
+    <View style={[styles.container, hideHeader ? styles.containerCompact : undefined]}>
+      {hideHeader ? null : (
+        <View style={styles.header}>
+          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+            Rental Details
+          </AppText>
+          {onImport ? (
+            <Button
+              variant="secondary"
+              icon="scan-document"
+              loading={importing}
+              onPress={onImport}
+              accessibilityLabel="Import car rental confirmation document or screenshots">
+              Import Confirmation
+            </Button>
+          ) : null}
+        </View>
+      )}
       {importedFileName ? (
-        <AppText variant="caption" color="secondary" selectable>
-          Imported from {importedFileName}. Review the details before saving.
-        </AppText>
+        <ConfirmationImportBanner
+          fileName={importedFileName}
+          uris={value.confirmationUris}
+          kind="rental"
+        />
       ) : null}
       <View style={styles.twoColumns}>
         <View style={styles.flex}>
@@ -102,24 +113,26 @@ export function RentalDetailsEditor({
         onChangeText={(nextValue) => update('vehicleClass', nextValue)}
         placeholder="Compact SUV"
       />
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <DateField
-            label="Drop Off Date"
-            value={value.dropoffDate || planStartDate || ''}
-            minimumDate={planStartDate}
-            maximumDate={planEndDate}
-            onChange={(nextValue) => update('dropoffDate', nextValue)}
-          />
+      {hideDropoffFields ? null : (
+        <View style={styles.twoColumns}>
+          <View style={styles.flex}>
+            <DateField
+              label="Drop Off Date"
+              value={value.dropoffDate || planStartDate || ''}
+              minimumDate={planStartDate}
+              maximumDate={planEndDate}
+              onChange={(nextValue) => update('dropoffDate', nextValue)}
+            />
+          </View>
+          <View style={styles.flex}>
+            <TimeField
+              label="Drop Off Time"
+              value={dropoffTimeValue}
+              onChange={(nextValue) => update('dropoffMinutes', String(nextValue))}
+            />
+          </View>
         </View>
-        <View style={styles.flex}>
-          <TimeField
-            label="Drop Off Time"
-            value={dropoffTimeValue}
-            onChange={(nextValue) => update('dropoffMinutes', String(nextValue))}
-          />
-        </View>
-      </View>
+      )}
       {error ? <ErrorMessage message={error} selectable /> : null}
     </View>
   );
@@ -127,6 +140,7 @@ export function RentalDetailsEditor({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.md },
+  containerCompact: { gap: spacing.sm },
   header: {
     minHeight: 44,
     flexDirection: 'row',

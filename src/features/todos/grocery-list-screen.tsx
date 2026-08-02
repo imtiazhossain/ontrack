@@ -31,6 +31,7 @@ import {
     OtherItems,
 } from '@/features/todos/grocery-rows';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
@@ -60,6 +61,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { refreshControl } = usePullToRefresh();
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
@@ -374,6 +376,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
       <FlashList
         data={listData}
         keyExtractor={(item) => item.key}
+        refreshControl={refreshControl}
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         extraData={[collapsedIds, draft, view]}

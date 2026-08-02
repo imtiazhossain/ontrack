@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, ErrorMessage, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { travelCardBorder, travelPanelTint, travelCardFill } from '@/features/travel/travel-surface';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
 import { formatDateKey } from '@/utils/date';
@@ -76,16 +77,22 @@ export function TravelWeatherCard({
 
   return (
     <View
-      accessibilityLabel={`Destination weather for ${destination}`}
-      style={[styles.card, { backgroundColor: theme.accentFaint }]}>
+      accessibilityLabel={`Destination Weather for ${destination}`}
+      style={[
+        styles.card,
+        {
+          backgroundColor: travelPanelTint(theme),
+          borderColor: travelCardBorder(theme),
+        },
+      ]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Symbol name="cloud.sun.fill" size="md" color={theme.accentPrimary} />
+          <Symbol name="weather" size="md" color={theme.accentPrimary} />
           <View style={styles.flex}>
-            <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+            <AppText variant="overline" color="accent" style={travelOverlineStyle} fit>
               Destination Weather
             </AppText>
-            <AppText variant="callout" color="accent">
+            <AppText variant="callout" color="accent" fit>
               {weather?.locationLabel ?? destination}
             </AppText>
           </View>
@@ -107,7 +114,7 @@ export function TravelWeatherCard({
       {shownDays.length > 0 ? (
         <View style={styles.days}>
           {shownDays.map((day) => (
-            <View key={day.date} style={[styles.day, { backgroundColor: theme.backgroundElevated }]}>
+            <View key={day.date} style={[styles.day, { backgroundColor: travelCardFill(theme) }]}>
               <AppText variant="caption" color="secondary">
                 {formatDateKey(day.date, dateDisplayFormat)}
               </AppText>
@@ -166,9 +173,10 @@ export function TravelWeatherCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     padding: spacing.md,
     gap: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   header: {
     minHeight: 32,
@@ -177,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 0 },
   days: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   day: {
     minWidth: 108,
@@ -202,5 +210,5 @@ const styles = StyleSheet.create({
   retry: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
   googleButton: { alignSelf: 'flex-start' },
   pressed: { opacity: 0.6 },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0, flexShrink: 1 },
 });

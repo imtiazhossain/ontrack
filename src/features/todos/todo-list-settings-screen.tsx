@@ -15,9 +15,11 @@ import {
 } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { PeoplePicker } from '@/features/social/people-picker';
 import { shareTodoInvite } from '@/features/todos/share';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import type { FriendProfile } from '@/services/friends';
 import {
   createTodoEmailInvite,
   createTodoShareLink,
@@ -32,6 +34,7 @@ import {
   type PendingTodoEmailInvite,
 } from '@/services/todos/collaboration';
 import { deletePersistedRecipeImage } from '@/services/recipes';
+import { useFriends } from '@/store/friends';
 import { useTodos, type TodoMember } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
@@ -62,6 +65,8 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   const [working, setWorking] = useState<string>();
   const [error, setError] = useState<string>();
   const [pendingInvites, setPendingInvites] = useState<PendingTodoEmailInvite[]>([]);
+  const [pickingFriends, setPickingFriends] = useState(false);
+  const hydrateFriends = useFriends((state) => state.hydrate);
 
   const refreshPending = () =>
     loadTodoListPendingInvites(listId).then(setPendingInvites);
@@ -69,7 +74,8 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   useEffect(() => {
     if (!user || list?.mode !== 'shared' || list.role !== 'owner') return;
     void refreshPending().catch(() => undefined);
-  }, [list?.mode, list?.role, listId, user]); // eslint-disable-line react-hooks/exhaustive-deps
+    void hydrateFriends().catch(() => undefined);
+  }, [list?.mode, list?.role, listId, user, hydrateFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!list) {
     return (
@@ -94,6 +100,21 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     } finally {
       setWorking(undefined);
     }
+  };
+
+  const inviteFriendsToList = (friends: FriendProfile[]) => {
+    if (!friends.length) return;
+    void run('friends', async () => {
+      if (list.mode === 'private') await publishTodoList(list.id);
+      for (const friend of friends) {
+        await createTodoEmailInvite(list.id, friend.email);
+      }
+      await refreshPending();
+      appPrompt.alert(
+        'Invitations Ready',
+        'Selected friends will see these in their onTrack invitation inbox.',
+      );
+    });
   };
 
   const requireSignIn = () => {
@@ -190,6 +211,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
   };
 
   return (
+    <>
     <Screen
       contentStyle={{
         ...styles.container,
@@ -329,6 +351,13 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
               <Card style={{ gap: spacing.md }}>
                 <AppText variant="subheading">Invite an Account</AppText>
+                <Button
+                  icon="people"
+                  variant="secondary"
+                  disabled={Boolean(working)}
+                  onPress={() => setPickingFriends(true)}>
+                  Invite from Friends
+                </Button>
                 <Input
                   label="onTrack account email"
                   value={email}
@@ -498,6 +527,15 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
         </Button>
       )}
     </Screen>
+    <PeoplePicker
+      visible={pickingFriends}
+      title="Invite Friends"
+      confirmLabel="Invite"
+      excludeIds={pendingInvites.map((invite) => invite.email)}
+      onClose={() => setPickingFriends(false)}
+      onConfirm={inviteFriendsToList}
+    />
+    </>
   );
 }
 

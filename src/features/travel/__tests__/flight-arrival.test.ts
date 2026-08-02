@@ -87,12 +87,12 @@ describe('flight arrival', () => {
     expect(
       formatFlightItineraryCaption({
         date: '2026-09-08',
-        dateLabel: '09/08/2026',
+        dateLabel: '9/8',
         startMinutes: 20 * 60 + 25,
         durationMinutes: 5 * 60 + 50,
         departureAirport: 'EWR',
         arrivalAirport: 'KEF',
       }),
-    ).toBe('09/08/2026 · 8:25 PM → 6:15 AM (+1) · 5h 50m');
+    ).toBe('9/8 · 8:25 PM → 6:15 AM (+1) · 5h 50m');
   });
 });

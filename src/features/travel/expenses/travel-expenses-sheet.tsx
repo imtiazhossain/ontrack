@@ -40,9 +40,14 @@ import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import type { TravelExpense, TravelExpenseCategory, TravelPlan } from '@/features/travel/types';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import {
+  TravelSkyHeader,
+} from '@/features/travel/travel-surface';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
-import { formatDateKey } from '@/utils/date';const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
+import { formatDateKey } from '@/utils/date';
+
+const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
   stay: 'lodging',
   food: 'food',
@@ -181,27 +186,27 @@ export function TravelExpensesSheet({
             {
               backgroundColor: theme.backgroundPrimary,
               paddingBottom: Math.max(insets.bottom, spacing.lg),
+              overflow: 'hidden',
             },
           ]}>
           <View style={styles.handleRow}>
             <View style={[styles.handle, { backgroundColor: theme.separator }]} />
           </View>
-          <View style={styles.sheetHeader}>
-            <View style={styles.flex}>
-              <AppText variant="overline" color="accent" style={travelOverlineStyle}>
-                Expenses
-              </AppText>
-              <AppText variant="title">{plan.title}</AppText>
-              <AppText variant="callout" color="secondary">
-                Track spending in any currency · settle up with friends
-              </AppText>
-            </View>
-            <IconButton
-              icon="close"
-              accessibilityLabel="Close expenses"
-              onPress={onClose}
-            />
-          </View>
+          <TravelSkyHeader
+            eyebrow="Expenses"
+            title={plan.title}
+            subtitle="Track Spending · Settle Up with Friends"
+            trailing={
+              <IconButton
+                icon="close"
+                size={36}
+                background="transparent"
+                borderColor={theme.separator}
+                accessibilityLabel="Close Expenses"
+                onPress={onClose}
+              />
+            }
+          />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"

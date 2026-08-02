@@ -1,4 +1,4 @@
-import { validateTravelDateRange } from '../date-range';
+import { tripDayCount, validateTravelDateRange } from '../date-range';
 import type { TravelItineraryItem } from '../types';
 
 const FLIGHT: TravelItineraryItem = {
@@ -9,6 +9,16 @@ const FLIGHT: TravelItineraryItem = {
   startMinutes: 600,
   durationMinutes: 180,
 };
+
+describe('tripDayCount', () => {
+  it('counts inclusive calendar days', () => {
+    expect(tripDayCount('2026-09-08', '2026-09-14')).toBe(7);
+  });
+
+  it('treats same-day trips as 1 day', () => {
+    expect(tripDayCount('2026-09-08', '2026-09-08')).toBe(1);
+  });
+});
 
 describe('travel date range validation', () => {
   it('accepts a valid range containing the itinerary', () => {
