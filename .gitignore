@@ -50,3 +50,12 @@ modules/*/android/build/
 .eas-local-build/
 .gradle/
 modules/**/.gradle/
+
+# Agent scratch under .cursor (keep committed rules)
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+# Python bytecode
+__pycache__/
+*.py[cod]
