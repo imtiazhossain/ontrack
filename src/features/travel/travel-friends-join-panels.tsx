@@ -4,9 +4,14 @@ import { AppText, Button, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { createTravelInviteUrl } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import type { ItinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  travelInputFieldBackground,
+  type ItinerarySheetChrome,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { displayJoinLink } from '@/features/travel/travel-join-link-display';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
+import { useTheme } from '@/hooks/use-theme';
 import type {
   TravelOpenJoinRequest,
   TravelParticipant,
@@ -38,6 +43,7 @@ export function TravelOpenJoinCard({
   onCopy: () => void;
   onShare: () => void;
 }) {
+  const theme = useTheme();
   return (
     <TravelSurfaceCard bodyStyle={styles.openJoinCard}>
       <View style={[styles.joinHeader, { gap: rs.sm }]}>
@@ -68,7 +74,7 @@ export function TravelOpenJoinCard({
           style={[
             styles.urlField,
             {
-              backgroundColor: chrome.fieldBg,
+              backgroundColor: travelInputFieldBackground(theme),
               borderColor: chrome.fieldBorder,
               minHeight: Math.max(44, s(44)),
               paddingLeft: rs.md,
@@ -130,7 +136,7 @@ export function TravelOpenJoinCard({
           style={({ pressed }) => [
             styles.joinAction,
             {
-              backgroundColor: chrome.fieldBg,
+              backgroundColor: travelInputFieldBackground(theme),
               borderColor: chrome.fieldBorder,
               minHeight: Math.max(44, s(48)),
               opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
@@ -152,7 +158,7 @@ export function TravelOpenJoinCard({
           style={({ pressed }) => [
             styles.joinAction,
             {
-              backgroundColor: chrome.fieldBg,
+              backgroundColor: travelInputFieldBackground(theme),
               borderColor: chrome.fieldBorder,
               minHeight: Math.max(44, s(48)),
               opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,

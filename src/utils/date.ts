@@ -52,9 +52,10 @@ export function nativeDatePickerLocale(locale: unknown): string | undefined {
 
 export function formatDateKey(value: string, format: DateDisplayFormat): string {
   if (!isDateKey(value)) return value;
-  if (format === 'iso') return value;
   const [year, month, day] = value.split('-');
-  return `${month}/${day}/${year}`;
+  if (format === 'iso') return value;
+  const normalized = normalizeDateParts(day, month);
+  return `${normalized.month}/${normalized.day}/${year}`;
 }
 
 /** Visible calendar-sheet title derived from a spoken accessibility label. */
@@ -75,9 +76,20 @@ export function formatTimePickerTitle(label: string): string {
 export function formatDateKeyShort(value: string, format: DateDisplayFormat): string {
   if (!isDateKey(value)) return value;
   const [, month, day] = value.split('-');
-  const m = String(Number(month));
-  const d = String(Number(day));
-  return format === 'iso' ? `${d}/${m}` : `${m}/${d}`;
+  const normalized = normalizeDateParts(day, month);
+  return format === 'iso'
+    ? `${normalized.day}/${normalized.month}`
+    : `${normalized.month}/${normalized.day}`;
+}
+
+function normalizeDateParts(
+  day: string,
+  month: string,
+): { day: string; month: string } {
+  return {
+    day: String(Number(day)),
+    month: String(Number(month)),
+  };
 }
 
 export function todayKey(): string {

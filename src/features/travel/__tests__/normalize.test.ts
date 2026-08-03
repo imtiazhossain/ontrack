@@ -301,6 +301,45 @@ describe('travel plan normalization', () => {
     ]);
   });
 
+  it('deduplicates repeated itinerary items with different ids', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      itinerary: [
+        {
+          id: 'item-1',
+          kind: 'activity',
+          title: 'Dinner',
+          date: '2026-09-09',
+          startMinutes: 19 * 60,
+          durationMinutes: 90,
+        },
+        {
+          id: 'item-2',
+          kind: 'activity',
+          title: 'Dinner',
+          date: '2026-09-09',
+          startMinutes: 19 * 60,
+          durationMinutes: 90,
+        },
+      ],
+    });
+
+    expect(normalized?.itinerary).toEqual([
+      {
+        id: 'item-1',
+        kind: 'activity',
+        title: 'Dinner',
+        date: '2026-09-09',
+        startMinutes: 19 * 60,
+        durationMinutes: 90,
+        details: undefined,
+        bookingUrl: undefined,
+        flight: undefined,
+        rental: undefined,
+      },
+    ]);
+  });
+
   it('repairs the previously persisted Icelandair return flight import', () => {
     const normalized = normalizeTravelPlan({
       ...legacyPlan,

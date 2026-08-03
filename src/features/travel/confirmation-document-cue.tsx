@@ -61,6 +61,7 @@ export function ConfirmationDocumentCue({
         style={({ pressed }) => [
           styles.cue,
           {
+            alignSelf: 'center',
             borderColor: accent,
             backgroundColor: accent,
             minHeight: Math.max(44, s(40)),
@@ -71,7 +72,7 @@ export function ConfirmationDocumentCue({
         <AppText
           variant="callout"
           fit
-          style={[styles.cueLabel, { color: theme.textOnAccent }]}>
+          style={[styles.cueText, { color: theme.textOnAccent }]}> 
           View Confirmation
         </AppText>
         <Symbol name="chevron-right" size="sm" color={theme.textOnAccent} />
@@ -86,7 +87,7 @@ export function ConfirmationDocumentCue({
           edges={['top', 'bottom']}
           style={[styles.viewer, { backgroundColor: theme.backgroundPrimary }]}>
           <View style={styles.viewerHeader}>
-            <AppText variant="subheading" fit style={styles.cueLabel}>
+            <AppText variant="subheading" fit style={styles.cueTitle}>
               Confirmation
             </AppText>
             <Pressable
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  cueLabel: { flexShrink: 1, minWidth: 0, flex: 1 },
+  cueText: { flexShrink: 1, minWidth: 0 },
   viewer: { flex: 1 },
   viewerHeader: {
     flexDirection: 'row',
@@ -161,6 +162,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   closeButton: { alignItems: 'center', justifyContent: 'center' },
+  cueTitle: { flexShrink: 1, minWidth: 0 },
   pages: { alignItems: 'center' },
   page: {
     flexGrow: 1,

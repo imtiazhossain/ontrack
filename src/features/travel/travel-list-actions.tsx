@@ -139,18 +139,23 @@ export function TravelSheetPrimaryAction({
   label,
   icon,
   onPress,
+  editorialGold = true,
+  flat = false,
   testID,
 }: {
   label: string;
   icon?: AppIconName;
   onPress: () => void;
+  editorialGold?: boolean;
+  flat?: boolean;
   testID?: string;
 }) {
   return (
     <ItinerarySheetSubmitButton
       label={label}
       icon={icon}
-      editorialGold
+      editorialGold={editorialGold}
+      flat={flat}
       testID={testID}
       onPress={onPress}
     />

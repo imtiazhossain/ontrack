@@ -18,12 +18,13 @@ import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { AppText } from './app-text';
 import { Symbol } from './symbol';
 
-type PromptActionStyle = 'default' | 'cancel' | 'destructive';
+type PromptActionStyle = 'default' | 'cancel' | 'destructive' | 'primary' | 'secondary';
 
 interface PromptAction {
   text: string;
   onPress?: () => void;
   style?: PromptActionStyle;
+  hideIcon?: boolean;
   disabled?: boolean;
 }
 
@@ -169,6 +170,7 @@ export function AppPromptHost() {
   const visibleActions = request.actions.filter(
     (action) => action.style !== 'cancel',
   );
+  const singleAction = visibleActions.length === 1;
 
   return (
     <Modal
@@ -239,7 +241,7 @@ export function AppPromptHost() {
               styles.brandMark,
               { backgroundColor: theme.accentFaint },
             ]}>
-            <Symbol name="smart" size={20} color={theme.accentPrimary} />
+            <Symbol name="smart" size={22} color={theme.accentPrimary} />
           </View>
           <View style={styles.copy}>
             <AppText
@@ -262,9 +264,26 @@ export function AppPromptHost() {
             showsVerticalScrollIndicator={false}>
             {visibleActions.map((action, index) => {
               const destructive = action.style === 'destructive';
-              const foreground = destructive
-                ? theme.danger
-                : theme.textPrimary;
+              const primary = action.style === 'primary';
+              const secondary = action.style === 'secondary';
+              const foreground = primary
+                ? theme.textOnAccent
+                : destructive
+                  ? theme.danger
+                  : theme.textPrimary;
+              const background = primary
+                ? theme.accentPrimary
+                : destructive
+                  ? theme.name === 'dark'
+                    ? '#3A2020'
+                    : '#F8E8E5'
+                  : secondary
+                    ? theme.backgroundElevated
+                    : theme.backgroundSunken;
+              const borderColor = primary
+                ? 'transparent'
+                : theme.separator;
+
               return (
                 <Pressable
                   key={`${action.text}-${index}`}
@@ -275,28 +294,33 @@ export function AppPromptHost() {
                   style={({ pressed }) => [
                     styles.action,
                     {
-                      backgroundColor: destructive
-                        ? theme.name === 'dark'
-                          ? '#3A2020'
-                          : '#F8E8E5'
-                        : theme.backgroundSunken,
-                      borderColor: 'transparent',
+                      backgroundColor: background,
+                      borderColor,
                       opacity: action.disabled
                         ? 0.38
                         : pressed
-                          ? 0.62
+                          ? 0.88
                           : 1,
-                      transform: [{ scale: pressed ? 0.985 : 1 }],
+                      transform: [{ scale: pressed ? 0.992 : 1 }],
                     },
                   ]}>
-                  <AppText style={[styles.actionLabel, { color: foreground }]}>
+                  <AppText
+                    variant="callout"
+                    allowFontScaling={false}
+                    numberOfLines={2}
+                    style={[
+                      styles.actionLabel,
+                      { color: foreground },
+                    ]}>
                     {action.text}
                   </AppText>
-                  <Symbol
-                    name={destructive ? 'delete' : 'chevron-right'}
-                    size={17}
-                    color={foreground}
-                  />
+                  {!action.hideIcon ? (
+                    <Symbol
+                      name={destructive ? 'delete' : 'chevron-right'}
+                      size={17}
+                      color={foreground}
+                    />
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -338,8 +362,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   brandMark: {
-    width: 42,
-    height: 42,
+    width: 46,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -352,19 +376,22 @@ const styles = StyleSheet.create({
   title: {
     ...appTextStyle('title'),
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   message: {
     ...appTextStyle('body'),
     textAlign: 'center',
+    lineHeight: 22,
   },
   actions: {
     gap: spacing.sm,
+    width: '100%',
   },
   action: {
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -374,6 +401,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     ...appTextStyle('callout'),
-    flex: 1,
+    flex: 0,
+    textAlign: 'center',
   },
 });

@@ -22,7 +22,10 @@ import {
 import { featureFlags } from '@/constants/feature-flags';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { compareOnGoogleFlights } from '@/features/travel/provider';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  travelInputFieldBackground,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
 import {
   TRAVEL_EDITORIAL_ACCENT,
@@ -233,7 +236,7 @@ export function FlightSearchScreen({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: chrome.fieldBg,
+      fieldBackground: travelInputFieldBackground(theme),
       stackedLabelColor: accent,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,

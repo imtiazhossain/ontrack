@@ -74,12 +74,12 @@
     "node": ">=20 <25"
   },
   "scripts": {
-    "start": "node ./scripts/assert-node.js && expo start --dev-client",
-    "start:clear": "node ./scripts/assert-node.js && expo start --dev-client --clear",
+    "start": "node ./scripts/assert-node.js && expo start --dev-client --localhost",
+    "start:clear": "node ./scripts/assert-node.js && expo start --dev-client --localhost --clear",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "node ./scripts/assert-node.js && expo start --dev-client --android",
-    "ios": "node ./scripts/assert-node.js && expo start --dev-client --ios",
-    "web": "node ./scripts/assert-node.js && expo start --web",
+    "android": "node ./scripts/assert-node.js && expo start --dev-client --android --localhost",
+    "ios": "node ./scripts/assert-node.js && expo start --dev-client --ios --localhost",
+    "web": "node ./scripts/assert-node.js && expo start --web --localhost",
     "lint": "npm run test:token-budget",
     "test:token-budget": "WATCHMAN_DISABLE=1 jest --watchman=false src/design-system/__tests__/token-budget.test.ts",
     "test": "jest",

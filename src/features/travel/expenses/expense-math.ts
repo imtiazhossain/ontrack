@@ -211,6 +211,12 @@ export interface SettleTransfer {
   amount: number;
 }
 
+function confirmationCodeFromNotes(notes?: string): string | undefined {
+  if (!notes) return undefined;
+  const match = notes.match(/confirmation:\s*([a-z0-9-]+)/i);
+  return match?.[1]?.trim().toUpperCase() || undefined;
+}
+
 /** Greedy minimize transfers from settleBalances. */
 export function settleTransfers(balances: SettleBalance[]): SettleTransfer[] {
   const debtors = balances
@@ -243,9 +249,34 @@ export function upsertTravelExpense(
   plan: TravelPlan,
   expense: TravelExpense,
 ): TravelPlan {
-  const expenses = plan.expenses.some((item) => item.id === expense.id)
-    ? plan.expenses.map((item) => (item.id === expense.id ? expense : item))
-    : [...plan.expenses, expense];
+  const existingById = plan.expenses.some((item) => item.id === expense.id);
+  let expenses: TravelExpense[];
+  if (existingById) {
+    expenses = plan.expenses.map((item) => (item.id === expense.id ? expense : item));
+  } else {
+    const confirmationCode = confirmationCodeFromNotes(expense.notes);
+    if (confirmationCode) {
+      const matchingImportedIndex = plan.expenses.findIndex((item) => {
+        if (item.category !== expense.category) return false;
+        return confirmationCodeFromNotes(item.notes) === confirmationCode;
+      });
+      if (matchingImportedIndex >= 0) {
+        const existing = plan.expenses[matchingImportedIndex];
+        const replacement: TravelExpense = {
+          ...expense,
+          id: existing.id,
+          createdAt: existing.createdAt,
+        };
+        expenses = plan.expenses.map((item, index) =>
+          index === matchingImportedIndex ? replacement : item,
+        );
+      } else {
+        expenses = [...plan.expenses, expense];
+      }
+    } else {
+      expenses = [...plan.expenses, expense];
+    }
+  }
   return {
     ...plan,
     expenses,

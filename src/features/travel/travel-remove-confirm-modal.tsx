@@ -25,12 +25,14 @@ export type TravelRemoveConfirmPayload = {
 type TravelRemoveConfirmModalProps = {
   payload: TravelRemoveConfirmPayload | null;
   onCancel: () => void;
+  disableBackdropDismiss?: boolean;
 };
 
 /** Cream travel dialog for remove / delete confirms (itinerary, trip, friends, notes, expenses). */
 export function TravelRemoveConfirmModal({
   payload,
   onCancel,
+  disableBackdropDismiss = false,
 }: TravelRemoveConfirmModalProps) {
   const theme = useTheme();
   const palette = travelDialogPalette(theme);
@@ -57,7 +59,10 @@ export function TravelRemoveConfirmModal({
 
   const dismissAgent = useAgentUiTarget(
     visible ? AgentUiIds.travel.removeConfirm.dismiss : undefined,
-    { label: 'Dismiss', onPress: onCancel },
+    {
+      label: 'Dismiss',
+      onPress: disableBackdropDismiss ? undefined : onCancel,
+    },
   );
   const closeAgent = useAgentUiTarget(
     visible ? AgentUiIds.travel.removeConfirm.close : undefined,
@@ -91,7 +96,7 @@ export function TravelRemoveConfirmModal({
             testID={AgentUiIds.travel.removeConfirm.dismiss}
             onLayout={dismissAgent.onLayout}
             accessibilityLabel="Dismiss"
-            onPress={onCancel}
+            onPress={disableBackdropDismiss ? undefined : onCancel}
             style={StyleSheet.absoluteFill}
           />
           <Animated.View

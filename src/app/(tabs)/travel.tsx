@@ -368,7 +368,12 @@ export default function TravelScreen() {
           {error ? <ErrorMessage message={error} /> : null}
           <View style={styles.row}>
             <View style={styles.flex}>
-              <TravelSheetPrimaryAction label="Let’s Go" icon="flight" onPress={createPlan} />
+              <TravelSheetPrimaryAction
+                label="Let’s Go"
+                icon="flight"
+                flat
+                onPress={createPlan}
+              />
             </View>
             {plans.length > 0 ? (
               <Button
@@ -548,7 +553,7 @@ export default function TravelScreen() {
                       accessibilityLabel={`View weather for ${plan.destination}`}
                     />
                     <TravelSheetAction
-                      label="Currency Calc"
+                      label="Currency Calculator"
                       icon="calculator"
                       tone="currency"
                       onPress={() => openCurrency(plan.id)}
@@ -578,6 +583,8 @@ export default function TravelScreen() {
                   <TravelSheetPrimaryAction
                     label="Co-Travelers"
                     icon="people"
+                    editorialGold={false}
+                    flat
                     onPress={() => openFriends(plan.id)}
                   />
                 </>

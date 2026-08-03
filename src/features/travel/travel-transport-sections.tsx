@@ -199,7 +199,12 @@ export function TravelTransportSections({
       expanded={transportExpanded}
       onToggle={onToggleTransport}
       titleVariant="caption">
-      <View style={[styles.stack, { gap: rs.xs, paddingHorizontal: rs.sm }]}>
+      <View
+        style={[
+          styles.stack,
+          { gap: rs.xs, paddingHorizontal: rs.sm, paddingBottom: rs.sm },
+        ]}>
+
         <TravelCollapsibleSection
           title="FLIGHTS"
           icon="flight"
