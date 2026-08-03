@@ -31,6 +31,21 @@ src/
   app/              Expo Router screens
   components/       Reusable UI primitives and shared widgets
   design-system/    Tokens, themes, typography
+
+## Token Budget & Optimisation Guidelines
+
+- Keep any source file under **700 lines**.
+- Never use hard‑coded pixel values like `12px`; use design‑system tokens (`useResponsive()`, `AppText fit`, etc.).
+- See `.cursor/rules/token-optimization.mdc` for detailed guidance.
+- Example of good usage:
+  ```tsx
+  <AppText style={appTextStyle('body')}>Hello</AppText>
+  ```
+  versus bad usage:
+  ```tsx
+  <Text style={{fontSize: 14, marginTop: 8}}>Hello</Text>
+  ```
+
   features/         Isolated feature UI, models, and provider interfaces
   services/         AI, cloud sync, provider, and storage adapters
   store/            Zustand persisted state
