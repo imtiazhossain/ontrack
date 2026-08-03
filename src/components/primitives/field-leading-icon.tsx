@@ -7,6 +7,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 import { Symbol } from './symbol';
 
+export { fieldLeadingIconRowStyle } from './field-leading-icon-style';
+
 /** Shared leading-icon column so Input / DateField / TimeField placeholders share one x-origin. */
 export function FieldLeadingIcon({
   name,
@@ -33,6 +35,7 @@ export function FieldLeadingIcon({
         backgroundColor,
         alignItems: 'center',
         justifyContent: 'center',
+        alignSelf: 'center',
         flexShrink: 0,
       }}>
       <Symbol name={name} size="sm" color={color ?? theme.textSecondary} />

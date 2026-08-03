@@ -10,7 +10,6 @@ import {
   Input,
   Symbol,
   TimeField,
-  appPrompt,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
@@ -20,6 +19,7 @@ import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
 import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
 import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
@@ -138,6 +138,7 @@ export function TravelItineraryForm({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs } = useResponsive();
+  const [photosModalVisible, setPhotosModalVisible] = useState(false);
   const isMoment = kind === 'moment';
   const usesRange = kind === 'stay' || kind === 'flight' || kind === 'rental';
   const showDuration = kind === 'activity';
@@ -219,41 +220,11 @@ export function TravelItineraryForm({
   };
 
   const choosePhotos = () => {
-    appPrompt.alert('Add Photos', 'Attach pictures to this timeline entry.', [
-      {
-        text: 'Take Photo',
-        onPress: () => {
-          void (async () => {
-            try {
-              const uri = await pickCameraImage();
-              if (uri) appendPhotos([uri]);
-            } catch (error) {
-              if (__DEV__) console.warn('[choosePhotos] camera', error);
-            }
-          })();
-        },
-      },
-      {
-        text: 'Choose from Photos',
-        onPress: () => {
-          void (async () => {
-            try {
-              const assets = await pickLibraryImages({
-                allowsMultipleSelection: true,
-                selectionLimit: 8,
-              });
-              if (assets?.length) appendPhotos(assets.map((asset) => asset.uri));
-            } catch (error) {
-              if (__DEV__) console.warn('[choosePhotos] library', error);
-            }
-          })();
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setPhotosModalVisible(true);
   };
 
   return (
+    <>
     <View style={[styles.formBody, { gap: rs.sm }]}>
       {confirmationImport ? (
         <View style={{ gap: rs.sm }}>
@@ -633,6 +604,34 @@ export function TravelItineraryForm({
         </Button>
       )}
     </View>
+    <TravelAddPhotosModal
+      visible={photosModalVisible}
+      onClose={() => setPhotosModalVisible(false)}
+      onTakePhoto={() => {
+        void (async () => {
+          try {
+            const uri = await pickCameraImage();
+            if (uri) appendPhotos([uri]);
+          } catch (error) {
+            if (__DEV__) console.warn('[choosePhotos] camera', error);
+          }
+        })();
+      }}
+      onChooseFromPhotos={() => {
+        void (async () => {
+          try {
+            const assets = await pickLibraryImages({
+              allowsMultipleSelection: true,
+              selectionLimit: 8,
+            });
+            if (assets?.length) appendPhotos(assets.map((asset) => asset.uri));
+          } catch (error) {
+            if (__DEV__) console.warn('[choosePhotos] library', error);
+          }
+        })();
+      }}
+    />
+    </>
   );
 }
 

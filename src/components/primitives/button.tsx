@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, type TextStyle, type ViewStyle } from 'react-nat
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { AppText } from './app-text';
 import { LoadingSpinner } from './loading-spinner';
@@ -20,6 +21,7 @@ interface ButtonProps extends PropsWithChildren {
   style?: ViewStyle;
   textStyle?: TextStyle;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 export function Button({
@@ -33,6 +35,7 @@ export function Button({
   style,
   textStyle,
   accessibilityLabel,
+  testID,
 }: ButtonProps) {
   const theme = useTheme();
   const { spacing, layout, iconSizes } = useResponsive();
@@ -49,17 +52,25 @@ export function Button({
   const iconColor =
     variant === 'primary' || variant === 'danger' ? theme.textOnAccent : theme.textPrimary;
   const isDisabled = disabled || loading;
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: isDisabled ? undefined : handlePress,
+  });
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.base,
         {
@@ -101,6 +112,7 @@ interface IconButtonProps {
   /** Replaces the icon with a spinner while work is in flight. */
   loading?: boolean;
   disabled?: boolean;
+  testID?: string;
 }
 
 export function IconButton({
@@ -115,6 +127,7 @@ export function IconButton({
   accessibilityLabel,
   loading = false,
   disabled,
+  testID,
 }: IconButtonProps) {
   const theme = useTheme();
   const { layout, iconSizes } = useResponsive();
@@ -122,17 +135,25 @@ export function IconButton({
   const isDisabled = disabled || loading;
   const tint = color ?? theme.textPrimary;
   const spinnerColor = color ?? theme.accentPrimary;
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: isDisabled ? undefined : handlePress,
+  });
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       hitSlop={6}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.iconButton,
         {

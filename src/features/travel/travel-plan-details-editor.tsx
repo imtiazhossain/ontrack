@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,10 +9,14 @@ import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
   TravelSurfaceCard,
 } from '@/features/travel/travel-surface';
+import {
+  TravelRemoveConfirmModal,
+  type TravelRemoveConfirmPayload,
+} from '@/features/travel/travel-remove-confirm-modal';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 import type { TravelPlanDetailsDraft } from './travel-plan-details';
 import type { TravelPlan } from './types';
@@ -31,6 +36,8 @@ interface TravelPlanDetailsEditorProps extends Omit<TravelPlanDetailsDraft, 'not
   onSave: () => void;
   onCancel: () => void;
   onDelete: () => void;
+  /** DEV: auto-open Trip Cover Photo picker. */
+  initialCoverPickerOpen?: boolean;
 }
 
 /** Dedicated Edit Trip page matching the travel mock. */
@@ -50,10 +57,25 @@ export function TravelPlanDetailsEditor({
   onSave,
   onCancel,
   onDelete,
+  initialCoverPickerOpen = false,
 }: TravelPlanDetailsEditorProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout, typography } = useResponsive();
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
+  const openDeleteTrip = () => {
+    setRemoveConfirm({
+      title: 'Delete Trip?',
+      message: `This action will permanently remove “${plan.title}”.`,
+      actionLabel: 'Delete Trip',
+      onConfirm: onDelete,
+    });
+  };
+  const deleteTripAgent = useAgentUiTarget(AgentUiIds.travel.removeConfirm.open, {
+    label: `Delete ${plan.title}`,
+    onPress: openDeleteTrip,
+  });
   const field = (tone: keyof typeof chrome.icons) => {
     const icon = chrome.icons[tone];
     return {
@@ -72,6 +94,7 @@ export function TravelPlanDetailsEditor({
   };
 
   return (
+    <>
     <View style={[styles.page, { gap: rs.lg }]}>
       <View style={[styles.header, { gap: rs.md }]}>
         <View style={{ paddingTop: rs.xs }}>
@@ -127,6 +150,7 @@ export function TravelPlanDetailsEditor({
               plan={plan}
               coverUri={coverUri}
               onCoverUriChange={onCoverUriChange}
+              initialPickerOpen={initialCoverPickerOpen}
             />
             <View style={[styles.divider, { backgroundColor: chrome.fieldBorder }]} />
           </View>
@@ -241,16 +265,13 @@ export function TravelPlanDetailsEditor({
           </View>
 
           <Pressable
+            ref={deleteTripAgent.ref}
+            testID={AgentUiIds.travel.removeConfirm.open}
+            onLayout={deleteTripAgent.onLayout}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${plan.title}`}
             hitSlop={8}
-            onPress={() =>
-              confirmDestructiveAction({
-                title: 'Delete Trip?',
-                message: `Remove “${plan.title}”?`,
-                onConfirm: onDelete,
-              })
-            }
+            onPress={openDeleteTrip}
             style={({ pressed }) => [
               styles.deleteAction,
               { gap: rs.xs, opacity: pressed ? 0.7 : 1 },
@@ -266,6 +287,11 @@ export function TravelPlanDetailsEditor({
         </View>
       </TravelSurfaceCard>
     </View>
+    <TravelRemoveConfirmModal
+      payload={removeConfirm}
+      onCancel={() => setRemoveConfirm(null)}
+    />
+    </>
   );
 }
 

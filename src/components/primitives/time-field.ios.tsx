@@ -10,7 +10,7 @@ import { formatMinutes, formatTimePickerTitle, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
 import { IconButton } from './button';
-import { FieldLeadingIcon } from './field-leading-icon';
+import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
@@ -76,24 +76,21 @@ export function TimeField({
         onPress={openPicker}
         style={({ pressed }) => [
           styles.field,
-          {
+          fieldLeadingIconRowStyle({
             minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
             borderRadius: stacked ? radii.lg : radii.md,
             paddingHorizontal: rs.md,
             paddingVertical: stacked ? rs.sm : 0,
-            alignItems: stacked ? 'flex-start' : 'center',
             backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
-          },
+          }),
         ]}
         testID={testID}>
-        <View style={stacked ? { paddingTop: s(2) } : undefined}>
-          <FieldLeadingIcon
-            name="clock"
-            backgroundColor={iconBackground}
-            color={iconColor}
-          />
-        </View>
+        <FieldLeadingIcon
+          name="clock"
+          backgroundColor={iconBackground}
+          color={iconColor}
+        />
         {stacked ? (
           <View style={styles.stackedCopy}>
             <AppText
@@ -130,13 +127,11 @@ export function TimeField({
           </AppText>
         )}
         {showChevron ? (
-          <View style={stacked ? { paddingTop: s(10) } : undefined}>
-            <Symbol
-              name="chevron-down"
-              size="sm"
-              color={placeholderColor ?? theme.textTertiary}
-            />
-          </View>
+          <Symbol
+            name="chevron-down"
+            size="sm"
+            color={placeholderColor ?? theme.textTertiary}
+          />
         ) : null}
       </Pressable>
 

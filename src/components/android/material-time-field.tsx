@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives/app-text';
-import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
+import {
+  FieldLeadingIcon,
+  fieldLeadingIconRowStyle,
+} from '@/components/primitives/field-leading-icon';
 import { Symbol } from '@/components/primitives/symbol';
 import {
   clampMinutesFromMidnight,
@@ -60,22 +63,19 @@ export function MaterialTimeField({
         onPress={() => setShowPicker(true)}
         style={({ pressed }) => [
           styles.field,
-          {
+          fieldLeadingIconRowStyle({
             minHeight: stacked ? Math.max(56, s(60)) : 48,
             borderRadius: stacked ? radii.lg : radii.md,
             paddingVertical: stacked ? spacing.sm : 0,
-            alignItems: stacked ? 'flex-start' : 'center',
             backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
-          },
+          }),
         ]}>
-        <View style={stacked ? { paddingTop: s(2) } : undefined}>
-          <FieldLeadingIcon
-            name="clock"
-            backgroundColor={iconBackground}
-            color={iconColor}
-          />
-        </View>
+        <FieldLeadingIcon
+          name="clock"
+          backgroundColor={iconBackground}
+          color={iconColor}
+        />
         {stacked ? (
           <View style={styles.stackedCopy}>
             <AppText
@@ -112,13 +112,11 @@ export function MaterialTimeField({
           </AppText>
         )}
         {showChevron ? (
-          <View style={stacked ? { paddingTop: s(10) } : undefined}>
-            <Symbol
-              name="chevron-down"
-              size="sm"
-              color={placeholderColor ?? theme.textTertiary}
-            />
-          </View>
+          <Symbol
+            name="chevron-down"
+            size="sm"
+            color={placeholderColor ?? theme.textTertiary}
+          />
         ) : null}
       </Pressable>
 

@@ -3,6 +3,7 @@ import {
   emptyFlightDetailsDraft,
   type FlightDetailsDraft,
 } from './flight-details';
+import { flightExpenseTitleFromSegments } from './flight-expense-title';
 
 export interface ParsedFlightSegment {
   flight: FlightDetailsDraft;
@@ -404,8 +405,10 @@ export function parseFlightConfirmation(
         : [parseSegment(text, tripRange, confirmationCode)];
   const first = segments[0];
   const money = findConfirmationMoney(text);
+  const routeTitle = flightExpenseTitleFromSegments(segments);
   return {
     ...first,
+    ...(routeTitle ? { title: routeTitle } : {}),
     segments,
     amount: money.amount,
     currency: money.currency,

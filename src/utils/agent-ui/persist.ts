@@ -1,0 +1,49 @@
+import { File, Paths } from 'expo-file-system';
+
+import { listAgentUiTargets, type AgentUiEntry } from './registry';
+
+export const AGENT_UI_DUMP_FILENAME = 'agent-ui-dump.json';
+export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
+
+export type AgentUiDumpPayload = {
+  generatedAt: string;
+  count: number;
+  elements: AgentUiEntry[];
+};
+
+export type AgentUiStatusPayload = {
+  generatedAt: string;
+  op: string;
+  id?: string;
+  ok: boolean;
+  detail?: string;
+  element?: AgentUiEntry;
+};
+
+function writeJson(filename: string, payload: unknown): void {
+  const file = new File(Paths.document, filename);
+  if (!file.exists) {
+    file.create({ intermediates: true });
+  }
+  file.write(JSON.stringify(payload, null, 2));
+}
+
+export function writeAgentUiDump(): AgentUiDumpPayload {
+  const elements = listAgentUiTargets();
+  const payload: AgentUiDumpPayload = {
+    generatedAt: new Date().toISOString(),
+    count: elements.length,
+    elements,
+  };
+  writeJson(AGENT_UI_DUMP_FILENAME, payload);
+  return payload;
+}
+
+export function writeAgentUiStatus(payload: Omit<AgentUiStatusPayload, 'generatedAt'>): AgentUiStatusPayload {
+  const full: AgentUiStatusPayload = {
+    generatedAt: new Date().toISOString(),
+    ...payload,
+  };
+  writeJson(AGENT_UI_STATUS_FILENAME, full);
+  return full;
+}

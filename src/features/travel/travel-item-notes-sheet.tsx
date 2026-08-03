@@ -11,13 +11,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
+import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, type Theme } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import {
   noteAuthorColor,
 } from '@/features/travel/travel-item-note-colors';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  TravelRemoveConfirmModal,
+  type TravelRemoveConfirmPayload,
+} from '@/features/travel/travel-remove-confirm-modal';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import {
   TRAVEL_EXPENSE_SELF_ID,
@@ -152,7 +156,8 @@ export function TravelItemNotesSheet({
   const preferenceName = usePreferences((state) => state.name).trim();
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
   const notes = item.notes ?? [];
   const authorName = preferenceName || 'You';
   const authorId = TRAVEL_EXPENSE_SELF_ID;
@@ -165,15 +170,12 @@ export function TravelItemNotesSheet({
     paddingBottom: rs.sm,
   };
   const isEditing = editingId != null;
-  const deletingNote = deletingId
-    ? notes.find((note) => note.id === deletingId)
-    : undefined;
 
   useEffect(() => {
     if (!visible) {
       setDraft('');
       setEditingId(null);
-      setDeletingId(null);
+      setRemoveConfirm(null);
     }
   }, [visible]);
 
@@ -183,7 +185,7 @@ export function TravelItemNotesSheet({
   };
 
   const beginEdit = (note: TravelItemNote) => {
-    if (deletingId) setDeletingId(null);
+    setRemoveConfirm(null);
     if (editingId === note.id) {
       cancelEdit();
       return;
@@ -193,16 +195,17 @@ export function TravelItemNotesSheet({
   };
 
   const requestDelete = (note: TravelItemNote) => {
-    // Confirm inside this Modal. Root appPrompt sits behind RN Modal windows.
     cancelEdit();
-    setDeletingId(note.id);
-  };
-
-  const confirmDelete = () => {
-    if (!deletingId) return;
-    const next = notes.filter((entry) => entry.id !== deletingId);
-    setDeletingId(null);
-    onSaveNotes(next);
+    const preview =
+      note.body.length > 80 ? `${note.body.slice(0, 77).trimEnd()}…` : note.body;
+    setRemoveConfirm({
+      title: 'Delete Note?',
+      message: `This action will permanently remove “${preview}”.`,
+      actionLabel: 'Delete Note',
+      onConfirm: () => {
+        onSaveNotes(notes.filter((entry) => entry.id !== note.id));
+      },
+    });
   };
 
   const submit = () => {
@@ -247,6 +250,7 @@ export function TravelItemNotesSheet({
   ));
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -284,40 +288,7 @@ export function TravelItemNotesSheet({
               />
             </View>
 
-            {deletingNote ? (
-              <View
-                style={[
-                  styles.deleteConfirm,
-                  {
-                    gap: rs.md,
-                    paddingHorizontal: rs.md,
-                    paddingVertical: rs.lg,
-                  },
-                ]}
-                accessibilityLabel="Confirm delete note">
-                <Symbol name="delete" size="lg" color={theme.danger} />
-                <AppText style={styles.deleteTitle}>Delete note?</AppText>
-                <AppText
-                  variant="body"
-                  color="secondary"
-                  style={styles.deleteCopy}
-                  numberOfLines={3}>
-                  Remove “{deletingNote.body}”? This can’t be undone.
-                </AppText>
-                <Button
-                  variant="danger"
-                  accessibilityLabel="Confirm delete note"
-                  onPress={confirmDelete}>
-                  Delete note
-                </Button>
-                <Button
-                  variant="ghost"
-                  accessibilityLabel="Keep note"
-                  onPress={() => setDeletingId(null)}>
-                  Keep note
-                </Button>
-              </View>
-            ) : notes.length === 0 ? (
+            {notes.length === 0 ? (
               <View
                 style={[
                   styles.empty,
@@ -351,66 +322,69 @@ export function TravelItemNotesSheet({
               </ScrollView>
             )}
 
-            {deletingNote ? null : (
-              <View
-                style={[
-                  styles.composer,
-                  {
-                    borderTopColor: theme.separator,
-                    gap: rs.sm,
-                    paddingHorizontal: rs.md,
-                    paddingTop: rs.sm,
-                  },
-                ]}>
-                {isEditing ? (
-                  <IconButton
-                    icon="close"
-                    size={Math.max(36, s(36))}
-                    background={theme.backgroundSunken}
-                    accessibilityLabel="Cancel edit"
-                    onPress={cancelEdit}
-                  />
-                ) : null}
-                <TextInput
-                  value={draft}
-                  onChangeText={setDraft}
-                  placeholder={isEditing ? 'Edit note…' : 'Add a note…'}
-                  placeholderTextColor={theme.textTertiary}
-                  multiline
-                  maxLength={500}
-                  accessibilityLabel={
-                    isEditing ? 'Edit trip note' : 'Trip note'
-                  }
-                  underlineColorAndroid="transparent"
-                  style={[
-                    styles.input,
-                    {
-                      color: theme.textPrimary,
-                      backgroundColor: theme.backgroundSunken,
-                      minHeight: Math.max(40, s(40)),
-                      maxHeight: Math.max(88, s(88)),
-                      paddingHorizontal: rs.md,
-                      paddingVertical: rs.sm,
-                    },
-                  ]}
-                />
+            <View
+              style={[
+                styles.composer,
+                {
+                  borderTopColor: theme.separator,
+                  gap: rs.sm,
+                  paddingHorizontal: rs.md,
+                  paddingTop: rs.sm,
+                },
+              ]}>
+              {isEditing ? (
                 <IconButton
-                  icon={isEditing ? 'check' : 'send'}
+                  icon="close"
                   size={Math.max(36, s(36))}
-                  background={
-                    draft.trim() ? theme.accentPrimary : theme.backgroundSunken
-                  }
-                  color={draft.trim() ? theme.textOnAccent : theme.textTertiary}
-                  disabled={!draft.trim()}
-                  accessibilityLabel={isEditing ? 'Save note' : 'Post note'}
-                  onPress={submit}
+                  background={theme.backgroundSunken}
+                  accessibilityLabel="Cancel edit"
+                  onPress={cancelEdit}
                 />
-              </View>
-            )}
+              ) : null}
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder={isEditing ? 'Edit note…' : 'Add a note…'}
+                placeholderTextColor={theme.textTertiary}
+                multiline
+                maxLength={500}
+                accessibilityLabel={
+                  isEditing ? 'Edit trip note' : 'Trip note'
+                }
+                underlineColorAndroid="transparent"
+                style={[
+                  styles.input,
+                  {
+                    color: theme.textPrimary,
+                    backgroundColor: theme.backgroundSunken,
+                    minHeight: Math.max(40, s(40)),
+                    maxHeight: Math.max(88, s(88)),
+                    paddingHorizontal: rs.md,
+                    paddingVertical: rs.sm,
+                  },
+                ]}
+              />
+              <IconButton
+                icon={isEditing ? 'check' : 'send'}
+                size={Math.max(36, s(36))}
+                background={
+                  draft.trim() ? theme.accentPrimary : theme.backgroundSunken
+                }
+                color={draft.trim() ? theme.textOnAccent : theme.textTertiary}
+                disabled={!draft.trim()}
+                accessibilityLabel={isEditing ? 'Save note' : 'Post note'}
+                onPress={submit}
+              />
+            </View>
           </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
+    <TravelRemoveConfirmModal
+      payload={removeConfirm}
+      onCancel={() => setRemoveConfirm(null)}
+    />
+    </>
   );
 }
 
@@ -487,21 +461,6 @@ const styles = StyleSheet.create({
   emptyCopy: {
     textAlign: 'center',
     maxWidth: 220,
-  },
-  deleteConfirm: {
-    alignItems: 'center',
-  },
-  deleteTitle: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '400',
-    letterSpacing: -0.4,
-    textAlign: 'center',
-  },
-  deleteCopy: {
-    textAlign: 'center',
-    maxWidth: 280,
   },
   noteCard: {
     borderRadius: 12,

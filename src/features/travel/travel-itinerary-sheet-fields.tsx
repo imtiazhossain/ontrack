@@ -9,6 +9,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export function ItinerarySheetImportCard({
@@ -126,13 +127,15 @@ export function ItinerarySheetImportCard({
 export function ItinerarySheetSubmitButton({
   label,
   onPress,
-  icon = 'calendar-add',
+  icon,
   editorialGold = false,
+  testID,
 }: {
   label: string;
   onPress: () => void;
   icon?: AppIconName;
   editorialGold?: boolean;
+  testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -142,15 +145,20 @@ export function ItinerarySheetSubmitButton({
       ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
       : ([chrome.ctaFrom, chrome.ctaTo] as const);
   const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 52 : 52));
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.submitWrap,
         {
@@ -173,11 +181,11 @@ export function ItinerarySheetSubmitButton({
           {
             minHeight,
             paddingHorizontal: rs.lg,
-            gap: rs.sm,
+            gap: icon ? rs.sm : 0,
             borderRadius: radii.pill,
           },
         ]}>
-        <Symbol name={icon} size="sm" color={chrome.ctaText} />
+        {icon ? <Symbol name={icon} size="sm" color={chrome.ctaText} /> : null}
         <AppText
           variant="callout"
           fit
@@ -186,6 +194,7 @@ export function ItinerarySheetSubmitButton({
             styles.submitLabel,
             {
               color: chrome.ctaText,
+              textAlign: 'center',
               fontSize: editorialGold ? s(20) : undefined,
               lineHeight: editorialGold ? s(25) : undefined,
             },

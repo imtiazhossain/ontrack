@@ -5,13 +5,33 @@ import {
   type TravelParticipant,
   type TravelPlan,
 } from '@/features/travel/types';
+import {
+  isTravelExpenseMemberId,
+} from '@/services/travel/expense-collaboration';
 import { newId } from '@/utils/id';
 
 import { normalizeCurrencyCode } from './format-money';
 import type { FxRates } from './fx-rates';
 import { convertAmount } from './fx-rates';
 
-export type ExpensePerson = { id: string; name: string };
+export type ExpensePerson = {
+  id: string;
+  name: string;
+  /** Current signed-in user — uses preferences avatar. */
+  isSelf?: boolean;
+  /** Auth user id when known (`member:<uid>` / friends / roster). */
+  userId?: string;
+};
+
+function memberUserId(id: string): string | undefined {
+  if (!isTravelExpenseMemberId(id)) return undefined;
+  const userId = id.slice('member:'.length).trim();
+  return userId || undefined;
+}
+
+function samePersonName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 
 export function expensePeople(
   plan: Pick<
@@ -23,7 +43,7 @@ export function expensePeople(
     Boolean(plan.chatAccessCode) ||
     Boolean(plan.hostTripId?.trim() && plan.hostTripId.trim() !== plan.id);
   const people: ExpensePerson[] = [
-    { id: TRAVEL_EXPENSE_SELF_ID, name: 'You' },
+    { id: TRAVEL_EXPENSE_SELF_ID, name: 'You', isSelf: true },
   ];
   if (isMember) {
     people.push({
@@ -38,11 +58,40 @@ export function expensePeople(
   }
   for (const person of plan.sharedExpensePeople ?? []) {
     if (person.id === TRAVEL_EXPENSE_SELF_ID) continue;
-    if (!people.some((entry) => entry.id === person.id)) {
-      people.push({ id: person.id, name: person.name });
+    const userId = memberUserId(person.id);
+    const existingIndex = people.findIndex(
+      (entry) =>
+        entry.id === person.id || samePersonName(entry.name, person.name),
+    );
+    if (existingIndex >= 0) {
+      const existing = people[existingIndex]!;
+      if (userId && !existing.userId) {
+        people[existingIndex] = { ...existing, userId };
+      }
+      continue;
     }
+    people.push({
+      id: person.id,
+      name: person.name,
+      ...(userId ? { userId } : {}),
+    });
   }
   return people;
+}
+
+/** Attach friend / roster auth ids so ProfileAvatar can show custom icons. */
+export function enrichExpensePeopleAvatars(
+  people: ExpensePerson[],
+  lookup: Array<{ userId: string; displayName: string }>,
+): ExpensePerson[] {
+  if (lookup.length === 0) return people;
+  return people.map((person) => {
+    if (person.isSelf || person.userId) return person;
+    const match = lookup.find((entry) =>
+      samePersonName(entry.displayName, person.name),
+    );
+    return match ? { ...person, userId: match.userId } : person;
+  });
 }
 
 export function personName(
@@ -61,6 +110,37 @@ export function abbreviatedPersonName(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+}
+
+/**
+ * First-name label for expense rows.
+ * "You" stays; "Farhana Tasmin" → "Farhana".
+ * When multiple people share a first name, append last initial: "Farhana T.".
+ */
+export function firstNamePersonLabel(name: string, allNames: string[]): string {
+  const trimmed = name.trim();
+  if (!trimmed) return trimmed;
+  if (/^you$/i.test(trimmed)) return 'You';
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const first = parts[0]!;
+  if (parts.length === 1) return first;
+
+  const firstLower = first.toLowerCase();
+  const sameFirstCount = allNames.reduce((count, other) => {
+    const otherFirst = other.trim().split(/\s+/).filter(Boolean)[0]?.toLowerCase();
+    return otherFirst === firstLower ? count + 1 : count;
+  }, 0);
+  if (sameFirstCount <= 1) return first;
+
+  const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase();
+  return lastInitial ? `${first} ${lastInitial}.` : first;
+}
+
+export function expensePayerLabel(people: ExpensePerson[], paidById: string): string {
+  return firstNamePersonLabel(
+    personName(people, paidById),
+    people.map((person) => person.name),
+  );
 }
 
 /** Convert expense amount into the trip base currency when rates allow. */

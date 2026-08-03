@@ -61,6 +61,11 @@ import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
+import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
+import {
+  TravelRemoveConfirmModal,
+  type TravelRemoveConfirmPayload,
+} from '@/features/travel/travel-remove-confirm-modal';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
 import {
@@ -72,7 +77,6 @@ import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { addDays, minutesBetween } from '@/utils/date';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 import { isHttpsUrl } from '@/utils/safe-url';
@@ -200,6 +204,10 @@ export function TravelPlanDetail({
   );
   const [isAddingItem, setIsAddingItem] = useState(Boolean(initialAddKind));
   const [isChoosingAddKind, setIsChoosingAddKind] = useState(initialOpenAddPicker);
+  const [addPhotosItemId, setAddPhotosItemId] = useState<string>();
+  const addPhotosItemIdRef = useRef<string | undefined>(undefined);
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
   /** Blocks dismiss/reset while a system picker or OCR import is in flight. */
   const importInProgressRef = useRef(false);
   const [importStatusLabel, setImportStatusLabel] = useState<string>();
@@ -480,10 +488,10 @@ export function TravelPlanDetail({
   };
 
   const confirmRemoveItem = (item: TravelPlan['itinerary'][number]) => {
-    confirmDestructiveAction({
+    setRemoveConfirm({
       title: 'Remove Itinerary Item?',
-      message: item.title,
-      actionLabel: 'Remove',
+      message: 'This action will permanently remove this itinerary item.',
+      actionLabel: 'Remove Item',
       onConfirm: () => removeItem(item.id),
     });
   };
@@ -530,59 +538,35 @@ export function TravelPlanDetail({
     );
   };
 
-  const addPhotosToItem = (itemId: string) => {
-    const append = async (uris: string[]) => {
-      if (!uris.length) return;
-      try {
-        const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
-        if (!latest) return;
-        const current = latest.itinerary.find((entry) => entry.id === itemId);
-        const persisted = await persistTravelMomentPhotos(uris, itemId);
-        const next = [...(current?.photoUris ?? []), ...persisted];
-        updatePlan({
-          ...latest,
-          itinerary: latest.itinerary.map((item) =>
-            item.id === itemId
-              ? { ...item, photoUris: next.length ? next : undefined }
-              : item,
-          ),
-          updatedAt: new Date().toISOString(),
-        });
-      } catch (error) {
-        if (__DEV__) console.warn('[addPhotosToItem]', error);
-        appPrompt.alert(
-          'Couldn’t save photo',
-          'Something went wrong while saving. Try again with another image.',
-        );
-      }
-    };
+  const appendPhotosToItem = async (itemId: string, uris: string[]) => {
+    if (!uris.length) return;
+    try {
+      const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
+      if (!latest) return;
+      const current = latest.itinerary.find((entry) => entry.id === itemId);
+      const persisted = await persistTravelMomentPhotos(uris, itemId);
+      const next = [...(current?.photoUris ?? []), ...persisted];
+      updatePlan({
+        ...latest,
+        itinerary: latest.itinerary.map((item) =>
+          item.id === itemId
+            ? { ...item, photoUris: next.length ? next : undefined }
+            : item,
+        ),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (__DEV__) console.warn('[addPhotosToItem]', error);
+      appPrompt.alert(
+        'Couldn’t save photo',
+        'Something went wrong while saving. Try again with another image.',
+      );
+    }
+  };
 
-    appPrompt.alert('Add Photos', 'Attach pictures to this timeline entry.', [
-      {
-        text: 'Take Photo',
-        onPress: () => {
-          void (async () => {
-            const uri = await pickCameraImage();
-            if (uri) await append([uri]);
-          })();
-        },
-      },
-      {
-        text: 'Choose from Photos',
-        onPress: () => {
-          void (async () => {
-            const assets = await pickLibraryImages({
-              allowsMultipleSelection: true,
-              selectionLimit: 8,
-            });
-            if (assets?.length) {
-              await append(assets.map((asset) => asset.uri));
-            }
-          })();
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  const addPhotosToItem = (itemId: string) => {
+    addPhotosItemIdRef.current = itemId;
+    setAddPhotosItemId(itemId);
   };
 
   const beginEditingFlightDetails = (
@@ -1275,6 +1259,43 @@ export function TravelPlanDetail({
         visible={isChoosingAddKind}
         onClose={() => setIsChoosingAddKind(false)}
         onSelect={chooseAddKind}
+      />
+
+      <TravelRemoveConfirmModal
+        payload={removeConfirm}
+        onCancel={() => setRemoveConfirm(null)}
+      />
+
+      <TravelAddPhotosModal
+        visible={addPhotosItemId != null}
+        onClose={() => {
+          addPhotosItemIdRef.current = undefined;
+          setAddPhotosItemId(undefined);
+        }}
+        onTakePhoto={() => {
+          const itemId = addPhotosItemIdRef.current;
+          if (!itemId) return;
+          void (async () => {
+            const uri = await pickCameraImage();
+            if (uri) await appendPhotosToItem(itemId, [uri]);
+          })();
+        }}
+        onChooseFromPhotos={() => {
+          const itemId = addPhotosItemIdRef.current;
+          if (!itemId) return;
+          void (async () => {
+            const assets = await pickLibraryImages({
+              allowsMultipleSelection: true,
+              selectionLimit: 8,
+            });
+            if (assets?.length) {
+              await appendPhotosToItem(
+                itemId,
+                assets.map((asset) => asset.uri),
+              );
+            }
+          })();
+        }}
       />
 
       <TravelItineraryAddSheet

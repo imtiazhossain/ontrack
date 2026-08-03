@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -22,24 +22,32 @@ import {
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import { layout, radii, spacing, typography } from '@/design-system';
 import {
+  buildTravelChatListItems,
   chatNotificationsAreEnabled,
   enableTravelChatNotifications,
   getTravelChatDeviceId,
   loadTravelChatMessages,
   sendTravelChatMessage,
   travelChatAccessCode,
+  type TravelChatListItem,
   type TravelChatMessage,
 } from '@/features/travel/chat';
 import {
-  travelCardBorder,
-  travelCardFill,
-  travelPageBg,
-} from '@/features/travel/travel-surface';
+  TravelChatComposerSparkle,
+  TravelChatDateSeparator,
+  TravelChatDestinationStamp,
+  TravelChatLandscape,
+  TravelChatMemberStack,
+  travelChatPalette,
+  type TravelChatMember,
+} from '@/features/travel/travel-chat-chrome';
+import { travelPageBg } from '@/features/travel/travel-surface';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
@@ -47,9 +55,10 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { layout: responsiveLayout, spacing: rs } = useResponsive();
+  const { layout: responsiveLayout, spacing: rs, s } = useResponsive();
+  const palette = travelChatPalette(theme);
   const listRef =
-    useRef<ComponentRef<typeof FlashList<OptimisticTravelChatMessage>>>(null);
+    useRef<ComponentRef<typeof FlashList<TravelChatListItem>>>(null);
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const senderName = usePreferences((state) => state.name).trim() || 'Trip member';
   const accessCode = plan ? travelChatAccessCode(plan) : undefined;
@@ -63,6 +72,25 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const listItems = buildTravelChatListItems(messages);
+
+  const members = useMemo<TravelChatMember[]>(() => {
+    if (!plan) return [];
+    return [
+      { id: `${plan.id}-self`, name: senderName, isSelf: true },
+      ...plan.participants.map((person) => ({
+        id: person.id,
+        name: person.name,
+      })),
+    ];
+  }, [plan, senderName]);
+
+  const memberSubtitle = useMemo(() => {
+    if (!plan) return 'Plan Together · Stay Connected';
+    if (plan.id === ALL_ACCOUNTS_TEST_TRIP.id) return 'Shared Test Chat · Plan Together';
+    const count = plan.participants.length + 1;
+    return `${count} ${count === 1 ? 'Trip Member' : 'Trip Members'} · Plan Together`;
+  }, [plan]);
 
   const refresh = useCallback(async () => {
     if (!accessCode) return;
@@ -127,10 +155,10 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   }, [accessCode, deviceId]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (listItems.length === 0) return;
     const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(timer);
-  }, [messages.length]);
+  }, [listItems.length]);
 
   useEffect(() => {
     const showEvent =
@@ -218,6 +246,9 @@ export function TravelChatScreen({ planId }: { planId: string }) {
     }
   };
 
+  const composerBottomPad = Math.max(insets.bottom, spacing.sm);
+  const sendSize = Math.max(48, s(52));
+
   if (!plan) {
     return (
       <View
@@ -225,7 +256,6 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           styles.fill,
           {
             backgroundColor: travelPageBg(theme),
-            paddingTop: insets.top,
             paddingHorizontal: responsiveLayout.screenPadding,
           },
         ]}>
@@ -234,6 +264,8 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           title="Travel"
           subtitle="Plan Together · Stay Connected"
           closeAccessibilityLabel="Close Group Chat"
+          closeTestID={AgentUiIds.travel.chat.close}
+          paddingTop={0}
           onClose={() => router.back()}
         />
         <EmptyState icon="chat" title="Trip Not Found" message="This trip is no longer available." />
@@ -246,18 +278,22 @@ export function TravelChatScreen({ planId }: { planId: string }) {
       <View
         style={[
           styles.fill,
-          { backgroundColor: travelPageBg(theme), paddingTop: insets.top },
+          { backgroundColor: travelPageBg(theme) },
         ]}>
-        <View style={{ paddingHorizontal: responsiveLayout.screenPadding }}>
+        <TravelChatLandscape color={palette.mountainColor} />
+        <View style={{ paddingHorizontal: responsiveLayout.screenPadding, zIndex: 1 }}>
           <TravelSheetHeader
             eyebrow="Group Chat"
             title={plan.title}
-            subtitle="Plan Together · Stay Connected"
+            subtitle={memberSubtitle}
             closeAccessibilityLabel="Close Group Chat"
+            closeTestID={AgentUiIds.travel.chat.close}
+            paddingTop={0}
             onClose={() => router.back()}
           />
+          <TravelChatMemberStack members={members} />
         </View>
-        <View style={styles.center}>
+        <View style={[styles.center, { zIndex: 1 }]}>
           <EmptyState
             icon="people"
             title="Chat Opens When a Friend Joins"
@@ -272,22 +308,28 @@ export function TravelChatScreen({ planId }: { planId: string }) {
     <View
       style={[
         styles.fill,
-        { backgroundColor: travelPageBg(theme), paddingTop: insets.top },
+        { backgroundColor: travelPageBg(theme) },
       ]}>
-      <View style={{ paddingHorizontal: responsiveLayout.screenPadding }}>
+      <TravelChatLandscape color={palette.mountainColor} />
+      <TravelChatDestinationStamp
+        title={plan.title}
+        destination={plan.destination}
+        color={palette.stamp}
+      />
+
+      <View style={{ paddingHorizontal: responsiveLayout.screenPadding, zIndex: 1 }}>
         <TravelSheetHeader
           eyebrow="Group Chat"
           title={plan.title}
-          subtitle={
-            plan.id === ALL_ACCOUNTS_TEST_TRIP.id
-              ? 'Shared Test Chat · Plan Together'
-              : `${plan.participants.length + 1} ${
-                  plan.participants.length === 0 ? 'Trip Member' : 'Trip Members'
-                } · Plan Together`
-          }
+          subtitle={memberSubtitle}
           closeAccessibilityLabel="Close Group Chat"
+          closeTestID={AgentUiIds.travel.chat.close}
+          paddingTop={0}
           onClose={() => router.back()}
         />
+        <View style={{ marginTop: -rs.md, marginBottom: rs.md }}>
+          <TravelChatMemberStack members={members} />
+        </View>
       </View>
 
       {notificationsAvailable && !notificationsEnabled ? (
@@ -295,10 +337,11 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           style={[
             styles.notificationBanner,
             {
-              backgroundColor: travelCardFill(theme),
-              borderColor: travelCardBorder(theme),
+              backgroundColor: palette.bubbleTheirs,
+              borderColor: palette.bubbleBorder,
               marginHorizontal: responsiveLayout.screenPadding,
               marginBottom: rs.sm,
+              zIndex: 1,
             },
           ]}>
           <View style={styles.bannerCopy}>
@@ -310,6 +353,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             </AppText>
           </View>
           <Button
+            testID={AgentUiIds.travel.chat.enableNotifications}
             disabled={enablingNotifications || !deviceId}
             onPress={() => void enableNotifications()}>
             {enablingNotifications ? 'Turning On…' : 'Turn On'}
@@ -318,26 +362,29 @@ export function TravelChatScreen({ planId }: { planId: string }) {
       ) : null}
 
       {error ? (
-        <View style={styles.error}>
+        <View style={[styles.error, { zIndex: 1 }]}>
           <ErrorMessage message={error} selectable />
         </View>
       ) : null}
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={theme.accentPrimary} />
+        <View style={[styles.center, { zIndex: 1 }]}>
+          <ActivityIndicator color={palette.goldFrom} />
           <AppText variant="body" color="secondary">Loading messages…</AppText>
         </View>
       ) : (
-        <FlashList<OptimisticTravelChatMessage>
+        <FlashList<TravelChatListItem>
           ref={listRef}
-          data={messages}
+          data={listItems}
           keyExtractor={(item) => item.id}
+          getItemType={(item) => item.type}
           contentInsetAdjustmentBehavior="never"
           contentContainerStyle={[
             styles.messages,
-            messages.length === 0 ? styles.emptyMessages : undefined,
+            listItems.length === 0 ? styles.emptyMessages : undefined,
+            { paddingBottom: rs.xl, flexGrow: 1 },
           ]}
+          style={styles.list}
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
@@ -348,37 +395,67 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             />
           }
           renderItem={({ item }) => {
-            const mine = item.senderDeviceId === deviceId;
+            if (item.type === 'date') {
+              return <TravelChatDateSeparator label={item.label} />;
+            }
+
+            const message = item.message as OptimisticTravelChatMessage;
+            const mine = message.senderDeviceId === deviceId;
             return (
               <View style={[styles.messageRow, mine ? styles.myMessageRow : undefined]}>
                 {!mine ? (
-                  <AppText variant="caption" color="secondary" style={styles.sender}>
-                    {item.senderName}
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.sender,
+                      {
+                        color: palette.senderName,
+                        fontSize: Math.max(12, s(13)),
+                      },
+                    ]}>
+                    {message.senderName}
                   </AppText>
                 ) : null}
                 <View
                   style={[
                     styles.bubble,
-                    item.pending ? styles.pendingBubble : undefined,
+                    message.pending ? styles.pendingBubble : undefined,
                     {
-                      backgroundColor: mine ? theme.accentPrimary : travelCardFill(theme),
-                      borderColor: mine ? 'transparent' : travelCardBorder(theme),
+                      backgroundColor: mine ? palette.bubbleMine : palette.bubbleTheirs,
+                      borderColor: palette.bubbleBorder,
+                      borderRadius: radii.pill,
+                      boxShadow: palette.bubbleShadow,
+                      paddingHorizontal: Math.max(rs.lg, s(18)),
+                      paddingVertical: Math.max(rs.md, s(12)),
                     },
                   ]}>
-                  <AppText selectable color={mine ? 'onAccent' : 'primary'}>
-                    {item.body}
+                  <AppText
+                    selectable
+                    style={{
+                      color: palette.senderName,
+                      fontSize: Math.max(16, s(17)),
+                      lineHeight: Math.max(22, s(24)),
+                    }}>
+                    {message.body}
                   </AppText>
                 </View>
                 <AppText
                   variant="caption"
-                  color="tertiary"
-                  style={mine ? styles.myTimestamp : undefined}>
-                  {item.pending
+                  style={[
+                    mine ? styles.myTimestamp : undefined,
+                    {
+                      color: palette.timestamp,
+                      fontSize: Math.max(11, s(12)),
+                      marginTop: rs.xs,
+                      paddingHorizontal: spacing.sm,
+                    },
+                  ]}>
+                  {message.pending
                     ? 'Sending…'
                     : new Intl.DateTimeFormat(undefined, {
                         hour: 'numeric',
                         minute: '2-digit',
-                      }).format(new Date(item.createdAt))}
+                      }).format(new Date(message.createdAt))}
                 </AppText>
               </View>
             );
@@ -390,39 +467,61 @@ export function TravelChatScreen({ planId }: { planId: string }) {
         style={[
           styles.composer,
           {
-            borderTopColor: travelCardBorder(theme),
-            backgroundColor: travelPageBg(theme),
-            paddingBottom: Math.max(insets.bottom, spacing.sm),
+            paddingBottom: composerBottomPad,
             marginBottom: keyboardInset,
+            paddingHorizontal: responsiveLayout.screenPadding,
+            gap: rs.sm,
+            zIndex: 2,
           },
         ]}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Message the Trip…"
-          placeholderTextColor={theme.textTertiary}
-          multiline
-          maxLength={2000}
-          accessibilityLabel="Trip Message"
-          underlineColorAndroid="transparent"
+        <AgentTestId
+          testID={AgentUiIds.travel.chat.composer}
+          label="Trip Message"
           style={[
-            styles.input,
-            typography.body,
+            styles.composerField,
             {
-              color: theme.textPrimary,
-              backgroundColor: travelCardFill(theme),
-              borderColor: travelCardBorder(theme),
+              backgroundColor: palette.composerBg,
+              borderColor: palette.composerBorder,
+              borderRadius: radii.pill,
+              minHeight: Math.max(48, s(52)),
+              paddingLeft: rs.sm,
+              paddingRight: rs.md,
+              gap: rs.sm,
             },
-          ]}
-        />
-        <IconButton
-          icon="arrow-up"
-          accessibilityLabel="Send message"
-          disabled={!draft.trim() || !deviceId || sending}
-          color={theme.textOnAccent}
-          background={theme.accentPrimary}
-          onPress={() => void send()}
-        />
+          ]}>
+          <TravelChatComposerSparkle color={palette.goldFrom} ring={palette.sparkleRing} />
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Message the Trip…"
+            placeholderTextColor={palette.timestamp}
+            multiline
+            maxLength={2000}
+            accessibilityLabel="Trip Message"
+            underlineColorAndroid="transparent"
+            style={[
+              styles.input,
+              typography.body,
+              {
+                color: palette.senderName,
+                fontSize: Math.max(15, s(16)),
+                paddingVertical: Platform.OS === 'ios' ? rs.sm : rs.xs,
+              },
+            ]}
+          />
+        </AgentTestId>
+        <View style={{ boxShadow: palette.sendShadow, borderRadius: sendSize / 2 }}>
+          <IconButton
+            icon="arrow-up"
+            accessibilityLabel="Send message"
+            testID={AgentUiIds.travel.chat.send}
+            disabled={!draft.trim() || !deviceId || sending}
+            color={palette.chrome.ctaText}
+            background={palette.goldFrom}
+            size={sendSize}
+            onPress={() => void send()}
+          />
+        </View>
       </View>
     </View>
   );
@@ -448,17 +547,15 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     boxShadow: '0 3px 12px rgba(51, 39, 28, 0.10)',
   },
-  bannerCopy: { flex: 1, gap: spacing.xxs },
+  bannerCopy: { flex: 1, gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
   error: { paddingHorizontal: layout.screenPadding, paddingTop: spacing.sm },
+  list: { flex: 1, zIndex: 1 },
   messages: { flexGrow: 1, gap: spacing.md, padding: layout.screenPadding },
   emptyMessages: { justifyContent: 'center' },
   messageRow: { alignItems: 'flex-start', maxWidth: '84%' },
   myMessageRow: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   sender: { paddingHorizontal: spacing.sm, paddingBottom: spacing.xs },
   bubble: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
     borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -467,19 +564,21 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: spacing.sm,
-    paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  composerField: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minWidth: 0,
+    minHeight: 28,
     maxHeight: 120,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
 });

@@ -2,7 +2,10 @@ import { useId, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
+import {
+  FieldLeadingIcon,
+  fieldLeadingIconRowStyle,
+} from '@/components/primitives/field-leading-icon';
 import { borders, radii, spacing, type AppIconName } from '@/design-system';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -213,7 +216,7 @@ export function ScrollableDropdown({
         onPress={toggle}
         style={({ pressed }) => [
           styles.field,
-          {
+          fieldLeadingIconRowStyle({
             minHeight: icon ? Math.max(56, s(60)) : 58,
             paddingHorizontal: icon ? rs.md : spacing.md,
             paddingVertical: icon ? rs.sm : spacing.sm,
@@ -224,7 +227,7 @@ export function ScrollableDropdown({
                 ? 'transparent'
                 : theme.separator,
             opacity: pressed ? 0.86 : 1,
-          },
+          }),
         ]}>
         {icon ? (
           <FieldLeadingIcon
@@ -348,8 +351,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.sm,
   },
   fieldCopy: {

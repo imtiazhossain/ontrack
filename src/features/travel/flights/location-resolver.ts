@@ -23,6 +23,26 @@ function validCode(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Z]{3}$/.test(value);
 }
 
+/** City/airport search terms — full entry first, then city before a comma. */
+export function locationQueryCandidates(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  const push = (value: string) => {
+    const key = normalized(value);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    candidates.push(value.trim());
+  };
+
+  push(trimmed);
+  const city = trimmed.split(',')[0]?.trim();
+  if (city) push(city);
+  return candidates;
+}
+
 export function airportCodesForLocation(
   query: string,
   results: FlightLocation[],
@@ -40,6 +60,13 @@ export function airportCodesForLocation(
         item.type === 'city' &&
         typeof item.name === 'string' &&
         normalized(item.name) === queryName,
+    ) ??
+    results.find(
+      (item) =>
+        item.type === 'city' &&
+        typeof item.name === 'string' &&
+        (normalized(item.name).startsWith(queryName) ||
+          queryName.startsWith(normalized(item.name))),
     ) ??
     results.find((item) => item.type === 'city');
   if (city && validCode(city.code)) {
@@ -62,32 +89,39 @@ export function airportCodesForLocation(
   return airport ? [airport.code] : [];
 }
 
+async function fetchLocationResults(
+  term: string,
+  signal: AbortSignal,
+): Promise<FlightLocation[]> {
+  const params = new URLSearchParams({ term, locale: 'en' });
+  params.append('types[]', 'city');
+  params.append('types[]', 'airport');
+  const response = await fetch(
+    `https://autocomplete.travelpayouts.com/places2?${params.toString()}`,
+    { signal },
+  );
+  if (!response.ok) throw new Error(`Location lookup failed (${response.status}).`);
+  const body = await response.json();
+  return Array.isArray(body) ? (body as FlightLocation[]) : [];
+}
+
 export async function resolveFlightLocation(query: string): Promise<string[]> {
   const key = normalized(query);
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const params = new URLSearchParams({ term: query.trim(), locale: 'en' });
-  params.append('types[]', 'city');
-  params.append('types[]', 'airport');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LOCATION_LOOKUP_TIMEOUT_MS);
   try {
-    const response = await fetch(
-      `https://autocomplete.travelpayouts.com/places2?${params.toString()}`,
-      { signal: controller.signal },
-    );
-    if (!response.ok) throw new Error(`Location lookup failed (${response.status}).`);
-    const body = await response.json();
-    const codes = airportCodesForLocation(
-      query,
-      Array.isArray(body) ? (body as FlightLocation[]) : [],
-    );
-    if (codes.length === 0) {
-      throw new Error(`No airports found for ${query.trim()}.`);
+    for (const term of locationQueryCandidates(query)) {
+      const results = await fetchLocationResults(term, controller.signal);
+      const codes = airportCodesForLocation(query, results);
+      if (codes.length === 0) continue;
+      cache.set(key, codes);
+      cache.set(normalized(term), codes);
+      return codes;
     }
-    cache.set(key, codes);
-    return codes;
+    throw new Error(`No airports found for ${query.trim()}.`);
   } finally {
     clearTimeout(timeout);
   }
