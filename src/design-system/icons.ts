@@ -105,6 +105,11 @@ export const appIcons = {
   chat: { ios: 'message.fill', android: 'chat', web: 'chat' },
   send: { ios: 'paperplane.fill', android: 'send', web: 'send' },
   currency: { ios: 'dollarsign.circle', android: 'attach_money', web: 'attach_money' },
+  calculator: {
+    ios: 'plus.forwardslash.minus',
+    android: 'calculate',
+    web: 'calculate',
+  },
   receipt: { ios: 'receipt', android: 'receipt_long', web: 'receipt_long' },
   shield: { ios: 'lock.shield.fill', android: 'shield', web: 'verified_user' },
   wallet: { ios: 'wallet.pass', android: 'account_balance_wallet', web: 'account_balance_wallet' },

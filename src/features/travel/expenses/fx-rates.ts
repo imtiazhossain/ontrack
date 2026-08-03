@@ -1,11 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { normalizeCurrencyCode } from './format-money';
+import {
+  ACTIVE_FX_PROVIDER,
+  getActiveFxProvider,
+  type FxProviderId,
+  parseCurrencyApiUsdLatest,
+  parseFrankfurterLatest,
+} from './fx-providers';
 
-const FX_STORAGE_KEY = 'ontrack/fx/v1';
-const FRANKFURTER_LATEST = 'https://api.frankfurter.dev/v1/latest';
+export {
+  ACTIVE_FX_PROVIDER,
+  FX_PROVIDERS,
+  getActiveFxProvider,
+  parseCurrencyApiUsdLatest,
+  parseFrankfurterLatest,
+  type FxProviderId,
+} from './fx-providers';
 
-/** Currencies supported by Frankfurter v1 (includes ISK). */
+/** Refetch when the last successful fetch is older than this. */
+export const FX_CACHE_TTL_MS = 60 * 60 * 1000;
+
+/** Provider-scoped cache so flipping {@link ACTIVE_FX_PROVIDER} does not reuse stale tables. */
+const FX_STORAGE_KEY = `ontrack/fx/v2/${ACTIVE_FX_PROVIDER}`;
+
+/** Currencies offered in trip FX pickers (subset common across providers). */
 export const FX_CURRENCIES = [
   'AUD',
   'BRL',
@@ -48,13 +67,10 @@ export interface FxRates {
   base: string;
   rates: Record<string, number>;
   fetchedAt: string;
+  provider: FxProviderId;
+  /** Human label for UI (e.g. Market, Frankfurter). */
+  sourceLabel: string;
 }
-
-type FrankfurterLatest = {
-  date?: string;
-  base?: string;
-  rates?: Record<string, number>;
-};
 
 let memoryCache: FxRates | undefined;
 let inflight: Promise<FxRates | undefined> | undefined;
@@ -77,18 +93,17 @@ function sanitizeRates(base: string, rates: Record<string, number>): Record<stri
   return next;
 }
 
-export function parseFrankfurterLatest(payload: unknown): FxRates | undefined {
-  if (!payload || typeof payload !== 'object') return undefined;
-  const body = payload as FrankfurterLatest;
-  const base = normalizeCurrencyCode(body.base, '');
-  if (!base || !body.rates || typeof body.rates !== 'object') return undefined;
-  const rates = sanitizeRates(base, body.rates);
-  if (Object.keys(rates).length < 2) return undefined;
+function withProviderMeta(
+  table: { date: string; base: string; rates: Record<string, number> },
+): FxRates {
+  const provider = getActiveFxProvider();
   return {
-    date: typeof body.date === 'string' ? body.date : new Date().toISOString().slice(0, 10),
-    base,
-    rates,
+    ...table,
+    base: normalizeCurrencyCode(table.base),
+    rates: sanitizeRates(normalizeCurrencyCode(table.base), table.rates),
     fetchedAt: new Date().toISOString(),
+    provider: provider.id,
+    sourceLabel: provider.label,
   };
 }
 
@@ -114,7 +129,7 @@ export function convertAmount(
 }
 
 async function readCachedRates(): Promise<FxRates | undefined> {
-  if (memoryCache) return memoryCache;
+  if (memoryCache?.provider === ACTIVE_FX_PROVIDER) return memoryCache;
   try {
     const raw = await AsyncStorage.getItem(FX_STORAGE_KEY);
     if (!raw) return undefined;
@@ -127,10 +142,13 @@ async function readCachedRates(): Promise<FxRates | undefined> {
     ) {
       return undefined;
     }
+    const provider = getActiveFxProvider();
     memoryCache = {
       ...parsed,
       base: normalizeCurrencyCode(parsed.base),
       rates: sanitizeRates(normalizeCurrencyCode(parsed.base), parsed.rates),
+      provider: provider.id,
+      sourceLabel: parsed.sourceLabel || provider.label,
     };
     return memoryCache;
   } catch {
@@ -147,37 +165,55 @@ async function writeCachedRates(rates: FxRates): Promise<void> {
   }
 }
 
+/** Fetch from the active provider ({@link ACTIVE_FX_PROVIDER}). */
 export async function fetchLatestFxRates(signal?: AbortSignal): Promise<FxRates | undefined> {
-  const response = await fetch(`${FRANKFURTER_LATEST}?base=USD`, { signal });
-  if (!response.ok) return undefined;
-  const json: unknown = await response.json();
-  return parseFrankfurterLatest(json);
+  const table = await getActiveFxProvider().fetchLatest(signal);
+  return table ? withProviderMeta(table) : undefined;
+}
+
+/** True when `fetchedAt` is within the TTL window. */
+export function isFxRatesFresh(
+  rates: Pick<FxRates, 'fetchedAt'> | undefined,
+  nowMs = Date.now(),
+  ttlMs = FX_CACHE_TTL_MS,
+): boolean {
+  if (!rates?.fetchedAt) return false;
+  const fetchedAt = Date.parse(rates.fetchedAt);
+  if (!Number.isFinite(fetchedAt)) return false;
+  const age = nowMs - fetchedAt;
+  return age >= 0 && age < ttlMs;
 }
 
 /**
- * Returns fresh rates when online; otherwise last cached table.
- * Dedupes concurrent callers.
+ * Returns network-fresh rates when online; otherwise last cached table.
+ * Dedupes concurrent callers. Cache is considered fresh for {@link FX_CACHE_TTL_MS}
+ * unless `force` is set (currency calculator always forces on open).
  */
 export async function loadFxRates(options?: {
   force?: boolean;
   signal?: AbortSignal;
 }): Promise<{ rates: FxRates | undefined; stale: boolean }> {
   const cached = await readCachedRates();
-  const today = new Date().toISOString().slice(0, 10);
-  if (!options?.force && cached?.date === today) {
+  if (!options?.force && isFxRatesFresh(cached)) {
     return { rates: cached, stale: false };
   }
 
+  if (options?.signal?.aborted) {
+    return { rates: cached, stale: Boolean(cached) };
+  }
+
   if (!inflight) {
+    // Shared fetch intentionally omits the caller's AbortSignal so one sheet
+    // unmount does not cancel an in-flight refresh for other consumers.
     inflight = (async () => {
       try {
-        const fresh = await fetchLatestFxRates(options?.signal);
+        const fresh = await fetchLatestFxRates();
         if (fresh) {
           await writeCachedRates(fresh);
           return fresh;
         }
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') throw error;
+      } catch {
+        // Network / parse failures fall through to cached rates.
       } finally {
         inflight = undefined;
       }
@@ -185,12 +221,11 @@ export async function loadFxRates(options?: {
     })();
   }
 
-  try {
-    const fresh = await inflight;
-    if (fresh) return { rates: fresh, stale: false };
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
+  const fresh = await inflight;
+  if (options?.signal?.aborted) {
+    return { rates: fresh ?? cached, stale: !fresh && Boolean(cached) };
   }
+  if (fresh) return { rates: fresh, stale: false };
 
   return { rates: cached, stale: Boolean(cached) };
 }

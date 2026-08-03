@@ -9,16 +9,19 @@ After any change that affects the running Expo/iOS app UI, **always test in the 
 
 ## Required close-out
 
-1. Confirm Metro `/status` is 200 (restart with `REACT_NATIVE_PACKAGER_HOSTNAME=<en0 IP> npm start -- --clear` if needed).
+1. Confirm Metro `/status` is 200. Prefer the already-running bundler so Fast Refresh can apply the edit. Start only if down:
+   - Use Node 24 (`nvm use`, see `.nvmrc`). Put nvm ahead of Homebrew on `PATH` — Homebrew `node@25` crashes Metro on Fast Refresh.
+   - `REACT_NATIVE_PACKAGER_HOSTNAME=<en0 IP> npm start` (no `--clear`). Use `npm run start:clear` only when the bundle is demonstrably stale after reconnect.
 2. Boot/open the iOS Simulator (`open -a Simulator`) with the onTrack app (`com.imtihoss.ontracknow`) or Expo Go as appropriate.
 3. Deep-link or navigate to the changed surface (e.g. `xcrun simctl openurl booted 'ontrack://workouts'`).
-4. **Test the change** on that surface (visible result of the edit, not just that the app launched).
+4. **Test the change** on that surface via Fast Refresh (visible result of the edit, not just that the app launched). Do not terminate/relaunch solely to pick up JS/UI edits.
 5. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant).
 6. Capture a screenshot with `xcrun simctl io booted screenshot` and **read the image** so it appears in the reply.
-7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait/retry and capture again before finishing.
+7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait for Fast Refresh / reconnect the dev client and capture again before finishing.
 
 ## Do not
 
 - Skip simulator testing after UI/app changes.
+- Restart Metro with `--clear` or kill the app as the default way to see UI edits.
 - End on “reload the app” without a simulator screenshot of the change.
 - Hand off a white screen, error boundary, partial load, or unrelated screen as the final visual proof.

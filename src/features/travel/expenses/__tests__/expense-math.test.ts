@@ -18,6 +18,8 @@ const rates: FxRates = {
   base: 'USD',
   rates: { USD: 1, ISK: 138, EUR: 0.92 },
   fetchedAt: '2026-07-30T12:00:00.000Z',
+  provider: 'frankfurter',
+  sourceLabel: 'Frankfurter',
 };
 
 const plan: TravelPlan = {

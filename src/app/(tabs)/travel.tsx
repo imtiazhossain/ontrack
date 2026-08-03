@@ -1,4 +1,3 @@
-import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -15,11 +14,11 @@ import {
 import { fontFamilies, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
-import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { TravelCoTravelerStack } from '@/features/travel/travel-cotraveler-stack';
+import { TravelCurrencySheet } from '@/features/travel/travel-currency-sheet';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
@@ -86,6 +85,8 @@ export default function TravelScreen() {
   const [detailsError, setDetailsError] = useState<string>();
   const [expensesPlanId, setExpensesPlanId] = useState<string>();
   const [expensesVisible, setExpensesVisible] = useState(false);
+  const [currencyPlanId, setCurrencyPlanId] = useState<string>();
+  const [currencyVisible, setCurrencyVisible] = useState(false);
   const [friendsPlanId, setFriendsPlanId] = useState<string>();
   const [friendsVisible, setFriendsVisible] = useState(false);
   const [expandedCoTravelerPlanId, setExpandedCoTravelerPlanId] = useState<
@@ -107,6 +108,7 @@ export default function TravelScreen() {
     [plans],
   );
   const expensesPlan = sortedPlans.find((plan) => plan.id === expensesPlanId);
+  const currencyPlan = sortedPlans.find((plan) => plan.id === currencyPlanId);
   const friendsPlan = sortedPlans.find((plan) => plan.id === friendsPlanId);
   const openExpenses = (planId: string) => {
     setExpensesPlanId(planId);
@@ -115,6 +117,14 @@ export default function TravelScreen() {
   const closeExpenses = () => {
     appPrompt.dismiss();
     setExpensesVisible(false);
+  };
+  const openCurrency = (planId: string) => {
+    setCurrencyPlanId(planId);
+    setCurrencyVisible(true);
+  };
+  const closeCurrency = () => {
+    appPrompt.dismiss();
+    setCurrencyVisible(false);
   };
   const openFriends = (planId: string) => {
     setExpandedCoTravelerPlanId(undefined);
@@ -488,12 +498,9 @@ export default function TravelScreen() {
                     <TravelSheetAction
                       label="Currency"
                       icon="currency"
+                      iconImage={require('../../../assets/images/travel/currency-converter-icon.png')}
                       tone="link"
-                      onPress={() =>
-                        void WebBrowser.openBrowserAsync(
-                          googleCurrencyConversionUrl(plan.destination, dateLocale),
-                        )
-                      }
+                      onPress={() => openCurrency(plan.id)}
                       accessibilityLabel={`Convert Currency for ${plan.destination}`}
                     />
                     <TravelSheetAction
@@ -534,6 +541,13 @@ export default function TravelScreen() {
           visible={expensesVisible}
           onClose={closeExpenses}
           onSavePlan={savePlan}
+        />
+      ) : null}
+      {currencyPlan ? (
+        <TravelCurrencySheet
+          plan={currencyPlan}
+          visible={currencyVisible}
+          onClose={closeCurrency}
         />
       ) : null}
       {friendsPlan ? (

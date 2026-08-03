@@ -5,6 +5,7 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { numericOnChangeText, sanitizeNumericInput } from '@/utils/parse';
 import { AppText } from './app-text';
 import { FieldLeadingIcon } from './field-leading-icon';
 
@@ -21,6 +22,34 @@ interface InputProps extends TextInputProps {
   /** Optional supporting copy shown below a stacked field value. */
   helperText?: string;
   trailing?: ReactNode;
+}
+
+function numericSanitizeOptions(keyboardType: TextInputProps['keyboardType']) {
+  if (keyboardType === 'number-pad') {
+    return { decimals: false, allowComma: false } as const;
+  }
+  if (keyboardType === 'decimal-pad' || keyboardType === 'numeric') {
+    return { decimals: true } as const;
+  }
+  return null;
+}
+
+function numericChangeForKeyboard(
+  keyboardType: TextInputProps['keyboardType'],
+  onChangeText: TextInputProps['onChangeText'],
+) {
+  const options = numericSanitizeOptions(keyboardType);
+  if (!options) return onChangeText;
+  return numericOnChangeText(onChangeText, options);
+}
+
+function sanitizeNumericValue(
+  value: TextInputProps['value'],
+  keyboardType: TextInputProps['keyboardType'],
+) {
+  const options = numericSanitizeOptions(keyboardType);
+  if (!options || value == null) return value;
+  return sanitizeNumericInput(String(value), options);
 }
 
 export function Input({
@@ -40,6 +69,8 @@ export function Input({
   value,
   onFocus,
   onBlur,
+  keyboardType,
+  onChangeText,
   ...rest
 }: InputProps) {
   const theme = useTheme();
@@ -49,11 +80,13 @@ export function Input({
   const hasIcon = Boolean(icon);
   const stacked = Boolean(stackedLabel && icon);
   const [focused, setFocused] = useState(false);
-  const hasValue = String(value ?? '').length > 0;
+  const numericValue = sanitizeNumericValue(value, keyboardType);
+  const hasValue = String(numericValue ?? '').length > 0;
   const showChromePlaceholder =
     hasIcon && !stacked && !hasValue && !focused && Boolean(placeholder);
   const body = typography.body;
   const fill = fieldBackground ?? theme.backgroundSunken;
+  const handleChangeText = numericChangeForKeyboard(keyboardType, onChangeText);
 
   const handleFocus: TextInputProps['onFocus'] = (event) => {
     setFocused(true);
@@ -106,12 +139,14 @@ export function Input({
                 {stackedLabel}
               </AppText>
               <TextInput
-                value={value}
+                value={numericValue}
                 placeholder={placeholder}
                 placeholderTextColor={placeholderTextColor ?? theme.textTertiary}
                 allowFontScaling
                 maxFontSizeMultiplier={1.3}
                 multiline={multiline}
+                keyboardType={keyboardType}
+                onChangeText={handleChangeText}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 style={[
@@ -150,11 +185,13 @@ export function Input({
             </AppText>
           ) : (
             <TextInput
-              value={value}
+              value={numericValue}
               placeholder={undefined}
               allowFontScaling
               maxFontSizeMultiplier={1.3}
               multiline={multiline}
+              keyboardType={keyboardType}
+              onChangeText={handleChangeText}
               onFocus={handleFocus}
               onBlur={handleBlur}
               style={[
@@ -178,10 +215,12 @@ export function Input({
           )}
           {showChromePlaceholder ? (
             <TextInput
-              value={value}
+              value={numericValue}
               caretHidden
               allowFontScaling
               maxFontSizeMultiplier={1.3}
+              keyboardType={keyboardType}
+              onChangeText={handleChangeText}
               onFocus={handleFocus}
               onBlur={handleBlur}
               style={styles.hitInput}
@@ -206,12 +245,14 @@ export function Input({
       ) : null}
       <View style={styles.field}>
         <TextInput
-          value={value}
+          value={numericValue}
           placeholder={placeholder}
           placeholderTextColor={placeholderTextColor ?? theme.textTertiary}
           allowFontScaling
           maxFontSizeMultiplier={1.3}
           multiline={multiline}
+          keyboardType={keyboardType}
+          onChangeText={handleChangeText}
           onFocus={handleFocus}
           onBlur={handleBlur}
           style={[

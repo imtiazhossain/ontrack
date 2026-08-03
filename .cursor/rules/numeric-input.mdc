@@ -1,0 +1,39 @@
+---
+description: Number-only fields must strip letters via shared sanitize helpers
+alwaysApply: true
+---
+
+# Numeric input (no letters)
+
+Fields that only accept numbers must never keep letters or other junk from typing/paste — even when `keyboardType` is `decimal-pad` / `number-pad` (external keyboards and paste still allow text).
+
+## Required
+
+1. Sanitize with `@/utils/parse`:
+   - `sanitizeNumericInput(text)` — decimals (default; allows `,` thousands + one `.`)
+   - `sanitizeNumericInput(text, { decimals: false })` — integers only
+   - `numericOnChangeText(onChangeText, options?)` — wrap handlers for raw `TextInput`s
+2. Prefer the shared `Input` primitive — it auto-sanitizes when `keyboardType` is `decimal-pad`, `number-pad`, or `numeric`.
+3. Raw `TextInput`s with those keyboard types **must** use `numericOnChangeText` (or call `sanitizeNumericInput` before setState).
+
+## Do / Don't
+
+```tsx
+// ✅ Input auto-sanitizes
+<Input keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+
+// ✅ Raw TextInput
+<TextInput
+  keyboardType="decimal-pad"
+  value={rateText}
+  onChangeText={numericOnChangeText(onRateChange)}
+/>
+
+// ❌ Letters can leak in
+<TextInput keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+```
+
+## Never reintroduce
+
+- Ad-hoc `/[^0-9]/g` (or similar) copies when `sanitizeNumericInput` fits
+- Number fields that set state from unsanitized `onChangeText` text

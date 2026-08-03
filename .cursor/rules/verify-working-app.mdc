@@ -7,21 +7,40 @@ alwaysApply: true
 
 After **any** code change that affects the running Expo app, do not end the turn until you have **tested the change** and left the iOS Simulator in a **working state that visibly shows the change**.
 
+## Live updates (Fast Refresh) — preferred path
+
+JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killing Metro or relaunching the app.
+
+1. If Metro `/status` is already 200, **leave it running**. Do not restart with `--clear`.
+2. Save the edit, wait briefly for Metro to rebundle / Fast Refresh, then screenshot the changed surface.
+3. Only reconnect the dev client if the app lost the packager (launcher / blank / LoadBundleFromServerError):
+   - `xcrun simctl openurl booted "exp+ontrack://expo-development-client/?url=http%3A%2F%2F<en0-IP>%3A8081"`
+4. Prefer that reconnect over `simctl terminate` / `launch`.
+
+## When Metro is down
+
+1. Use **Node 24** (see `.nvmrc`). Never start Metro with Homebrew `node@25` first on `PATH` — Node 25’s broken `localStorage` crashes Metro on Fast Refresh.
+   - Prefer: `export PATH="$HOME/.nvm/versions/node/v24.12.0/bin:/opt/homebrew/bin:/usr/bin:/bin"` (or `nvm use`) before `npm start`.
+2. Start it **without** clearing cache:
+   - `REACT_NATIVE_PACKAGER_HOSTNAME=<current en0 IP> npm start`
+   - (`npm start` = `expo start --dev-client`; use `npm run start:clear` only for stubborn stale-bundle cases)
+3. Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with that LAN IP when it drifts.
+4. Prove `/status` is 200 on LAN + localhost; on doubt, fetch the iOS entry bundle and confirm HTTP 200.
+
 ## Required close-out
 
-1. **Metro must be up.** If port `8081` is not serving `/status` → 200, start it:
-   - Prefer: `REACT_NATIVE_PACKAGER_HOSTNAME=<current en0 IP> npm start`
-   - Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with that LAN IP when it drifts.
-2. **Prove the bundle loads.** `curl` LAN + localhost status; on doubt, fetch the iOS entry bundle and confirm HTTP 200.
-3. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains. Then exercise the changed surface in the simulator (navigate/deep-link, tap through the flow). Fix failures before finishing.
-4. **Watch for white screens / LoadBundleFromServerError.** Those usually mean Metro died or Fast Refresh broke — restart Metro and confirm status before handing off.
-5. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`) or Expo Go. Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
-6. **Show proof in the reply.** Capture `xcrun simctl io booted screenshot`, read the image, and confirm it depicts the change. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
+1. **Metro must be up** (prefer reuse over restart).
+2. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains. Exercise the changed surface in the simulator (navigate/deep-link, tap through the flow). Fix failures before finishing.
+3. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
+4. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`). Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
+5. **Show proof in the reply.** Capture `xcrun simctl io booted screenshot`, read the image, and confirm it depicts the change. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
 
 ## Do not
 
+- Kill Metro or run `--clear` after routine JS/UI edits.
+- Terminate/relaunch the app just to pick up JS changes — use Fast Refresh / reconnect instead.
 - End without testing the change in the simulator.
 - End on “reload the app” while Metro is down or unverified.
-- Leave Fast Refresh / HMR errors as the final state — recover to a clean bundle first.
+- Leave Fast Refresh / HMR errors as the final state — recover to a clean connected bundle first.
 - Assume a background `npm start` is healthy without checking `/status`.
 - Hand off a splash, blank, error, or unrelated screen — the simulator must show the change.

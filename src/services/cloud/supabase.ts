@@ -7,16 +7,29 @@ const secureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+/**
+ * Node 25+ exposes a broken global `localStorage` (getItem is not a function)
+ * that crashes Expo's SSR/Metro path during Fast Refresh. Only use real Storage.
+ */
+function getUsableWebStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null {
+  try {
+    const storage = (globalThis as { localStorage?: Storage }).localStorage;
+    if (!storage || typeof storage.getItem !== 'function') return null;
+    return storage;
+  } catch {
+    return null;
+  }
+}
+
 // Web cannot use SecureStore. localStorage remains XSS-readable; keep the web
 // surface minimal, enforce CSP, and prefer native builds for full auth sessions.
 const webStorage = {
-  getItem: (key: string) =>
-    typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
+  getItem: (key: string) => getUsableWebStorage()?.getItem(key) ?? null,
   setItem: (key: string, value: string) => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+    getUsableWebStorage()?.setItem(key, value);
   },
   removeItem: (key: string) => {
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+    getUsableWebStorage()?.removeItem(key);
   },
 };
 

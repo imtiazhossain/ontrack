@@ -3,16 +3,15 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/primitives';
 import { spacing } from '@/design-system';
-import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import type { TravelPlan } from '@/features/travel/types';
 import { googleWeatherUrl } from '@/features/travel/weather';
 
 export function TravelPlanActions({
   plan,
-  dateLocale,
+  onOpenCurrency,
 }: {
   plan: TravelPlan;
-  dateLocale: string;
+  onOpenCurrency: () => void;
 }) {
   return (
     <View style={styles.actions}>
@@ -31,12 +30,8 @@ export function TravelPlanActions({
         variant="secondary"
         icon="currency"
         style={styles.action}
-        onPress={() =>
-          void WebBrowser.openBrowserAsync(
-            googleCurrencyConversionUrl(plan.destination, dateLocale),
-          )
-        }
-        accessibilityLabel={`Convert your home currency for ${plan.destination} with Google`}>
+        onPress={onOpenCurrency}
+        accessibilityLabel={`Convert your home currency for ${plan.destination}`}>
         Currency
       </Button>
     </View>

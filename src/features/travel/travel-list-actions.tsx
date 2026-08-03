@@ -1,4 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import {
+  type ImageSourcePropType,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, type AppIconName } from '@/design-system';
@@ -15,6 +21,7 @@ import { haptics } from '@/utils/haptics';
 export function TravelSheetAction({
   label,
   icon,
+  iconImage,
   tone,
   onPress,
   accessibilityLabel,
@@ -22,6 +29,8 @@ export function TravelSheetAction({
 }: {
   label: string;
   icon: AppIconName;
+  /** Optional bitmap glyph; replaces the SF Symbol when set. */
+  iconImage?: ImageSourcePropType;
   tone: SheetIconTone;
   onPress: () => void;
   accessibilityLabel: string;
@@ -63,12 +72,22 @@ export function TravelSheetAction({
           height: iconBox,
           borderRadius: radii.sm,
           borderCurve: 'continuous',
-          backgroundColor: iconTone.bg,
+          backgroundColor: iconImage ? 'transparent' : iconTone.bg,
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          overflow: 'hidden',
         }}>
-        <Symbol name={icon} size="sm" color={iconTone.fg} />
+        {iconImage ? (
+          <Image
+            source={iconImage}
+            style={{ width: iconBox, height: iconBox }}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <Symbol name={icon} size="sm" color={iconTone.fg} />
+        )}
       </View>
       <AppText
         variant="callout"
