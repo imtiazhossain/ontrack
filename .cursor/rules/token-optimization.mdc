@@ -10,6 +10,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 ## Before writing code
 
 1. Read `AGENTS.md` feature entry points and Shared patterns.
+  - See the README's **Token Budget & Optimisation Guidelines** section for concrete examples and limits.
 2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `useResponsive` / `AppText fit` / `typeConfig` + `appTextStyle`, `LoadingBlock`, `DateField`, `FieldLeadingIcon` / `fieldLeadingIconRowStyle`, `appPrompt`, `@/utils/agent-ui` (`AgentUiIds` / `useAgentUiTarget` / `testID`).
 3. Open the smallest entry file first; do not load sibling giants unless needed.
 4. For any UI change, follow `.cursor/rules/responsive-layout.mdc` — scale with `useResponsive()`, keep chrome on one line with `fit`.
