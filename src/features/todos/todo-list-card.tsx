@@ -2,19 +2,24 @@ import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText, DragHandle, Symbol } from '@/components/primitives';
-import { layout, radii, spacing, typography } from '@/design-system';
-import {
-  collaboratorInitial,
-  todoListIcon,
-} from '@/features/todos/list-icon';
+import { layout, radii } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
+import { todoListIcon } from '@/features/todos/list-icon';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoList } from '@/store/todos';
+
+export type TodoListCollaboratorChip = {
+  userId?: string;
+  displayName: string;
+  isSelf?: boolean;
+};
 
 export function TodoListCard({
   editMode,
   list,
   nameDraft,
-  collaboratorNames,
+  collaborators,
   open,
   total,
   onPress,
@@ -31,7 +36,7 @@ export function TodoListCard({
   editMode: boolean;
   list: TodoList;
   nameDraft: string;
-  collaboratorNames?: string[];
+  collaborators?: TodoListCollaboratorChip[];
   open: number;
   total: number;
   onPress: () => void;
@@ -46,8 +51,14 @@ export function TodoListCard({
   isActive: boolean;
 }) {
   const theme = useTheme();
+  const { spacing, s, typography } = useResponsive();
   const nameInputRef = useRef<TextInput>(null);
   const icon = todoListIcon(list.name, list.kind);
+  const iconBox = Math.max(44, s(48));
+  // Match caption name height — chip was oversized vs the label beside it.
+  const collaboratorChip = Math.max(14, Math.round(typography.caption.lineHeight));
+  const collaboratorRing = 1;
+  const collaboratorNames = collaborators?.map((person) => person.displayName);
   const collaboratorLabel = collaboratorNames?.join(', ');
   const leaving = list.mode === 'shared' && list.role === 'member';
   const canRename = editMode && list.role === 'owner';
@@ -57,12 +68,15 @@ export function TodoListCard({
         style={[
           styles.cardIcon,
           {
+            width: iconBox,
+            height: iconBox,
+            borderRadius: radii.md,
             backgroundColor: theme.backgroundSunken,
           },
         ]}>
         <Symbol name={icon} size={22} color={theme.textSecondary} />
       </View>
-      <View style={styles.cardCopy}>
+      <View style={[styles.cardCopy, { gap: spacing.xs, minWidth: 0, flexShrink: 1 }]}>
         {canRename ? (
           <View style={styles.nameEditor}>
             <TextInput
@@ -77,7 +91,11 @@ export function TodoListCard({
               selectTextOnFocus
               selectionColor={theme.accentPrimary}
               underlineColorAndroid="transparent"
-              style={[styles.nameInput, { color: theme.textPrimary }]}
+              style={[
+                styles.nameInput,
+                typography.subheading,
+                { color: theme.textPrimary },
+              ]}
               value={nameDraft}
             />
             <Pressable
@@ -103,33 +121,37 @@ export function TodoListCard({
             ) : null}
           </>
         )}
-        {collaboratorNames ? (
+        {collaborators?.length ? (
           <View style={styles.collaborators}>
             <View style={styles.collaboratorAvatars}>
-              {collaboratorNames.slice(0, 2).map((name, index) => (
+              {collaborators.slice(0, 2).map((person, index) => (
                 <View
-                  key={`${name}-${index}`}
+                  key={`${person.userId ?? person.displayName}-${index}`}
                   style={[
-                    styles.collaboratorAvatar,
+                    index > 0 && styles.collaboratorAvatarOverlap,
                     {
-                      backgroundColor: theme.accentFaint,
+                      // Slight ring so stacked chips separate on the card surface.
+                      borderRadius: collaboratorChip / 2,
+                      borderWidth: collaboratorRing,
                       borderColor: theme.backgroundElevated,
                     },
-                    index > 0 && styles.collaboratorAvatarOverlap,
                   ]}>
-                  <AppText
-                    style={[
-                      styles.collaboratorInitial,
-                      { color: theme.accentPrimary },
-                    ]}>
-                    {collaboratorInitial(name)}
-                  </AppText>
+                  <ProfileAvatar
+                    displayName={person.displayName}
+                    userId={person.userId}
+                    isSelf={person.isSelf}
+                    size={collaboratorChip - collaboratorRing * 2}
+                  />
                 </View>
               ))}
             </View>
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {collaboratorNames.length > 2
-                ? `${collaboratorNames.slice(0, 2).join(', ')} +${collaboratorNames.length - 2}`
+            <AppText
+              variant="caption"
+              color="secondary"
+              numberOfLines={1}
+              style={{ flexShrink: 1, minWidth: 0 }}>
+              {collaborators.length > 2
+                ? `${collaboratorNames!.slice(0, 2).join(', ')} +${collaborators.length - 2}`
                 : collaboratorLabel}
             </AppText>
           </View>
@@ -230,20 +252,22 @@ const styles = StyleSheet.create({
     minHeight: 88,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
+    gap: 4,
+    paddingLeft: 16,
+    paddingRight: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    overflow: 'hidden',
   },
   cardMain: {
     minHeight: 86,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
+    gap: 12,
+    paddingVertical: 16,
+    minWidth: 0,
   },
   activeCard: {
     shadowColor: '#000',
@@ -253,21 +277,19 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   cardIcon: {
-    width: 46,
-    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.md,
+    flexShrink: 0,
+    overflow: 'hidden',
   },
-  cardCopy: { flex: 1, gap: spacing.xs },
+  cardCopy: { flex: 1 },
   nameEditor: {
     minHeight: layout.minTapTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
+    gap: 4,
   },
   nameInput: {
-    ...typography.subheading,
     flex: 1,
     minWidth: 0,
     minHeight: layout.minTapTarget,
@@ -283,31 +305,20 @@ const styles = StyleSheet.create({
   collaborators: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 6,
+    minWidth: 0,
   },
   collaboratorAvatars: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
-  collaboratorAvatar: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: radii.pill,
-  },
-  collaboratorAvatarOverlap: { marginLeft: -5 },
-  collaboratorInitial: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '700',
-  },
-  count: { alignItems: 'center', minWidth: 44 },
+  collaboratorAvatarOverlap: { marginLeft: -3 },
+  count: { alignItems: 'center', minWidth: 44, flexShrink: 0 },
   cardEditActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
+    gap: 4,
   },
   cardActionButton: {
     width: layout.minTapTarget,

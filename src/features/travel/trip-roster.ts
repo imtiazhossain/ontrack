@@ -1,3 +1,4 @@
+import { useAvatarCache } from '@/features/account/avatar-cache';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import { asNonEmptyString, asString } from '@/utils/parse';
 
@@ -26,6 +27,25 @@ export function isTravelMemberPlan(
   return hostTripId !== plan.id;
 }
 
+export type TravelTripRosterRole = 'host' | 'cohost' | 'member';
+
+/**
+ * Sole-host UI (transfer / rename-host / open-join). Never elevate a member
+ * copy just because the roster hasn’t loaded yet — that briefly showed host
+ * controls on friend devices and let rename corrupt hostDisplayName.
+ */
+export function resolveIsTravelSoleHost(input: {
+  myRosterRole?: TravelTripRosterRole;
+  memberPlan: boolean;
+}): boolean {
+  if (input.myRosterRole === 'host') return true;
+  if (input.myRosterRole === 'member' || input.myRosterRole === 'cohost') {
+    return false;
+  }
+  // Roster pending / unavailable: only local host plans may assume sole host.
+  return !input.memberPlan;
+}
+
 async function requireAuthenticatedClient() {
   const client = getSupabaseClient();
   if (!client) {
@@ -49,6 +69,10 @@ function parseRosterPerson(value: unknown): TravelTripRosterPerson | undefined {
   const displayName = asNonEmptyString(row.displayName);
   const role = row.role === 'host' || row.role === 'cohost' || row.role === 'member' ? row.role : undefined;
   if (!userId || !displayName || !role) return undefined;
+  const avatarKind =
+    row.avatarKind === 'initials' || row.avatarKind === 'icon' || row.avatarKind === 'photo'
+      ? row.avatarKind
+      : undefined;
   return {
     userId,
     displayName,
@@ -59,6 +83,16 @@ function parseRosterPerson(value: unknown): TravelTripRosterPerson | undefined {
       : {}),
     ...(asNonEmptyString(asString(row.acceptedAt))
       ? { acceptedAt: asNonEmptyString(asString(row.acceptedAt)) }
+      : {}),
+    ...(avatarKind ? { avatarKind } : {}),
+    ...(asNonEmptyString(asString(row.avatarColor))
+      ? { avatarColor: asNonEmptyString(asString(row.avatarColor)) }
+      : {}),
+    ...(asNonEmptyString(asString(row.avatarIconId))
+      ? { avatarIconId: asNonEmptyString(asString(row.avatarIconId)) }
+      : {}),
+    ...(asNonEmptyString(asString(row.avatarPhotoPath))
+      ? { avatarPhotoPath: asNonEmptyString(asString(row.avatarPhotoPath)) }
       : {}),
   };
 }
@@ -76,9 +110,21 @@ export async function listTravelTripRoster(
     );
   }
   if (!Array.isArray(data)) return [];
-  return data
+  const people = data
     .map(parseRosterPerson)
     .filter((person): person is TravelTripRosterPerson => Boolean(person));
+  useAvatarCache.getState().upsertMany(
+    people.map((person) => ({
+      userId: person.userId,
+      avatar: {
+        kind: person.avatarKind ?? 'initials',
+        color: person.avatarColor,
+        iconId: person.avatarIconId,
+        photoPath: person.avatarPhotoPath,
+      },
+    })),
+  );
+  return people;
 }
 
 export type TransferTravelTripHostResult = {

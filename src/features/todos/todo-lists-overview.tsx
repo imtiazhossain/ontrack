@@ -94,14 +94,21 @@ export function TodoListsOverview() {
     [insets.bottom],
   );
   const collaboratorsByList = useMemo(() => {
-    const names = new Map<string, string[]>();
+    const byList = new Map<
+      string,
+      Array<{ userId?: string; displayName: string; isSelf?: boolean }>
+    >();
     for (const member of members) {
       if (member.userId === user?.id) continue;
-      const listNames = names.get(member.listId) ?? [];
-      if (!listNames.includes(member.displayName)) listNames.push(member.displayName);
-      names.set(member.listId, listNames);
+      const listPeople = byList.get(member.listId) ?? [];
+      if (listPeople.some((person) => person.userId === member.userId)) continue;
+      listPeople.push({
+        userId: member.userId,
+        displayName: member.displayName,
+      });
+      byList.set(member.listId, listPeople);
     }
-    return names;
+    return byList;
   }, [members, user?.id]);
 
   const add = () => {
@@ -222,7 +229,7 @@ export function TodoListsOverview() {
             editMode={editMode}
             isActive={isActive}
             list={item}
-            collaboratorNames={collaboratorsByList.get(item.id)}
+            collaborators={collaboratorsByList.get(item.id)}
             open={count.open}
             total={count.total}
             nameDraft={nameDrafts[item.id] ?? item.name}

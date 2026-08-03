@@ -1,0 +1,25 @@
+---
+description: Always auto-apply database updates and Supabase migrations — never leave them pending
+alwaysApply: true
+---
+
+# Auto-apply database updates and migrations
+
+Whenever an agent creates, edits, or pulls SQL migrations / schema changes, **apply them immediately**. Do not hand off with pending migrations or tell the user to run them.
+
+## Required behavior
+
+1. **After writing or changing** any file under `supabase/migrations/` (or equivalent schema SQL), apply it in the same turn before finishing.
+2. **OnTrack default:** use the linked project:
+   - `supabase db push`
+   - If the CLI asks for confirmation, pass non-interactive flags (e.g. `--yes` / `--include-all` as appropriate) so apply is not blocked.
+3. **If a local Supabase stack is running**, also bring local up to date (`supabase migration up` or `supabase db reset` only when intentionally rebuilding local — prefer non-destructive `migration up` / `db push` for linked remote).
+4. **Verify apply succeeded** (CLI exit 0 / migration listed as applied). Fix failed migrations in-turn; do not leave a broken tip.
+5. **Mention in the reply** that migrations were applied (or that none were pending).
+
+## Do not
+
+- End a turn with new/changed migrations sitting unapplied.
+- Ask the user to run `supabase db push` / apply migrations themselves when the agent can do it.
+- Skip apply because the change “is only SQL” — schema must match the app code being shipped.
+- Run destructive resets (`db reset`, drop DB) unless the user explicitly asked or local rebuild is the only safe fix and is clearly stated.

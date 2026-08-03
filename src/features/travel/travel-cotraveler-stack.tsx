@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { AppText } from '@/components/primitives';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
@@ -25,6 +25,8 @@ export type CoTravelerAvatarPerson = {
   name: string;
   /** Current user — always rendered leftmost and on top. */
   isSelf?: boolean;
+  /** Auth user id when known (roster / friends). */
+  userId?: string;
 };
 
 /** Initials for stacked co-traveler chips (e.g. "Farhana Tasmin" → "FT"). */
@@ -166,24 +168,19 @@ export function TravelCoTravelerStack({
                   width: size,
                   height: size,
                   borderRadius: size / 2,
-                  backgroundColor: theme.backgroundSunken,
                   borderColor: border,
                   borderWidth,
                   left: index * step,
                   zIndex: count - index,
+                  overflow: 'hidden',
                 },
               ]}>
-              <AppText
-                variant="caption"
-                color="accent"
-                numberOfLines={1}
-                maxFontSizeMultiplier={1.1}
-                style={[
-                  styles.initials,
-                  { fontSize: Math.max(11, Math.round(size * 0.38)) },
-                ]}>
-                {coTravelerInitials(person.name)}
-              </AppText>
+              <ProfileAvatar
+                displayName={person.name}
+                userId={person.userId}
+                isSelf={person.isSelf}
+                size={size}
+              />
             </View>
           ))}
         </View>

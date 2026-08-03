@@ -428,4 +428,43 @@ describe('travel plan normalization', () => {
   it('ignores invalid cloud records', () => {
     expect(normalizeTravelPlans([legacyPlan, null, { title: 'Missing ID' }])).toHaveLength(1);
   });
+
+  it('restores host ownership when a host plan was mis-tagged as a member copy', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      id: 'trip-invite-euneo2',
+      chatAccessCode: 'ca11968c4977e8ef06db',
+      openJoinCode: '3eb90399d01f9b732186',
+      hostTripId: 'trip-invite-1s2yhed',
+      hostDisplayName: 'Farhana',
+      sharedExpensePeople: [
+        { id: 'host', name: 'Imtiaz' },
+        { id: 'self', name: 'Imtiaz' },
+        { id: 'friend-1', name: 'Farhana Tasmin' },
+      ],
+    });
+    expect(normalized?.chatAccessCode).toBeUndefined();
+    expect(normalized?.openJoinCode).toBe('3eb90399d01f9b732186');
+    expect(normalized?.hostTripId).toBe('trip-invite-euneo2');
+    expect(normalized?.hostDisplayName).toBeUndefined();
+    expect(normalized?.sharedExpensePeople).toEqual([
+      { id: 'self', name: 'Imtiaz' },
+      { id: 'friend-1', name: 'Farhana Tasmin' },
+    ]);
+  });
+
+  it('keeps intentional former-host member copies that cleared open-join', () => {
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        chatAccessCode: 'aaaaaaaaaaaaaaaaaaaa',
+        hostTripId: 'trip-host-1',
+        hostDisplayName: 'Sam',
+      }),
+    ).toMatchObject({
+      chatAccessCode: 'aaaaaaaaaaaaaaaaaaaa',
+      hostTripId: 'trip-host-1',
+      hostDisplayName: 'Sam',
+    });
+  });
 });

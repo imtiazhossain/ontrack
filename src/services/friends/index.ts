@@ -1,5 +1,10 @@
 import { Share } from 'react-native';
 
+import {
+  avatarMetaFromProfileRow,
+  normalizeAvatarMeta,
+  type ProfileAvatarMeta,
+} from '@/features/account/profile-avatar-model';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 
 export class FriendsError extends Error {
@@ -14,6 +19,7 @@ export interface FriendProfile {
   displayName: string;
   email: string;
   friendsSince?: string;
+  avatar: ProfileAvatarMeta;
 }
 
 export interface FriendRequestItem {
@@ -76,6 +82,7 @@ function asFriend(row: Record<string, unknown>): FriendProfile | undefined {
     email,
     friendsSince:
       typeof row.friends_since === 'string' ? row.friends_since : undefined,
+    avatar: avatarMetaFromProfileRow(row),
   };
 }
 
@@ -119,11 +126,33 @@ export async function ensureFriendProfile(input?: {
     user_id: row.user_id,
     display_name: row.display_name,
     email: row.email,
+    avatar_kind: row.avatar_kind,
+    avatar_color: row.avatar_color,
+    avatar_icon_id: row.avatar_icon_id,
+    avatar_photo_path: row.avatar_photo_path,
   });
   if (!profile) {
     throw new FriendsError('Your profile could not be saved.');
   }
   return profile;
+}
+
+export async function setProfileAvatar(
+  avatar: ProfileAvatarMeta,
+): Promise<ProfileAvatarMeta> {
+  const client = await authenticatedClient();
+  const normalized = normalizeAvatarMeta(avatar);
+  const { data, error } = await client.rpc('set_profile_avatar', {
+    requested_kind: normalized.kind,
+    requested_color: normalized.color ?? null,
+    requested_icon_id: normalized.kind === 'icon' ? normalized.iconId ?? null : null,
+    requested_photo_path:
+      normalized.kind === 'photo' ? normalized.photoPath ?? null : null,
+  });
+  if (error || !data || typeof data !== 'object') {
+    throw new FriendsError(messageFrom(error, 'Your avatar could not be saved.'));
+  }
+  return avatarMetaFromProfileRow(data as Record<string, unknown>);
 }
 
 export async function listFriends(): Promise<FriendProfile[]> {

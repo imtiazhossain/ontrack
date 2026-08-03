@@ -324,9 +324,40 @@ export function normalizeTravelExpenses(
   });
 }
 
+/**
+ * True member copies never keep `openJoinCode` (invite decode leaves it empty;
+ * host transfer clears it). A plan with both member chat access and a host
+ * open-join code was mis-tagged as someone else’s trip — restore host ownership.
+ */
+export function repairMisattributedTravelHostPlan<T extends Partial<TravelPlan>>(
+  plan: T,
+): T {
+  const openJoin =
+    typeof plan.openJoinCode === 'string' &&
+    /^[a-f0-9]{20}$/.test(plan.openJoinCode);
+  const chat =
+    typeof plan.chatAccessCode === 'string' &&
+    /^[a-f0-9]{20}$/.test(plan.chatAccessCode);
+  if (!openJoin || !chat || typeof plan.id !== 'string') return plan;
+
+  const sharedExpensePeople = Array.isArray(plan.sharedExpensePeople)
+    ? plan.sharedExpensePeople.filter(
+        (person) => person && typeof person === 'object' && person.id !== 'host',
+      )
+    : plan.sharedExpensePeople;
+
+  return {
+    ...plan,
+    chatAccessCode: undefined,
+    hostTripId: plan.id,
+    hostDisplayName: undefined,
+    ...(sharedExpensePeople ? { sharedExpensePeople } : {}),
+  };
+}
+
 export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
   if (!value || typeof value !== 'object') return undefined;
-  const plan = value as Partial<TravelPlan>;
+  const plan = repairMisattributedTravelHostPlan(value as Partial<TravelPlan>);
   if (
     typeof plan.id !== 'string' ||
     typeof plan.title !== 'string' ||

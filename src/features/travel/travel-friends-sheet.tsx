@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -13,6 +13,7 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
   createTravelInviteUrl,
@@ -37,10 +38,12 @@ import {
   isTravelMemberPlan,
   leaveTravelTrip,
   listTravelTripRoster,
+  resolveIsTravelSoleHost,
   revokeTravelTripCohost,
   transferTravelTripHost,
   transferTravelTripHostByInvite,
 } from '@/features/travel/trip-roster';
+import { ensureFriendProfile } from '@/services/friends';
 import type {
   TravelOpenJoinRequest,
   TravelParticipant,
@@ -113,6 +116,9 @@ export function TravelFriendsSheet({
   const [joinRequests, setJoinRequests] = useState<TravelOpenJoinRequest[]>([]);
   const [decidingRequestId, setDecidingRequestId] = useState<string>();
   const [roster, setRoster] = useState<TravelTripRosterPerson[]>([]);
+  const onSavePlanRef = useRef(onSavePlan);
+  onSavePlanRef.current = onSavePlan;
+  const ensuredOpenJoinForPlanRef = useRef<string | undefined>(undefined);
 
   const tripId = canonicalTravelTripId(plan);
   const memberPlan = isTravelMemberPlan(plan);
@@ -121,11 +127,7 @@ export function TravelFriendsSheet({
     return roster.find((person) => person.userId === user.id)?.role;
   }, [roster, user?.id]);
   // Sole host owns transfer / co-host grants. Cohosts share invite + friend manage.
-  const isSoleHost =
-    myRosterRole === 'host' ||
-    (myRosterRole !== 'member' &&
-      myRosterRole !== 'cohost' &&
-      (!memberPlan || plan.participants.length > 0));
+  const isSoleHost = resolveIsTravelSoleHost({ myRosterRole, memberPlan });
   const canManage = isSoleHost || myRosterRole === 'cohost';
 
   const hostFromRoster = roster.find((person) => person.role === 'host');
@@ -157,30 +159,25 @@ export function TravelFriendsSheet({
     }
     return [...byUserId.values()];
   }, [roster, plan.sharedExpensePeople, plan.participants, user?.id]);
-  const hostFallbackName = (() => {
-    const fromPrefs = preferencesName.trim();
-    if (fromPrefs && !/^you$/i.test(fromPrefs)) return fromPrefs;
-    const meta = user?.user_metadata ?? {};
-    const fromMeta =
-      (typeof meta.full_name === 'string' && meta.full_name.trim()) ||
-      (typeof meta.name === 'string' && meta.name.trim()) ||
-      '';
-    if (fromMeta && !/^you$/i.test(fromMeta)) return fromMeta;
-    const fromEmail = user?.email?.split('@')[0]?.trim();
-    if (fromEmail) return fromEmail;
-    return 'Host';
-  })();
+  const hostFallbackName = resolveSelfDisplayName({
+    preferencesName,
+    user,
+    fallback: 'Host',
+  });
   const hostPerson = (() => {
     const isSelfHost = Boolean(
       user?.id && hostFromRoster?.userId === user.id,
     );
     // Prefer the signed-in profile name for yourself — roster/JWT helpers can
     // fall back to a generic label like "You" / "Traveler".
-    if (isSelfHost || (isSoleHost && !hostFromRoster)) {
+    // Never claim host on a member copy before roster confirms — that duplicated
+    // a friend into the host slot after rename.
+    if (isSelfHost || (isSoleHost && !memberPlan && !hostFromRoster)) {
       return {
         name: hostFallbackName,
         email: user?.email ?? hostFromRoster?.email,
         isSelf: true,
+        userId: user?.id ?? hostFromRoster?.userId,
       };
     }
     if (hostFromRoster) {
@@ -188,13 +185,73 @@ export function TravelFriendsSheet({
         name: hostFromRoster.displayName,
         email: hostFromRoster.email,
         isSelf: false,
+        userId: hostFromRoster.userId,
       };
     }
-    if (plan.hostDisplayName?.trim()) {
+    if (memberPlan && plan.hostDisplayName?.trim()) {
       return { name: plan.hostDisplayName.trim(), isSelf: false };
+    }
+    if (!memberPlan) {
+      return {
+        name: hostFallbackName,
+        email: user?.email,
+        isSelf: true,
+        userId: user?.id,
+      };
     }
     return { name: 'Host', isSelf: false };
   })();
+
+  const visibleParticipants = useMemo(() => {
+    const hostEmail = hostPerson.email?.trim().toLowerCase();
+    const hostName = hostPerson.name.trim().toLowerCase();
+    const rosterLoaded = roster.length > 0;
+    const rosterEmails = new Set(
+      roster
+        .map((person) => person.email?.trim().toLowerCase())
+        .filter((value): value is string => Boolean(value)),
+    );
+    return plan.participants.filter((person) => {
+      const email = person.email?.trim().toLowerCase();
+      const name = person.name.trim().toLowerCase();
+      // Never list the host again under an older invite / display name.
+      if (hostEmail && email && email === hostEmail) return false;
+      if (hostName && name === hostName) return false;
+      if (
+        hostFromRoster &&
+        name &&
+        hostFromRoster.displayName.trim().toLowerCase() === name
+      ) {
+        return false;
+      }
+      // Member copies: once the server roster is in, hide stale accepted
+      // local rows (they duplicate host/friends under prior names).
+      if (memberPlan && rosterLoaded && person.acceptedAt) return false;
+      if (email && rosterEmails.has(email) && person.acceptedAt) return false;
+      return true;
+    });
+  }, [
+    hostFromRoster,
+    hostPerson.email,
+    hostPerson.name,
+    memberPlan,
+    plan.participants,
+    roster,
+  ]);
+
+  const renameSelf = (nextName: string) => {
+    setPreferencesName(nextName);
+    void ensureFriendProfile({ displayName: nextName }).catch(() => undefined);
+    if (user?.id) {
+      setRoster((people) =>
+        people.map((person) =>
+          person.userId === user.id
+            ? { ...person, displayName: nextName }
+            : person,
+        ),
+      );
+    }
+  };
 
   const refreshJoinRequests = useCallback(async (canonicalTripId: string) => {
     try {
@@ -215,6 +272,15 @@ export function TravelFriendsSheet({
     }
   }, []);
 
+  // Keep the displayed code in sync when the plan already has one — without
+  // toggling busy state (that was flickering the Join Link card).
+  useEffect(() => {
+    if (!visible) return;
+    if (plan.openJoinCode && plan.openJoinCode !== openJoinCode) {
+      setOpenJoinCode(plan.openJoinCode);
+    }
+  }, [visible, plan.openJoinCode, openJoinCode]);
+
   useEffect(() => {
     if (!visible) {
       setEditingInvite(false);
@@ -227,6 +293,7 @@ export function TravelFriendsSheet({
       setOpenJoinError(undefined);
       setCopiedOpenJoin(false);
       setDecidingRequestId(undefined);
+      ensuredOpenJoinForPlanRef.current = undefined;
       return;
     }
 
@@ -235,22 +302,54 @@ export function TravelFriendsSheet({
       useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
     const canonicalId = canonicalTravelTripId(latest);
     const isMember = isTravelMemberPlan(latest);
-    setOpenJoinCode(latest.openJoinCode);
+    const savePlan = (next: TravelPlan) => onSavePlanRef.current(next);
 
-    void refreshRoster(canonicalId).then((people) => {
-      if (!active || !people) return;
-      const host = people.find((person) => person.role === 'host');
-      if (!host?.displayName) return;
+    const syncRosterIntoPlan = (people: TravelTripRosterPerson[]) => {
       const current =
         useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
-      if (current.hostDisplayName === host.displayName) return;
-      if (isTravelMemberPlan(current) || current.hostDisplayName) {
-        onSavePlan({
-          ...current,
+      const host = people.find((person) => person.role === 'host');
+      let next = current;
+      let changed = false;
+
+      if (
+        host?.displayName &&
+        current.hostDisplayName !== host.displayName &&
+        (isTravelMemberPlan(current) || current.hostDisplayName)
+      ) {
+        next = {
+          ...next,
           hostDisplayName: host.displayName,
+        };
+        changed = true;
+      }
+
+      // Keep local invite labels in sync with roster names so trip-card
+      // initials match Co-Travelers (e.g. "Farhana Tasmin" vs truncated "Farhana").
+      const participants = next.participants.map((person) => {
+        const match = people.find(
+          (member) =>
+            (member.role === 'member' || member.role === 'cohost') &&
+            (member.inviteCode === person.inviteCode ||
+              (member.email &&
+                person.email &&
+                member.email.toLowerCase() === person.email.toLowerCase())),
+        );
+        if (!match?.displayName || match.displayName === person.name) return person;
+        changed = true;
+        return { ...person, name: match.displayName };
+      });
+      if (changed) {
+        savePlan({
+          ...next,
+          participants,
           updatedAt: new Date().toISOString(),
         });
       }
+    };
+
+    void refreshRoster(canonicalId).then((people) => {
+      if (!active || !people) return;
+      syncRosterIntoPlan(people);
     });
 
     const inviteCodes = latest.participants.map((person) => person.inviteCode);
@@ -268,7 +367,7 @@ export function TravelFriendsSheet({
             return { ...person, acceptedAt };
           });
           if (changed) {
-            onSavePlan({
+            savePlan({
               ...current,
               participants,
               updatedAt: new Date().toISOString(),
@@ -279,42 +378,53 @@ export function TravelFriendsSheet({
     }
 
     if (!isMember) {
-      setOpenJoinBusy(true);
-      void ensureTravelOpenJoinLink(latest)
-        .then((code) => {
-          if (!active) return;
-          setOpenJoinCode(code);
-          setOpenJoinError(undefined);
-          const current =
-            useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
-          if (current.openJoinCode !== code) {
-            const next = {
-              ...current,
-              openJoinCode: code,
-              updatedAt: new Date().toISOString(),
-            };
-            onSavePlan(next);
-            void publishTravelTripExpenses(next).catch(() => undefined);
-          } else {
-            void publishTravelTripExpenses(current).catch(() => undefined);
-          }
-          return refreshJoinRequests(canonicalId);
-        })
-        .catch((reason: unknown) => {
-          if (!active) return;
-          setOpenJoinError(
-            reason instanceof Error
-              ? reason.message
-              : 'The open join link could not be created.',
-          );
-        })
-        .finally(() => {
-          if (active) setOpenJoinBusy(false);
-        });
+      const alreadyHaveCode = Boolean(latest.openJoinCode);
+      const alreadyEnsured = ensuredOpenJoinForPlanRef.current === plan.id;
+      if (!alreadyHaveCode && !alreadyEnsured) {
+        ensuredOpenJoinForPlanRef.current = plan.id;
+        setOpenJoinBusy(true);
+        void ensureTravelOpenJoinLink(latest)
+          .then((code) => {
+            if (!active) return;
+            setOpenJoinCode(code);
+            setOpenJoinError(undefined);
+            const current =
+              useTravel.getState().plans.find((item) => item.id === plan.id) ??
+              latest;
+            if (current.openJoinCode !== code) {
+              const next = {
+                ...current,
+                openJoinCode: code,
+                updatedAt: new Date().toISOString(),
+              };
+              savePlan(next);
+              void publishTravelTripExpenses(next).catch(() => undefined);
+            }
+            return refreshJoinRequests(canonicalId);
+          })
+          .catch((reason: unknown) => {
+            if (!active) return;
+            ensuredOpenJoinForPlanRef.current = undefined;
+            setOpenJoinError(
+              reason instanceof Error
+                ? reason.message
+                : 'The open join link could not be created.',
+            );
+          })
+          .finally(() => {
+            if (active) setOpenJoinBusy(false);
+          });
+      } else if (alreadyHaveCode) {
+        setOpenJoinCode(latest.openJoinCode);
+        void refreshJoinRequests(canonicalId);
+      }
     }
 
     const poll = setInterval(() => {
-      void refreshRoster(canonicalId);
+      void refreshRoster(canonicalId).then((people) => {
+        if (!active || !people) return;
+        syncRosterIntoPlan(people);
+      });
       if (!isMember) void refreshJoinRequests(canonicalId);
     }, 5000);
 
@@ -322,13 +432,7 @@ export function TravelFriendsSheet({
       active = false;
       clearInterval(poll);
     };
-  }, [
-    visible,
-    plan.id,
-    onSavePlan,
-    refreshJoinRequests,
-    refreshRoster,
-  ]);
+  }, [visible, plan.id, refreshJoinRequests, refreshRoster]);
 
   const inviteFriend = async () => {
     setInviteError(undefined);
@@ -742,7 +846,7 @@ export function TravelFriendsSheet({
   return (
     <TravelSheetModal
         visible={visible}
-        eyebrow="CoTravelers"
+        eyebrow="Co-Travelers"
         title={plan.title}
         subtitle={
           canManage
@@ -750,12 +854,13 @@ export function TravelFriendsSheet({
             : 'Plan together. Trip friends.'
         }
         lockHeight
-        closeAccessibilityLabel="Close CoTravelers"
+        closeAccessibilityLabel="Close Co-Travelers"
         onClose={onClose}>
             <TripPeople
               host={hostPerson}
-              participants={plan.participants}
+              participants={visibleParticipants}
               rosterMembers={rosterMembers}
+              selfUserId={user?.id}
               canManage={canManage}
               editing={editingInvite}
               name={inviteName}
@@ -787,65 +892,87 @@ export function TravelFriendsSheet({
               }
               onMakeCohost={makeCohost}
               onRemoveCohost={removeCohost}
-              onRenameHost={isSoleHost ? (nextName) => {
-                setPreferencesName(nextName);
-                const current =
-                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
-                  plan;
-                onSavePlan({
-                  ...current,
-                  hostDisplayName: nextName,
-                  updatedAt: new Date().toISOString(),
-                });
-                void publishTravelTripExpenses({
-                  ...current,
-                  hostDisplayName: nextName,
-                }).catch(() => undefined);
-              } : undefined}
-              onRenameParticipant={(participant, nextName) => {
-                const current =
-                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
-                  plan;
-                onSavePlan({
-                  ...current,
-                  participants: current.participants.map((person) =>
-                    person.id === participant.id
-                      ? { ...person, name: nextName }
-                      : person,
-                  ),
-                  updatedAt: new Date().toISOString(),
-                });
-              }}
-              onRenameRosterMember={(member, nextName) => {
-                const current =
-                  useTravel.getState().plans.find((item) => item.id === plan.id) ??
-                  plan;
-                const matched = current.participants.find(
-                  (person) =>
-                    person.inviteCode === member.inviteCode ||
-                    (person.email &&
-                      member.email &&
-                      person.email.toLowerCase() === member.email.toLowerCase()),
-                );
-                if (matched) {
-                  onSavePlan({
-                    ...current,
-                    participants: current.participants.map((person) =>
-                      person.id === matched.id
-                        ? { ...person, name: nextName }
-                        : person,
-                    ),
-                    updatedAt: new Date().toISOString(),
-                  });
-                }
-                setRoster((people) =>
-                  people.map((person) =>
-                    person.userId === member.userId
-                      ? { ...person, displayName: nextName }
-                      : person,
-                  ),
-                );
-              }}
+              onRenameHost={
+                isSoleHost
+                  ? (nextName) => {
+                      renameSelf(nextName);
+                      const current =
+                        useTravel.getState().plans.find((item) => item.id === plan.id) ??
+                        plan;
+                      onSavePlan({
+                        ...current,
+                        hostDisplayName: nextName,
+                        updatedAt: new Date().toISOString(),
+                      });
+                      if (!isTravelMemberPlan(current)) {
+                        void publishTravelTripExpenses({
+                          ...current,
+                          hostDisplayName: nextName,
+                        }).catch(() => undefined);
+                      }
+                    }
+                  : undefined
+              }
+              onRenameSelf={renameSelf}
+              onRenameParticipant={
+                canManage
+                  ? (participant, nextName) => {
+                      const current =
+                        useTravel
+                          .getState()
+                          .plans.find((item) => item.id === plan.id) ?? plan;
+                      onSavePlan({
+                        ...current,
+                        participants: current.participants.map((person) =>
+                          person.id === participant.id
+                            ? { ...person, name: nextName }
+                            : person,
+                        ),
+                        updatedAt: new Date().toISOString(),
+                      });
+                    }
+                  : undefined
+              }
+              onRenameRosterMember={
+                canManage
+                  ? (member, nextName) => {
+                      if (user?.id && member.userId === user.id) {
+                        renameSelf(nextName);
+                        return;
+                      }
+                      const current =
+                        useTravel
+                          .getState()
+                          .plans.find((item) => item.id === plan.id) ?? plan;
+                      const matched = current.participants.find(
+                        (person) =>
+                          person.inviteCode === member.inviteCode ||
+                          (person.email &&
+                            member.email &&
+                            person.email.toLowerCase() ===
+                              member.email.toLowerCase()),
+                      );
+                      if (matched) {
+                        onSavePlan({
+                          ...current,
+                          participants: current.participants.map((person) =>
+                            person.id === matched.id
+                              ? { ...person, name: nextName }
+                              : person,
+                          ),
+                          updatedAt: new Date().toISOString(),
+                        });
+                      }
+                      setRoster((people) =>
+                        people.map((person) =>
+                          person.userId === member.userId
+                            ? { ...person, displayName: nextName }
+                            : person,
+                        ),
+                      );
+                    }
+                  : undefined
+              }
             />
 
             {canManage ? (

@@ -189,7 +189,7 @@ export function TravelSheetModal({
         <Pressable
           accessibilityLabel={closeAccessibilityLabel}
           onPress={dismissKeyboardAndClose}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, styles.dismissLayer]}
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -202,6 +202,7 @@ export function TravelSheetModal({
               const next = Math.round(event.nativeEvent.layout.height);
               if (next > 0) setLockedHeight(next);
             }}
+            pointerEvents="auto"
             style={[
               styles.sheet,
               {
@@ -254,14 +255,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  dismissLayer: {
+    zIndex: 0,
+  },
   avoid: {
     width: '100%',
+    flex: 1,
     justifyContent: 'flex-end',
+    zIndex: 1,
   },
   sheet: {
     width: '100%',
     overflow: 'hidden',
     borderCurve: 'continuous',
+    zIndex: 2,
   },
   header: {
     width: '100%',

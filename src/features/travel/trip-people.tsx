@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
@@ -10,6 +10,7 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import type {
   TravelParticipant,
   TravelTripRosterPerson,
@@ -23,6 +24,7 @@ export type TripHostPerson = {
   name: string;
   email?: string;
   isSelf?: boolean;
+  userId?: string;
 };
 
 export type TripFriendTarget =
@@ -35,6 +37,8 @@ interface TripPeopleProps {
   participants: TravelParticipant[];
   /** Accepted members from the server roster (excludes host). */
   rosterMembers?: TravelTripRosterPerson[];
+  /** Signed-in user id — marks “you” in the roster for self-rename. */
+  selfUserId?: string;
   /** When false, hide invite/remove/transfer controls (member read-only). */
   canManage?: boolean;
   editing: boolean;
@@ -63,17 +67,10 @@ interface TripPeopleProps {
   onMakeCohost?: (member: TravelTripRosterPerson) => void;
   onRemoveCohost?: (member: TravelTripRosterPerson) => void;
   onRenameHost?: (name: string) => void;
+  /** Rename the signed-in user’s own display name (any role). */
+  onRenameSelf?: (name: string) => void;
   onRenameParticipant?: (participant: TravelParticipant, name: string) => void;
   onRenameRosterMember?: (member: TravelTripRosterPerson, name: string) => void;
-}
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
 }
 
 function targetKey(target: TripFriendTarget): string {
@@ -126,6 +123,8 @@ function FriendActionChip({
 
 function FriendRow({
   displayName,
+  userId,
+  isSelf,
   badge,
   busy,
   canOpenMenu,
@@ -136,6 +135,7 @@ function FriendRow({
   showRemoveCohost,
   showResend,
   showRemove,
+  selfOnlyMenu,
   renaming,
   renameDraft,
   onRenameDraftChange,
@@ -150,6 +150,8 @@ function FriendRow({
   onCancelRename,
 }: {
   displayName: string;
+  userId?: string;
+  isSelf?: boolean;
   badge?: 'host' | 'cohost' | 'pending';
   busy?: boolean;
   canOpenMenu: boolean;
@@ -160,6 +162,8 @@ function FriendRow({
   showRemoveCohost?: boolean;
   showResend?: boolean;
   showRemove?: boolean;
+  /** Only Rename — used when the row is you but you can’t manage the trip. */
+  selfOnlyMenu?: boolean;
   renaming?: boolean;
   renameDraft?: string;
   onRenameDraftChange?: (value: string) => void;
@@ -176,17 +180,22 @@ function FriendRow({
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const avatarLabel = (renaming ? renameDraft : displayName)?.trim() || displayName;
+  // "(You)" is chrome on the name row — never feed it to initials.
+  const avatarName =
+    avatarLabel.replace(/\s*\(You\)\s*$/i, '').trim() || avatarLabel;
+  const avatarSize = Math.max(40, s(42));
   const header = (
     <View
       style={[
         styles.personHeader,
         renaming ? styles.personHeaderEditing : null,
       ]}>
-      <View style={[styles.avatar, { backgroundColor: theme.backgroundSunken }]}>
-        <AppText variant="callout" color="accent">
-          {initials(avatarLabel)}
-        </AppText>
-      </View>
+      <ProfileAvatar
+        displayName={avatarName}
+        userId={userId}
+        isSelf={isSelf}
+        size={avatarSize}
+      />
       {renaming ? (
         <View style={styles.renameRow}>
           <View style={styles.renameField}>
@@ -333,7 +342,7 @@ function FriendRow({
             disabled={busy}
             onPress={() => onUpdateName?.()}
           />
-          {showMakeCohost ? (
+          {!selfOnlyMenu && showMakeCohost ? (
             <FriendActionChip
               label="Co-host"
               accessibilityLabel="Make co-host"
@@ -341,7 +350,7 @@ function FriendRow({
               onPress={() => onMakeCohost?.()}
             />
           ) : null}
-          {showRemoveCohost ? (
+          {!selfOnlyMenu && showRemoveCohost ? (
             <FriendActionChip
               label="Demote"
               accessibilityLabel="Remove co-host"
@@ -349,7 +358,7 @@ function FriendRow({
               onPress={() => onRemoveCohost?.()}
             />
           ) : null}
-          {showMakeHost ? (
+          {!selfOnlyMenu && showMakeHost ? (
             <FriendActionChip
               label="Host"
               accessibilityLabel="Make host"
@@ -357,14 +366,14 @@ function FriendRow({
               onPress={() => onMakeHost?.()}
             />
           ) : null}
-          {showResend ? (
+          {!selfOnlyMenu && showResend ? (
             <FriendActionChip
               label="Resend"
               disabled={busy}
               onPress={() => onResend?.()}
             />
           ) : null}
-          {showRemove ? (
+          {!selfOnlyMenu && showRemove ? (
             <FriendActionChip
               label="Remove"
               danger
@@ -382,6 +391,7 @@ export function TripPeople({
   host,
   participants,
   rosterMembers = [],
+  selfUserId,
   canManage = true,
   editing,
   name,
@@ -406,6 +416,7 @@ export function TripPeople({
   onMakeCohost,
   onRemoveCohost,
   onRenameHost,
+  onRenameSelf,
   onRenameParticipant,
   onRenameRosterMember,
 }: TripPeopleProps) {
@@ -423,8 +434,13 @@ export function TripPeople({
       .map((person) => person.email?.toLowerCase())
       .filter((value): value is string => Boolean(value)),
   );
+  const hostEmail = host?.email?.trim().toLowerCase();
+  const hostName = host?.name.trim().toLowerCase();
   const acceptedWithoutRoster = localAccepted.filter((person) => {
     const emailKey = person.email?.toLowerCase();
+    const nameKey = person.name.trim().toLowerCase();
+    if (hostEmail && emailKey && emailKey === hostEmail) return false;
+    if (hostName && nameKey === hostName) return false;
     return !emailKey || !rosterEmails.has(emailKey);
   });
   const hasPeople =
@@ -434,6 +450,7 @@ export function TripPeople({
     pending.length > 0;
 
   const closePanels = () => {
+    Keyboard.dismiss();
     setMenu(undefined);
     setRenaming(undefined);
     setRenameDraft('');
@@ -448,14 +465,30 @@ export function TripPeople({
   const saveRename = () => {
     const next = renameDraft.trim();
     if (!next || !renaming) return;
-    if (renaming.kind === 'host') onRenameHost?.(next);
-    else if (renaming.kind === 'roster') onRenameRosterMember?.(renaming.member, next);
-    else onRenameParticipant?.(renaming.participant, next);
-    closePanels();
+    if (renaming.kind === 'host') {
+      if (onRenameHost) onRenameHost(next);
+      else if (host?.isSelf) onRenameSelf?.(next);
+    } else if (renaming.kind === 'roster') {
+      if (selfUserId && renaming.member.userId === selfUserId) {
+        onRenameSelf?.(next);
+      } else {
+        onRenameRosterMember?.(renaming.member, next);
+      }
+    } else {
+      onRenameParticipant?.(renaming.participant, next);
+    }
+    // Dismiss keyboard before unmounting the focused input so the sheet
+    // doesn’t keep an invisible touch blocker after rename.
+    Keyboard.dismiss();
+    requestAnimationFrame(() => {
+      setMenu(undefined);
+      setRenaming(undefined);
+      setRenameDraft('');
+    });
   };
 
   const toggleMenu = (target: TripFriendTarget, currentName: string, accepted: boolean) => {
-    if (!canManage) return;
+    // Allow opening even when !canManage — self rows still expose Rename.
     if (menu && targetKey(menu.target) === targetKey(target) && !renaming) {
       setMenu(undefined);
       return;
@@ -496,10 +529,16 @@ export function TripPeople({
         <TravelSurfaceCard bodyStyle={styles.list} padding={0}>
           {host ? (
             <View style={styles.rowPad}>
-              <FriendRow
-                displayName={hostLabel}
-                badge="host"
-                canOpenMenu={canManage && Boolean(onRenameHost)}
+                <FriendRow
+                  displayName={hostLabel}
+                  userId={host.userId}
+                  isSelf={host.isSelf}
+                  badge="host"
+                canOpenMenu={
+                  (canManage && Boolean(onRenameHost)) ||
+                  Boolean(host.isSelf && onRenameSelf)
+                }
+                selfOnlyMenu={Boolean(host.isSelf && !canManage && onRenameSelf)}
                 expanded={isExpanded({ kind: 'host' })}
                 showDivider={++rowIndex < rowCount}
                 renaming={isRenaming({ kind: 'host' })}
@@ -521,19 +560,31 @@ export function TripPeople({
             const busy = transferringUserId === member.userId;
             const showDivider = ++rowIndex < rowCount;
             const isCohost = member.role === 'cohost';
+            const isSelfMember = Boolean(
+              selfUserId && member.userId === selfUserId,
+            );
+            const canOpen =
+              canManage || Boolean(isSelfMember && onRenameSelf);
             return (
               <View key={member.userId} style={styles.rowPad}>
                 <FriendRow
-                  displayName={member.displayName}
+                  displayName={
+                    isSelfMember && !/^you$/i.test(member.displayName.trim())
+                      ? `${member.displayName.trim()} (You)`
+                      : member.displayName
+                  }
+                  userId={member.userId}
+                  isSelf={isSelfMember}
                   badge={isCohost ? 'cohost' : undefined}
                   busy={busy}
-                  canOpenMenu={canManage}
+                  canOpenMenu={canOpen}
+                  selfOnlyMenu={Boolean(isSelfMember && !canManage)}
                   expanded={isExpanded(target)}
                   showDivider={showDivider}
-                  showMakeHost={canPromoteHost}
-                  showMakeCohost={canPromoteHost && !isCohost}
-                  showRemoveCohost={canPromoteHost && isCohost}
-                  showRemove
+                  showMakeHost={canPromoteHost && !isSelfMember}
+                  showMakeCohost={canPromoteHost && !isCohost && !isSelfMember}
+                  showRemoveCohost={canPromoteHost && isCohost && !isSelfMember}
+                  showRemove={!isSelfMember}
                   renaming={isRenaming(target)}
                   renameDraft={isRenaming(target) ? renameDraft : undefined}
                   onRenameDraftChange={setRenameDraft}

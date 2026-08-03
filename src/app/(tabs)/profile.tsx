@@ -15,9 +15,14 @@ import {
 import { ADDONS } from '@/addons/registry';
 import type { AddonId } from '@/addons/types';
 import { CloudAccountCard } from '@/features/account/cloud-account-card';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
+import { ProfileAvatarEditorSheet } from '@/features/account/profile-avatar-editor-sheet';
+import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import { radii, spacing } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuthSession } from '@/features/auth/auth-provider';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
@@ -28,6 +33,7 @@ import { useTodos } from '@/store/todos';
 import { deletePlant } from '@/services/plants/schedule';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import { useVisionBoard } from '@/store/vision-board';
+import { haptics } from '@/utils/haptics';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -39,6 +45,8 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { s, spacing: rs } = useResponsive();
+  const { user } = useAuthSession();
   const name = usePreferences((s) => s.name);
   const goal = usePreferences((s) => s.goal);
   const homeLocation = usePreferences((s) => s.homeLocation);
@@ -62,6 +70,10 @@ export default function ProfileSettingsScreen() {
   const resetTodos = useTodos((s) => s.reset);
   const resetVisionBoard = useVisionBoard((s) => s.reset);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+
+  const displayName = resolveSelfDisplayName({ preferencesName: name, user });
+  const avatarSize = Math.max(72, s(80));
 
   const handleReset = async () => {
     await Promise.all([
@@ -81,12 +93,34 @@ export default function ProfileSettingsScreen() {
 
   return (
     <Screen>
-      <AppText variant="title" style={styles.title}>
-        Profile
-      </AppText>
-      <AppText variant="body" color="secondary">
-        {name || 'You'} · {goal || 'Living intentionally'}
-      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Customize profile icon"
+        onPress={() => {
+          haptics.tap();
+          setAvatarOpen(true);
+        }}
+        style={[
+          styles.hero,
+          {
+            gap: rs.md,
+            marginBottom: rs.lg,
+            paddingVertical: rs.md,
+          },
+        ]}>
+        <ProfileAvatar displayName={displayName} size={avatarSize} isSelf />
+        <View style={[styles.heroCopy, { gap: rs.xs, minWidth: 0, flexShrink: 1 }]}>
+          <AppText variant="title" style={styles.title} fit numberOfLines={1}>
+            Profile
+          </AppText>
+          <AppText variant="body" color="secondary" numberOfLines={2}>
+            {displayName} · {goal || 'Living intentionally'}
+          </AppText>
+          <AppText variant="caption" color="accent" fit>
+            Tap to customize icon
+          </AppText>
+        </View>
+      </Pressable>
 
       <SectionHeader title="Account & Sync" />
       <CloudAccountCard />
@@ -191,12 +225,20 @@ export default function ProfileSettingsScreen() {
       </Pressable>
 
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
+      <ProfileAvatarEditorSheet visible={avatarOpen} onClose={() => setAvatarOpen(false)} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginBottom: spacing.xs },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroCopy: {
+    flex: 1,
+  },
+  title: { marginBottom: 0 },
   segment: {
     flexDirection: 'row',
     gap: spacing.sm,
