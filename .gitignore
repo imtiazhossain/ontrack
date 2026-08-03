@@ -48,3 +48,12 @@ modules/*/android/build/
 
 # local EAS build artifacts
 .eas-local-build/
+
+# Agent scratch under .cursor (keep committed rules)
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+# Python bytecode
+__pycache__/
+*.py[cod]
