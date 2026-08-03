@@ -36,14 +36,18 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 
 ## Commands
 
-- `npm run ios` / `android` / `web` — Metro (clears cache)
+- `npm start` — Metro + Expo dev client on **Node 24** (keeps cache; Fast Refresh). Requires Node `<25` (see `.nvmrc`).
+- `npm run start:clear` — Metro with cache clear (only when the bundle is stuck/stale)
+- `npm run ios` / `android` / `web` — Metro targeting that platform (no default cache clear)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — Jest (`**/__tests__/**/*.test.ts`)
 - `npm run lint` — ESLint
 
+Prefer leaving Metro running so Fast Refresh updates the simulator without app relaunches. Do not kill Metro or pass `--clear` after routine JS/UI edits. Do not start Metro with Homebrew Node 25 ahead of nvm on `PATH`.
+
 ## Agent close-out (required)
 
-After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
+After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator via Fast Refresh when possible**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
 
 If the change touches `supabase/migrations/` (or other DB schema), **auto-apply** with `supabase db push` in the same turn — never leave migrations pending. See `.cursor/rules/auto-apply-migrations.mdc` and the parent **Database Updates and Migrations Rule**.
 
@@ -67,7 +71,7 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 | Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
 | Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ canonical `travel-sheet` frame/header for every sheet, `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-action` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-timeline-add-modal` / `flight-details-card-editor` / `flight-schedule` / `stay-details-card-editor` / `rental-details-card-editor` / `travel-range-fields` / `travel-range-schedule` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `expenses/travel-expenses-sheet`, `services/travel/expense-collaboration` for shared trip expenses, `travel-friends-sheet` / `trip-people` / `trip-roster` for host roster + co-hosts + host transfer, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
+| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ canonical `travel-sheet` frame/header for every sheet, `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-action` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-timeline-add-modal` / `flight-details-card-editor` / `flight-schedule` / `stay-details-card-editor` / `rental-details-card-editor` / `travel-range-fields` / `travel-range-schedule` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `travel-currency-sheet` / `travel-currency-side-card` / `travel-currency-rate-panel` / `travel-currency-chrome` / `currency-for-destination` / `expenses/fx-rates` + `expenses/fx-providers` (`ACTIVE_FX_PROVIDER` to swap feeds) for origin↔destination FX, `expenses/travel-expenses-sheet`, `services/travel/expense-collaboration` for shared trip expenses, `travel-friends-sheet` / `trip-people` / `trip-roster` for host roster + co-hosts + host transfer, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
 | Social / friends | `app/(tabs)/social.tsx` (+ `features/social/social-hub-screen`, `people-picker`, `services/friends`, `store/friends`, invite `/f/{code|slug}`) |
 | Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
 | Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`, `challenge-friend-button`) |
@@ -81,7 +85,7 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 ## Shared patterns (prefer these)
 
 - **IDs:** `@/utils/id` — `newId(prefix)` for local entities; `newUuid` / `newPrefixedUuid` for synced/collaborative keys. `store/schedule` re-exports `newId` for compatibility.
-- **Parse:** `@/utils/parse` — `asString`, `asTrimmedString`, `asNonEmptyString`, `asFiniteNumber`, `formatCompactNumber`.
+- **Parse:** `@/utils/parse` — `asString`, `asTrimmedString`, `asNonEmptyString`, `asFiniteNumber`, `formatCompactNumber`, `sanitizeNumericInput` / `numericOnChangeText` for number-only fields (see `.cursor/rules/numeric-input.mdc`; `Input` auto-sanitizes `decimal-pad` / `number-pad` / `numeric`).
 - **Persist:** `@/services/storage` — `createPersistStorage` (MMKV on native with AsyncStorage migration/fallback).
 - **List equality:** `@/utils/list-equality` — `listReferenceEquality` for Zustand selectors that filter arrays.
 - **Idle deferral:** `@/utils/defer-until-idle` for post-paint startup work (migrations, notifications).

@@ -16,8 +16,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { appTextStyle, radii } from '@/design-system';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { appTextStyle, radii, type AppIconName } from '@/design-system';
+import {
+  itinerarySheetChrome,
+  type ItinerarySheetChrome,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
@@ -26,8 +29,12 @@ type TravelSheetHeaderProps = {
   eyebrow: string;
   title: string;
   subtitle?: string;
+  /** Optional leading icon for the subtitle row (e.g. location pin). */
+  subtitleIcon?: AppIconName;
   onClose: () => void;
   closeAccessibilityLabel: string;
+  /** Override itinerary chrome colors (e.g. Convert Currency forest palette). */
+  chrome?: ItinerarySheetChrome;
 };
 
 /** Canonical editorial header for every travel sheet and sheet-like route. */
@@ -35,11 +42,13 @@ export function TravelSheetHeader({
   eyebrow,
   title,
   subtitle,
+  subtitleIcon,
   onClose,
   closeAccessibilityLabel,
+  chrome: chromeProp,
 }: TravelSheetHeaderProps) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
+  const chrome = chromeProp ?? itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
   const closeSize = Math.max(48, s(50));
 
@@ -61,12 +70,34 @@ export function TravelSheetHeader({
               styles.title,
               {
                 color: chrome.title,
-                fontSize: Math.max(40, s(48)),
-                lineHeight: Math.max(46, s(54)),
+                fontSize: Math.max(36, s(42)),
+                lineHeight: Math.max(42, s(48)),
               },
             ]}>
             {title}
           </AppText>
+          {subtitle ? (
+            <View style={[styles.subtitleRow, { gap: rs.xs }]}>
+              {subtitleIcon ? (
+                <Symbol name={subtitleIcon} size="sm" color={chrome.icons.location.fg} />
+              ) : null}
+              <AppText
+                fit
+                numberOfLines={1}
+                style={[
+                  styles.subtitle,
+                  typography.callout,
+                  {
+                    color: chrome.subtitle,
+                    fontSize: Math.max(15, s(16)),
+                    flexShrink: 1,
+                    minWidth: 0,
+                  },
+                ]}>
+                {subtitle}
+              </AppText>
+            </View>
+          ) : null}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -83,7 +114,7 @@ export function TravelSheetHeader({
               width: closeSize,
               height: closeSize,
               borderRadius: closeSize / 2,
-              backgroundColor: theme.name === 'light' ? '#FFFEFC' : chrome.closeBg,
+              backgroundColor: chrome.closeBg,
               borderColor: chrome.fieldBorder,
               opacity: pressed ? 0.7 : 1,
             },
@@ -91,18 +122,6 @@ export function TravelSheetHeader({
           <Symbol name="close" size="md" color={chrome.title} />
         </Pressable>
       </View>
-      {subtitle ? (
-        <AppText
-          fit
-          numberOfLines={1}
-          style={[
-            styles.subtitle,
-            typography.callout,
-            { color: chrome.subtitle, fontSize: Math.max(15, s(16)) },
-          ]}>
-          {subtitle}
-        </AppText>
-      ) : null}
     </View>
   );
 }
@@ -112,12 +131,15 @@ type TravelSheetModalProps = PropsWithChildren<{
   eyebrow: string;
   title: string;
   subtitle?: string;
+  subtitleIcon?: AppIconName;
   onClose: () => void;
   closeAccessibilityLabel: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footer?: ReactNode;
   /** Optional cap; always clamped to the space below the status bar. */
   maxHeight?: number;
+  /** Optional floor so tall forms (e.g. currency) open roomy instead of hugging content. */
+  minHeight?: number;
   /**
    * After the first layout while open, keep the sheet at that height so
    * expanding inline content scrolls inside instead of resizing the frame.
@@ -125,6 +147,8 @@ type TravelSheetModalProps = PropsWithChildren<{
   lockHeight?: boolean;
   /** Change to reset scroll (e.g. when switching list ↔ editor). */
   scrollKey?: string | number;
+  /** Override default itinerary chrome (e.g. Convert Currency forest palette). */
+  chrome?: ItinerarySheetChrome;
 }>;
 
 /**
@@ -136,17 +160,20 @@ export function TravelSheetModal({
   eyebrow,
   title,
   subtitle,
+  subtitleIcon,
   onClose,
   closeAccessibilityLabel,
   contentContainerStyle,
   footer,
   maxHeight,
+  minHeight,
   lockHeight = false,
   scrollKey,
+  chrome: chromeProp,
   children,
 }: TravelSheetModalProps) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
+  const chrome = chromeProp ?? itinerarySheetChrome(theme);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { spacing: rs, layout } = useResponsive();
@@ -160,6 +187,10 @@ export function TravelSheetModal({
     maxHeight !== undefined
       ? Math.min(maxHeight, availableHeight)
       : Math.round(availableHeight * 0.98);
+  const sheetMinHeight =
+    minHeight !== undefined
+      ? Math.min(Math.max(0, minHeight), sheetMaxHeight)
+      : undefined;
 
   useEffect(() => {
     if (!visible) {
@@ -208,6 +239,7 @@ export function TravelSheetModal({
               {
                 backgroundColor: chrome.sheetBg,
                 maxHeight: sheetMaxHeight,
+                minHeight: sheetMinHeight,
                 height: lockHeight ? lockedHeight : undefined,
                 paddingBottom: Math.max(insets.bottom, rs.md),
                 paddingHorizontal: layout.screenPadding,
@@ -222,8 +254,10 @@ export function TravelSheetModal({
                 eyebrow={eyebrow}
                 title={title}
                 subtitle={subtitle}
+                subtitleIcon={subtitleIcon}
                 onClose={onClose}
                 closeAccessibilityLabel={closeAccessibilityLabel}
+                chrome={chrome}
               />
             </View>
             <ScrollView
@@ -289,6 +323,12 @@ const styles = StyleSheet.create({
   title: {
     ...appTextStyle('title'),
     letterSpacing: -1.1,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
   },
   subtitle: {
     ...appTextStyle('body'),

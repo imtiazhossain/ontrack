@@ -33,6 +33,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 - Hard-coded chrome `fontSize` / control padding that ignores `useResponsive()` / `AppText fit`
 - Ad-hoc `fontFamily` / medium-bold `fontWeight` for UI text when `typeConfig` / `appTextStyle` / `AppText` fits (bold only when explicitly requested)
 - `AppText fit` / shrink-to-fit for initials inside `ProfileAvatar` (use `avatarInitialsFontSize` + RN `Text`)
+- Ad-hoc letter-stripping for number fields when `sanitizeNumericInput` / `numericOnChangeText` / `Input` numeric keyboards fit
 
 ## After substantive edits
 

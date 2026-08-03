@@ -70,12 +70,16 @@
     "jest-expo": "~57.0.3",
     "typescript": "~6.0.3"
   },
+  "engines": {
+    "node": ">=20 <25"
+  },
   "scripts": {
-    "start": "expo start --clear",
+    "start": "node ./scripts/assert-node.js && expo start --dev-client",
+    "start:clear": "node ./scripts/assert-node.js && expo start --dev-client --clear",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --clear --android",
-    "ios": "expo start --clear --ios",
-    "web": "expo start --clear --web",
+    "android": "node ./scripts/assert-node.js && expo start --dev-client --android",
+    "ios": "node ./scripts/assert-node.js && expo start --dev-client --ios",
+    "web": "node ./scripts/assert-node.js && expo start --web",
     "lint": "expo lint",
     "test": "jest",
     "typecheck": "tsc --noEmit",
