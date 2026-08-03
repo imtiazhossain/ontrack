@@ -188,6 +188,10 @@ Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 | `ontrack.travel.expenses.paidBy.<personId>` | Paid By person avatar (`self`, `host`, `member:…`, …) |
 | `ontrack.travel.expenses.splitWith.<personId>` | Split With person avatar |
 | `ontrack.travel.expenses.addExpense` | Add Expense (list footer) |
+| `ontrack.travel.expenses.submitExpense` | Add Expense submit (editor) |
+| `ontrack.travel.expenses.saveExpense` | Save Expense submit (editor) |
+| `ontrack.travel.expenses.deleteExpense` | Delete expense (legacy editor button) |
+| `ontrack.travel.expenses.deleteExpenseFooter` | Delete expense (editor footer) |
 | `ontrack.travel.expenses.close` | Close Expenses sheet |
 | `ontrack.travel.expenses.row.<expenseId>` | Expense list row (edit) |
 

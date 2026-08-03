@@ -4,7 +4,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppText, DateField, ErrorMessage, Input, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  travelInputFieldBackground,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
   TravelSurfaceCard,
@@ -81,7 +84,7 @@ export function TravelPlanDetailsEditor({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: chrome.fieldBg,
+      fieldBackground: travelInputFieldBackground(theme),
       stackedLabelColor: chrome.label,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,
@@ -249,8 +252,7 @@ export function TravelPlanDetailsEditor({
                 {
                   minHeight: Math.max(layout.minTapTarget, s(52)),
                   borderColor: chrome.fieldBorder,
-                  backgroundColor:
-                    theme.name === 'light' ? '#FFFFFF' : chrome.fieldBg,
+                  backgroundColor: travelInputFieldBackground(theme),
                   opacity: pressed ? 0.75 : 1,
                 },
               ]}>

@@ -148,4 +148,33 @@ describe('expense math', () => {
     expect(next.expenses[0].title).toBe('Hot dogs');
     expect(next.expenses[0].currency).toBe('ISK');
   });
+
+  it('deduplicates imported stay expenses by confirmation code', () => {
+    const existing = createExpenseDraft({
+      title: 'Centerhotel Midgardur',
+      amount: 1065.32,
+      currency: 'USD',
+      date: '2026-09-09',
+      category: 'stay',
+      notes: 'Confirmation: 13460175',
+      paidById: TRAVEL_EXPENSE_SELF_ID,
+      splitWithIds: [TRAVEL_EXPENSE_SELF_ID, 'friend-1'],
+    });
+    const withExisting = upsertTravelExpense(plan, existing);
+    const duplicateAttempt = createExpenseDraft({
+      title: 'Centerhotel Midgardur',
+      amount: 1065.32,
+      currency: 'USD',
+      date: '2026-09-09',
+      category: 'stay',
+      notes: 'Confirmation: 13460175',
+      paidById: TRAVEL_EXPENSE_SELF_ID,
+      splitWithIds: [TRAVEL_EXPENSE_SELF_ID, 'friend-1'],
+    });
+    const next = upsertTravelExpense(withExisting, duplicateAttempt);
+
+    expect(next.expenses).toHaveLength(1);
+    expect(next.expenses[0].id).toBe(existing.id);
+    expect(next.expenses[0].title).toBe('Centerhotel Midgardur');
+  });
 });

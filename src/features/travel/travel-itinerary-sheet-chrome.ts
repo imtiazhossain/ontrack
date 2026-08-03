@@ -79,7 +79,7 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
 
   return {
     sheetBg: '#FCF9F5',
-    fieldBg: '#F3EEE7',
+    fieldBg: '#FFFFFF',
     fieldBorder: 'rgba(51,39,28,0.06)',
     handle: '#C4BBB0',
     title: '#2D1C13',
@@ -114,6 +114,10 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
 }
 
 export type SheetIconTone = keyof ItinerarySheetChrome['icons'];
+
+export function travelInputFieldBackground(theme: Theme): string {
+  return itinerarySheetChrome(theme).fieldBg;
+}
 
 /** Shared stacked-field colors used by Add Stay and structured travel editors. */
 export function itinerarySheetFieldProps(

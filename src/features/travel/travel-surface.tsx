@@ -4,7 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { type AppIconName, type Theme } from '@/design-system';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  itinerarySheetChrome,
+  travelInputFieldBackground,
+} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -30,8 +33,7 @@ export function travelPageBg(theme: Theme): string {
 
 /** Elevated card fill — cream sheet in light, field panel in dark. */
 export function travelCardFill(theme: Theme): string {
-  const chrome = itinerarySheetChrome(theme);
-  return theme.name === 'dark' ? chrome.fieldBg : '#FFFFFF';
+  return travelInputFieldBackground(theme);
 }
 
 /** Hairline card border from sheet chrome. */
@@ -41,7 +43,7 @@ export function travelCardBorder(theme: Theme): string {
 
 /** Soft sunken / field panel tint (Add Stay input fill). */
 export function travelPanelTint(theme: Theme): string {
-  return itinerarySheetChrome(theme).fieldBg;
+  return travelInputFieldBackground(theme);
 }
 
 /** Warm sand tint for secondary panels. */
@@ -51,7 +53,7 @@ export function travelWarmTint(theme: Theme): string {
 
 /** Soft pill behind secondary labels — sheet field fill. */
 export function travelPillBg(theme: Theme): string {
-  return itinerarySheetChrome(theme).fieldBg;
+  return travelInputFieldBackground(theme);
 }
 
 /** CTA / accent from sheet chrome (gradient start). */

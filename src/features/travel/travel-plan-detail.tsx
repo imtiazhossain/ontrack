@@ -24,7 +24,7 @@ import {
 import {
   validateFlightSchedule,
 } from '@/features/travel/flight-schedule';
-import { normalizeTravelPlan } from '@/features/travel/normalize';
+import { isDuplicateItineraryItem, normalizeTravelPlan } from '@/features/travel/normalize';
 import {
   emptyRentalDetailsDraft,
   validateRentalDetails,
@@ -35,9 +35,13 @@ import {
   validateStayDetails,
   type StayDetailsDraft,
 } from '@/features/travel/stay-details';
+import {
+  expenseFormFromExpense,
+  type ExpenseFormState,
+} from '@/features/travel/expenses/expense-form';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
-import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
+import { DETAILS_MAX_LENGTH, ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
@@ -52,13 +56,14 @@ import { TravelTransportSections } from '@/features/travel/travel-transport-sect
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
-import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
+import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { minutesBetween } from '@/utils/date';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 import { isHttpsUrl } from '@/utils/safe-url';
+import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 
 type DetailSectionKey = 'transport' | 'flights' | 'stays' | 'rentals' | 'timeline';
 
@@ -264,10 +269,50 @@ function TravelPlanDetailLoaded({
 
   const itemEdit = useTravelPlanItemDetailsEdit({ plan, itinerary, updatePlan });
   const itemMedia = useTravelPlanItemMedia({ planId, plan, itinerary, updatePlan });
+  const [openExpenseSheet, setOpenExpenseSheet] = useState(false);
+  const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState | undefined>();
+  const [preparedExpenseDraft, setPreparedExpenseDraft] = useState<ExpenseFormState | undefined>();
+  const [addItemInProgress, setAddItemInProgress] = useState(false);
+  const addItemInProgressRef = useRef(false);
+  const setAddItemInProgressState = (value: boolean) => {
+    addItemInProgressRef.current = value;
+    setAddItemInProgress(value);
+  };
+  const stopAddItem = () => setAddItemInProgressState(false);
+  const addItemError = (message: string) => {
+    stopAddItem();
+    setError(message);
+  };
+
+  const goToItinerarySafely = () => {
+    // Clear transient overlays before route transitions so no hidden modal
+    // can keep intercepting touches after the prompt closes.
+    setOpenExpenseSheet(false);
+    setExpenseDraft(undefined);
+    setPreparedExpenseDraft(undefined);
+    setIsAddingItem(false);
+    setIsChoosingAddKind(false);
+    clearAddPhotos();
+    setRemoveConfirm(null);
+    setDevBookingOpen(null);
+  };
+
   const confirmationImports = useTravelPlanConfirmationImports({
     plan,
     updatePlan,
     accountEmail,
+    navigation: {
+      onOpenExpenseDraft: (_planId, draft) => {
+        setExpenseDraft(draft);
+        setOpenExpenseSheet(true);
+      },
+      onPrepareExpenseDraft: (_planId, draft) => {
+        setPreparedExpenseDraft(draft);
+      },
+      onGoToItinerary: () => {
+        goToItinerarySafely();
+      },
+    },
     addSheet: {
       date,
       startMinutes,
@@ -357,7 +402,73 @@ function TravelPlanDetailLoaded({
     clearAddPhotos,
   } = itemMedia;
 
+  const matchingImportedExpense = (
+    sourcePlan: TravelPlan,
+    draft: ExpenseFormState,
+  ) => {
+    const draftNote = draft.notes.trim().toUpperCase();
+    if (draftNote) {
+      const byNote = sourcePlan.expenses.find(
+        (expense) =>
+          expense.category === draft.category &&
+          (expense.notes ?? '').toUpperCase().includes(draftNote),
+      );
+      if (byNote) return byNote;
+    }
+    const amount = Number(draft.amountText);
+    const normalizedTitle = draft.title.trim().toLowerCase();
+    return sourcePlan.expenses.find((expense) => {
+      if (expense.category !== draft.category) return false;
+      if (expense.date !== draft.date || expense.currency !== draft.currency) return false;
+      if (normalizedTitle && expense.title.trim().toLowerCase() !== normalizedTitle) return false;
+      if (!Number.isFinite(amount)) return false;
+      return expense.amount === amount;
+    });
+  };
+
+  const openImportedExpenseReview = (sourcePlan: TravelPlan, draft: ExpenseFormState) => {
+    const existing = matchingImportedExpense(sourcePlan, draft);
+    setExpenseDraft(existing ? expenseFormFromExpense(existing) : draft);
+    setOpenExpenseSheet(true);
+  };
+
+  const maybeShowImportedAddPrompt = (
+    sourcePlan: TravelPlan,
+    duplicateItinerary: boolean,
+  ) => {
+    if (!preparedExpenseDraft) return;
+    const draft = preparedExpenseDraft;
+    setPreparedExpenseDraft(undefined);
+    const kindLabel =
+      ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
+    const lowerKindLabel = kindLabel.toLowerCase();
+    const baseMessage = duplicateItinerary
+      ? `This ${lowerKindLabel} was already in your itinerary. Review the related expense to avoid duplicates.`
+      : `Your ${lowerKindLabel} was imported. Review the related expense after saving this ${lowerKindLabel}.`;
+    appPrompt.alert(
+      `Added ${kindLabel} Information`,
+      baseMessage,
+      [
+        {
+          text: 'Review Expense',
+          style: 'primary' as const,
+          hideIcon: true,
+          onPress: () => openImportedExpenseReview(sourcePlan, draft),
+        },
+        {
+          text: 'Go to Itinerary',
+          style: 'secondary' as const,
+          hideIcon: true,
+          onPress: goToItinerarySafely,
+        },
+      ],
+      { cancelable: false },
+    );
+  };
+
   const addItem = () => {
+    if (addItemInProgressRef.current) return;
+    setAddItemInProgressState(true);
     setError(undefined);
     setFlightDetailsError(undefined);
     setRentalDetailsError(undefined);
@@ -365,13 +476,13 @@ function TravelPlanDetailLoaded({
     const isMoment = kind === 'moment';
     const usesRange = kind === 'stay' || kind === 'flight' || kind === 'rental';
     if (!isMoment && !title.trim()) {
-      return setError('Add a name for this itinerary item.');
+      return addItemError('Add a name for this itinerary item.');
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
-      return setError(`Choose a date between ${plan.startDate} and ${plan.endDate}.`);
+      return addItemError(`Choose a date between ${plan.startDate} and ${plan.endDate}.`);
     }
     if (startMinutes === null || startMinutes < 0 || startMinutes >= 24 * 60) {
-      return setError(
+      return addItemError(
         kind === 'stay'
           ? 'Choose a check-in time.'
           : kind === 'rental'
@@ -389,10 +500,10 @@ function TravelPlanDetailLoaded({
         endDate < plan.startDate ||
         endDate > plan.endDate
       ) {
-        return setError(`Choose an end date between ${plan.startDate} and ${plan.endDate}.`);
+        return addItemError(`Choose an end date between ${plan.startDate} and ${plan.endDate}.`);
       }
       if (endMinutes === null || endMinutes < 0 || endMinutes >= 24 * 60) {
-        return setError(
+        return addItemError(
           kind === 'stay'
             ? 'Choose a check-out time.'
             : kind === 'rental'
@@ -404,7 +515,7 @@ function TravelPlanDetailLoaded({
       }
       const span = minutesBetween(date, startMinutes, endDate, endMinutes);
       if (!Number.isFinite(span) || span <= 0) {
-        return setError(
+        return addItemError(
           kind === 'flight'
             ? 'Arrival must be after departure.'
             : kind === 'rental'
@@ -414,22 +525,23 @@ function TravelPlanDetailLoaded({
       }
       durationMinutes = kind === 'flight' ? span : 60;
       if (kind === 'flight' && span > 3 * 24 * 60) {
-        return setError('Flight duration looks too long. Check the arrival time.');
+        return addItemError('Flight duration looks too long. Check the arrival time.');
       }
     } else if (
       !isMoment &&
       (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 1440)
     ) {
-      return setError('Duration must be between 1 and 1,440 minutes.');
+      return addItemError('Duration must be between 1 and 1,440 minutes.');
     }
     if (!isMoment && !validBookingUrl(bookingUrl.trim())) {
-      return setError('Booking links must use a complete HTTPS address.');
+      return addItemError('Booking links must use a complete HTTPS address.');
     }
     const validatedFlightDetails =
       kind === 'flight'
         ? validateFlightDetails(flightDetails)
         : ({ ok: true, value: undefined } as const);
     if (!validatedFlightDetails.ok) {
+      stopAddItem();
       return setFlightDetailsError(validatedFlightDetails.error);
     }
     const validatedRentalDetails =
@@ -441,6 +553,7 @@ function TravelPlanDetailLoaded({
           })
         : ({ ok: true, value: undefined } as const);
     if (!validatedRentalDetails.ok) {
+      stopAddItem();
       return setRentalDetailsError(validatedRentalDetails.error);
     }
     const validatedStayDetails =
@@ -452,33 +565,66 @@ function TravelPlanDetailLoaded({
           })
         : ({ ok: true, value: undefined } as const);
     if (!validatedStayDetails.ok) {
+      stopAddItem();
       return setStayDetailsError(validatedStayDetails.error);
     }
     const itemId = newId('trip-item');
     const now = new Date().toISOString();
+    const incomingItem: TravelItineraryItem = {
+      id: itemId,
+      kind,
+      title: title.trim() || (isMoment ? 'Moment' : title.trim()),
+      date,
+      startMinutes,
+      durationMinutes: Math.round(durationMinutes),
+      details: details.trim() || undefined,
+      bookingUrl: isMoment ? undefined : bookingUrl.trim() || undefined,
+      photoUris: photoUris.length ? photoUris : undefined,
+      flight: validatedFlightDetails.value,
+      rental: validatedRentalDetails.value,
+      stay: validatedStayDetails.value,
+    };
     void (async () => {
       const persistedPhotos = photoUris.length
         ? await persistTravelMomentPhotos(photoUris, itemId)
         : undefined;
       const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
-      if (!latest) return;
+      if (!latest) {
+        stopAddItem();
+        return;
+      }
+      const latestItinerary = Array.isArray(latest.itinerary) ? latest.itinerary : [];
+      const duplicateExists = latestItinerary.some((existing) =>
+        isDuplicateItineraryItem(existing, incomingItem),
+      );
+      if (duplicateExists) {
+        setTitle('');
+        setDetails('');
+        setBookingUrl('');
+        setPhotoUris([]);
+        setFlightDetails(emptyFlightDetailsDraft());
+        setImportedFlightFileName(undefined);
+        setRentalDetails(emptyRentalDetailsDraft());
+        setImportedRentalFileName(undefined);
+        setStayDetails(
+          defaultStayDetails({
+            checkoutDate: plan.endDate,
+            checkoutMinutes: String(11 * 60),
+          }),
+        );
+        setImportedStayFileName(undefined);
+        setIsAddingItem(false);
+        stopAddItem();
+        maybeShowImportedAddPrompt(latest, false);
+        return;
+      }
       updatePlan({
         ...latest,
         itinerary: [
-          ...(Array.isArray(latest.itinerary) ? latest.itinerary : []),
+          ...latestItinerary,
           {
-            id: itemId,
-            kind,
-            title: title.trim() || (isMoment ? 'Moment' : title.trim()),
-            date,
-            startMinutes,
-            durationMinutes: Math.round(durationMinutes),
-            details: details.trim() || undefined,
-            bookingUrl: isMoment ? undefined : bookingUrl.trim() || undefined,
+            ...incomingItem,
             photoUris: persistedPhotos,
-            flight: validatedFlightDetails.value,
-            rental: validatedRentalDetails.value,
-            stay: validatedStayDetails.value,
           },
         ],
         updatedAt: now,
@@ -499,6 +645,8 @@ function TravelPlanDetailLoaded({
       );
       setImportedStayFileName(undefined);
       setIsAddingItem(false);
+      stopAddItem();
+      maybeShowImportedAddPrompt(latest, false);
     })();
   };
 
@@ -574,6 +722,7 @@ function TravelPlanDetailLoaded({
   const cancelAddToTimeline = () => {
     if (importInProgressRef.current) return;
     setIsAddingItem(false);
+    setPreparedExpenseDraft(undefined);
     resetAddForm();
   };
 
@@ -781,6 +930,41 @@ function TravelPlanDetailLoaded({
         onStayDetailsChange={setStayDetails}
         onImportStay={(source) => void importStay('new', source)}
         onAdd={addItem}
+      />
+      <TravelExpensesSheet
+        plan={plan}
+        visible={openExpenseSheet}
+        initialForm={expenseDraft}
+        onClose={() => {
+          setOpenExpenseSheet(false);
+          setExpenseDraft(undefined);
+        }}
+        onSavePlan={updatePlan}
+        onSaved={({ mode }) => {
+          setOpenExpenseSheet(false);
+          setExpenseDraft(undefined);
+          if (mode === 'edit') return;
+          appPrompt.alert(
+            'Expense Saved',
+            'Your imported expense is now part of this trip.',
+            [
+              {
+                text: 'Review',
+                style: 'primary' as const,
+                hideIcon: true,
+                onPress: () => {
+                  setOpenExpenseSheet(true);
+                },
+              },
+              {
+                text: 'Go to Itinerary',
+                style: 'secondary' as const,
+                onPress: goToItinerarySafely,
+              },
+            ],
+            { cancelable: false },
+          );
+        }}
       />
       <BookingOpenSheet
         target={devBookingOpen}

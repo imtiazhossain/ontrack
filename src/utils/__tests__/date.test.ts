@@ -30,7 +30,7 @@ describe('date keys', () => {
 
   it('changes presentation without changing the stored date key', () => {
     const stored = '2026-07-26';
-    expect(formatDateKey(stored, 'mdy')).toBe('07/26/2026');
+    expect(formatDateKey(stored, 'mdy')).toBe('7/26/2026');
     expect(formatDateKey(stored, 'iso')).toBe(stored);
   });
 

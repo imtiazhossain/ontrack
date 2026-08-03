@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 
 import {
   AppText,
+  Button,
   Symbol,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
@@ -54,10 +55,6 @@ import {
 import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
-import {
-  TravelRemoveConfirmModal,
-  type TravelRemoveConfirmPayload,
-} from '@/features/travel/travel-remove-confirm-modal';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -67,6 +64,7 @@ import {
   shouldSyncTravelExpenses,
 } from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
+import { useTravel } from '@/store/travel';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
@@ -108,13 +106,17 @@ function expenseCategoryKind(category: TravelExpenseCategory): TravelItemKind | 
 export function TravelExpensesSheet({
   plan,
   visible,
+  initialForm,
   onClose,
   onSavePlan,
+  onSaved,
 }: {
   plan: TravelPlan;
   visible: boolean;
+  initialForm?: ExpenseFormState;
   onClose: () => void;
   onSavePlan: (plan: TravelPlan) => void;
+  onSaved?: (result: { mode: 'create' | 'edit' }) => void;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
@@ -122,8 +124,26 @@ export function TravelExpensesSheet({
   const [rates, setRates] = useState<FxRates | undefined>();
   const [form, setForm] = useState<ExpenseFormState | undefined>();
   const [formError, setFormError] = useState<string>();
-  const [removeConfirm, setRemoveConfirm] =
-    useState<TravelRemoveConfirmPayload | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | undefined>();
+  const [pendingDelete, setPendingDelete] = useState<
+    { id: string; title: string } | null
+  >(null);
+  const hasLocalExpenseEditsRef = useRef(false);
+  const formRef = useRef<ExpenseFormState | undefined>(undefined);
+  const editingExpenseIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    editingExpenseIdRef.current = editingExpenseId;
+  }, [editingExpenseId]);
+
+  useEffect(() => {
+    if (visible) return;
+    hasLocalExpenseEditsRef.current = false;
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -138,6 +158,14 @@ export function TravelExpensesSheet({
 
   useEffect(() => {
     if (!visible) return;
+    if (initialForm) {
+      setForm(initialForm);
+      setEditingExpenseId(initialForm.existing?.id);
+    }
+  }, [visible, initialForm]);
+
+  useEffect(() => {
+    if (!visible) return;
     const next = withRoundTripFlightExpenseTitles(plan);
     if (next !== plan) onSavePlan(next);
   }, [visible, plan, onSavePlan]);
@@ -148,6 +176,7 @@ export function TravelExpensesSheet({
     void pullTravelTripExpenses(plan)
       .then(async (merged) => {
         if (!active) return;
+        if (hasLocalExpenseEditsRef.current) return;
         const current = merged ?? plan;
         if (merged) onSavePlan(merged);
         // Host: push local expenses so friends can pull them.
@@ -185,15 +214,26 @@ export function TravelExpensesSheet({
     void publishTravelTripExpenses(next).catch(() => undefined);
   };
 
+  const applyLocalExpenseEdit = (next: TravelPlan): TravelPlan => {
+    hasLocalExpenseEditsRef.current = true;
+    if (!shouldSyncTravelExpenses(next)) return next;
+    return {
+      ...next,
+      sharedExpensesUpdatedAt: new Date().toISOString(),
+    };
+  };
+
   const beginAdd = () => {
     setFormError(undefined);
-    setRemoveConfirm(null);
+    setEditingExpenseId(undefined);
+    setPendingDelete(null);
     setForm(emptyExpenseForm(plan));
   };
 
   const beginEdit = (expense: TravelExpense) => {
     setFormError(undefined);
-    setRemoveConfirm(null);
+    setEditingExpenseId(expense.id);
+    setPendingDelete(null);
     setForm(expenseFormFromExpense(expense));
   };
 
@@ -204,35 +244,57 @@ export function TravelExpensesSheet({
       setFormError(built.error);
       return;
     }
-    const next = upsertTravelExpense(plan, built.expense);
+    const latestPlan =
+      useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
+    const existingForEdit = editingExpenseId
+      ? latestPlan.expenses.find((entry) => entry.id === editingExpenseId)
+      : undefined;
+    const saveMode = existingForEdit ? 'edit' : 'create';
+    const expenseToSave = existingForEdit
+      ? {
+          ...built.expense,
+          id: existingForEdit.id,
+          createdAt: existingForEdit.createdAt,
+        }
+      : built.expense;
+    const next = applyLocalExpenseEdit(upsertTravelExpense(latestPlan, expenseToSave));
     onSavePlan(next);
     syncSharedExpenses(next);
     setForm(undefined);
     setFormError(undefined);
-    setRemoveConfirm(null);
+    setEditingExpenseId(undefined);
+    setPendingDelete(null);
+    onSaved?.({ mode: saveMode });
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const latestPlan =
+      useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
+    const next = applyLocalExpenseEdit(removeTravelExpense(latestPlan, pendingDelete.id));
+    onSavePlan(next);
+    syncSharedExpenses(next);
+    setForm(undefined);
+    setFormError(undefined);
+    setEditingExpenseId(undefined);
+    setPendingDelete(null);
   };
 
   const requestDelete = () => {
-    if (!form?.existing) return;
-    const expense = form.existing;
-    setRemoveConfirm({
-      title: 'Delete Expense?',
-      message: `This action will permanently remove “${expense.title}”.`,
-      actionLabel: 'Delete Expense',
-      onConfirm: () => {
-        const next = removeTravelExpense(plan, expense.id);
-        onSavePlan(next);
-        syncSharedExpenses(next);
-        setForm(undefined);
-        setFormError(undefined);
-      },
-    });
+    const expenseId = editingExpenseIdRef.current ?? formRef.current?.existing?.id;
+    if (!expenseId) return;
+    const title =
+      formRef.current?.existing?.title?.trim() ||
+      formRef.current?.title?.trim() ||
+      'this expense';
+    setPendingDelete({ id: expenseId, title });
   };
 
   const dismissForm = () => {
     setForm(undefined);
     setFormError(undefined);
-    setRemoveConfirm(null);
+    setEditingExpenseId(undefined);
+    setPendingDelete(null);
   };
 
   const closeSheet = () => {
@@ -240,7 +302,7 @@ export function TravelExpensesSheet({
     onClose();
   };
 
-  const editingExpense = Boolean(form?.existing);
+  const editingExpense = Boolean(editingExpenseId ?? form?.existing?.id);
 
   return (
     <>
@@ -261,11 +323,55 @@ export function TravelExpensesSheet({
       scrollKey={form ? (form.existing?.id ?? 'add') : 'list'}
       footer={
         form ? (
-          <ItinerarySheetSubmitButton
-            label={editingExpense ? 'Save Expense' : 'Add Expense'}
-            icon="receipt"
-            onPress={saveForm}
-          />
+          <View style={styles.editorFooterActions}>
+            {editingExpense && pendingDelete ? (
+              <View style={styles.inlineConfirmCard}>
+                <AppText
+                  variant="callout"
+                  testID={AgentUiIds.travel.removeConfirm.dismiss}
+                  style={styles.inlineConfirmTitle}>
+                  Delete Expense?
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {`This action will permanently remove “${pendingDelete.title}”.`}
+                </AppText>
+                <View style={styles.inlineConfirmActions}>
+                  <Button
+                    variant="secondary"
+                    testID={AgentUiIds.travel.removeConfirm.cancel}
+                    onPress={() => setPendingDelete(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    testID={AgentUiIds.travel.removeConfirm.confirm}
+                    icon="delete"
+                    onPress={confirmDelete}>
+                    Delete Expense
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+            <ItinerarySheetSubmitButton
+              label={editingExpense ? 'Save Expense' : 'Add Expense'}
+              icon="receipt"
+              testID={
+                editingExpense
+                  ? AgentUiIds.travel.expenses.saveExpense
+                  : AgentUiIds.travel.expenses.submitExpense
+              }
+              onPress={saveForm}
+            />
+            {editingExpense && !pendingDelete ? (
+              <Button
+                variant="danger"
+                testID={AgentUiIds.travel.expenses.deleteExpenseFooter}
+                icon="delete"
+                onPress={requestDelete}>
+                Delete Expense
+              </Button>
+            ) : null}
+          </View>
         ) : (
           <TravelSheetPrimaryAction
             label="Add Expense"
@@ -281,10 +387,9 @@ export function TravelExpensesSheet({
                   rates={rates}
                   error={formError}
                   onChange={(next) => {
-                    setRemoveConfirm(null);
                     setForm(next);
                   }}
-                  onDelete={form.existing ? requestDelete : undefined}
+                  onDelete={undefined}
                 />
               ) : (
               <View style={styles.listBody}>
@@ -415,10 +520,6 @@ export function TravelExpensesSheet({
               </View>
             )}
     </TravelSheetModal>
-    <TravelRemoveConfirmModal
-      payload={removeConfirm}
-      onCancel={() => setRemoveConfirm(null)}
-    />
     </>
   );
 }
@@ -452,6 +553,24 @@ function ExpenseRowButton({
 }
 
 const styles = StyleSheet.create({
+  editorFooterActions: {
+    gap: spacing.sm,
+  },
+  inlineConfirmCard: {
+    borderRadius: radii.lg,
+    backgroundColor: '#FFF4EE',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E0B3A5',
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  inlineConfirmTitle: {
+    color: '#7C2F24',
+  },
+  inlineConfirmActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   listBody: { gap: spacing.lg },
   summaryCard: { justifyContent: 'center', gap: spacing.xxs },
   summaryLabel: {

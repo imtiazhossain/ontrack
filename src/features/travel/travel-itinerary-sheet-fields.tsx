@@ -5,6 +5,7 @@ import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
+  travelInputFieldBackground,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -41,7 +42,7 @@ export function ItinerarySheetImportCard({
       style={[
         styles.importCard,
         {
-          backgroundColor: chrome.fieldBg,
+          backgroundColor: travelInputFieldBackground(theme),
           borderColor: chrome.fieldBorder,
           borderRadius: radii.lg,
           paddingHorizontal: rs.md,
@@ -129,21 +130,24 @@ export function ItinerarySheetSubmitButton({
   onPress,
   icon,
   editorialGold = false,
+  flat = false,
   testID,
 }: {
   label: string;
   onPress: () => void;
   icon?: AppIconName;
   editorialGold?: boolean;
+  flat?: boolean;
   testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout } = useResponsive();
-  const colors =
+  const gradientColors =
     editorialGold && theme.name === 'light'
       ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
       : ([chrome.ctaFrom, chrome.ctaTo] as const);
+  const colors = flat ? ([gradientColors[0], gradientColors[0]] as const) : gradientColors;
   const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 52 : 52));
   const handlePress = () => {
     haptics.tap();
@@ -166,7 +170,7 @@ export function ItinerarySheetSubmitButton({
           minHeight,
           borderRadius: radii.pill,
           boxShadow:
-            editorialGold && theme.name === 'light'
+            !flat && editorialGold && theme.name === 'light'
               ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
               : undefined,
         },
@@ -214,7 +218,7 @@ export function useSheetFieldChrome(tone: SheetIconTone) {
     chrome,
     iconBackground: icon.bg,
     iconColor: icon.fg,
-    fieldBackground: chrome.fieldBg,
+    fieldBackground: travelInputFieldBackground(theme),
     stackedLabelColor: chrome.label,
     placeholderColor: chrome.placeholder,
     placeholderTextColor: chrome.placeholder,

@@ -1,13 +1,17 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { appPrompt } from '@/components/primitives';
-import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
+import {
+  expandedTripRangeForFlights,
+  mergeImportedFlights,
+} from '@/features/travel/flight-confirmation-itinerary';
 import { applyImportedRentalToPlan } from '@/features/travel/apply-imported-rental';
 import {
   importFlightConfirmation,
   type FlightConfirmationImportSource,
 } from '@/features/travel/flight-confirmation-import';
-import { applyFlightExpenseFromImport } from '@/features/travel/flight-expense-from-import';
+import type { ExpenseFormState } from '@/features/travel/expenses/expense-form';
+import { defaultSplitIds } from '@/features/travel/expenses/expense-math';
 import {
   emptyFlightDetailsDraft,
   type FlightDetailsDraft,
@@ -16,6 +20,10 @@ import {
   importRentalConfirmation,
   type RentalConfirmationImportSource,
 } from '@/features/travel/rental-confirmation-import';
+import {
+  expandedTripRangeForRental,
+  mergeImportedRental,
+} from '@/features/travel/rental-confirmation-itinerary';
 import {
   emptyRentalDetailsDraft,
   type RentalDetailsDraft,
@@ -28,9 +36,10 @@ import {
   emptyStayDetailsDraft,
   type StayDetailsDraft,
 } from '@/features/travel/stay-details';
-import { applyStayExpenseFromImport } from '@/features/travel/stay-expense-from-import';
 import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
 import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
+import { TRAVEL_EXPENSE_SELF_ID } from '@/features/travel/types';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import { newId } from '@/store/schedule';
 import { addDays } from '@/utils/date';
 
@@ -87,12 +96,18 @@ export function useTravelPlanConfirmationImports({
   accountEmail,
   addSheet,
   edit,
+  navigation,
 }: {
   plan: TravelPlan;
   updatePlan: (next: TravelPlan) => void;
   accountEmail?: string;
   addSheet: TravelPlanAddSheetImportBindings;
   edit: EditBindings;
+  navigation?: {
+    onOpenExpenseDraft?: (planId: string, draft: ExpenseFormState) => void;
+    onPrepareExpenseDraft?: (planId: string, draft: ExpenseFormState) => void;
+    onGoToItinerary?: (planId: string) => void;
+  };
 }) {
   const [importingFlightTarget, setImportingFlightTarget] = useState<string>();
   const [importingRentalTarget, setImportingRentalTarget] = useState<string>();
@@ -129,6 +144,54 @@ export function useTravelPlanConfirmationImports({
       }
     },
   });
+
+  const expenseDraftForImport = (
+    title: string,
+    amount: number,
+    currency: string | undefined,
+    date: string | undefined,
+    category: 'flight' | 'transport' | 'stay',
+    notes?: string,
+  ): ExpenseFormState => ({
+    title,
+    amountText: String(amount),
+    currency: currency ?? plan.baseCurrency,
+    date: date ?? plan.startDate,
+    category,
+    notes: notes ?? '',
+    paidById: TRAVEL_EXPENSE_SELF_ID,
+    splitWithIds: defaultSplitIds(plan.participants, isTravelMemberPlan(plan)),
+  });
+
+  const openImportedExpenseDraft = (
+    amount: number,
+    currency: string | undefined,
+    date: string | undefined,
+    category: 'flight' | 'transport' | 'stay',
+    title: string,
+    notes?: string,
+  ) => {
+    if (!navigation?.onOpenExpenseDraft) return;
+    navigation.onOpenExpenseDraft(
+      plan.id,
+      expenseDraftForImport(title, amount, currency, date, category, notes),
+    );
+  };
+
+  const prepareImportedExpenseDraft = (
+    amount: number,
+    currency: string | undefined,
+    date: string | undefined,
+    category: 'flight' | 'transport' | 'stay',
+    title: string,
+    notes?: string,
+  ) => {
+    if (!navigation?.onPrepareExpenseDraft) return;
+    navigation.onPrepareExpenseDraft(
+      plan.id,
+      expenseDraftForImport(title, amount, currency, date, category, notes),
+    );
+  };
 
   const importConfirmation = async (
     target: 'new' | string,
@@ -170,47 +233,83 @@ export function useTravelPlanConfirmationImports({
           ? ` Added ${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} under Expenses.`
           : '';
       if (imported.segments.length > 1 || target !== 'new') {
-        updatePlan(
-          applyImportedFlightsToPlan({
-            plan,
-            imported,
+        updatePlan({
+          ...plan,
+          ...expandedTripRangeForFlights(plan, imported.segments),
+          itinerary: mergeImportedFlights({
+            itinerary: plan.itinerary,
+            segments: imported.segments,
+            tripRange: plan,
             createId: () => newId('trip-item'),
             targetItemId: target === 'new' ? undefined : target,
+            confirmationUris: imported.confirmationUris,
           }),
-        );
+          updatedAt: new Date().toISOString(),
+        });
         edit.setEditingFlightItemId(undefined);
         if (target === 'new') {
-          addSheet.setTitle('');
-          addSheet.setDetails('');
-          addSheet.setBookingUrl('');
-          addSheet.setFlightDetails(emptyFlightDetailsDraft());
-          addSheet.setImportedFlightFileName(undefined);
-          addSheet.setIsAddingItem(false);
-        }
-        if (imported.segments.length > 1) {
-          if (expenseAlert) {
-            appPrompt.alert(
-              'Flights Added',
-              `Saved ${imported.segments.length} flights to your itinerary.${expenseAlert}`,
+          // Segments already saved; fill sheet with first segment so user can review then submit
+          addSheet.setFlightDetails((current) => ({
+            airline: imported.flight.airline || current.airline,
+            flightNumber: imported.flight.flightNumber || current.flightNumber,
+            confirmationCode: imported.flight.confirmationCode || current.confirmationCode,
+            departureAirport: imported.flight.departureAirport || current.departureAirport,
+            arrivalAirport: imported.flight.arrivalAirport || current.arrivalAirport,
+            seat: imported.flight.seat || current.seat,
+            confirmationUris: imported.confirmationUris?.length
+              ? imported.confirmationUris
+              : current.confirmationUris,
+          }));
+          addSheet.setImportedFlightFileName(imported.fileName);
+          if (imported.title) addSheet.setTitle(imported.title);
+          const nextDate = imported.date || addSheet.date;
+          const nextStart =
+            imported.startMinutes !== undefined
+              ? imported.startMinutes
+              : (addSheet.startMinutes ?? 9 * 60);
+          if (imported.date) addSheet.setDate(imported.date);
+          if (imported.startMinutes !== undefined) addSheet.setStartMinutes(imported.startMinutes);
+          if (imported.durationMinutes !== undefined) {
+            addSheet.setDuration(String(imported.durationMinutes));
+            const span = imported.durationMinutes;
+            const dayOffset = Math.floor((nextStart + span) / (24 * 60));
+            addSheet.setEndDate(addDays(nextDate, dayOffset));
+            addSheet.setEndMinutes((nextStart + span) % (24 * 60));
+          }
+          if (imported.amount !== undefined && imported.amount > 0) {
+            prepareImportedExpenseDraft(
+              imported.amount,
+              imported.currency,
+              imported.date,
+              'flight',
+              imported.title ?? 'Flight expense',
+              imported.flight.confirmationCode
+                ? `Confirmation: ${imported.flight.confirmationCode}`
+                : undefined,
             );
           }
           return;
         }
-        if (target !== 'new') {
-          if (expenseAlert) {
-            appPrompt.alert(
-              'Flight Updated',
-              `Updated this flight from the confirmation.${expenseAlert}`,
-            );
-          }
-          return;
+        if (expenseAlert) {
+          appPrompt.alert(
+            'Flight Updated',
+            `Updated this flight from the confirmation.${expenseAlert}`,
+            undefined,
+            { cancelable: true },
+          );
         }
+        return;
       }
       if (imported.amount !== undefined && imported.amount > 0 && target === 'new') {
-        updatePlan(applyFlightExpenseFromImport(plan, imported));
-        appPrompt.alert(
-          'Flight Expense Added',
-          `${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} was added under Expenses. Review the flight details before saving.`,
+        prepareImportedExpenseDraft(
+          imported.amount,
+          imported.currency,
+          imported.date,
+          'flight',
+          imported.title ?? 'Flight expense',
+          imported.flight.confirmationCode
+            ? `Confirmation: ${imported.flight.confirmationCode}`
+            : undefined,
         );
       }
       const mergeImportedDetails = (current: FlightDetailsDraft): FlightDetailsDraft => ({
@@ -299,29 +398,43 @@ export function useTravelPlanConfirmationImports({
             pickerUi,
           ));
       if (!imported) return;
-      updatePlan(
-        applyImportedRentalToPlan({
-          plan,
-          imported,
-          createId: () => newId('trip-item'),
-          targetItemId: target === 'new' ? undefined : target,
-        }),
-      );
-      edit.setEditingRentalItemId(undefined);
-      addSheet.setKind('rental');
-      if (target === 'new') {
-        addSheet.setTitle('');
+      if (target !== 'new') {
+        updatePlan(
+          applyImportedRentalToPlan({
+            plan,
+            imported,
+            createId: () => newId('trip-item'),
+            targetItemId: target,
+          }),
+        );
+        edit.setEditingRentalItemId(undefined);
+      } else {
+        // Fill the add sheet for review; addItem() saves on submit
+        const rentalTitle =
+          imported.title ||
+          (imported.rental.company ? `${imported.rental.company} Rental` : 'Car Rental');
+        addSheet.setKind('rental');
+        addSheet.setTitle(rentalTitle);
         addSheet.setDetails('');
         addSheet.setBookingUrl('');
-        addSheet.setRentalDetails(emptyRentalDetailsDraft());
-        addSheet.setImportedRentalFileName(undefined);
-        addSheet.setIsAddingItem(false);
-      }
-      if (imported.amount !== undefined && imported.amount > 0) {
-        appPrompt.alert(
-          'Rental Added',
-          `Saved the rental to your itinerary and added ${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} under Expenses.`,
-        );
+        addSheet.setRentalDetails({ ...imported.rental });
+        if (imported.date) addSheet.setDate(imported.date);
+        if (imported.startMinutes !== undefined) addSheet.setStartMinutes(imported.startMinutes);
+        if (imported.rental.dropoffDate) addSheet.setEndDate(imported.rental.dropoffDate);
+        const dropMinutes = Number(imported.rental.dropoffMinutes);
+        if (dropMinutes > 0) addSheet.setEndMinutes(dropMinutes);
+        if (imported.amount !== undefined && imported.amount > 0) {
+          prepareImportedExpenseDraft(
+            imported.amount,
+            imported.currency,
+            imported.date,
+            'transport',
+            imported.title ?? 'Rental expense',
+            imported.rental.confirmationCode
+              ? `Confirmation: ${imported.rental.confirmationCode}`
+              : undefined,
+          );
+        }
       }
     } catch (reason) {
       const message =
@@ -372,10 +485,15 @@ export function useTravelPlanConfirmationImports({
           ));
       if (!imported) return;
       if (imported.amount !== undefined && imported.amount > 0 && target === 'new') {
-        updatePlan(applyStayExpenseFromImport(plan, imported));
-        appPrompt.alert(
-          'Stay Expense Added',
-          `${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} was added under Expenses. Review the stay details before saving.`,
+        prepareImportedExpenseDraft(
+          imported.amount,
+          imported.currency,
+          imported.date,
+          'stay',
+          imported.title ?? 'Stay expense',
+          imported.stay.confirmationCode
+            ? `Confirmation: ${imported.stay.confirmationCode}`
+            : undefined,
         );
       }
       const mergeImportedDetails = (current: StayDetailsDraft): StayDetailsDraft => ({

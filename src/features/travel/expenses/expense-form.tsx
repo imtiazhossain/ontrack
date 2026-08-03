@@ -42,6 +42,7 @@ import {
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
+  travelInputFieldBackground,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
@@ -228,7 +229,7 @@ function PersonToggleRow({
           minHeight: Math.max(72, s(76)),
           padding: rs.md,
           gap: rs.sm,
-          backgroundColor: chrome.fieldBg,
+          backgroundColor: travelInputFieldBackground(theme),
         },
         style,
       ]}>
@@ -410,7 +411,7 @@ export function TravelExpenseForm({
         onChange={(currency) => onChange({ ...form, currency })}
         iconBackground={chrome.icons.shield.bg}
         iconColor={chrome.icons.shield.fg}
-        fieldBackground={chrome.fieldBg}
+        fieldBackground={travelInputFieldBackground(theme)}
         labelColor={chrome.label}
       />
       {converted !== undefined ? (
@@ -450,7 +451,7 @@ export function TravelExpenseForm({
         }
         iconBackground={chrome.icons.lodging.bg}
         iconColor={chrome.icons.lodging.fg}
-        fieldBackground={chrome.fieldBg}
+        fieldBackground={travelInputFieldBackground(theme)}
         labelColor={chrome.label}
       />
 
@@ -509,7 +510,10 @@ export function TravelExpenseForm({
       {error ? <ErrorMessage message={error} /> : null}
 
       {onDelete ? (
-        <Button variant="danger" onPress={onDelete}>
+        <Button
+          variant="danger"
+          testID={AgentUiIds.travel.expenses.deleteExpense}
+          onPress={onDelete}>
           Delete expense
         </Button>
       ) : null}

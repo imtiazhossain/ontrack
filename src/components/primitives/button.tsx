@@ -53,7 +53,11 @@ export function Button({
     variant === 'primary' || variant === 'danger' ? theme.textOnAccent : theme.textPrimary;
   const isDisabled = disabled || loading;
   const handlePress = () => {
-    haptics.tap();
+    try {
+      haptics.tap();
+    } catch {
+      // Best-effort haptics should never block the button action.
+    }
     onPress();
   };
   const agent = useAgentUiTarget(testID, {
@@ -136,7 +140,11 @@ export function IconButton({
   const tint = color ?? theme.textPrimary;
   const spinnerColor = color ?? theme.accentPrimary;
   const handlePress = () => {
-    haptics.tap();
+    try {
+      haptics.tap();
+    } catch {
+      // Best-effort haptics should never block the button action.
+    }
     onPress();
   };
   const agent = useAgentUiTarget(testID, {
