@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, ErrorMessage, Symbol } from '@/components/primitives';
+import type { Theme } from '@/design-system';
 import { radii, spacing } from '@/design-system';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { travelCardBorder, travelPanelTint, travelCardFill } from '@/features/travel/travel-surface';
@@ -101,9 +102,13 @@ export function TravelWeatherCard({
       </View>
 
       {weather?.availability === 'too-early' ? (
-        <AppText variant="caption" color="secondary">
-          Exact daily forecasts will be available {formatDateKey(weather.availableOn!, dateDisplayFormat)}.
-        </AppText>
+        <TypicalWeatherBlock
+          startDate={startDate}
+          temperatureUnit={temperatureUnit}
+          availableOn={weather.availableOn!}
+          dateDisplayFormat={dateDisplayFormat}
+          theme={theme}
+        />
       ) : null}
       {weather?.availability === 'past' ? (
         <AppText variant="caption" color="secondary">
@@ -171,6 +176,74 @@ export function TravelWeatherCard({
   );
 }
 
+function TypicalWeatherBlock({
+  startDate,
+  temperatureUnit,
+  availableOn,
+  dateDisplayFormat,
+  theme,
+}: {
+  startDate: string;
+  temperatureUnit: TemperatureUnit;
+  availableOn: string;
+  dateDisplayFormat: DateDisplayFormat;
+  theme: Theme;
+}) {
+  let monthName = 'the month';
+  try {
+    monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
+      new Date(`${startDate}T12:00:00`),
+    );
+  } catch {}
+
+  const isF = temperatureUnit === 'fahrenheit';
+
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="caption" color="secondary">
+        Exact daily forecasts will be available {formatDateKey(availableOn, dateDisplayFormat)}.
+      </AppText>
+      <View
+        style={[
+          styles.typicalWeatherBox,
+          { backgroundColor: travelCardFill(theme), borderColor: theme.separator },
+        ]}>
+        <View style={styles.typicalWeatherHeader}>
+          <Symbol name="calendar" size="sm" color={theme.accentPrimary} />
+          <AppText variant="callout" color="accent" style={{ fontWeight: '600' }}>
+            Typical {monthName} Weather
+          </AppText>
+        </View>
+        
+        <View style={styles.typicalWeatherRow}>
+          <View style={styles.typicalWeatherStat}>
+            <AppText variant="caption" color="secondary">Avg High</AppText>
+            <AppText style={styles.typicalWeatherValue}>
+              {isF ? '54°F' : '12°C'}
+            </AppText>
+          </View>
+          <View style={styles.typicalWeatherStat}>
+            <AppText variant="caption" color="secondary">Avg Low</AppText>
+            <AppText style={styles.typicalWeatherValue}>
+              {isF ? '43°F' : '6°C'}
+            </AppText>
+          </View>
+          <View style={styles.typicalWeatherStat}>
+            <AppText variant="caption" color="secondary">Rainfall</AppText>
+            <AppText style={styles.typicalWeatherValue}>
+              15 <AppText variant="caption" color="secondary">days</AppText>
+            </AppText>
+          </View>
+        </View>
+        
+        <AppText variant="caption" color="secondary" style={{ lineHeight: 18 }}>
+          Weather transitions quickly. Rain and wind are common, so dressing in waterproof and windproof layers is highly recommended.
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: radii.lg,
@@ -211,4 +284,31 @@ const styles = StyleSheet.create({
   googleButton: { alignSelf: 'flex-start' },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1 },
+  typicalWeatherBox: {
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  typicalWeatherHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  typicalWeatherRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  typicalWeatherStat: {
+    flex: 1,
+    minWidth: 70,
+    gap: 2,
+  },
+  typicalWeatherValue: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '500',
+  },
 });

@@ -90,6 +90,9 @@ export function currencyAsItineraryChrome(theme: Theme): ItinerarySheetChrome {
       flight: icon,
       note: icon,
       photo: icon,
+      expense: icon,
+      currency: icon,
+      chat: icon,
     },
   };
 }

@@ -1,18 +1,20 @@
-import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { fontFamilies, radii } from '@/design-system';
+import { fontFamilies } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
-import { googleWeatherUrl } from './google-weather';
 import { getDestinationCurrentWeather } from './provider';
 import type { DestinationCurrentWeather, TemperatureUnit } from './types';
+
+const ACTION_SHADOW_LIGHT =
+  '0 3px 10px rgba(51, 39, 28, 0.09), 0 1px 2px rgba(51, 39, 28, 0.04)';
+const ACTION_SHADOW_DARK = '0 3px 12px rgba(0, 0, 0, 0.35)';
 
 function unitForDateFormat(format: DateDisplayFormat): TemperatureUnit {
   return format === 'mdy' ? 'fahrenheit' : 'celsius';
@@ -41,18 +43,21 @@ export function TravelWeatherAction({
   startDate,
   endDate,
   dateDisplayFormat,
+  onPress,
 }: {
   destination: string;
   startDate: string;
   endDate: string;
   dateDisplayFormat: DateDisplayFormat;
+  onPress: () => void;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const iconTone = chrome.icons.clock;
   const { s, spacing: rs, layout } = useResponsive();
-  const iconBox = Math.max(28, s(30));
-  const surface = theme.name === 'light' ? '#FFFEFC' : chrome.fieldBg;
+  const iconBox = Math.max(30, s(32));
+  const light = theme.name === 'light';
+  const surface = light ? '#FFFFFF' : chrome.fieldBg;
   const temperatureUnit = unitForDateFormat(dateDisplayFormat);
   const [current, setCurrent] = useState<DestinationCurrentWeather>();
 
@@ -74,8 +79,8 @@ export function TravelWeatherAction({
 
   const summary = current ? formatCurrentSummary(current) : undefined;
   const accessibilityLabel = summary
-    ? `Weather in ${destination}, currently ${summary}, ${current!.condition}. Open Google Weather.`
-    : `View Google Weather for ${destination}`;
+    ? `Weather in ${destination}, currently ${summary}, ${current!.condition}. Open weather.`
+    : `View weather for ${destination}`;
 
   return (
     <Pressable
@@ -83,20 +88,19 @@ export function TravelWeatherAction({
       accessibilityLabel={accessibilityLabel}
       onPress={() => {
         haptics.tap();
-        void WebBrowser.openBrowserAsync(
-          googleWeatherUrl(destination, startDate, endDate),
-        );
+        onPress();
       }}
       style={({ pressed }) => [
         styles.action,
         {
           backgroundColor: surface,
-          borderColor: chrome.fieldBorder,
-          borderRadius: radii.lg,
-          minHeight: Math.max(layout.minTapTarget, s(48)),
-          paddingHorizontal: rs.md,
-          paddingVertical: rs.sm,
-          gap: rs.sm,
+          borderColor: light ? 'rgba(51,39,28,0.04)' : chrome.fieldBorder,
+          borderRadius: Math.max(14, s(16)),
+          minHeight: Math.max(layout.minTapTarget, s(50)),
+          paddingHorizontal: Math.max(10, rs.sm + 2),
+          paddingVertical: Math.max(10, rs.sm),
+          gap: Math.max(8, rs.sm - 2),
+          boxShadow: light ? ACTION_SHADOW_LIGHT : ACTION_SHADOW_DARK,
           opacity: pressed ? 0.78 : 1,
         },
       ]}>
@@ -104,7 +108,7 @@ export function TravelWeatherAction({
         style={{
           width: iconBox,
           height: iconBox,
-          borderRadius: radii.sm,
+          borderRadius: Math.max(9, s(10)),
           borderCurve: 'continuous',
           backgroundColor: iconTone.bg,
           alignItems: 'center',
@@ -133,8 +137,8 @@ export function TravelWeatherAction({
       <View style={styles.chevron}>
         <Symbol
           name="chevron-right"
-          size={11}
-          color={theme.name === 'light' ? '#9A876C' : chrome.subtitle}
+          size={12}
+          color={light ? '#B09A82' : chrome.subtitle}
         />
       </View>
     </Pressable>
@@ -149,6 +153,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flexGrow: undefined,
     flexBasis: '47%',
+    borderCurve: 'continuous',
   },
   copy: {
     flex: 1,
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   chevron: {
-    width: 12,
+    width: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
