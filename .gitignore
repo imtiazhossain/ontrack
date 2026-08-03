@@ -48,6 +48,8 @@ modules/*/android/build/
 
 # local EAS build artifacts
 .eas-local-build/
+.gradle/
+modules/**/.gradle/
 
 # Agent scratch under .cursor (keep committed rules)
 .cursor/*

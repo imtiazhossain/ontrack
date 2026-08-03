@@ -37,6 +37,10 @@ export interface TravelStayDetails {
   confirmationUris?: string[];
   /** Freeform stay notes (wifi, door codes, parking, etc.). */
   notes?: string;
+  /** Total price for the stay. */
+  price?: number;
+  /** Currency code for the stay price, e.g. USD. */
+  currency?: string;
 }
 
 export interface TravelItineraryItem {

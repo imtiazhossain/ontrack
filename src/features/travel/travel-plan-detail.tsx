@@ -54,6 +54,7 @@ import {
   validateStayDetails,
   type StayDetailsDraft,
 } from '@/features/travel/stay-details';
+import { applyStayExpenseFromImport } from '@/features/travel/stay-expense-from-import';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
 import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
@@ -1015,6 +1016,13 @@ export function TravelPlanDetail({
             pickerUi,
           ));
       if (!imported) return;
+      if (imported.amount !== undefined && imported.amount > 0 && target === 'new') {
+        updatePlan(applyStayExpenseFromImport(plan, imported));
+        appPrompt.alert(
+          'Stay Expense Added',
+          `${imported.currency ?? plan.baseCurrency} ${imported.amount.toFixed(2)} was added under Expenses. Review the stay details before saving.`,
+        );
+      }
       const mergeImportedDetails = (current: StayDetailsDraft): StayDetailsDraft => ({
         ...current,
         confirmationCode:
@@ -1030,6 +1038,11 @@ export function TravelPlanDetail({
           ? imported.confirmationUris
           : current.confirmationUris,
         notes: imported.stay.notes || current.notes,
+        price:
+          imported.stay.price !== undefined
+            ? String(imported.stay.price)
+            : current.price,
+        currency: imported.stay.currency || current.currency,
       });
       if (target === 'new') {
         setError(undefined);

@@ -105,6 +105,36 @@ export function StayDetailsEditor({
         maxLength={24}
         {...itinerarySheetFieldProps(chrome, 'import')}
       />
+      <View style={[styles.twoColumns, { gap: rs.sm }]}>
+        <View style={[styles.flex, { minWidth: columnMinWidth }]}>
+          <Input
+            icon="currency"
+            stackedLabel="Price"
+            value={value.price}
+            onChangeText={(nextValue) =>
+              onChange({ ...value, price: nextValue })
+            }
+            placeholder="0.00"
+            keyboardType="decimal-pad"
+            {...itinerarySheetFieldProps(chrome, 'import')}
+          />
+        </View>
+        <View style={[styles.flex, { minWidth: columnMinWidth }]}>
+          <Input
+            icon="wallet"
+            stackedLabel="Currency"
+            value={value.currency}
+            onChangeText={(nextValue) =>
+              onChange({ ...value, currency: nextValue.toUpperCase() })
+            }
+            placeholder="USD"
+            autoCapitalize="characters"
+            maxLength={3}
+            autoCorrect={false}
+            {...itinerarySheetFieldProps(chrome, 'shield')}
+          />
+        </View>
+      </View>
       <Input
         icon="note"
         stackedLabel="Reservation Email"

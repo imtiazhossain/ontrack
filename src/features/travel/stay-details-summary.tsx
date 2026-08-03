@@ -63,6 +63,7 @@ export function StayDetailsSummary({
     Boolean(details.confirmationCode) ||
     Boolean(details.reservationEmail) ||
     Boolean(details.notes) ||
+    details.price !== undefined ||
     Boolean(checkinStamp) ||
     Boolean(checkoutStamp) ||
     confirmationUris.length > 0;
@@ -74,6 +75,13 @@ export function StayDetailsSummary({
       : undefined,
     checkoutStamp
       ? { label: 'Check Out', value: checkoutStamp, icon: 'calendar' as const }
+      : undefined,
+    details.price !== undefined
+      ? {
+          label: 'Price',
+          value: `${details.currency ? `${details.currency} ` : ''}${details.price.toFixed(2)}`,
+          icon: 'currency' as const,
+        }
       : undefined,
     details.reservationEmail
       ? {
