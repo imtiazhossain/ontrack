@@ -477,6 +477,41 @@ export function TravelItineraryForm({
             maxLength={24}
             {...itinerarySheetFieldProps(chrome, 'shield')}
           />
+          <View style={[styles.twoColumns, { gap: rs.sm }]}>
+            <View style={styles.flex}>
+              <Input
+                value={stayDetails.price}
+                onChangeText={(nextValue) =>
+                  onStayDetailsChange({ ...stayDetails, price: nextValue })
+                }
+                icon="currency"
+                stackedLabel="Price"
+                placeholder="0.00"
+                accessibilityLabel="Price"
+                keyboardType="decimal-pad"
+                {...itinerarySheetFieldProps(chrome, 'import')}
+              />
+            </View>
+            <View style={styles.flex}>
+              <Input
+                value={stayDetails.currency}
+                onChangeText={(nextValue) =>
+                  onStayDetailsChange({
+                    ...stayDetails,
+                    currency: nextValue.toUpperCase(),
+                  })
+                }
+                icon="wallet"
+                stackedLabel="Currency"
+                placeholder="USD"
+                accessibilityLabel="Currency"
+                autoCapitalize="characters"
+                maxLength={3}
+                autoCorrect={false}
+                {...itinerarySheetFieldProps(chrome, 'shield')}
+              />
+            </View>
+          </View>
           <Input
             value={stayDetails.reservationEmail}
             onChangeText={(nextValue) =>

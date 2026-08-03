@@ -109,4 +109,113 @@ describe('stay confirmation parser', () => {
     expect(parsed.details).not.toMatch(/AM Booking/i);
     expect(parsed.bookingUrl).toContain('trivago.deals');
   });
+
+  it('parses Airbnb itinerary with Stay name, address, notes, price, and currency', () => {
+    const AIRBNB_ITINERARY = `
+Reservation confirmed
+Confirmation code: HM3DMFZH2T
+Luxury Villa with Ocean View
+Entire home/apt in Malibu, California
+Address: 123 Seaside Way, Malibu, CA 90265
+Check-in
+Thu, Oct 15, 2026
+3:00 PM
+Checkout
+Sun, Oct 18, 2026
+11:00 AM
+4 guests · 2 bedrooms · 3 beds · 2 baths
+Hosted by Maria
+Contact host: +1 (555) 234-5678
+Total (USD) $1,250.00
+https://www.airbnb.com/rooms/12345678
+`;
+    const parsed = parseStayConfirmation(AIRBNB_ITINERARY, {
+      startDate: '2026-10-10',
+      endDate: '2026-10-25',
+    });
+    expect(parsed.stay.confirmationCode).toBe('HM3DMFZH2T');
+    expect(parsed.title).toBe('Luxury Villa with Ocean View');
+    expect(parsed.details).toBe('123 Seaside Way, Malibu, CA 90265');
+    expect(parsed.date).toBe('2026-10-15');
+    expect(parsed.startMinutes).toBe(15 * 60);
+    expect(parsed.stay.checkoutDate).toBe('2026-10-18');
+    expect(Number(parsed.stay.checkoutMinutes)).toBe(11 * 60);
+    expect(parsed.amount).toBe(1250);
+    expect(parsed.currency).toBe('USD');
+    expect(parsed.stay.price).toBe('1250');
+    expect(parsed.stay.currency).toBe('USD');
+    expect(parsed.stay.notes).toContain('4 guests');
+    expect(parsed.stay.notes).toContain('Hosted by Maria');
+    expect(parsed.stay.notes).toContain('+1 (555) 234-5678');
+  });
+
+  it('parses Villa Patziac Airbnb itinerary with unlabelled geographic location', () => {
+    const VILLA_PATZIAC = `
+Villa Patziac | Private Cove | Serene Retreat
+
+Check-in
+3:00 PM
+Tue, Sep 22
+
+Checkout
+11:00 AM
+Thu, Sep 24
+
+Call host: +1 917-334-6322
+
+Who's coming
+5 guests
+
+Confirmation code
+HM3DMFZH2T
+
+Santa Cruz la Laguna, Sololá Department, Guatemala
+
+Hosted by Christopher And Erynne
+
+Payment details
+Total cost: $1,097.22
+`;
+    const parsed = parseStayConfirmation(VILLA_PATZIAC, {
+      startDate: '2026-09-20',
+      endDate: '2026-09-30',
+    });
+    expect(parsed.stay.confirmationCode).toBe('HM3DMFZH2T');
+    expect(parsed.title).toBe('Villa Patziac | Private Cove | Serene Retreat');
+    expect(parsed.details).toBe(
+      'Santa Cruz la Laguna, Sololá Department, Guatemala',
+    );
+    expect(parsed.details).not.toContain('Call host');
+    expect(parsed.details).not.toContain('+1');
+    expect(parsed.date).toBe('2026-09-22');
+    expect(parsed.startMinutes).toBe(15 * 60);
+    expect(parsed.stay.checkoutDate).toBe('2026-09-24');
+    expect(Number(parsed.stay.checkoutMinutes)).toBe(11 * 60);
+    expect(parsed.amount).toBe(1097.22);
+    expect(parsed.stay.price).toBe('1097.22');
+    expect(parsed.stay.notes).toContain('5 guests');
+    expect(parsed.stay.notes).toContain('Hosted by Christopher And Erynne');
+    expect(parsed.stay.notes).toContain('+1 917-334-6322');
+  });
+
+  it('leaves address empty when address is unclear or ambiguous', () => {
+    const UNCLEAR_CONFIRMATION = `
+Your reservation is confirmed
+Confirmation code: XYZ987654
+Cozy Lakeside Cabin
+Check-in: Sep 10, 2026 3:00 PM
+Check-out: Sep 15, 2026 11:00 AM
+Hosted by John Doe
+Call host: +1 800-555-0199
+`;
+    const parsed = parseStayConfirmation(UNCLEAR_CONFIRMATION, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-20',
+    });
+    expect(parsed.title).toBe('Cozy Lakeside Cabin');
+    expect(parsed.stay.confirmationCode).toBe('XYZ987654');
+    expect(parsed.details).toBeUndefined();
+  });
 });
+
+

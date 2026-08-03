@@ -10,11 +10,20 @@ export interface StayDetailsDraft {
   checkoutMinutes: string;
   confirmationUris?: string[];
   notes: string;
+  price: string;
+  currency: string;
 }
 
 export function emptyStayDetailsDraft(
   defaults?: Partial<
-    Pick<StayDetailsDraft, 'checkoutDate' | 'checkoutMinutes' | 'reservationEmail'>
+    Pick<
+      StayDetailsDraft,
+      | 'checkoutDate'
+      | 'checkoutMinutes'
+      | 'reservationEmail'
+      | 'price'
+      | 'currency'
+    >
   >,
 ): StayDetailsDraft {
   return {
@@ -23,6 +32,8 @@ export function emptyStayDetailsDraft(
     checkoutDate: defaults?.checkoutDate ?? '',
     checkoutMinutes: defaults?.checkoutMinutes ?? String(11 * 60),
     notes: '',
+    price: defaults?.price ?? '',
+    currency: defaults?.currency ?? '',
   };
 }
 
@@ -31,6 +42,19 @@ function optionalText(value: unknown, uppercase = false): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   return uppercase ? trimmed.toUpperCase() : trimmed;
+}
+
+function optionalPositiveNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.round(value * 100) / 100;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.replace(/,/g, '').trim());
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.round(parsed * 100) / 100;
+    }
+  }
+  return undefined;
 }
 
 function optionalMinutes(value: unknown): number | undefined {
@@ -55,6 +79,8 @@ export function stayDetailsDraft(value?: TravelStayDetails): StayDetailsDraft {
     checkoutMinutes:
       value?.checkoutMinutes !== undefined ? String(value.checkoutMinutes) : '',
     notes: value?.notes ?? '',
+    price: value?.price !== undefined ? String(value.price) : '',
+    currency: value?.currency ?? '',
     ...(value?.confirmationUris?.length
       ? { confirmationUris: value.confirmationUris }
       : {}),
@@ -69,6 +95,8 @@ export function normalizeStayDetails(input: unknown): TravelStayDetails | undefi
   const checkoutDate = optionalText(value.checkoutDate);
   const confirmationUris = normalizeConfirmationUris(value.confirmationUris);
   const reservationEmail = optionalText(value.reservationEmail)?.toLowerCase();
+  const price = optionalPositiveNumber(value.price);
+  const currency = optionalText(value.currency, true);
   const next: TravelStayDetails = {
     confirmationCode: optionalText(value.confirmationCode, true),
     reservationEmail:
@@ -78,6 +106,8 @@ export function normalizeStayDetails(input: unknown): TravelStayDetails | undefi
     checkoutDate: checkoutDate && isDateKey(checkoutDate) ? checkoutDate : undefined,
     checkoutMinutes: optionalMinutes(value.checkoutMinutes),
     notes: optionalText(value.notes),
+    price,
+    currency: price !== undefined && currency ? currency : undefined,
     ...(confirmationUris ? { confirmationUris } : {}),
   };
   if (
@@ -86,6 +116,7 @@ export function normalizeStayDetails(input: unknown): TravelStayDetails | undefi
     !next.checkoutDate &&
     next.checkoutMinutes === undefined &&
     !next.notes &&
+    next.price === undefined &&
     !next.confirmationUris?.length
   ) {
     return undefined;
@@ -115,6 +146,14 @@ export function validateStayDetails(
   if (notes.length > 1000) {
     return { ok: false, error: 'Keep stay notes under 1,000 characters.' };
   }
+  const priceText = draft.price.trim();
+  let price: number | undefined;
+  if (priceText) {
+    price = Number(priceText.replace(/,/g, ''));
+    if (!Number.isFinite(price) || price < 0) {
+      return { ok: false, error: 'Enter a valid stay price.' };
+    }
+  }
   const reservationEmail = draft.reservationEmail.trim();
   if (reservationEmail && !EMAIL_PATTERN.test(reservationEmail)) {
     return { ok: false, error: 'Enter a valid reservation email.' };
@@ -126,6 +165,8 @@ export function validateStayDetails(
     checkoutMinutes,
     confirmationUris: draft.confirmationUris,
     notes: notes || undefined,
+    price,
+    currency: draft.currency.trim() || undefined,
   });
   if (
     value?.confirmationCode &&

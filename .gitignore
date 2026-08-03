@@ -48,3 +48,5 @@ modules/*/android/build/
 
 # local EAS build artifacts
 .eas-local-build/
+.gradle/
+modules/**/.gradle/

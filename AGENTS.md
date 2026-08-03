@@ -116,3 +116,4 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 - Plant/travel entity IDs should use `@/utils/id` (or schedule’s re-export), not ad-hoc generators.
 - Platform extension files (`*.ios.tsx`, `*.android.tsx`, `*.web.tsx`) are resolved by Metro — do not delete because imports look unused.
 - **Avatar initials:** never use `AppText fit` / shrink-to-fit inside `ProfileAvatar` — use fixed `Text` + `avatarInitialsFontSize()` (see `profile-avatar-initials` tests).
+- **Stay confirmation address:** Only extract high-confidence addresses (explicit labels, recognized street formats, or clean multi-part geographic locations). If an address is unclear or ambiguous, do not populate it with noisy text (e.g. phone numbers or date lines) — leave it blank so the user can manually enter it.
