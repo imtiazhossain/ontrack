@@ -7,6 +7,7 @@ import { radii, shadows } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import {
   formatDateKey,
   formatDatePickerTitle,
@@ -18,7 +19,7 @@ import {
 import { AppText } from './app-text';
 import { IconButton } from './button';
 import { DateFieldCalendar } from './date-field-calendar';
-import { FieldLeadingIcon } from './field-leading-icon';
+import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 
 interface DateFieldProps {
   label?: string;
@@ -106,6 +107,10 @@ export function DateField({
     setCalendarCursor(new Date(initial.getFullYear(), initial.getMonth(), 1, 12));
     setShowPicker(true);
   };
+  const agent = useAgentUiTarget(testID, {
+    label: resolvedA11yLabel,
+    onPress: disabled ? undefined : openPicker,
+  });
 
   const commitDraft = () => {
     onChange(toDateKey(draftDate));
@@ -120,31 +125,30 @@ export function DateField({
         </AppText>
       ) : null}
       <Pressable
+        ref={agent.ref}
+        testID={testID}
+        onLayout={agent.onLayout}
         accessibilityRole="button"
         accessibilityLabel={resolvedA11yLabel}
         accessibilityValue={{ text: displayValue || resolvedPlaceholder }}
         disabled={disabled}
         onPress={openPicker}
         style={({ pressed }) => [
-          {
+          fieldLeadingIconRowStyle({
             minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
             borderRadius: stacked ? radii.lg : radii.md,
             paddingHorizontal: spacing.md,
             paddingVertical: stacked ? spacing.sm : 0,
-            flexDirection: 'row',
-            alignItems: stacked ? 'flex-start' : 'center',
             gap: spacing.sm,
             backgroundColor: fieldBackground ?? theme.backgroundSunken,
             opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
-          },
+          }),
         ]}>
-        <View style={stacked ? { paddingTop: s(2) } : undefined}>
-          <FieldLeadingIcon
-            name="calendar"
-            backgroundColor={iconBackground}
-            color={iconColor}
-          />
-        </View>
+        <FieldLeadingIcon
+          name="calendar"
+          backgroundColor={iconBackground}
+          color={iconColor}
+        />
         {stacked ? (
           <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' }}>
             <AppText

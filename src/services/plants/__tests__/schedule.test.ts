@@ -7,6 +7,7 @@ import { toDateKey } from '@/utils/date';
 import {
   activatePlantSchedule,
   logPlantWatering,
+  reconcilePlantSchedules,
   undoPlantWatering,
   wateringDueAt,
 } from '@/services/plants/schedule';
@@ -69,6 +70,58 @@ describe('plant watering scheduling', () => {
       expect.objectContaining({ plantId: plant.id, careKind: 'watering', status: 'upcoming' }),
     ]);
     expect(usePlants.getState().plants[0].wateringActivityId).toBe(useSchedule.getState().activities[0].id);
+  });
+
+  it('collapses orphan watering duplicates on reconcile', async () => {
+    const makeWatering = () =>
+      useSchedule.getState().saveEvent({
+        detailKind: 'plant',
+        activity: {
+          date: '2026-07-27',
+          title: 'Water Moss',
+          categoryId: 'plant',
+          startMinutes: 540,
+          durationMinutes: 10,
+          status: 'upcoming',
+          plantId: plant.id,
+          careKind: 'watering',
+        },
+      });
+
+    makeWatering();
+    makeWatering();
+    makeWatering();
+    usePlants.setState({
+      plants: [{ ...plant, wateringLogs: [], checkIns: [], wateringActivityId: undefined }],
+    });
+
+    await reconcilePlantSchedules();
+
+    const watering = useSchedule.getState().activities.filter(
+      (item) => item.plantId === plant.id && item.careKind === 'watering' && item.status === 'upcoming',
+    );
+    expect(watering).toHaveLength(1);
+    expect(usePlants.getState().plants[0].wateringActivityId).toBe(watering[0].id);
+  });
+
+  it('keeps a single watering activity under concurrent reconcile', async () => {
+    usePlants.setState({
+      plants: [{ ...plant, wateringLogs: [], checkIns: [], wateringActivityId: undefined }],
+    });
+    useSchedule.setState({ activities: [], meals: [], workouts: [], workSessions: [], movies: [], seeded: true });
+
+    await Promise.all([
+      reconcilePlantSchedules(),
+      reconcilePlantSchedules(),
+      activatePlantSchedule(plant.id, false),
+      reconcilePlantSchedules(),
+    ]);
+
+    const watering = useSchedule.getState().activities.filter(
+      (item) => item.plantId === plant.id && item.careKind === 'watering' && item.status === 'upcoming',
+    );
+    expect(watering).toHaveLength(1);
+    expect(usePlants.getState().plants[0].wateringActivityId).toBe(watering[0].id);
   });
 
   it('advances from actual watering and supports undoing the latest log', async () => {

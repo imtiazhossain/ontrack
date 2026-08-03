@@ -61,6 +61,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { newId } from '@/utils/id';
 import { haptics } from '@/utils/haptics';
+import {
+  TravelRemoveConfirmModal,
+  type TravelRemoveConfirmPayload,
+} from '@/features/travel/travel-remove-confirm-modal';
 
 function tripNameSlug(title: string): string {
   const slug = title
@@ -116,6 +120,8 @@ export function TravelFriendsSheet({
   const [joinRequests, setJoinRequests] = useState<TravelOpenJoinRequest[]>([]);
   const [decidingRequestId, setDecidingRequestId] = useState<string>();
   const [roster, setRoster] = useState<TravelTripRosterPerson[]>([]);
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
   const onSavePlanRef = useRef(onSavePlan);
   onSavePlanRef.current = onSavePlan;
   const ensuredOpenJoinForPlanRef = useRef<string | undefined>(undefined);
@@ -526,7 +532,7 @@ export function TravelFriendsSheet({
 
   const confirmRemoveParticipant = (participant: TravelParticipant) => {
     const accepted = Boolean(participant.acceptedAt);
-    confirmDestructiveAction({
+    setRemoveConfirm({
       title: accepted ? 'Remove Friend?' : 'Remove Invitation?',
       message: accepted
         ? `${participant.name} will be removed from this trip and their invite link will stop working.`
@@ -555,7 +561,7 @@ export function TravelFriendsSheet({
       );
       return;
     }
-    confirmDestructiveAction({
+    setRemoveConfirm({
       title: 'Remove Friend?',
       message: `${member.displayName} will be removed from this trip and their invite link will stop working.`,
       actionLabel: 'Remove Friend',
@@ -721,7 +727,7 @@ export function TravelFriendsSheet({
 
   const removeCohost = (member: TravelTripRosterPerson) => {
     if (!isSoleHost) return;
-    confirmDestructiveAction({
+    setRemoveConfirm({
       title: 'Remove Co-host?',
       message: `${member.displayName} will stay on the trip as a friend, but won’t manage invites.`,
       actionLabel: 'Remove Co-host',
@@ -844,9 +850,10 @@ export function TravelFriendsSheet({
     : undefined;
 
   return (
+    <>
     <TravelSheetModal
-        visible={visible}
-        eyebrow="Co-Travelers"
+      visible={visible}
+      eyebrow="Co-Travelers"
         title={plan.title}
         subtitle={
           canManage
@@ -1184,6 +1191,11 @@ export function TravelFriendsSheet({
               </View>
             ) : null}
     </TravelSheetModal>
+    <TravelRemoveConfirmModal
+      payload={removeConfirm}
+      onCancel={() => setRemoveConfirm(null)}
+    />
+    </>
   );
 }
 

@@ -34,10 +34,8 @@ import {
   kindIcon,
   kindTint,
 } from '@/features/travel/travel-kind-chrome';
-import {
-  TravelItemNotesButton,
-  TravelItemNotesSheet,
-} from '@/features/travel/travel-item-notes-sheet';
+import { TravelItemNotesButton, TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
+import { AgentUiIds } from '@/utils/agent-ui';
 import {
   TRAVEL_CARD_SHADOW,
   travelCardBorder,
@@ -661,6 +659,7 @@ export function TravelTimelineNode({
                       iconSize="sm"
                       background={theme.backgroundSunken}
                       color={theme.danger}
+                      testID={AgentUiIds.travel.removeConfirm.open}
                       accessibilityLabel={`Remove ${item.title}`}
                       onPress={onRemove}
                     />

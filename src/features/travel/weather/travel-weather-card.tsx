@@ -1,18 +1,23 @@
-import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, Symbol } from '@/components/primitives';
+import { AppText, ErrorMessage, Symbol } from '@/components/primitives';
 import type { Theme } from '@/design-system';
-import { radii, spacing } from '@/design-system';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { travelCardBorder, travelPanelTint, travelCardFill } from '@/features/travel/travel-surface';
+import { fontFamilies, radii } from '@/design-system';
+import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+  travelCardBorder,
+  travelCardFill,
+  travelCardShadow,
+  travelPanelTint,
+  TRAVEL_EDITORIAL_ACCENT,
+} from '@/features/travel/travel-surface';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
 import { formatDateKey } from '@/utils/date';
 
 import { getTravelWeather } from './provider';
-import { googleWeatherUrl } from './google-weather';
 import type { TemperatureUnit, TravelWeather } from './types';
 
 interface TravelWeatherCardProps {
@@ -39,6 +44,9 @@ export function TravelWeatherCard({
   compact = false,
 }: TravelWeatherCardProps) {
   const theme = useTheme();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
+  const light = theme.name === 'light';
   const temperatureUnit = unitForDateFormat(dateDisplayFormat);
   const [requestVersion, setRequestVersion] = useState(0);
   const requestKey = [
@@ -75,6 +83,9 @@ export function TravelWeatherCard({
     [compact, weather],
   );
   const hiddenDayCount = Math.max(0, (weather?.days.length ?? 0) - shownDays.length);
+  const iconSize = Math.max(44, s(48));
+  const accent = light ? TRAVEL_EDITORIAL_ACCENT : chrome.ctaFrom;
+  const locationLabel = weather?.locationLabel ?? destination;
 
   return (
     <View
@@ -82,23 +93,55 @@ export function TravelWeatherCard({
       style={[
         styles.card,
         {
-          backgroundColor: travelPanelTint(theme),
+          backgroundColor: light ? '#F7F1E8' : travelPanelTint(theme),
           borderColor: travelCardBorder(theme),
+          borderRadius: Math.max(20, s(22)),
+          padding: Math.max(16, rs.md + 2),
+          gap: Math.max(14, rs.md),
+          boxShadow: travelCardShadow(theme),
         },
       ]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Symbol name="weather" size="md" color={theme.accentPrimary} />
-          <View style={styles.flex}>
-            <AppText variant="overline" color="accent" style={travelOverlineStyle} fit>
-              Destination Weather
-            </AppText>
-            <AppText variant="callout" color="accent" fit>
-              {weather?.locationLabel ?? destination}
-            </AppText>
-          </View>
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              width: iconSize,
+              height: iconSize,
+              borderRadius: iconSize / 2,
+              backgroundColor: light ? '#EFE6D8' : chrome.icons.clock.bg,
+            },
+          ]}>
+          <Symbol name="weather" size="md" color={accent} />
         </View>
-        {!weather && !error ? <ActivityIndicator color={theme.accentPrimary} /> : null}
+        <View style={styles.flex}>
+          <AppText
+            variant="callout"
+            fit
+            numberOfLines={1}
+            style={[
+              styles.cardTitle,
+              {
+                color: accent,
+                fontSize: s(17),
+                lineHeight: s(22),
+              },
+            ]}>
+            Destination Weather
+          </AppText>
+          <AppText
+            variant="caption"
+            fit
+            numberOfLines={1}
+            style={{
+              color: chrome.subtitle,
+              fontSize: s(14),
+              lineHeight: s(18),
+            }}>
+            {locationLabel}
+          </AppText>
+        </View>
+        {!weather && !error ? <ActivityIndicator color={accent} /> : null}
       </View>
 
       {weather?.availability === 'too-early' ? (
@@ -108,6 +151,7 @@ export function TravelWeatherCard({
           availableOn={weather.availableOn!}
           dateDisplayFormat={dateDisplayFormat}
           theme={theme}
+          accent={accent}
         />
       ) : null}
       {weather?.availability === 'past' ? (
@@ -117,15 +161,26 @@ export function TravelWeatherCard({
       ) : null}
 
       {shownDays.length > 0 ? (
-        <View style={styles.days}>
+        <View style={[styles.days, { gap: rs.sm }]}>
           {shownDays.map((day) => (
-            <View key={day.date} style={[styles.day, { backgroundColor: travelCardFill(theme) }]}>
+            <View
+              key={day.date}
+              style={[
+                styles.day,
+                {
+                  backgroundColor: travelCardFill(theme),
+                  borderRadius: radii.sm,
+                  padding: rs.sm,
+                  gap: rs.xxs,
+                },
+              ]}>
               <AppText variant="caption" color="secondary">
                 {formatDateKey(day.date, dateDisplayFormat)}
               </AppText>
-              <AppText style={styles.weatherSymbol}>{day.symbol}</AppText>
+              <AppText style={{ fontSize: s(22), lineHeight: s(28) }}>{day.symbol}</AppText>
               <AppText variant="callout">
-                {day.temperatureMax}{unitSymbol(temperatureUnit)}
+                {day.temperatureMax}
+                {unitSymbol(temperatureUnit)}
               </AppText>
               <AppText variant="caption" color="secondary">
                 {day.temperatureMin}° · {day.precipitationProbability}% rain
@@ -133,8 +188,19 @@ export function TravelWeatherCard({
             </View>
           ))}
           {hiddenDayCount > 0 ? (
-            <View style={[styles.moreDays, { borderColor: theme.separator }]}>
-              <AppText variant="caption" color="accent">+{hiddenDayCount} days</AppText>
+            <View
+              style={[
+                styles.moreDays,
+                {
+                  borderColor: theme.separator,
+                  minWidth: Math.max(72, s(72)),
+                  minHeight: Math.max(40, s(40)),
+                  paddingHorizontal: rs.sm,
+                },
+              ]}>
+              <AppText variant="caption" color="accent" fit>
+                +{hiddenDayCount} days
+              </AppText>
             </View>
           ) : null}
         </View>
@@ -142,36 +208,32 @@ export function TravelWeatherCard({
 
       {weather?.availability === 'partial' && weather.availableThrough ? (
         <AppText variant="caption" color="secondary">
-          Forecast currently available through {formatDateKey(weather.availableThrough, dateDisplayFormat)}.
+          Forecast currently available through{' '}
+          {formatDateKey(weather.availableThrough, dateDisplayFormat)}.
         </AppText>
       ) : null}
 
       {error ? (
-        <View style={styles.errorRow}>
+        <View style={[styles.errorRow, { gap: rs.sm }]}>
           <ErrorMessage message={error} variant="caption" style={styles.flex} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Retry destination weather"
             onPress={() => setRequestVersion((version) => version + 1)}
-            style={({ pressed }) => [styles.retry, pressed ? styles.pressed : undefined]}>
-            <AppText variant="caption" color="accent">Retry</AppText>
+            style={({ pressed }) => [
+              {
+                minHeight: Math.max(36, s(36)),
+                justifyContent: 'center',
+                paddingHorizontal: rs.sm,
+              },
+              pressed ? styles.pressed : undefined,
+            ]}>
+            <AppText variant="caption" color="accent">
+              Retry
+            </AppText>
           </Pressable>
         </View>
       ) : null}
-
-      <Button
-        variant="ghost"
-        icon="open-external"
-        style={styles.googleButton}
-        onPress={() =>
-          void WebBrowser.openBrowserAsync(
-            googleWeatherUrl(destination, startDate, endDate),
-          )
-        }
-        accessibilityLabel={`View Google weather for ${destination} during this trip`}>
-        View on Google Weather
-      </Button>
-      <AppText variant="caption" color="tertiary">Weather by Open-Meteo</AppText>
     </View>
   );
 }
@@ -182,62 +244,131 @@ function TypicalWeatherBlock({
   availableOn,
   dateDisplayFormat,
   theme,
+  accent,
 }: {
   startDate: string;
   temperatureUnit: TemperatureUnit;
   availableOn: string;
   dateDisplayFormat: DateDisplayFormat;
   theme: Theme;
+  accent: string;
 }) {
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
+  const light = theme.name === 'light';
+
   let monthName = 'the month';
   try {
     monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
       new Date(`${startDate}T12:00:00`),
     );
-  } catch {}
+  } catch {
+    /* keep fallback */
+  }
 
   const isF = temperatureUnit === 'fahrenheit';
+  const stats = [
+    { label: 'Avg High', value: isF ? '54°F' : '12°C' },
+    { label: 'Avg Low', value: isF ? '43°F' : '6°C' },
+    { label: 'Rainfall', value: '15 days' },
+  ] as const;
+  const ruleColor = light ? 'rgba(160, 120, 80, 0.28)' : chrome.fieldBorder;
+  const diamondColor = light ? '#C4A06A' : chrome.ctaFrom;
 
   return (
-    <View style={{ gap: spacing.sm }}>
-      <AppText variant="caption" color="secondary">
+    <View style={{ gap: Math.max(12, rs.sm + 2) }}>
+      <AppText
+        variant="caption"
+        style={{
+          color: chrome.subtitle,
+          fontSize: s(13),
+          lineHeight: s(18),
+        }}>
         Exact daily forecasts will be available {formatDateKey(availableOn, dateDisplayFormat)}.
       </AppText>
       <View
         style={[
           styles.typicalWeatherBox,
-          { backgroundColor: travelCardFill(theme), borderColor: theme.separator },
+          {
+            backgroundColor: travelCardFill(theme),
+            borderColor: travelCardBorder(theme),
+            borderRadius: Math.max(16, s(18)),
+            padding: Math.max(16, rs.md),
+            gap: Math.max(14, rs.md),
+            boxShadow: light ? '0 2px 10px rgba(51, 39, 28, 0.06)' : undefined,
+          },
         ]}>
-        <View style={styles.typicalWeatherHeader}>
-          <Symbol name="calendar" size="sm" color={theme.accentPrimary} />
-          <AppText variant="callout" color="accent" style={{ fontWeight: '600' }}>
+        <View style={[styles.typicalWeatherHeader, { gap: rs.sm }]}>
+          <Symbol name="calendar" size="sm" color={accent} />
+          <AppText
+            variant="callout"
+            fit
+            numberOfLines={1}
+            style={[
+              styles.typicalTitle,
+              {
+                color: accent,
+                fontSize: s(16),
+                lineHeight: s(21),
+              },
+            ]}>
             Typical {monthName} Weather
           </AppText>
         </View>
-        
+
         <View style={styles.typicalWeatherRow}>
-          <View style={styles.typicalWeatherStat}>
-            <AppText variant="caption" color="secondary">Avg High</AppText>
-            <AppText style={styles.typicalWeatherValue}>
-              {isF ? '54°F' : '12°C'}
-            </AppText>
-          </View>
-          <View style={styles.typicalWeatherStat}>
-            <AppText variant="caption" color="secondary">Avg Low</AppText>
-            <AppText style={styles.typicalWeatherValue}>
-              {isF ? '43°F' : '6°C'}
-            </AppText>
-          </View>
-          <View style={styles.typicalWeatherStat}>
-            <AppText variant="caption" color="secondary">Rainfall</AppText>
-            <AppText style={styles.typicalWeatherValue}>
-              15 <AppText variant="caption" color="secondary">days</AppText>
-            </AppText>
-          </View>
+          {stats.map((stat, index) => (
+            <View key={stat.label} style={styles.typicalWeatherStatWrap}>
+              {index > 0 ? (
+                <View style={[styles.statDivider, { backgroundColor: ruleColor }]} />
+              ) : null}
+              <View style={[styles.typicalWeatherStat, { gap: Math.max(4, s(4)) }]}>
+                <AppText
+                  variant="caption"
+                  fit
+                  numberOfLines={1}
+                  style={{
+                    color: chrome.subtitle,
+                    fontSize: s(12),
+                    lineHeight: s(16),
+                  }}>
+                  {stat.label}
+                </AppText>
+                <AppText
+                  fit
+                  numberOfLines={1}
+                  style={[
+                    styles.typicalWeatherValue,
+                    {
+                      color: chrome.title,
+                      fontSize: s(22),
+                      lineHeight: s(26),
+                    },
+                  ]}>
+                  {stat.value}
+                </AppText>
+              </View>
+            </View>
+          ))}
         </View>
-        
-        <AppText variant="caption" color="secondary" style={{ lineHeight: 18 }}>
-          Weather transitions quickly. Rain and wind are common, so dressing in waterproof and windproof layers is highly recommended.
+
+        <View style={styles.diamondRule}>
+          <View style={[styles.ruleLine, { backgroundColor: ruleColor }]} />
+          <View style={[styles.diamond, { backgroundColor: diamondColor }]} />
+          <View style={[styles.ruleLine, { backgroundColor: ruleColor }]} />
+        </View>
+
+        <AppText
+          variant="caption"
+          style={{
+            color: chrome.subtitle,
+            fontFamily: fontFamilies.serif,
+            fontSize: s(14),
+            lineHeight: s(20),
+            textAlign: 'center',
+          }}>
+          Weather transitions quickly. Rain and wind are common, so dressing in waterproof and
+          windproof layers is highly recommended.
         </AppText>
       </View>
     </View>
@@ -246,69 +377,94 @@ function TypicalWeatherBlock({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
   },
   header: {
-    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: 12,
   },
-  titleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 0 },
-  days: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  iconBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  cardTitle: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+  },
+  days: { flexDirection: 'row', flexWrap: 'wrap' },
   day: {
     minWidth: 108,
     flexGrow: 1,
     flexBasis: '28%',
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    gap: spacing.xxs,
   },
   moreDays: {
-    minWidth: 72,
-    minHeight: 40,
     borderWidth: 1,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
   },
-  weatherSymbol: { fontSize: 22, lineHeight: 28 },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  retry: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  googleButton: { alignSelf: 'flex-start' },
+  errorRow: { flexDirection: 'row', alignItems: 'center' },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1 },
   typicalWeatherBox: {
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
   },
   typicalWeatherHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    minWidth: 0,
+  },
+  typicalTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
   },
   typicalWeatherRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    alignItems: 'stretch',
+  },
+  typicalWeatherStatWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: 2,
   },
   typicalWeatherStat: {
     flex: 1,
-    minWidth: 70,
-    gap: 2,
+    minWidth: 0,
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
   typicalWeatherValue: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '500',
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  diamondRule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  ruleLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  diamond: {
+    width: 7,
+    height: 7,
+    transform: [{ rotate: '45deg' }],
   },
 });

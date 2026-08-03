@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { numericOnChangeText, sanitizeNumericInput } from '@/utils/parse';
 import { AppText } from './app-text';
-import { FieldLeadingIcon } from './field-leading-icon';
+import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -15,6 +16,8 @@ interface InputProps extends TextInputProps {
   icon?: AppIconName;
   /** Persistent label above the value when `icon` is set (sheet stacked chrome). */
   stackedLabel?: string;
+  /** Align stacked label + value (`center` for short numeric fields). */
+  stackedAlign?: 'start' | 'center';
   iconBackground?: string;
   iconColor?: string;
   fieldBackground?: string;
@@ -57,6 +60,7 @@ export function Input({
   style,
   icon,
   stackedLabel,
+  stackedAlign = 'start',
   iconBackground,
   iconColor,
   fieldBackground,
@@ -71,6 +75,8 @@ export function Input({
   onBlur,
   keyboardType,
   onChangeText,
+  testID,
+  accessibilityLabel,
   ...rest
 }: InputProps) {
   const theme = useTheme();
@@ -79,7 +85,9 @@ export function Input({
   const stackedMinHeight = Math.max(56, s(60));
   const hasIcon = Boolean(icon);
   const stacked = Boolean(stackedLabel && icon);
+  const stackedCentered = stacked && stackedAlign === 'center';
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const numericValue = sanitizeNumericValue(value, keyboardType);
   const hasValue = String(numericValue ?? '').length > 0;
   const showChromePlaceholder =
@@ -87,6 +95,10 @@ export function Input({
   const body = typography.body;
   const fill = fieldBackground ?? theme.backgroundSunken;
   const handleChangeText = numericChangeForKeyboard(keyboardType, onChangeText);
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel ?? stackedLabel ?? label,
+    onPress: () => inputRef.current?.focus(),
+  });
 
   const handleFocus: TextInputProps['onFocus'] = (event) => {
     setFocused(true);
@@ -99,7 +111,11 @@ export function Input({
 
   if (hasIcon && icon) {
     return (
-      <View style={[styles.wrapper, { gap: spacing.sm }]}>
+      <View
+        ref={agent.ref}
+        collapsable={false}
+        onLayout={agent.onLayout}
+        style={[styles.wrapper, { gap: spacing.sm }]}>
         {label && !stacked ? (
           <AppText variant="overline" color="tertiary" fit>
             {label}
@@ -108,7 +124,7 @@ export function Input({
         <View
           style={[
             styles.iconField,
-            {
+            fieldLeadingIconRowStyle({
               minHeight: stacked ? stackedMinHeight : minHeight,
               height: multiline && hasValue ? undefined : stacked ? undefined : minHeight,
               borderRadius: radii.lg,
@@ -116,29 +132,34 @@ export function Input({
               paddingVertical: stacked ? spacing.sm : 0,
               gap: spacing.sm,
               backgroundColor: fill,
-              alignItems: stacked ? 'flex-start' : 'center',
-            },
+            }),
           ]}>
-          <View style={stacked ? { paddingTop: s(2) } : undefined}>
-            <FieldLeadingIcon
-              name={icon}
-              backgroundColor={iconBackground}
-              color={iconColor}
-            />
-          </View>
+          <FieldLeadingIcon
+            name={icon}
+            backgroundColor={iconBackground}
+            color={iconColor}
+          />
           {stacked ? (
-            <View style={styles.stackedCopy}>
+            <View
+              style={[
+                styles.stackedCopy,
+                stackedCentered ? styles.stackedCopyCentered : null,
+              ]}>
               <AppText
                 variant="caption"
                 fit
                 numberOfLines={1}
                 style={[
                   styles.stackedLabel,
+                  stackedCentered ? styles.stackedLabelCentered : null,
                   { color: stackedLabelColor ?? theme.textPrimary },
                 ]}>
                 {stackedLabel}
               </AppText>
               <TextInput
+                ref={inputRef}
+                testID={testID}
+                accessibilityLabel={accessibilityLabel}
                 value={numericValue}
                 placeholder={placeholder}
                 placeholderTextColor={placeholderTextColor ?? theme.textTertiary}
@@ -162,6 +183,7 @@ export function Input({
                     padding: 0,
                     margin: 0,
                     textAlignVertical: multiline ? 'top' : 'center',
+                    textAlign: stackedCentered ? 'center' : undefined,
                   },
                   trailing ? { paddingRight: s(40) } : null,
                   style,
@@ -185,6 +207,9 @@ export function Input({
             </AppText>
           ) : (
             <TextInput
+              ref={inputRef}
+              testID={testID}
+              accessibilityLabel={accessibilityLabel}
               value={numericValue}
               placeholder={undefined}
               allowFontScaling
@@ -215,6 +240,9 @@ export function Input({
           )}
           {showChromePlaceholder ? (
             <TextInput
+              ref={inputRef}
+              testID={testID}
+              accessibilityLabel={accessibilityLabel}
               value={numericValue}
               caretHidden
               allowFontScaling
@@ -237,7 +265,11 @@ export function Input({
   }
 
   return (
-    <View style={[styles.wrapper, { gap: spacing.sm }]}>
+    <View
+      ref={agent.ref}
+      collapsable={false}
+      onLayout={agent.onLayout}
+      style={[styles.wrapper, { gap: spacing.sm }]}>
       {label ? (
         <AppText variant="overline" color="tertiary" fit>
           {label}
@@ -245,6 +277,9 @@ export function Input({
       ) : null}
       <View style={styles.field}>
         <TextInput
+          ref={inputRef}
+          testID={testID}
+          accessibilityLabel={accessibilityLabel}
           value={numericValue}
           placeholder={placeholder}
           placeholderTextColor={placeholderTextColor ?? theme.textTertiary}
@@ -298,9 +333,16 @@ const styles = StyleSheet.create({
     gap: 2,
     justifyContent: 'center',
   },
+  stackedCopyCentered: {
+    alignItems: 'center',
+  },
   stackedLabel: {
     flexShrink: 1,
     minWidth: 0,
+  },
+  stackedLabelCentered: {
+    textAlign: 'center',
+    width: '100%',
   },
   chromeLabel: {
     flex: 1,

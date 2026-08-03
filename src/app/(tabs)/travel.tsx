@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
@@ -18,11 +18,16 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
+import {
+  TravelCalendarUpdatedModal,
+  type TravelCalendarUpdatedPayload,
+} from '@/features/travel/travel-calendar-updated-modal';
 import { TravelCoTravelerStack } from '@/features/travel/travel-cotraveler-stack';
 import { TravelCurrencySheet } from '@/features/travel/travel-currency-sheet';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
+import { AgentUiIds } from '@/utils/agent-ui';
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
@@ -43,12 +48,13 @@ import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
 import { TravelTripCover } from '@/features/travel/travel-trip-cover';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import type { TravelPlan } from '@/features/travel/types';
-import { TravelWeatherAction, TravelWeatherSheet } from '@/features/travel/weather';
+import { TravelWeatherSheet } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import { useUI } from '@/store/ui';
 import { formatDateKey, todayKey } from '@/utils/date';
 
 /** Primary travel planning tab — Add Stay sheet chrome for light + dark. */
@@ -56,6 +62,7 @@ export default function TravelScreen() {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const router = useRouter();
+  const { editCover } = useLocalSearchParams<{ editCover?: string }>();
   const { spacing: rs, s } = useResponsive();
   const { user } = useAuthSession();
   const plans = useTravel((state) => state.plans);
@@ -92,6 +99,9 @@ export default function TravelScreen() {
   const [currencyVisible, setCurrencyVisible] = useState(false);
   const [friendsPlanId, setFriendsPlanId] = useState<string>();
   const [friendsVisible, setFriendsVisible] = useState(false);
+  const [calendarUpdated, setCalendarUpdated] =
+    useState<TravelCalendarUpdatedPayload | null>(null);
+  const setSelectedDate = useUI((state) => state.setSelectedDate);
   const [expandedCoTravelerPlanId, setExpandedCoTravelerPlanId] = useState<
     string | undefined
   >();
@@ -184,6 +194,16 @@ export default function TravelScreen() {
     setDetailsError(undefined);
   };
 
+  // DEV: `ontrack://travel?editCover=1` opens Edit Trip + Trip Cover Photo modal.
+  const openCoverPickerOnEdit =
+    __DEV__ && (editCover === '1' || editCover === 'true');
+  useEffect(() => {
+    if (!openCoverPickerOnEdit) return;
+    const plan = sortedPlans[0];
+    if (!plan || editingDetailsPlanId) return;
+    beginEditingDetails(plan);
+  }, [openCoverPickerOnEdit, sortedPlans, editingDetailsPlanId]);
+
   const saveEditedDetails = async (plan: TravelPlan) => {
     setDetailsError(undefined);
     const validation = validateTravelPlanDetails({
@@ -219,10 +239,19 @@ export default function TravelScreen() {
 
   const addTripToCalendar = (plan: TravelPlan) => {
     const nextActivities = replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
-    appPrompt.alert(
-      'Calendar Updated',
-      `${nextActivities.length} ${nextActivities.length === 1 ? 'Event' : 'Events'} Added for “${plan.title}”.`,
-    );
+    setCalendarUpdated({
+      title: plan.title,
+      eventCount: nextActivities.length,
+      startDate: plan.startDate,
+    });
+  };
+
+  const closeCalendarUpdated = () => setCalendarUpdated(null);
+
+  const goToTravelCalendar = (startDate: string) => {
+    setCalendarUpdated(null);
+    setSelectedDate(startDate);
+    router.navigate('/(tabs)/calendar');
   };
 
   const editingPlan = sortedPlans.find((plan) => plan.id === editingDetailsPlanId);
@@ -241,6 +270,7 @@ export default function TravelScreen() {
           endDate={editEndDate}
           coverUri={editCoverUri}
           error={detailsError}
+          initialCoverPickerOpen={openCoverPickerOnEdit}
           onTitleChange={setEditTitle}
           onDestinationChange={setEditDestination}
           onStartDateChange={setEditStartDate}
@@ -436,6 +466,7 @@ export default function TravelScreen() {
                     <TravelSheetIconControl
                       icon="edit"
                       size={40}
+                      testID={AgentUiIds.travel.list.editTrip}
                       accessibilityLabel={`Edit Details for ${plan.title}`}
                       onPress={() => beginEditingDetails(plan)}
                     />
@@ -465,6 +496,7 @@ export default function TravelScreen() {
                       label="Itinerary"
                       icon="list"
                       tone="note"
+                      testID={AgentUiIds.travel.list.itinerary}
                       onPress={() =>
                         router.push({
                           pathname: '/travel/[id]',
@@ -477,6 +509,7 @@ export default function TravelScreen() {
                       label="Add to Calendar"
                       icon="calendar-add"
                       tone="calendar"
+                      testID={AgentUiIds.travel.list.addToCalendar}
                       onPress={() => addTripToCalendar(plan)}
                       accessibilityLabel={`Add ${plan.title} to Calendar`}
                     />
@@ -484,6 +517,7 @@ export default function TravelScreen() {
                       label="Search Flights"
                       icon="flight"
                       tone="flight"
+                      testID={AgentUiIds.travel.list.searchFlights}
                       onPress={() =>
                         router.push({
                           pathname: '/travel/[id]/flights',
@@ -496,6 +530,7 @@ export default function TravelScreen() {
                       label="Search Stays"
                       icon="lodging"
                       tone="lodging"
+                      testID={AgentUiIds.travel.list.searchStays}
                       onPress={() =>
                         router.push({
                           pathname: '/travel/[id]/stays',
@@ -504,12 +539,13 @@ export default function TravelScreen() {
                       }
                       accessibilityLabel={`Search Stays for ${plan.title}`}
                     />
-                    <TravelWeatherAction
-                      destination={plan.destination}
-                      startDate={plan.startDate}
-                      endDate={plan.endDate}
-                      dateDisplayFormat={dateDisplayFormat}
+                    <TravelSheetAction
+                      label={"Trip\nWeather"}
+                      icon="weather"
+                      tone="clock"
+                      testID={AgentUiIds.travel.list.tripWeather}
                       onPress={() => openWeather(plan.id)}
+                      accessibilityLabel={`View weather for ${plan.destination}`}
                     />
                     <TravelSheetAction
                       label="Currency"
@@ -523,6 +559,7 @@ export default function TravelScreen() {
                       label="Expenses"
                       icon="receipt"
                       tone="expense"
+                      testID={AgentUiIds.travel.list.expenses}
                       onPress={() => openExpenses(plan.id)}
                       accessibilityLabel={`Open Expenses for ${plan.title}`}
                     />
@@ -582,6 +619,11 @@ export default function TravelScreen() {
           onSavePlan={savePlan}
         />
       ) : null}
+      <TravelCalendarUpdatedModal
+        payload={calendarUpdated}
+        onGoToCalendar={goToTravelCalendar}
+        onBackToTravel={closeCalendarUpdated}
+      />
     </Screen>
   );
 }

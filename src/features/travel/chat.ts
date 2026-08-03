@@ -5,6 +5,14 @@ import * as SecureStore from 'expo-secure-store';
 import { getNotificationsModule } from '@/services/notifications/runtime';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import type { TravelPlan } from '@/features/travel/types';
+import {
+  addDays,
+  formatDateLong,
+  formatWeekday,
+  fromDateKey,
+  toDateKey,
+  todayKey,
+} from '@/utils/date';
 
 export const EVENT_CHAT_NOTIFICATION_CHANNEL = 'event-chat';
 const CHAT_DEVICE_ID_KEY = 'ontrack.travel-chat-device-id';
@@ -15,6 +23,45 @@ export interface TravelChatMessage {
   senderDeviceId: string;
   body: string;
   createdAt: string;
+}
+
+export type TravelChatListItem =
+  | { type: 'date'; id: string; dateKey: string; label: string }
+  | { type: 'message'; id: string; message: TravelChatMessage };
+
+/** Day chrome for chat: Today / Yesterday / weekday + date (+ year when needed). */
+export function travelChatDayLabel(dateKey: string, now = new Date()): string {
+  const today = toDateKey(now);
+  if (dateKey === today) return 'Today';
+  if (dateKey === addDays(today, -1)) return 'Yesterday';
+  const day = fromDateKey(dateKey);
+  const base = `${formatWeekday(dateKey)}, ${formatDateLong(dateKey)}`;
+  return day.getFullYear() === now.getFullYear()
+    ? base
+    : `${base}, ${day.getFullYear()}`;
+}
+
+/** Insert a date header before the first message of each local calendar day. */
+export function buildTravelChatListItems(
+  messages: TravelChatMessage[],
+  now = new Date(),
+): TravelChatListItem[] {
+  const items: TravelChatListItem[] = [];
+  let lastDateKey: string | undefined;
+  for (const message of messages) {
+    const dateKey = toDateKey(new Date(message.createdAt));
+    if (dateKey !== lastDateKey) {
+      items.push({
+        type: 'date',
+        id: `date-${dateKey}`,
+        dateKey,
+        label: travelChatDayLabel(dateKey, now),
+      });
+      lastDateKey = dateKey;
+    }
+    items.push({ type: 'message', id: message.id, message });
+  }
+  return items;
 }
 
 export class TravelChatError extends Error {

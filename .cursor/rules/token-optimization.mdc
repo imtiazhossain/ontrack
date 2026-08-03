@@ -10,10 +10,12 @@ Future agents must leave the codebase *more* optimized than they found it when t
 ## Before writing code
 
 1. Read `AGENTS.md` feature entry points and Shared patterns.
-2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `useResponsive` / `AppText fit` / `typeConfig` + `appTextStyle`, `LoadingBlock`, `DateField`, `appPrompt`.
+2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `useResponsive` / `AppText fit` / `typeConfig` + `appTextStyle`, `LoadingBlock`, `DateField`, `FieldLeadingIcon` / `fieldLeadingIconRowStyle`, `appPrompt`, `@/utils/agent-ui` (`AgentUiIds` / `useAgentUiTarget` / `testID`).
 3. Open the smallest entry file first; do not load sibling giants unless needed.
 4. For any UI change, follow `.cursor/rules/responsive-layout.mdc` — scale with `useResponsive()`, keep chrome on one line with `fit`.
 5. Typography: use `typeConfig` / `appTextStyle` / `AppText`. One UI font; regular weight by default — only `bold` when explicitly required.
+6. Leading field icons: use `FieldLeadingIcon` + `fieldLeadingIconRowStyle` (vertically centered — see `.cursor/rules/field-icon-centering.mdc`).
+7. Simulator UI taps: use `testID` + `scripts/agent-ui-dump.sh` / `agent-ui-tap.sh` (see `.cursor/rules/agent-ui-selectors.mdc`), not screenshot coordinates. **Always add an `ontrack.*` testID** when creating or editing an interactive control (ids.ts + map + `testID` prop).
 
 ## When editing large screens
 
@@ -34,6 +36,9 @@ Future agents must leave the codebase *more* optimized than they found it when t
 - Ad-hoc `fontFamily` / medium-bold `fontWeight` for UI text when `typeConfig` / `appTextStyle` / `AppText` fits (bold only when explicitly requested)
 - `AppText fit` / shrink-to-fit for initials inside `ProfileAvatar` (use `avatarInitialsFontSize` + RN `Text`)
 - Ad-hoc letter-stripping for number fields when `sanitizeNumericInput` / `numericOnChangeText` / `Input` numeric keyboards fit
+- Top-aligned / `paddingTop`-nudged leading field icons when `fieldLeadingIconRowStyle` fits
+- Screenshot-coordinate taps when an `ontrack.*` `testID` / agent-ui dump entry fits (or when one should be added)
+- Interactive controls without an `ontrack.*` `testID` when agents (or users) can tap/focus them
 
 ## After substantive edits
 

@@ -3,6 +3,9 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 import {
   abbreviatedPersonName,
   createExpenseDraft,
+  enrichExpensePeopleAvatars,
+  expensePeople,
+  firstNamePersonLabel,
   settleBalances,
   settleTransfers,
   totalInBase,
@@ -59,6 +62,42 @@ describe('expense math', () => {
     expect(abbreviatedPersonName('Farhana Tasmin')).toBe('FT');
     expect(abbreviatedPersonName('You')).toBe('You');
     expect(abbreviatedPersonName('Alex')).toBe('Alex');
+  });
+
+  it('uses first names for expense payer labels, with last initial on collision', () => {
+    expect(firstNamePersonLabel('Farhana Tasmin', ['Farhana Tasmin', 'You'])).toBe('Farhana');
+    expect(firstNamePersonLabel('You', ['Farhana Tasmin', 'You'])).toBe('You');
+    expect(firstNamePersonLabel('Alex', ['Alex', 'You'])).toBe('Alex');
+    expect(
+      firstNamePersonLabel('Farhana Tasmin', ['Farhana Tasmin', 'Farhana Khan', 'You']),
+    ).toBe('Farhana T.');
+    expect(
+      firstNamePersonLabel('Farhana Khan', ['Farhana Tasmin', 'Farhana Khan', 'You']),
+    ).toBe('Farhana K.');
+  });
+
+  it('marks You as self and attaches member auth ids for avatars', () => {
+    const people = expensePeople({
+      ...plan,
+      sharedExpensePeople: [
+        { id: 'self', name: 'Host' },
+        { id: 'member:uid-alex', name: 'Alex' },
+      ],
+    });
+    expect(people.find((person) => person.id === TRAVEL_EXPENSE_SELF_ID)?.isSelf).toBe(
+      true,
+    );
+    expect(people.find((person) => person.id === 'friend-1')).toMatchObject({
+      name: 'Alex',
+      userId: 'uid-alex',
+    });
+  });
+
+  it('enriches avatar user ids from friends / roster lookup', () => {
+    const people = enrichExpensePeopleAvatars(expensePeople(plan), [
+      { userId: 'uid-alex', displayName: 'Alex' },
+    ]);
+    expect(people.find((person) => person.id === 'friend-1')?.userId).toBe('uid-alex');
   });
 
   it('converts ISK totals into the trip base currency', () => {

@@ -202,6 +202,7 @@ describe('flight confirmation parser', () => {
     });
     expect(parsed.amount).toBe(916.46);
     expect(parsed.currency).toBe('USD');
+    expect(parsed.title).toBe('Flights EWR ↔ KEF');
 
     let nextId = 0;
     const imported = mergeImportedFlights({
@@ -269,6 +270,7 @@ describe('flight confirmation expense', () => {
       amount: 916.46,
       currency: 'USD',
       notes: 'Confirmation: AB2ZQV',
+      title: 'Flights EWR ↔ KEF',
     });
   });
 

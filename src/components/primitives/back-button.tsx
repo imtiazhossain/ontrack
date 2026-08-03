@@ -4,14 +4,18 @@ import { StyleSheet, View } from 'react-native';
 import { spacing } from '@/design-system';
 import { goBackOrReplace } from '@/utils/navigation';
 
+import { AgentUiIds } from '@/utils/agent-ui';
+
 import { IconButton } from './button';
 
 export function BackButton({
   accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
+  testID = AgentUiIds.chrome.back,
 }: {
   accessibilityLabel?: string;
   fallback?: Href;
+  testID?: string;
 }) {
   const router = useRouter();
 
@@ -21,6 +25,7 @@ export function BackButton({
         icon="chevron-left"
         accessibilityLabel={accessibilityLabel}
         background="transparent"
+        testID={testID}
         onPress={() => goBackOrReplace(router, fallback)}
       />
     </View>
@@ -32,11 +37,13 @@ export function HeaderBackButton({
   accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
   alwaysNavigateTo,
+  testID = AgentUiIds.chrome.headerBack,
 }: {
   accessibilityLabel?: string;
   fallback?: Href;
   /** When set, always navigate here instead of popping the stack. */
   alwaysNavigateTo?: Href;
+  testID?: string;
 }) {
   const router = useRouter();
 
@@ -45,6 +52,7 @@ export function HeaderBackButton({
       icon="back"
       accessibilityLabel={accessibilityLabel}
       background="transparent"
+      testID={testID}
       onPress={() =>
         alwaysNavigateTo
           ? router.replace(alwaysNavigateTo)

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   InputAccessoryView,
   Keyboard,
@@ -16,9 +16,11 @@ import {
   DateField,
   ErrorMessage,
   Input,
+  Symbol,
 } from '@/components/primitives';
 import { FieldLeadingIcon } from '@/components/primitives/field-leading-icon';
 import { appTextStyle, radii, spacing } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import {
   CurrencyDropdown,
   ScrollableDropdown,
@@ -27,8 +29,8 @@ import {
 import {
   createExpenseDraft,
   defaultSplitIds,
+  enrichExpensePeopleAvatars,
   expensePeople,
-  abbreviatedPersonName,
   type ExpensePerson,
 } from '@/features/travel/expenses/expense-math';
 import { formatMoney } from '@/features/travel/expenses/format-money';
@@ -42,7 +44,11 @@ import {
   itinerarySheetFieldProps,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { isTravelMemberPlan } from '@/features/travel/trip-roster';
+import {
+  canonicalTravelTripId,
+  isTravelMemberPlan,
+  listTravelTripRoster,
+} from '@/features/travel/trip-roster';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
@@ -51,6 +57,9 @@ import {
 } from '@/features/travel/types';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useFriends } from '@/store/friends';
+import { usePreferences } from '@/store/preferences';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { asPositiveNumber } from '@/utils/parse';
 
 const CATEGORIES: { value: TravelExpenseCategory; label: string }[] = [
@@ -109,6 +118,81 @@ export function expenseFormFromExpense(expense: TravelExpense): ExpenseFormState
   };
 }
 
+function PersonAvatarToggle({
+  person,
+  active,
+  single,
+  selfDisplayName,
+  testID,
+  onToggle,
+}: {
+  person: ExpensePerson;
+  active: boolean;
+  single?: boolean;
+  selfDisplayName: string;
+  testID: string;
+  onToggle: () => void;
+}) {
+  const theme = useTheme();
+  const { s } = useResponsive();
+  const avatarSize = Math.max(36, s(38));
+  const hit = Math.max(44, avatarSize + s(6));
+  const ring = active ? theme.accentPrimary : 'transparent';
+  const displayName = person.isSelf
+    ? selfDisplayName.trim() || person.name
+    : person.name;
+  const agent = useAgentUiTarget(testID, {
+    label: person.name,
+    onPress: onToggle,
+  });
+
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={person.name}
+      accessibilityState={{ selected: active }}
+      onPress={onToggle}
+      style={({ pressed }) => [
+        styles.personAvatarHit,
+        {
+          width: hit,
+          height: hit,
+          borderRadius: hit / 2,
+          borderWidth: active ? 2 : 0,
+          borderColor: ring,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      <ProfileAvatar
+        displayName={displayName}
+        userId={person.userId}
+        isSelf={person.isSelf}
+        size={avatarSize}
+        accessibilityLabel={person.name}
+      />
+      {!single && active ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.personCheck,
+            {
+              width: Math.max(16, s(16)),
+              height: Math.max(16, s(16)),
+              borderRadius: Math.max(8, s(8)),
+              backgroundColor: theme.accentPrimary,
+              borderColor: theme.backgroundElevated,
+            },
+          ]}>
+          <Symbol name="check" size={Math.max(10, s(10))} color={theme.textOnAccent} />
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
 function PersonToggleRow({
   label,
   people,
@@ -117,6 +201,8 @@ function PersonToggleRow({
   single,
   tone,
   icon,
+  selfDisplayName,
+  testIdPrefix,
   style,
 }: {
   label: string;
@@ -126,6 +212,8 @@ function PersonToggleRow({
   single?: boolean;
   tone: SheetIconTone;
   icon: 'wallet' | 'people';
+  selfDisplayName: string;
+  testIdPrefix: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
@@ -161,33 +249,16 @@ function PersonToggleRow({
       <View style={[styles.personWrap, { gap: rs.xs }]}>
         {people.map((person) => {
           const active = selectedIds.includes(person.id);
-          const shortName = abbreviatedPersonName(person.name);
-          const labelText = single ? shortName : active ? `✓ ${shortName}` : shortName;
           return (
-            <Pressable
+            <PersonAvatarToggle
               key={person.id}
-              accessibilityRole="button"
-              accessibilityLabel={person.name}
-              accessibilityState={{ selected: active }}
-              onPress={() => onToggle(person.id)}
-              style={[
-                styles.personChip,
-                {
-                  minHeight: Math.max(36, s(38)),
-                  paddingHorizontal: rs.md,
-                  paddingVertical: rs.xs,
-                  backgroundColor: active ? theme.accentFaint : chrome.sheetBg,
-                  borderColor: active ? theme.accentPrimary : 'transparent',
-                },
-              ]}>
-              <AppText
-                variant="callout"
-                color={active ? 'accent' : 'secondary'}
-                fit
-                numberOfLines={1}>
-                {labelText}
-              </AppText>
-            </Pressable>
+              person={person}
+              active={active}
+              single={single}
+              selfDisplayName={selfDisplayName}
+              testID={`${testIdPrefix}.${person.id}`}
+              onToggle={() => onToggle(person.id)}
+            />
           );
         })}
       </View>
@@ -213,7 +284,41 @@ export function TravelExpenseForm({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { spacing: rs } = useResponsive();
-  const people = expensePeople(plan);
+  const friends = useFriends((state) => state.friends);
+  const refreshFriends = useFriends((state) => state.refresh);
+  const selfDisplayName = usePreferences((state) => state.name);
+  const [rosterLookup, setRosterLookup] = useState<
+    Array<{ userId: string; displayName: string }>
+  >([]);
+  useEffect(() => {
+    let active = true;
+    void refreshFriends().catch(() => undefined);
+    void listTravelTripRoster(canonicalTravelTripId(plan))
+      .then((roster) => {
+        if (!active) return;
+        setRosterLookup(
+          roster.map((person) => ({
+            userId: person.userId,
+            displayName: person.displayName,
+          })),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [plan.id, plan.hostTripId, refreshFriends]);
+  const people = useMemo(
+    () =>
+      enrichExpensePeopleAvatars(expensePeople(plan), [
+        ...friends.map((friend) => ({
+          userId: friend.userId,
+          displayName: friend.displayName,
+        })),
+        ...rosterLookup,
+      ]),
+    [plan, friends, rosterLookup],
+  );
   const [openDropdown, setOpenDropdown] = useState<'currency' | 'category' | null>(
     null,
   );
@@ -357,6 +462,8 @@ export function TravelExpenseForm({
           single
           icon="wallet"
           tone="shield"
+          selfDisplayName={selfDisplayName}
+          testIdPrefix={AgentUiIds.travel.expenses.paidBy}
           style={styles.flex}
           onToggle={(paidById) => {
             Keyboard.dismiss();
@@ -372,6 +479,8 @@ export function TravelExpenseForm({
           selectedIds={form.splitWithIds}
           icon="people"
           tone="lodging"
+          selfDisplayName={selfDisplayName}
+          testIdPrefix={AgentUiIds.travel.expenses.splitWith}
           style={styles.flex}
           onToggle={(id) => {
             Keyboard.dismiss();
@@ -441,11 +550,18 @@ const styles = StyleSheet.create({
   personField: { borderRadius: radii.lg, borderCurve: 'continuous' },
   personFieldHeader: { flexDirection: 'row', alignItems: 'center' },
   personWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  personChip: {
-    borderRadius: radii.pill,
-    borderWidth: 1,
+  personAvatarHit: {
+    alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: '100%',
+    overflow: 'visible',
+  },
+  personCheck: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
   },
   accessory: {
     flexDirection: 'row',

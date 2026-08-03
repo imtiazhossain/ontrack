@@ -15,6 +15,7 @@ import {
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 const ACTION_SHADOW_LIGHT =
@@ -30,6 +31,7 @@ export function TravelSheetAction({
   onPress,
   accessibilityLabel,
   wide,
+  testID,
 }: {
   label: string;
   icon: AppIconName;
@@ -39,6 +41,7 @@ export function TravelSheetAction({
   onPress: () => void;
   accessibilityLabel: string;
   wide?: boolean;
+  testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -47,15 +50,23 @@ export function TravelSheetAction({
   const iconBox = Math.max(30, s(32));
   const light = theme.name === 'light';
   const surface = light ? '#FFFFFF' : chrome.fieldBg;
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: handlePress,
+  });
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.action,
         {
@@ -128,16 +139,19 @@ export function TravelSheetPrimaryAction({
   label,
   icon,
   onPress,
+  testID,
 }: {
   label: string;
   icon?: AppIconName;
   onPress: () => void;
+  testID?: string;
 }) {
   return (
     <ItinerarySheetSubmitButton
       label={label}
       icon={icon}
       editorialGold
+      testID={testID}
       onPress={onPress}
     />
   );
@@ -148,25 +162,32 @@ export function TravelSheetSecondaryAction({
   label,
   icon,
   onPress,
+  testID,
 }: {
   label: string;
   icon?: AppIconName;
   onPress: () => void;
+  testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout } = useResponsive();
   const minHeight = Math.max(layout.minTapTarget, s(48));
   const surface = theme.name === 'light' ? '#F3EEE7' : chrome.fieldBg;
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.secondaryAction,
         {
@@ -206,6 +227,7 @@ export function TravelSheetIconControl({
   accessibilityLabel,
   size,
   tone = 'default',
+  testID,
 }: {
   icon: AppIconName;
   onPress: () => void;
@@ -213,6 +235,7 @@ export function TravelSheetIconControl({
   size?: number;
   /** `accent` = gold icon on elevated cream (page header +). */
   tone?: 'default' | 'accent';
+  testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -235,15 +258,23 @@ export function TravelSheetIconControl({
   // Card edit/collapse: charcoal icons on elevated white; header + keeps gold.
   const iconColor =
     tone === 'accent' ? accent : theme.name === 'light' ? '#2C241C' : theme.textPrimary;
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: handlePress,
+  });
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.iconControl,
         {

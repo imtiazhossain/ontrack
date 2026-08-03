@@ -5,6 +5,7 @@ import {
 } from '@/features/travel/expenses/expense-math';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import type { ParsedFlightConfirmation } from '@/features/travel/flight-confirmation-parser';
+import { flightExpenseTitleFromSegments } from '@/features/travel/flight-expense-title';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
@@ -35,13 +36,14 @@ export function applyFlightExpenseFromImport(
   plan: TravelPlan,
   parsed: Pick<
     ParsedFlightConfirmation,
-    'amount' | 'currency' | 'title' | 'date' | 'flight'
+    'amount' | 'currency' | 'title' | 'date' | 'flight' | 'segments'
   > & {
     flight: Pick<TravelFlightDetails, 'airline' | 'confirmationCode' | 'flightNumber'> | {
       airline?: string;
       confirmationCode?: string;
       flightNumber?: string;
     };
+    segments?: ParsedFlightConfirmation['segments'];
   },
 ): TravelPlan {
   if (parsed.amount === undefined || !(parsed.amount > 0)) return plan;
@@ -52,7 +54,12 @@ export function applyFlightExpenseFromImport(
   const existing = findFlightExpense(plan.expenses, confirmationCode);
   const airline =
     'airline' in parsed.flight ? parsed.flight.airline?.trim() : undefined;
+  const fromSegments =
+    parsed.segments && parsed.segments.length > 0
+      ? flightExpenseTitleFromSegments(parsed.segments)
+      : undefined;
   const title =
+    fromSegments ||
     parsed.title?.trim() ||
     (airline ? `${airline} flight` : 'Flight');
   const expense = createExpenseDraft({
