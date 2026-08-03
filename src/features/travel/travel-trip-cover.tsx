@@ -33,13 +33,15 @@ export function TravelTripCover({ plan }: { plan: TravelPlan }) {
       };
     }
     setUri(undefined);
+    // Key on destination fields only — `plan` identity churn (weather/sync) must not abort.
     void fetchDestinationCoverUri(plan).then((next) => {
       if (active) setUri(next);
     });
     return () => {
       active = false;
     };
-  }, [destinationKey, localUri, plan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields used for remote covers
+  }, [destinationKey, localUri]);
 
   return (
     <View
