@@ -1,9 +1,16 @@
 {
   "cli": {
     "version": ">= 16.0.1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "productionSourceMap": false,
     "appVersionSource": "remote"
   },
   "build": {
+    "cache": {
+      "paths": ["node_modules/.cache", "~/.gradle/caches", "~/.cocoapods"]
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
@@ -34,6 +41,7 @@
       "environment": "preview",
       "channel": "testflight",
       "autoIncrement": true,
+      "autoSubmit": true,
       "env": {
         "EAS_USE_CACHE": "1",
         "EXPO_PUBLIC_APP_ENV": "testflight",
@@ -41,7 +49,7 @@
       },
       "ios": {
         "buildConfiguration": "Release",
-        "resourceClass": "m-medium"
+        "resourceClass": "m-large"
       }
     },
     "production": {
