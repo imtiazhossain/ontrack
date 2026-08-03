@@ -16,6 +16,7 @@ import {
   SectionHeader,
 } from '@/components/primitives';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -346,6 +347,11 @@ export function SocialHubScreen() {
                   gap: spacing.md,
                 },
               ]}>
+              <ProfileAvatar
+                displayName={friend.displayName}
+                userId={friend.userId}
+                size={Math.max(40, s(40))}
+              />
               <View style={styles.rowCopy}>
                 <AppText variant="callout" fit>
                   {friend.displayName}

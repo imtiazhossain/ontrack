@@ -1,6 +1,7 @@
 import {
   canonicalTravelTripId,
   isTravelMemberPlan,
+  resolveIsTravelSoleHost,
 } from '@/features/travel/trip-roster';
 import type { TravelPlan } from '@/features/travel/types';
 
@@ -24,6 +25,30 @@ describe('trip roster helpers', () => {
     ).toBe(true);
     expect(
       isTravelMemberPlan({ ...base, hostTripId: 'trip-local-1' }),
+    ).toBe(false);
+  });
+
+  it('never treats a member copy as sole host before roster loads', () => {
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: undefined, memberPlan: true }),
+    ).toBe(false);
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: 'member', memberPlan: true }),
+    ).toBe(false);
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: 'cohost', memberPlan: true }),
+    ).toBe(false);
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: 'host', memberPlan: true }),
+    ).toBe(true);
+  });
+
+  it('assumes sole host on local host plans until roster says otherwise', () => {
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: undefined, memberPlan: false }),
+    ).toBe(true);
+    expect(
+      resolveIsTravelSoleHost({ myRosterRole: 'member', memberPlan: false }),
     ).toBe(false);
   });
 });

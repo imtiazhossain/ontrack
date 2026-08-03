@@ -108,10 +108,43 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
 
     if (existingPlan) {
       if (isShortInvite) {
+        const code = invite.slice(2);
+        const hostTripId = decoded.hostTripId?.trim();
+        // Never convert a local host plan (has open-join) into a member copy of
+        // another trip — that strips host privileges on the wrong roster.
+        const looksLikeHostPlan =
+          Boolean(existingPlan.openJoinCode) && !existingPlan.chatAccessCode;
+        const pointsAtOtherTrip =
+          Boolean(hostTripId) && hostTripId !== existingPlan.id;
+        if (looksLikeHostPlan && pointsAtOtherTrip) {
+          const now = new Date().toISOString();
+          const memberCopy = {
+            ...decoded,
+            id: travelInviteLocalId(code),
+            chatAccessCode: code,
+            createdAt: now,
+            updatedAt: now,
+          };
+          savePlan(memberCopy);
+          replaceTravelActivities(
+            memberCopy.id,
+            travelCalendarDrafts(memberCopy),
+          );
+          setAddonEnabled('travel', true);
+          router.replace(
+            hasOnboarded
+              ? (`/travel/${memberCopy.id}` as never)
+              : ({
+                  pathname: '/onboarding',
+                  params: { returnTo: '/travel' },
+                } as never),
+          );
+          return;
+        }
         savePlan({
           ...existingPlan,
-          chatAccessCode: invite.slice(2),
-          ...(decoded.hostTripId ? { hostTripId: decoded.hostTripId } : {}),
+          chatAccessCode: code,
+          ...(hostTripId ? { hostTripId } : {}),
           updatedAt: new Date().toISOString(),
         });
       }

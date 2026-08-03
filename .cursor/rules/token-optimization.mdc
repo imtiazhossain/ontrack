@@ -32,6 +32,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 - Persisting image-picker cache URIs (always re-encode via image helpers)
 - Hard-coded chrome `fontSize` / control padding that ignores `useResponsive()` / `AppText fit`
 - Ad-hoc `fontFamily` / medium-bold `fontWeight` for UI text when `typeConfig` / `appTextStyle` / `AppText` fits (bold only when explicitly requested)
+- `AppText fit` / shrink-to-fit for initials inside `ProfileAvatar` (use `avatarInitialsFontSize` + RN `Text`)
 
 ## After substantive edits
 

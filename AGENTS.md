@@ -74,6 +74,7 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 | Vehicles tab | `app/(tabs)/vehicles.tsx` (+ `features/vehicles/*`, `store/vehicles.ts`, `services/vehicles/` for VIN/parts + `collaboration.ts`, join via `app/v/[code].tsx`) |
 | Games tab | `app/(tabs)/games.tsx` (+ `features/games/games-hub`, `balloon-pop/*`) |
 | Auth / guest | `features/auth/` |
+| Profile avatar | `features/account/profile-avatar.tsx` (+ `profile-avatar-editor-sheet`, `profile-avatar-model`, `profile-avatar-media`, `avatar-cache`, Iconify via `iconify-search`) |
 | Cloud sync | `services/cloud/sync.ts` |
 | Design tokens / prompts / DateField | `design-system/`, `components/primitives/` |
 
@@ -114,3 +115,4 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 - Recipe/meal source URLs must be `https:` when normalized for sync.
 - Plant/travel entity IDs should use `@/utils/id` (or schedule’s re-export), not ad-hoc generators.
 - Platform extension files (`*.ios.tsx`, `*.android.tsx`, `*.web.tsx`) are resolved by Metro — do not delete because imports look unused.
+- **Avatar initials:** never use `AppText fit` / shrink-to-fit inside `ProfileAvatar` — use fixed `Text` + `avatarInitialsFontSize()` (see `profile-avatar-initials` tests).

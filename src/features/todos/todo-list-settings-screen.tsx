@@ -14,6 +14,7 @@ import {
   Symbol,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { PeoplePicker } from '@/features/social/people-picker';
 import { shareTodoInvite } from '@/features/todos/share';
@@ -434,19 +435,12 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                   styles.memberRow,
                   { minHeight: Math.max(58, s(56)), gap: spacing.md },
                 ]}>
-                <View
-                  style={[
-                    styles.avatar,
-                    {
-                      width: s(42),
-                      height: s(42),
-                      backgroundColor: theme.accentFaint,
-                    },
-                  ]}>
-                  <AppText variant="callout" color="accent">
-                    {member.displayName.slice(0, 1).toUpperCase()}
-                  </AppText>
-                </View>
+                <ProfileAvatar
+                  displayName={member.displayName}
+                  userId={member.userId}
+                  isSelf={member.userId === user?.id}
+                  size={Math.max(42, s(42))}
+                />
                 <View style={styles.memberCopy}>
                   <AppText variant="subheading" fit>
                     {member.displayName}

@@ -86,6 +86,10 @@ export interface TravelTripRosterPerson {
   role: 'host' | 'cohost' | 'member';
   inviteCode?: string;
   acceptedAt?: string;
+  avatarKind?: 'initials' | 'icon' | 'photo';
+  avatarColor?: string;
+  avatarIconId?: string;
+  avatarPhotoPath?: string;
 }
 
 export type TravelExpenseCategory =

@@ -13,9 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, type Theme } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
 import {
   noteAuthorColor,
-  noteAuthorTint,
 } from '@/features/travel/travel-item-note-colors';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
@@ -67,8 +67,6 @@ function NoteCard({
   onDelete: () => void;
 }) {
   const accent = noteAuthorColor(note.authorId, theme);
-  const tint = noteAuthorTint(note.authorId, theme);
-  const initial = note.authorName.trim().charAt(0).toUpperCase() || '?';
   const isSelf = note.authorId === TRAVEL_EXPENSE_SELF_ID;
   const displayName =
     isSelf && note.authorName.trim().toLowerCase() !== 'you'
@@ -94,19 +92,12 @@ function NoteCard({
         },
       ]}>
       <View style={[styles.noteHeader, { gap }]}>
-        <View
-          style={[
-            styles.avatar,
-            {
-              backgroundColor: tint,
-              width: avatarSize,
-              height: avatarSize,
-            },
-          ]}>
-          <AppText style={[styles.avatarLetter, { color: accent }]} fit>
-            {initial}
-          </AppText>
-        </View>
+        <ProfileAvatar
+          displayName={displayName}
+          userId={isSelf ? undefined : note.authorId}
+          isSelf={isSelf}
+          size={avatarSize}
+        />
         <AppText
           variant="callout"
           fit

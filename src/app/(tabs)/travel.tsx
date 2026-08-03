@@ -18,6 +18,7 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { googleCurrencyConversionUrl } from '@/features/travel/currency-conversion-link';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
+import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { TravelCoTravelerStack } from '@/features/travel/travel-cotraveler-stack';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
@@ -65,19 +66,10 @@ export default function TravelScreen() {
   const dateLocale = usePreferences((state) => state.dateLocale);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const preferencesName = usePreferences((state) => state.name);
-  const selfDisplayName = useMemo(() => {
-    const fromPrefs = preferencesName.trim();
-    if (fromPrefs && !/^you$/i.test(fromPrefs)) return fromPrefs;
-    const meta = user?.user_metadata ?? {};
-    const fromMeta =
-      (typeof meta.full_name === 'string' && meta.full_name.trim()) ||
-      (typeof meta.name === 'string' && meta.name.trim()) ||
-      '';
-    if (fromMeta && !/^you$/i.test(fromMeta)) return fromMeta;
-    const fromEmail = user?.email?.split('@')[0]?.trim();
-    if (fromEmail) return fromEmail;
-    return 'You';
-  }, [preferencesName, user]);
+  const selfDisplayName = useMemo(
+    () => resolveSelfDisplayName({ preferencesName, user }),
+    [preferencesName, user],
+  );
   const [showForm, setShowForm] = useState(plans.length === 0);
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
@@ -131,6 +123,7 @@ export default function TravelScreen() {
   };
   const closeFriends = () => {
     appPrompt.dismiss();
+    setExpandedCoTravelerPlanId(undefined);
     setFriendsVisible(false);
   };
 
@@ -524,11 +517,7 @@ export default function TravelScreen() {
                     />
                   </View>
                   <TravelSheetPrimaryAction
-                    label={
-                      plan.participants.length > 0
-                        ? `CoTravelers · ${plan.participants.length + 1}`
-                        : 'CoTravelers · 1'
-                    }
+                    label="Co-Travelers"
                     icon="people"
                     onPress={() => openFriends(plan.id)}
                   />
@@ -544,7 +533,7 @@ export default function TravelScreen() {
           plan={expensesPlan}
           visible={expensesVisible}
           onClose={closeExpenses}
-          onSavePlan={(next) => savePlan(next)}
+          onSavePlan={savePlan}
         />
       ) : null}
       {friendsPlan ? (
@@ -552,7 +541,7 @@ export default function TravelScreen() {
           plan={friendsPlan}
           visible={friendsVisible}
           onClose={closeFriends}
-          onSavePlan={(next) => savePlan(next)}
+          onSavePlan={savePlan}
         />
       ) : null}
     </Screen>

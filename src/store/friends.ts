@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { useAvatarCache } from '@/features/account/avatar-cache';
 import {
   cancelFriendRequest,
   ensureFriendProfile,
@@ -30,11 +31,18 @@ interface FriendsState {
   clear: () => void;
 }
 
+function cacheFriendAvatars(friends: FriendProfile[]) {
+  useAvatarCache.getState().upsertMany(
+    friends.map((friend) => ({ userId: friend.userId, avatar: friend.avatar })),
+  );
+}
+
 async function loadLists() {
   const [friends, requests] = await Promise.all([
     listFriends(),
     listFriendRequests(),
   ]);
+  cacheFriendAvatars(friends);
   return {
     friends,
     incoming: requests.filter((item) => item.direction === 'incoming'),
@@ -51,10 +59,34 @@ export const useFriends = create<FriendsState>((set, get) => ({
     set({ loading: true, error: undefined });
     try {
       const prefsName = usePreferences.getState().name.trim();
-      await ensureFriendProfile({
-        displayName: opts?.displayName || prefsName || undefined,
+      const safePrefsName =
+        prefsName && !/^you$/i.test(prefsName) ? prefsName : undefined;
+      const profile = await ensureFriendProfile({
+        displayName: opts?.displayName || safePrefsName || undefined,
         email: opts?.email,
       });
+      const currentName = usePreferences.getState().name.trim();
+      if (
+        profile.displayName &&
+        (!currentName || /^you$/i.test(currentName)) &&
+        !/^you$/i.test(profile.displayName)
+      ) {
+        usePreferences.getState().setName(profile.displayName);
+      }
+      if (profile.avatar) {
+        const local = usePreferences.getState().avatar;
+        usePreferences.getState().setAvatar({
+          ...profile.avatar,
+          // Keep a locally saved tint when the cloud row is still empty (race after save).
+          ...(profile.avatar.color || local.color
+            ? { color: profile.avatar.color ?? local.color }
+            : {}),
+          ...(local.kind === 'photo' && local.localPhotoUri
+            ? { localPhotoUri: local.localPhotoUri }
+            : {}),
+        });
+        useAvatarCache.getState().upsert(profile.userId, profile.avatar);
+      }
       const lists = await loadLists();
       set({
         ...lists,
@@ -110,7 +142,8 @@ export const useFriends = create<FriendsState>((set, get) => ({
     await removeFriend(friendUserId);
     await get().refresh();
   },
-  clear: () =>
+  clear: () => {
+    useAvatarCache.getState().clear();
     set({
       friends: [],
       incoming: [],
@@ -118,5 +151,6 @@ export const useFriends = create<FriendsState>((set, get) => ({
       loading: false,
       error: undefined,
       lastLoadedAt: undefined,
-    }),
+    });
+  },
 }));
