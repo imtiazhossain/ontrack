@@ -7,24 +7,36 @@ Convention: `ontrack.<feature>.<surface>.<control>`
 ## Host commands
 
 ```bash
-# List currently registered elements (JSON)
+# List currently registered elements (JSON; includes route)
 ./scripts/agent-ui-dump.sh
+./scripts/agent-ui-dump.sh --prefix ontrack.today
 
 # Invoke a control by id (no coordinates)
 ./scripts/agent-ui-tap.sh ontrack.tabs.travel
+
+# Jump to a surface (prefer over tab-hopping)
+./scripts/agent-ui-open.sh travel
+./scripts/agent-ui-open.sh reset
+
+# Wait until an id/prefix/route is ready
+./scripts/agent-ui-wait.sh --prefix ontrack.checklists.
 ```
+
+See also [`docs/agent-routes.md`](./agent-routes.md) for aliases and deep links.
 
 Deep links (same ops):
 
 - `ontrack:///agent/ui?op=dump`
 - `ontrack:///agent/ui?op=tap&id=<testID>`
 - `ontrack:///agent/ui?op=exists&id=<testID>`
+- `ontrack:///agent/ui?op=goto&to=calendar`
+- `ontrack:///agent/ui?op=reset`
 
 (Use three slashes after `ontrack:` so the path is `/agent/ui`.)
 
 Dump/status files live in the app Documents directory:
 
-- `agent-ui-dump.json`
+- `agent-ui-dump.json` (includes `route`)
 - `agent-ui-status.json`
 
 ## Tabs
@@ -46,6 +58,61 @@ Dump/status files live in the app Documents directory:
 
 Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
+## Today (`/(tabs)/` index)
+
+| testID | Control |
+|--------|---------|
+| `ontrack.today.prevDay` | Previous day |
+| `ontrack.today.nextDay` | Next day |
+| `ontrack.today.weather` | Home weather / location |
+| `ontrack.today.addActivity` | Add activity |
+| `ontrack.today.emptyAddActivity` | Empty-state add |
+| `ontrack.today.activity.<id>` | Activity card |
+| `ontrack.today.activityToggle.<id>` | Activity complete toggle |
+| `ontrack.today.location.close` | Location sheet close |
+| `ontrack.today.location.useCurrent` | Use current location |
+| `ontrack.today.location.place` | Place search field |
+| `ontrack.today.location.save` | Save location |
+| `ontrack.today.location.clear` | Clear location |
+
+## Calendar (`/(tabs)/calendar`)
+
+| testID | Control |
+|--------|---------|
+| `ontrack.calendar.jumpToday` | Jump to today |
+| `ontrack.calendar.prevMonth` | Previous month |
+| `ontrack.calendar.nextMonth` | Next month |
+| `ontrack.calendar.openDay` | Open selected day |
+| `ontrack.calendar.day.<YYYY-MM-DD>` | Month grid day cell |
+
+## Checklists (`/(tabs)/to-do`)
+
+| testID | Control |
+|--------|---------|
+| `ontrack.checklists.editMode` | Edit / Done lists |
+| `ontrack.checklists.collaborators` | Collaborators |
+| `ontrack.checklists.newListName` | New list name field |
+| `ontrack.checklists.createList` | Create list |
+| `ontrack.checklists.list.<listId>` | Open list card |
+| `ontrack.checklists.detail.back` | Back to lists |
+| `ontrack.checklists.detail.newTask` | New task field |
+| `ontrack.checklists.detail.addTask` | Add task |
+| `ontrack.checklists.detail.sort` | Sort menu |
+| `ontrack.checklists.detail.actions` | List actions menu |
+| `ontrack.checklists.detail.editMode` | Edit / Done tasks |
+| `ontrack.checklists.detail.task.<taskId>` | Task row |
+
+## Profile (`/(tabs)/profile`)
+
+| testID | Control |
+|--------|---------|
+| `ontrack.profile.avatar` | Customize avatar |
+| `ontrack.profile.theme.system` / `.light` / `.dark` | Theme segment |
+| `ontrack.profile.homeLocation` | Home location |
+| `ontrack.profile.agents` | Manage Agents |
+| `ontrack.profile.nutrition` | Nutrition profiles |
+| `ontrack.profile.resetData` | Reset All Data |
+
 ## Travel list (`/(tabs)/travel`)
 
 | testID | Control |
@@ -63,6 +130,10 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 |--------|---------|
 | `ontrack.travel.planDetail.weather` | Weather |
 | `ontrack.travel.planDetail.currency` | Currency |
+| `ontrack.travel.planDetail.addToTimeline` | Add to Timeline |
+| `ontrack.travel.timelineAdd.dismiss` | Kind picker scrim |
+| `ontrack.travel.timelineAdd.close` | Kind picker close |
+| `ontrack.travel.timelineAdd.kind.<kind>` | Timeline kind choice |
 
 Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 

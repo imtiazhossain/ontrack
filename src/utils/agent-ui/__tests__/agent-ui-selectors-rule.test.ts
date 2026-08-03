@@ -11,6 +11,8 @@ describe('agent-ui selector rule', () => {
     expect(rule).toContain('ontrack.<feature>.<surface>.<control>');
     expect(rule).toContain('docs/agent-ui-map.md');
     expect(rule).toContain('src/utils/agent-ui/ids.ts');
+    expect(rule).toContain('agent-ui-open.sh');
+    expect(rule).toContain('ensure-packager.sh');
     expect(rule).not.toMatch(/coordinates are a \*\*last resort\*\*/i);
     expect(rule).toMatch(/Coordinates are not an alternative/i);
   });

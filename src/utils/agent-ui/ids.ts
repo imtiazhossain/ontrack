@@ -15,6 +15,54 @@ export const AgentUiIds = {
     games: 'ontrack.tabs.games',
     vehicles: 'ontrack.tabs.vehicles',
   },
+  today: {
+    prevDay: 'ontrack.today.prevDay',
+    nextDay: 'ontrack.today.nextDay',
+    weather: 'ontrack.today.weather',
+    addActivity: 'ontrack.today.addActivity',
+    emptyAddActivity: 'ontrack.today.emptyAddActivity',
+    activity: (activityId: string) => `ontrack.today.activity.${activityId}`,
+    activityToggle: (activityId: string) =>
+      `ontrack.today.activityToggle.${activityId}`,
+    location: {
+      close: 'ontrack.today.location.close',
+      useCurrent: 'ontrack.today.location.useCurrent',
+      place: 'ontrack.today.location.place',
+      save: 'ontrack.today.location.save',
+      clear: 'ontrack.today.location.clear',
+    },
+  },
+  calendar: {
+    jumpToday: 'ontrack.calendar.jumpToday',
+    prevMonth: 'ontrack.calendar.prevMonth',
+    nextMonth: 'ontrack.calendar.nextMonth',
+    openDay: 'ontrack.calendar.openDay',
+    day: (dateKey: string) => `ontrack.calendar.day.${dateKey}`,
+  },
+  checklists: {
+    editMode: 'ontrack.checklists.editMode',
+    collaborators: 'ontrack.checklists.collaborators',
+    newListName: 'ontrack.checklists.newListName',
+    createList: 'ontrack.checklists.createList',
+    list: (listId: string) => `ontrack.checklists.list.${listId}`,
+    detail: {
+      back: 'ontrack.checklists.detail.back',
+      newTask: 'ontrack.checklists.detail.newTask',
+      addTask: 'ontrack.checklists.detail.addTask',
+      sort: 'ontrack.checklists.detail.sort',
+      actions: 'ontrack.checklists.detail.actions',
+      editMode: 'ontrack.checklists.detail.editMode',
+      task: (taskId: string) => `ontrack.checklists.detail.task.${taskId}`,
+    },
+  },
+  profile: {
+    avatar: 'ontrack.profile.avatar',
+    homeLocation: 'ontrack.profile.homeLocation',
+    agents: 'ontrack.profile.agents',
+    nutrition: 'ontrack.profile.nutrition',
+    resetData: 'ontrack.profile.resetData',
+    theme: (themeId: string) => `ontrack.profile.theme.${themeId}`,
+  },
   travel: {
     list: {
       searchFlights: 'ontrack.travel.list.searchFlights',
@@ -28,6 +76,13 @@ export const AgentUiIds = {
     planDetail: {
       weather: 'ontrack.travel.planDetail.weather',
       currency: 'ontrack.travel.planDetail.currency',
+      addToTimeline: 'ontrack.travel.planDetail.addToTimeline',
+      weatherCard: 'ontrack.travel.planDetail.weatherCard',
+    },
+    timelineAdd: {
+      dismiss: 'ontrack.travel.timelineAdd.dismiss',
+      close: 'ontrack.travel.timelineAdd.close',
+      kind: (kind: string) => `ontrack.travel.timelineAdd.kind.${kind}`,
     },
     flightSearch: {
       back: 'ontrack.travel.flightSearch.back',
@@ -69,7 +124,6 @@ export const AgentUiIds = {
       close: 'ontrack.travel.removeConfirm.close',
       cancel: 'ontrack.travel.removeConfirm.cancel',
       confirm: 'ontrack.travel.removeConfirm.confirm',
-      /** Triggers that open the shared remove dialog (first visible wins for taps). */
       open: 'ontrack.travel.removeConfirm.open',
     },
     itineraryAdd: {

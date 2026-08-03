@@ -19,6 +19,8 @@ interface ActivityCardProps {
   onToggleComplete: () => void;
   onLongPress?: () => void;
   index?: number;
+  testID?: string;
+  toggleTestID?: string;
 }
 
 export function ActivityCard({
@@ -29,6 +31,8 @@ export function ActivityCard({
   onToggleComplete,
   onLongPress,
   index = 0,
+  testID,
+  toggleTestID,
 }: ActivityCardProps) {
   const theme = useTheme();
   const colors = categoryColors(theme, category.colorKey);
@@ -41,6 +45,7 @@ export function ActivityCard({
         onPress={onPress}
         onLongPress={onLongPress}
         padded={false}
+        testID={testID}
         accessibilityLabel={`${activity.title}, ${formatMinutes(activity.startMinutes)}, ${activity.status}`}
         style={{
           ...styles.card,
@@ -81,6 +86,7 @@ export function ActivityCard({
             icon={completed ? 'status-completed' : skipped ? 'status-skipped' : 'status-upcoming'}
             color={completed ? colors.main : skipped ? theme.warning : theme.textTertiary}
             background="transparent"
+            testID={toggleTestID}
             accessibilityLabel={
               completed ? 'Mark Incomplete' : skipped ? 'Unskip Activity' : 'Mark Complete'
             }

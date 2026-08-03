@@ -1,6 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 
 import { listAgentUiTargets, type AgentUiEntry } from './registry';
+import { getAgentUiRoute } from './route';
 
 export const AGENT_UI_DUMP_FILENAME = 'agent-ui-dump.json';
 export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
@@ -8,6 +9,8 @@ export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
 export type AgentUiDumpPayload = {
   generatedAt: string;
   count: number;
+  /** Expo Router pathname when the dump was taken (dev bridge). */
+  route: string | null;
   elements: AgentUiEntry[];
 };
 
@@ -18,6 +21,7 @@ export type AgentUiStatusPayload = {
   ok: boolean;
   detail?: string;
   element?: AgentUiEntry;
+  route?: string | null;
 };
 
 function writeJson(filename: string, payload: unknown): void {
@@ -33,6 +37,7 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
   const payload: AgentUiDumpPayload = {
     generatedAt: new Date().toISOString(),
     count: elements.length,
+    route: getAgentUiRoute(),
     elements,
   };
   writeJson(AGENT_UI_DUMP_FILENAME, payload);
@@ -42,6 +47,7 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
 export function writeAgentUiStatus(payload: Omit<AgentUiStatusPayload, 'generatedAt'>): AgentUiStatusPayload {
   const full: AgentUiStatusPayload = {
     generatedAt: new Date().toISOString(),
+    route: getAgentUiRoute(),
     ...payload,
   };
   writeJson(AGENT_UI_STATUS_FILENAME, full);

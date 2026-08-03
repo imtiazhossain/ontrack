@@ -13,19 +13,22 @@ JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killi
 
 1. If Metro `/status` is already 200, **leave it running**. Do not restart with `--clear`.
 2. Save the edit, wait briefly for Metro to rebundle / Fast Refresh, then screenshot the changed surface.
-3. Only reconnect the dev client if the app lost the packager (launcher / blank / LoadBundleFromServerError):
-   - `xcrun simctl openurl booted "exp+ontrack://expo-development-client/?url=http%3A%2F%2F<en0-IP>%3A8081"`
-4. Prefer that reconnect over `simctl terminate` / `launch`.
+3. Before reconnecting, run `./scripts/ensure-packager.sh` (or `npm run packager:ensure`). It checks Metro, syncs local API base URL, probes the app via agent-ui dump, and **only reconnects** if the probe fails.
+4. Manual reconnect (only if the script is unavailable):  
+   `xcrun simctl openurl booted "exp+ontrack://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"`  
+   Prefer `127.0.0.1` for the iOS Simulator (survives Wi‑Fi IP churn). Use LAN IP (`--lan`) for a physical device.
+5. Prefer reconnect over `simctl terminate` / `launch`.
 
 ## When Metro is down
 
 1. Use **Node 24** (see `.nvmrc`). Never start Metro with Homebrew `node@25` first on `PATH` — Node 25’s broken `localStorage` crashes Metro on Fast Refresh.
    - Prefer: `export PATH="$HOME/.nvm/versions/node/v24.12.0/bin:/opt/homebrew/bin:/usr/bin:/bin"` (or `nvm use`) before `npm start`.
-2. Start it **without** clearing cache:
-   - `REACT_NATIVE_PACKAGER_HOSTNAME=<current en0 IP> npm start`
+2. Start it **without** clearing cache — prefer:
+   - `./scripts/ensure-packager.sh --start` (defaults to `127.0.0.1`), or
+   - `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npm start`
    - (`npm start` = `expo start --dev-client`; use `npm run start:clear` only for stubborn stale-bundle cases)
-3. Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with that LAN IP when it drifts.
-4. Prove `/status` is 200 on LAN + localhost; on doubt, fetch the iOS entry bundle and confirm HTTP 200.
+3. Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with the packager host when it drifts (`ensure-packager.sh` does this for local Metro URLs).
+4. Prove `/status` is 200 on localhost (+ LAN when using `--lan`); on doubt, fetch the iOS entry bundle and confirm HTTP 200.
 
 ## Required close-out
 

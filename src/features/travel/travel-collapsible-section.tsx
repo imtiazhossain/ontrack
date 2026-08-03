@@ -13,6 +13,7 @@ import {
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 
 const TRAVEL_HEADER_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.08)';
 
@@ -22,6 +23,7 @@ export function TravelCollapsibleSection({
   expanded,
   onToggle,
   onAddPress,
+  addTestID,
   titleVariant = 'overline',
   nested = false,
   icon,
@@ -38,6 +40,7 @@ export function TravelCollapsibleSection({
   onToggle: () => void;
   /** Optional plus control to the right of the title (e.g. add timeline item). */
   onAddPress?: () => void;
+  addTestID?: string;
   /** Slightly larger parent headers can use `caption` or `callout`. */
   titleVariant?: TypeVariant;
   /** Smaller chevron flush to the title — for sections nested under a parent. */
@@ -70,6 +73,10 @@ export function TravelCollapsibleSection({
       ? s(16)
       : Math.max(32, s(32));
   const headerGap = nested ? spacing.xxs : spacing.sm;
+  const addAgent = useAgentUiTarget(addTestID, {
+    label: `Add to ${title}`,
+    onPress: onAddPress,
+  });
 
   return (
     <View
@@ -195,6 +202,9 @@ export function TravelCollapsibleSection({
         </Pressable>
         {onAddPress ? (
           <Pressable
+            ref={addAgent.ref}
+            testID={addTestID}
+            onLayout={addAgent.onLayout}
             accessibilityRole="button"
             accessibilityLabel={`Add to ${title}`}
             onPress={onAddPress}

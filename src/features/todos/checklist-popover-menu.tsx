@@ -18,6 +18,7 @@ import {
   type AppIconName,
 } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export interface ChecklistPopoverItem {
@@ -36,6 +37,7 @@ interface ChecklistPopoverMenuProps {
   triggerIcon: AppIconName;
   items: ChecklistPopoverItem[];
   onSelect: (id: string) => void;
+  testID?: string;
 }
 
 interface Anchor {
@@ -60,13 +62,14 @@ export function ChecklistPopoverMenu({
   triggerIcon,
   items,
   onSelect,
+  testID,
 }: ChecklistPopoverMenuProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const triggerRef = useRef<View>(null);
   const [anchor, setAnchor] = useState<Anchor>();
   const [visible, setVisible] = useState(false);
+  const openRef = useRef<() => void>(() => undefined);
 
   const panelWidth = Math.min(
     PANEL_WIDTH,
@@ -98,23 +101,31 @@ export function ChecklistPopoverMenu({
       : Math.max(insets.top + spacing.lg, anchor.y - panelHeight - spacing.sm)
     : insets.top + spacing.xxxl;
 
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: () => openRef.current(),
+  });
+
   const open = () => {
     haptics.select();
-    triggerRef.current?.measureInWindow((x, y, width, height) => {
+    agent.ref.current?.measureInWindow((x, y, width, height) => {
       setAnchor({ x, y, width, height });
       setVisible(true);
     });
   };
+  openRef.current = open;
 
   const close = () => setVisible(false);
 
   return (
     <>
       <Pressable
-        ref={triggerRef}
+        ref={agent.ref}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ expanded: visible }}
+        testID={agent.testID}
+        onLayout={agent.onLayout}
         hitSlop={4}
         onPress={open}
         style={({ pressed }) => [

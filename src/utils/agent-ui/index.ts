@@ -1,4 +1,5 @@
 export { AgentTestId } from './AgentTestId';
+export { AgentUiRouteSync } from './AgentUiRouteSync';
 export {
   AgentUiIds,
   tabTestIdForRoute,
@@ -26,4 +27,14 @@ export {
   type AgentUiEntry,
   type AgentUiFrame,
 } from './registry';
+export {
+  AGENT_UI_ROUTE_ALIASES,
+  agentUiDeepLinkForDestination,
+  agentUiNavigate,
+  getAgentUiRoute,
+  resolveAgentUiDestination,
+  setAgentUiNavigator,
+  setAgentUiRoute,
+  type AgentUiRouteAlias,
+} from './route';
 export { useAgentUiTarget } from './use-agent-ui-target';

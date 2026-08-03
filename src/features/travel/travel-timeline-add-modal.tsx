@@ -12,6 +12,7 @@ import {
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 type TimelineChoice = {
@@ -48,6 +49,113 @@ const TIMELINE_CHOICES: TimelineChoice[] = [
   },
 ];
 
+function TimelineKindChoice({
+  choice,
+  light,
+  iconSize,
+  ms,
+  s,
+  rs,
+  onSelect,
+}: {
+  choice: TimelineChoice;
+  light: boolean;
+  iconSize: number;
+  ms: (n: number) => number;
+  s: (n: number) => number;
+  rs: ReturnType<typeof useResponsive>['spacing'];
+  onSelect: (kind: TravelItemKind) => void;
+}) {
+  const theme = useTheme();
+  const colors = kindChrome(choice.kind, theme);
+  const testID = AgentUiIds.travel.timelineAdd.kind(choice.kind);
+  const handlePress = () => {
+    haptics.select();
+    onSelect(choice.kind);
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: choice.label,
+    onPress: handlePress,
+  });
+
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
+      accessibilityHint={`Opens the add ${choice.label.toLowerCase()} form`}
+      accessibilityLabel={choice.label}
+      accessibilityRole="button"
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.choice,
+        {
+          minHeight: Math.max(72, s(76)),
+          gap: rs.md,
+          paddingHorizontal: rs.md,
+          paddingVertical: rs.sm,
+          borderColor: kindBorder(choice.kind, theme),
+          backgroundColor: pressed
+            ? colors.tint
+            : light
+              ? '#FFFEFC'
+              : '#1B1917',
+          borderRadius: Math.max(radii.lg, s(16)),
+          transform: [{ scale: pressed ? 0.99 : 1 }],
+        },
+      ]}>
+      <View
+        style={[
+          styles.choiceIcon,
+          {
+            width: iconSize,
+            height: iconSize,
+            borderRadius: iconSize / 2,
+            backgroundColor: colors.tint,
+          },
+        ]}>
+        <Symbol
+          name={kindIcon(choice.kind)}
+          size={Math.max(23, s(25))}
+          color={colors.accent}
+        />
+      </View>
+      <View style={[styles.choiceCopy, { gap: ms(3) }]}>
+        <AppText
+          fit
+          numberOfLines={1}
+          style={[
+            styles.choiceTitle,
+            {
+              color: light ? '#251D18' : '#F1E8DF',
+              fontSize: Math.max(18, s(20)),
+              lineHeight: Math.max(23, s(25)),
+            },
+          ]}>
+          {choice.label}
+        </AppText>
+        <AppText
+          numberOfLines={2}
+          style={[
+            styles.choiceDescription,
+            {
+              color: light ? '#6F6861' : '#AAA097',
+              fontSize: Math.max(12.5, s(13.5)),
+              lineHeight: Math.max(17, s(18)),
+            },
+          ]}>
+          {choice.description}
+        </AppText>
+      </View>
+      <Symbol
+        name="chevron-right"
+        size={Math.max(18, s(19))}
+        color={colors.accent}
+      />
+    </Pressable>
+  );
+}
+
 export function TravelTimelineAddModal({
   visible,
   onClose,
@@ -64,6 +172,20 @@ export function TravelTimelineAddModal({
   const closeSize = Math.max(44, s(44));
   const iconSize = Math.max(46, s(48));
   const brandSize = Math.max(44, s(46));
+  const dismissAgent = useAgentUiTarget(
+    visible ? AgentUiIds.travel.timelineAdd.dismiss : undefined,
+    { label: 'Close add to timeline', onPress: onClose },
+  );
+  const closeAgent = useAgentUiTarget(
+    visible ? AgentUiIds.travel.timelineAdd.close : undefined,
+    {
+      label: 'Close add to timeline',
+      onPress: () => {
+        haptics.tap();
+        onClose();
+      },
+    },
+  );
 
   return (
     <Modal
@@ -86,6 +208,9 @@ export function TravelTimelineAddModal({
           style={StyleSheet.absoluteFill}
         />
         <Pressable
+          ref={dismissAgent.ref}
+          testID={AgentUiIds.travel.timelineAdd.dismiss}
+          onLayout={dismissAgent.onLayout}
           accessibilityLabel="Close add to timeline"
           onPress={onClose}
           style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlayScrim }]}
@@ -169,6 +294,9 @@ export function TravelTimelineAddModal({
             </View>
 
             <Pressable
+              ref={closeAgent.ref}
+              testID={AgentUiIds.travel.timelineAdd.close}
+              onLayout={closeAgent.onLayout}
               accessibilityLabel="Close add to timeline"
               accessibilityRole="button"
               hitSlop={8}
@@ -196,86 +324,18 @@ export function TravelTimelineAddModal({
             </Pressable>
 
             <View style={{ gap: rs.xs, paddingTop: rs.sm }}>
-              {TIMELINE_CHOICES.map((choice) => {
-                const colors = kindChrome(choice.kind, theme);
-                return (
-                  <Pressable
-                    accessibilityHint={`Opens the add ${choice.label.toLowerCase()} form`}
-                    accessibilityLabel={choice.label}
-                    accessibilityRole="button"
-                    key={choice.kind}
-                    onPress={() => {
-                      haptics.select();
-                      onSelect(choice.kind);
-                    }}
-                    style={({ pressed }) => [
-                      styles.choice,
-                      {
-                        minHeight: Math.max(72, s(76)),
-                        gap: rs.md,
-                        paddingHorizontal: rs.md,
-                        paddingVertical: rs.sm,
-                        borderColor: kindBorder(choice.kind, theme),
-                        backgroundColor: pressed
-                          ? colors.tint
-                          : light
-                            ? '#FFFEFC'
-                            : '#1B1917',
-                        borderRadius: Math.max(radii.lg, s(16)),
-                        transform: [{ scale: pressed ? 0.99 : 1 }],
-                      },
-                    ]}>
-                    <View
-                      style={[
-                        styles.choiceIcon,
-                        {
-                          width: iconSize,
-                          height: iconSize,
-                          borderRadius: iconSize / 2,
-                          backgroundColor: colors.tint,
-                        },
-                      ]}>
-                      <Symbol
-                        name={kindIcon(choice.kind)}
-                        size={Math.max(23, s(25))}
-                        color={colors.accent}
-                      />
-                    </View>
-                    <View style={[styles.choiceCopy, { gap: ms(3) }]}>
-                      <AppText
-                        fit
-                        numberOfLines={1}
-                        style={[
-                          styles.choiceTitle,
-                          {
-                            color: light ? '#251D18' : '#F1E8DF',
-                            fontSize: Math.max(18, s(20)),
-                            lineHeight: Math.max(23, s(25)),
-                          },
-                        ]}>
-                        {choice.label}
-                      </AppText>
-                      <AppText
-                        numberOfLines={2}
-                        style={[
-                          styles.choiceDescription,
-                          {
-                            color: light ? '#6F6861' : '#AAA097',
-                            fontSize: Math.max(12.5, s(13.5)),
-                            lineHeight: Math.max(17, s(18)),
-                          },
-                        ]}>
-                        {choice.description}
-                      </AppText>
-                    </View>
-                    <Symbol
-                      name="chevron-right"
-                      size={Math.max(18, s(19))}
-                      color={colors.accent}
-                    />
-                  </Pressable>
-                );
-              })}
+              {TIMELINE_CHOICES.map((choice) => (
+                <TimelineKindChoice
+                  key={choice.kind}
+                  choice={choice}
+                  light={light}
+                  iconSize={iconSize}
+                  ms={ms}
+                  s={s}
+                  rs={rs}
+                  onSelect={onSelect}
+                />
+              ))}
             </View>
           </ScrollView>
         </View>

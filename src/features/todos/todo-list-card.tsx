@@ -8,6 +8,7 @@ import { todoListIcon } from '@/features/todos/list-icon';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoList } from '@/store/todos';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 
 export type TodoListCollaboratorChip = {
   userId?: string;
@@ -32,6 +33,7 @@ export function TodoListCard({
   canMoveDown,
   canMoveUp,
   isActive,
+  testID,
 }: {
   editMode: boolean;
   list: TodoList;
@@ -49,6 +51,7 @@ export function TodoListCard({
   canMoveDown: boolean;
   canMoveUp: boolean;
   isActive: boolean;
+  testID?: string;
 }) {
   const theme = useTheme();
   const { spacing, s, typography } = useResponsive();
@@ -58,6 +61,10 @@ export function TodoListCard({
   // Match caption name height — chip was oversized vs the label beside it.
   const collaboratorChip = Math.max(14, Math.round(typography.caption.lineHeight));
   const collaboratorRing = 1;
+  const openAgent = useAgentUiTarget(editMode ? undefined : testID, {
+    label: list.name,
+    onPress,
+  });
   const collaboratorNames = collaborators?.map((person) => person.displayName);
   const collaboratorLabel = collaboratorNames?.join(', ');
   const leaving = list.mode === 'shared' && list.role === 'member';
@@ -182,6 +189,9 @@ export function TodoListCard({
         <View style={styles.cardMain}>{cardContents}</View>
       ) : (
         <Pressable
+          ref={openAgent.ref}
+          testID={testID}
+          onLayout={openAgent.onLayout}
           accessibilityHint="Tap to open."
           accessibilityRole="button"
           accessibilityLabel={`${list.name}, ${open} open of ${total}${

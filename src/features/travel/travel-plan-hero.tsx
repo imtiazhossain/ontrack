@@ -10,6 +10,8 @@ import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateKey, type DateDisplayFormat } from '@/utils/date';
+import { AgentUiIds } from '@/utils/agent-ui';
+import { goBackOrReplace } from '@/utils/navigation';
 
 export function TravelPlanHero({
   plan,
@@ -36,7 +38,8 @@ export function TravelPlanHero({
           background={theme.backgroundElevated}
           borderColor={theme.separator}
           accessibilityLabel="Go Back"
-          onPress={() => router.replace('/(tabs)/travel' as Href)}
+          testID={AgentUiIds.chrome.back}
+          onPress={() => goBackOrReplace(router, '/(tabs)/travel' as Href)}
         />
         <View style={styles.headerCopy}>
           {showDestination ? (
@@ -65,6 +68,7 @@ export function TravelPlanHero({
             background={theme.backgroundElevated}
             borderColor={theme.separator}
             accessibilityLabel="Add to Timeline"
+            testID={AgentUiIds.travel.planDetail.addToTimeline}
             onPress={onAddPress}
           />
         ) : null}

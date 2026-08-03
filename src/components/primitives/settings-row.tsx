@@ -142,6 +142,7 @@ export function SettingsActionRow({
   icon,
   onPress,
   accessibilityLabel,
+  testID,
 }: Omit<SettingsRowProps, 'trailing'> & { onPress: () => void }) {
   const theme = useTheme();
   return (
@@ -151,6 +152,7 @@ export function SettingsActionRow({
       icon={icon}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
+      testID={testID}
       trailing={<Symbol name="chevron-right" size="sm" color={theme.textTertiary} />}
     />
   );

@@ -11,13 +11,13 @@ After any change that affects the running Expo/iOS app UI, **always test in the 
 
 1. Confirm Metro `/status` is 200. Prefer the already-running bundler so Fast Refresh can apply the edit. Start only if down:
    - Use Node 24 (`nvm use`, see `.nvmrc`). Put nvm ahead of Homebrew on `PATH` — Homebrew `node@25` crashes Metro on Fast Refresh.
-   - `REACT_NATIVE_PACKAGER_HOSTNAME=<en0 IP> npm start` (no `--clear`). Use `npm run start:clear` only when the bundle is demonstrably stale after reconnect.
+   - Prefer `./scripts/ensure-packager.sh --start` (or `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npm start`). Use `npm run start:clear` only when the bundle is demonstrably stale after reconnect.
 2. Boot/open the iOS Simulator (`open -a Simulator`) with the onTrack app (`com.imtihoss.ontracknow`) or Expo Go as appropriate.
-3. Deep-link or navigate to the changed surface (e.g. `xcrun simctl openurl booted 'ontrack://workouts'`).
-4. **Test the change** on that surface via Fast Refresh (visible result of the edit, not just that the app launched). Do not terminate/relaunch solely to pick up JS/UI edits.
-5. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant).
+3. Deep-link or navigate to the changed surface with `./scripts/agent-ui-open.sh <alias>` (see `docs/agent-routes.md`) or `xcrun simctl openurl`. Prefer `./scripts/agent-ui-tap.sh` / dump over screenshot coordinates.
+4. **Test the change** on that surface via Fast Refresh (visible result of the edit, not just that the app launched). Do not terminate/relaunch solely to pick up JS/UI edits. If the packager looks lost, run `./scripts/ensure-packager.sh` (reconnects only when needed).
+5. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant). Use `./scripts/agent-ui-wait.sh` when waiting on a specific id/prefix/route.
 6. Capture a screenshot with `xcrun simctl io booted screenshot` and **read the image** so it appears in the reply.
-7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait for Fast Refresh / reconnect the dev client and capture again before finishing.
+7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait for Fast Refresh / run `ensure-packager.sh` and capture again before finishing.
 
 ## Do not
 
