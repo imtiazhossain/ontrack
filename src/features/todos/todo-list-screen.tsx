@@ -18,22 +18,15 @@ import Animated, {
 
 import {
     AppText,
-    ErrorMessage,
-    IconButton,
-    ProgressRing,
     Screen,
     Symbol,
 } from '@/components/primitives';
 import {
-    fontFamilies,
     layout,
-    radii,
     spacing,
-    typography,
 } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
-import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
+import { TodoListHeader } from '@/features/todos/todo-list-header';
 import { TodoEmptyState } from '@/features/todos/todo-empty-state';
 import { ChecklistItemSeparator, TodoRow } from '@/features/todos/todo-row';
 import { sortTodoTasks, type TodoFilter, type TodoSort } from '@/features/todos/todo-sort';
@@ -241,368 +234,50 @@ export function TodoListScreen({ listId }: { listId: string }) {
               />
             }
             ListHeaderComponent={
-              <Pressable
-                accessible={false}
-                onPress={dismissChrome}
-                style={styles.listHeader}
-              >
-                <View style={styles.heading}>
-                  <IconButton
-                    icon="chevron-left"
-                    size={40}
-                    background="transparent"
-                    accessibilityLabel="Back to checklists"
-                    testID={AgentUiIds.checklists.detail.back}
-                    onPress={() => {
-                      if (router.canGoBack()) router.back();
-                      else router.replace('/(tabs)/to-do' as never);
-                    }}
-                  />
-                  <View style={styles.headingCopy}>
-                    <AppText variant="overline" color="accent">
-                      {dateLabel}
-                    </AppText>
-                    <AppText style={styles.title}>{list.name}</AppText>
-                  </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.hero,
-                    {
-                      backgroundColor: theme.backgroundElevated,
-                      borderColor: theme.separator,
-                      boxShadow:
-                        theme.name === 'light'
-                          ? '0 10px 30px rgba(61, 50, 32, 0.09)'
-                          : '0 10px 30px rgba(0, 0, 0, 0.26)',
-                    },
-                  ]}
-                >
-                  <View style={styles.heroCopy}>
-                    <AppText
-                      variant="overline"
-                      color="tertiary"
-                      style={styles.heroOverline}>
-                      Momentum
-                    </AppText>
-                    <AppText variant="heading" style={styles.heroHeadline}>
-                      {heroCopy}
-                    </AppText>
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      style={styles.heroSupporting}>
-                      {tasks.length === 0
-                        ? 'Capture the next thing. The rest can wait.'
-                        : `${completedCount} of ${tasks.length} complete`}
-                    </AppText>
-                  </View>
-                  <ProgressRing
-                    progress={progress}
-                    size={48}
-                    strokeWidth={4}
-                    label={`${Math.round(progress * 100)}%`}
-                    sublabel="done"
-                    trackColor={theme.backgroundSunken}
-                  />
-                </View>
-
-                {owner ? <View
-                  style={[
-                    styles.composer,
-                    {
-                      backgroundColor: theme.backgroundSunken,
-                      borderColor: draft.trim()
-                        ? theme.accentPrimary
-                        : theme.separator,
-                    },
-                  ]}
-                >
-                  <Symbol name="add" size={21} color={theme.accentPrimary} />
-                  <View
-                    ref={newTaskAgent.ref}
-                    testID={newTaskAgent.testID}
-                    onLayout={newTaskAgent.onLayout}
-                    collapsable={false}
-                    style={styles.composerInputWrap}>
-                    <TextInput
-                      ref={inputRef}
-                      accessibilityLabel="New task"
-                      blurOnSubmit={false}
-                      maxLength={160}
-                      onChangeText={setDraft}
-                      onSubmitEditing={() => add()}
-                      placeholder="What needs your attention?"
-                      placeholderTextColor={theme.textTertiary}
-                      returnKeyType="done"
-                      underlineColorAndroid="transparent"
-                      style={[styles.composerInput, { color: theme.textPrimary }]}
-                      value={draft}
-                    />
-                  </View>
-                  <Pressable
-                    ref={addTaskAgent.ref}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add task"
-                    testID={addTaskAgent.testID}
-                    onLayout={addTaskAgent.onLayout}
-                    disabled={!draft.trim()}
-                    hitSlop={4}
-                    onPress={() => add()}
-                    style={({ pressed }) => [
-                      styles.addButton,
-                      {
-                        backgroundColor: draft.trim()
-                          ? theme.accentPrimary
-                          : theme.separator,
-                        opacity: pressed ? 0.72 : 1,
-                      },
-                    ]}
-                  >
-                    <Symbol
-                      name="arrow-up"
-                      size={18}
-                      color={theme.textOnAccent}
-                    />
-                  </Pressable>
-                </View> : (
-                  <View
-                    style={[
-                      styles.memberNotice,
-                      { backgroundColor: theme.backgroundSunken },
-                    ]}>
-                    <AppText variant="caption" color="secondary">
-                      You can complete items assigned to you or Anyone.
-                    </AppText>
-                  </View>
-                )}
-
-                {syncError ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss list sync message"
-                    onPress={clearSyncError}>
-                    <ErrorMessage message={syncError} />
-                  </Pressable>
-                ) : null}
-
-                <View style={styles.controls}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      filter === 'open'
-                        ? `Showing ${openTasks.length} open tasks. Show closed tasks`
-                        : `Showing ${completedCount} closed tasks. Show open tasks`
-                    }
-                    accessibilityHint="Toggles between open and closed tasks"
-                    hitSlop={4}
-                    onPress={() => {
-                      dismissChrome();
-                      setEditingTaskIds(null);
-                      setInlineEditingTaskId(null);
-                      setFilter(filter === 'open' ? 'completed' : 'open');
-                      haptics.select();
-                    }}
-                    style={({ pressed }) => [
-                      styles.taskStatus,
-                      {
-                        backgroundColor: theme.backgroundSunken,
-                        borderColor: theme.separator,
-                        opacity: pressed ? 0.72 : 1,
-                      },
-                    ]}>
-                    <View
-                      style={[
-                        styles.taskStatusDot,
-                        {
-                          backgroundColor:
-                            filter === 'open'
-                              ? theme.accentPrimary
-                              : theme.success,
-                        },
-                      ]}
-                    />
-                    <AppText
-                      variant="overline"
-                      color="secondary"
-                      style={styles.taskStatusLabel}>
-                      {filter === 'open' ? 'Open' : 'Closed'}
-                    </AppText>
-                    <View
-                      style={[
-                        styles.taskStatusDivider,
-                        { backgroundColor: theme.separator },
-                      ]}
-                    />
-                    <AppText
-                      variant="subheading"
-                      style={[
-                        styles.taskStatusCount,
-                        {
-                          color:
-                            filter === 'open'
-                              ? theme.accentPrimary
-                              : theme.success,
-                        },
-                      ]}>
-                      {filter === 'open' ? openTasks.length : completedCount}
-                    </AppText>
-                  </Pressable>
-                  <View style={styles.toolbarMenus}>
-                    {owner && visibleTasks.length > 0 ? (
-                      <Pressable
-                        ref={editModeAgent.ref}
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          editMode ? 'Finish editing checklist' : 'Edit checklist'
-                        }
-                        testID={editModeAgent.testID}
-                        onLayout={editModeAgent.onLayout}
-                        onPress={() => {
-                          dismissChrome();
-                          setInlineEditingTaskId(null);
-                          if (editMode) {
-                            setEditingTaskIds(null);
-                          } else {
-                            setSort('manual');
-                            setEditingTaskIds(
-                              new Set(visibleTasks.map((task) => task.id)),
-                            );
-                          }
-                          haptics.select();
-                        }}
-                        style={({ pressed }) => [
-                          styles.editModeButton,
-                          {
-                            backgroundColor: editMode
-                              ? theme.accentPrimary
-                              : theme.backgroundSunken,
-                            borderColor: editMode
-                              ? theme.accentPrimary
-                              : theme.separator,
-                            opacity: pressed ? 0.72 : 1,
-                          },
-                        ]}>
-                        <AppText
-                          variant="caption"
-                          color={editMode ? 'onAccent' : 'accent'}>
-                          {editMode ? 'Done' : 'Edit'}
-                        </AppText>
-                      </Pressable>
-                    ) : null}
-                    <ChecklistPopoverMenu
-                      accessibilityLabel="Sort checklist"
-                      title="Sort Items"
-                      triggerIcon="sort"
-                      testID={AgentUiIds.checklists.detail.sort}
-                      items={[
-                        {
-                          id: 'manual',
-                          title: 'Manual',
-                          description: 'Your drag-and-drop order',
-                          icon: 'list',
-                          selected: sort === 'manual',
-                        },
-                        {
-                          id: 'smart',
-                          title: 'Smart',
-                          description: 'Important first, then recent',
-                          icon: 'smart',
-                          selected: sort === 'smart',
-                        },
-                        {
-                          id: 'newest',
-                          title: 'Newest First',
-                          description: 'Most recently added at the top',
-                          icon: 'arrow-down',
-                          selected: sort === 'newest',
-                        },
-                        {
-                          id: 'oldest',
-                          title: 'Oldest First',
-                          description: 'Longest-standing items at the top',
-                          icon: 'arrow-up',
-                          selected: sort === 'oldest',
-                        },
-                        {
-                          id: 'alphabetical',
-                          title: 'A–Z',
-                          description: 'Arrange items alphabetically',
-                          icon: 'alphabetical',
-                          selected: sort === 'alphabetical',
-                        },
-                      ]}
-                      onSelect={(action) => {
-                        if (
-                          action === 'manual' ||
-                          action === 'smart' ||
-                          action === 'newest' ||
-                          action === 'oldest' ||
-                          action === 'alphabetical'
-                        ) {
-                          setSort(action);
-                          haptics.select();
-                        }
-                      }}
-                    />
-                    <ChecklistPopoverMenu
-                      accessibilityLabel={`${list.name} actions`}
-                      title="List Actions"
-                      triggerIcon="more"
-                      testID={AgentUiIds.checklists.detail.actions}
-                      items={[
-                        {
-                          id: 'copy',
-                          title: 'Copy',
-                          description: 'Copy a polished text checklist',
-                          icon: 'copy',
-                        },
-                        {
-                          id: 'share',
-                          title: 'Share',
-                          description: 'Send open items to another app',
-                          icon: 'share',
-                        },
-                        {
-                          id: 'manage',
-                          title: owner ? 'Manage' : 'Members',
-                          description: owner
-                            ? 'Sharing, members, and list settings'
-                            : 'View people with access',
-                          icon: 'settings',
-                        },
-                        ...(owner && completedCount > 0
-                          ? [
-                              {
-                                id: 'clear',
-                                title: 'Clear Completed',
-                                description: 'Remove every completed item',
-                                icon: 'delete',
-                                destructive: true,
-                                dividerBefore: true,
-                              } as const,
-                            ]
-                          : []),
-                      ]}
-                      onSelect={(action) => {
-                        if (action === 'copy') {
-                          void copyTodoListText(list, tasks, members).then((copied) => {
-                            if (copied) haptics.success();
-                          });
-                        }
-                        if (action === 'share') {
-                          void shareTodoListText(list, tasks, members);
-                        }
-                        if (action === 'manage') {
-                          router.push(`/todos/${list.id}/settings` as never);
-                        }
-                        if (action === 'clear') clearDone();
-                      }}
-                    />
-                  </View>
-                </View>
-              </Pressable>
+              <TodoListHeader
+                list={list}
+                tasks={tasks}
+                members={members}
+                owner={owner}
+                dateLabel={dateLabel}
+                heroCopy={heroCopy}
+                completedCount={completedCount}
+                progress={progress}
+                draft={draft}
+                filter={filter}
+                sort={sort}
+                editMode={editMode}
+                openTasksCount={openTasks.length}
+                syncError={syncError}
+                inputRef={inputRef}
+                newTaskAgent={newTaskAgent}
+                addTaskAgent={addTaskAgent}
+                editModeAgent={editModeAgent}
+                onDismissChrome={dismissChrome}
+                onDraftChange={setDraft}
+                onAdd={() => add()}
+                onClearSyncError={clearSyncError}
+                onFilterToggle={() => {
+                  dismissChrome();
+                  setEditingTaskIds(null);
+                  setInlineEditingTaskId(null);
+                  setFilter(filter === 'open' ? 'completed' : 'open');
+                  haptics.select();
+                }}
+                onToggleEditMode={() => {
+                  dismissChrome();
+                  setInlineEditingTaskId(null);
+                  if (editMode) {
+                    setEditingTaskIds(null);
+                  } else {
+                    setSort('manual');
+                    setEditingTaskIds(new Set(visibleTasks.map((task) => task.id)));
+                  }
+                  haptics.select();
+                }}
+                onSortChange={setSort}
+                onClearDone={clearDone}
+              />
             }
             ListEmptyComponent={
               <TodoEmptyState
@@ -695,145 +370,6 @@ export function TodoListScreen({ listId }: { listId: string }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  screenContent: {
-    paddingTop: Platform.select({ web: 76, default: spacing.sm }),
-  },
-  content: {
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    flex: 1,
-    alignSelf: 'center',
-  },
-  listHeader: { gap: spacing.md, paddingBottom: spacing.md },
-  heading: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  headingCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 34,
-    lineHeight: 41,
-    fontWeight: '400',
-    letterSpacing: -0.65,
-  },
-  hero: {
-    minHeight: 84,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  heroCopy: { flex: 1, gap: spacing.xs },
-  heroOverline: {
-    fontSize: 10,
-    lineHeight: 12,
-    letterSpacing: 1.1,
-  },
-  heroHeadline: {
-    fontSize: 16,
-    lineHeight: 21,
-  },
-  heroSupporting: {
-    fontSize: 11,
-    lineHeight: 14,
-  },
-  composer: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
-  },
-  composerInput: {
-    ...typography.body,
-    flex: 1,
-    minHeight: 52,
-    paddingVertical: spacing.md,
-  },
-  composerInputWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  controls: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  taskStatus: {
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-  },
-  taskStatusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: radii.pill,
-  },
-  taskStatusLabel: {
-    lineHeight: 18,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  taskStatusCount: {
-    fontSize: 17,
-    lineHeight: 18,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  taskStatusDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 14,
-  },
-  toolbarMenus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-  },
-  editModeButton: {
-    minWidth: 58,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-  },
-  memberNotice: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-  },
-  list: { flex: 1 },
-  listContent: { flexGrow: 1 },
-  listEmptyContent: { flexGrow: 1 },
-  listDismissFooter: { minHeight: spacing.xxl * 3, flexGrow: 1 },
   activeTaskRow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -841,6 +377,17 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+  content: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    flex: 1,
+    alignSelf: 'center',
+  },
+  flex: { flex: 1 },
+  list: { flex: 1 },
+  listContent: { flexGrow: 1 },
+  listDismissFooter: { minHeight: spacing.xxl * 3, flexGrow: 1 },
+  listEmptyContent: { flexGrow: 1 },
   missingList: {
     flex: 1,
     alignItems: 'center',
@@ -848,5 +395,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  pressed: { opacity: 0.62 },
+  screenContent: {
+    paddingTop: Platform.select({ web: 76, default: spacing.sm }),
+  },
 });

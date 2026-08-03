@@ -8,7 +8,7 @@ Keep this repo optimized for future AI-agent token usage. When a change is in sc
 
 - Prefer shared helpers listed under **Shared patterns** — do not copy-paste ID, parse, image pick/persist, API fetch, vision transport, or destructive-confirm logic.
 - Prefer editing the smallest feature entry file; extract presentational panels when a touched file would stay **>700 lines**.
-- Keep **Feature entry points** as short pointers only. Put encyclopedic domain maps in `.cursor/skills/<domain>/` (see travel skill) — do not grow always-on AGENTS.md with file dumps.
+- Keep **Feature entry points** as short pointers only. Put encyclopedic domain maps in `.cursor/skills/<domain>/` (travel, todos, workouts, vision-board) — do not grow always-on AGENTS.md with file dumps.
 - Update the feature entry table (one-line pointer) when you add a new top-level entry module; update the domain skill/reference for fat domains.
 - Follow `.cursor/rules/token-optimization.mdc` on every session.
 - Follow `.cursor/rules/responsive-layout.mdc` on every UI change (mandatory for all agents).
@@ -66,23 +66,23 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 
 ## Feature entry points
 
-Short pointers only. For travel depth, use the **travel** skill (`.cursor/skills/travel/`).
+Short pointers only. For domain depth, use skills under `.cursor/skills/` (**travel**, **todos**, **workouts**, **vision-board**).
 
 | Change | Start here |
 |--------|------------|
-| Checklist / todo list UI | `features/todos/todo-list-screen.tsx` |
+| Checklist / todo list UI | `features/todos/todo-list-screen.tsx` → **todos** skill |
 | Lists overview / create list | `features/todos/todo-lists-overview.tsx` |
 | Grocery meals / combined view | `features/todos/grocery-list-screen.tsx` |
 | Recipe import | `features/todos/recipe-import-screen.tsx` |
-| Todo store / normalize | `store/todos.ts`, `store/todos-normalize.ts` |
+| Todo store / normalize | `store/todos.ts`, `store/todos-normalize.ts` → **todos** skill |
 | Today / day timeline | `features/daily-tracking/day-view.tsx` |
 | Activity add/edit | `app/activity-form.tsx` |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
 | Plants | `app/(tabs)/plants.tsx`, `app/plants/`, `features/plants/` |
 | Travel | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` → **travel** skill |
 | Social / friends | `app/(tabs)/social.tsx`, `features/social/`, `services/friends`, `store/friends` |
-| Vision board | `features/vision-board/` |
-| Workouts | `app/(tabs)/workouts.tsx` (+ Muscle Explorer under Shared patterns) |
+| Vision board | `features/vision-board/` → **vision-board** skill |
+| Workouts | `app/(tabs)/workouts.tsx` → **workouts** skill (+ Muscle Explorer under Shared patterns) |
 | Vehicles | `app/(tabs)/vehicles.tsx`, `features/vehicles/`, `store/vehicles.ts`, `services/vehicles/` |
 | Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |

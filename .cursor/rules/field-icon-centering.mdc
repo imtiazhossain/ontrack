@@ -1,6 +1,10 @@
 ---
 description: REQUIRED — leading field icons must be vertically centered
-alwaysApply: true
+globs:
+  - src/components/primitives/**/*
+  - src/features/**/*.{ts,tsx}
+  - src/app/**/*.{ts,tsx}
+alwaysApply: false
 ---
 
 # Field leading-icon vertical centering (mandatory)

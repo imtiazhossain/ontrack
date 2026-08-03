@@ -8,7 +8,7 @@ import {
   type TodoPersistedState,
   type TodoRecipe,
   type TodoTask,
-} from './todos';
+} from './todos-types';
 import { newUuid } from '@/utils/id';
 import {
   asFiniteNonNegative,

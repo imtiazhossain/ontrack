@@ -67,6 +67,8 @@ Dump JSON includes `"route": "<pathname>"` so hosts know where they landed.
 | `agents` | `/agents` | `ontrack:///agents` |
 | `nutrition` | `/nutrition-profile` | `ontrack:///nutrition-profile` |
 | `activityForm` | `/activity-form` | `ontrack:///activity-form` |
+| `privacy` | `/privacy` | `ontrack:///privacy` |
+| `terms` | `/terms` | `ontrack:///terms` |
 
 Raw paths also work: `./scripts/agent-ui-open.sh /todos/<listId>/settings`
 

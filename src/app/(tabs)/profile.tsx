@@ -35,6 +35,7 @@ import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import { useVisionBoard } from '@/store/vision-board';
 import { haptics } from '@/utils/haptics';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -84,20 +85,30 @@ export default function ProfileSettingsScreen() {
     onPress: openAvatar,
   });
 
-  const handleReset = async () => {
-    await Promise.all([
-      ...plants.map((plant) => deletePlant(plant.id)),
-      deleteAllVisionBoardImages(),
-    ]);
-    resetPlants();
-    resetPreferences();
-    resetAddons();
-    resetAgents();
-    resetSchedule();
-    resetTravel();
-    resetTodos();
-    resetVisionBoard();
-    seedIfNeeded();
+  const handleReset = () => {
+    confirmDestructiveAction({
+      title: 'Reset All Data?',
+      message:
+        'This clears schedules, add-ons data, and app-owned photos on this device. Cloud account data is not deleted. You can sign in again to restore synced data.',
+      actionLabel: 'Reset',
+      onConfirm: () => {
+        void (async () => {
+          await Promise.all([
+            ...plants.map((plant) => deletePlant(plant.id)),
+            deleteAllVisionBoardImages(),
+          ]);
+          resetPlants();
+          resetPreferences();
+          resetAddons();
+          resetAgents();
+          resetSchedule();
+          resetTravel();
+          resetTodos();
+          resetVisionBoard();
+          seedIfNeeded();
+        })();
+      },
+    });
   };
 
   return (
@@ -171,7 +182,7 @@ export default function ProfileSettingsScreen() {
 
       <SectionHeader title="Add-ons" />
       <AppText variant="body" color="secondary" style={styles.sectionIntro}>
-        Testers have access to every add-on. Turn one off to hide it on this account; its data is kept.
+        Turn an add-on off to hide it on this account; its data is kept.
       </AppText>
       {ADDONS.map((addon) => (
         <SettingsToggleRow
@@ -189,7 +200,7 @@ export default function ProfileSettingsScreen() {
         detail={
           installedAgentCount > 0
             ? `${installedAgentCount} installed · permissions and access`
-            : 'Agent-ready · none installed'
+            : 'None installed yet'
         }
         icon="agents"
         testID={AgentUiIds.profile.agents}
@@ -207,14 +218,32 @@ export default function ProfileSettingsScreen() {
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>
-        Youth and infant guidance remains disabled until its release gates are complete.
+        Youth and infant clinical guidance is not available in this version.
       </AppText>
+
+      <SectionHeader title="Legal" />
+      <SettingsActionRow
+        label="Privacy Policy"
+        detail="How onTrack handles your data"
+        icon="shield"
+        testID={AgentUiIds.profile.privacy}
+        onPress={() => router.push('/privacy' as never)}
+        accessibilityLabel="Privacy Policy"
+      />
+      <SettingsActionRow
+        label="Terms of Use"
+        detail="Rules for using onTrack"
+        icon="note"
+        testID={AgentUiIds.profile.terms}
+        onPress={() => router.push('/terms' as never)}
+        accessibilityLabel="Terms of Use"
+      />
 
       <SectionHeader title="Data" />
       <Button
         variant="danger"
         testID={AgentUiIds.profile.resetData}
-        onPress={() => void handleReset()}
+        onPress={handleReset}
         accessibilityLabel="Reset All Data">
         Reset All Data
       </Button>

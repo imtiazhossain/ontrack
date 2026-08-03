@@ -13,6 +13,7 @@ import { create } from 'zustand';
 
 import { appTextStyle, borders, layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { AppText } from './app-text';
 import { Symbol } from './symbol';
@@ -145,6 +146,11 @@ export function AppPromptHost() {
     request.onDismiss?.();
   }, [dismiss, request]);
 
+  const closeAgent = useAgentUiTarget(
+    request?.cancelable ? AgentUiIds.prompt.close : undefined,
+    { label: 'Close', onPress: cancel },
+  );
+
   useEffect(() => {
     if (!request) return;
     const subscription = BackHandler.addEventListener(
@@ -210,8 +216,11 @@ export function AppPromptHost() {
           ]}>
           {request.cancelable ? (
             <Pressable
+              ref={closeAgent.ref}
               accessibilityLabel="Close"
               accessibilityRole="button"
+              testID={AgentUiIds.prompt.close}
+              onLayout={closeAgent.onLayout}
               hitSlop={8}
               onPress={cancel}
               style={({ pressed }) => [

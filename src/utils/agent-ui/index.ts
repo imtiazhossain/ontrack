@@ -37,4 +37,4 @@ export {
   setAgentUiRoute,
   type AgentUiRouteAlias,
 } from './route';
-export { useAgentUiTarget } from './use-agent-ui-target';
+export { useAgentUiTarget, type AgentUiTarget } from './use-agent-ui-target';

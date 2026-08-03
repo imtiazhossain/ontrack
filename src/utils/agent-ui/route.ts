@@ -27,6 +27,8 @@ export const AGENT_UI_ROUTE_ALIASES = {
   agents: '/agents',
   nutrition: '/nutrition-profile',
   activityForm: '/activity-form',
+  privacy: '/privacy',
+  terms: '/terms',
 } as const;
 
 export type AgentUiRouteAlias = keyof typeof AGENT_UI_ROUTE_ALIASES;

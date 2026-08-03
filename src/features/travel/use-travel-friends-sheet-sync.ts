@@ -1,0 +1,242 @@
+import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+
+import {
+  ensureTravelOpenJoinLink,
+  loadTravelInviteStatuses,
+} from '@/features/travel/share';
+import type {
+  TravelPlan,
+  TravelTripRosterPerson,
+} from '@/features/travel/types';
+import {
+  canonicalTravelTripId,
+  isTravelMemberPlan,
+} from '@/features/travel/trip-roster';
+import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
+import { useTravel } from '@/store/travel';
+
+type SetOptStr = Dispatch<SetStateAction<string | undefined>>;
+
+/**
+ * When the Co-Travelers sheet opens: sync roster into plan, poll invites /
+ * join requests, and ensure an open-join code for hosts.
+ */
+export function useTravelFriendsSheetSync({
+  visible,
+  plan,
+  onSavePlanRef,
+  openJoinCode,
+  setOpenJoinCode,
+  setOpenJoinBusy,
+  setOpenJoinError,
+  setCopiedOpenJoin,
+  setEditingInvite,
+  setInviteName,
+  setInviteEmail,
+  setInviteError,
+  setManagingParticipantId,
+  setTransferringUserId,
+  setCopiedCode,
+  setDecidingRequestId,
+  refreshJoinRequests,
+  refreshRoster,
+}: {
+  visible: boolean;
+  plan: TravelPlan;
+  onSavePlanRef: MutableRefObject<(plan: TravelPlan) => void>;
+  openJoinCode?: string;
+  setOpenJoinCode: SetOptStr;
+  setOpenJoinBusy: Dispatch<SetStateAction<boolean>>;
+  setOpenJoinError: SetOptStr;
+  setCopiedOpenJoin: Dispatch<SetStateAction<boolean>>;
+  setEditingInvite: Dispatch<SetStateAction<boolean>>;
+  setInviteName: Dispatch<SetStateAction<string>>;
+  setInviteEmail: Dispatch<SetStateAction<string>>;
+  setInviteError: SetOptStr;
+  setManagingParticipantId: SetOptStr;
+  setTransferringUserId: SetOptStr;
+  setCopiedCode: SetOptStr;
+  setDecidingRequestId: SetOptStr;
+  refreshJoinRequests: (tripId: string) => Promise<void>;
+  refreshRoster: (tripId: string) => Promise<TravelTripRosterPerson[] | null | undefined>;
+}) {
+  const ensuredOpenJoinForPlanRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (plan.openJoinCode && plan.openJoinCode !== openJoinCode) {
+      setOpenJoinCode(plan.openJoinCode);
+    }
+  }, [visible, plan.openJoinCode, openJoinCode, setOpenJoinCode]);
+
+  useEffect(() => {
+    if (!visible) {
+      setEditingInvite(false);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteError(undefined);
+      setManagingParticipantId(undefined);
+      setTransferringUserId(undefined);
+      setCopiedCode(undefined);
+      setOpenJoinError(undefined);
+      setCopiedOpenJoin(false);
+      setDecidingRequestId(undefined);
+      ensuredOpenJoinForPlanRef.current = undefined;
+      return;
+    }
+
+    let active = true;
+    const latest =
+      useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
+    const canonicalId = canonicalTravelTripId(latest);
+    const isMember = isTravelMemberPlan(latest);
+    const savePlan = (next: TravelPlan) => onSavePlanRef.current(next);
+
+    const syncRosterIntoPlan = (people: TravelTripRosterPerson[]) => {
+      const current =
+        useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
+      const host = people.find((person) => person.role === 'host');
+      let next = current;
+      let changed = false;
+
+      if (
+        host?.displayName &&
+        current.hostDisplayName !== host.displayName &&
+        (isTravelMemberPlan(current) || current.hostDisplayName)
+      ) {
+        next = {
+          ...next,
+          hostDisplayName: host.displayName,
+        };
+        changed = true;
+      }
+
+      // Keep local invite labels in sync with roster names so trip-card
+      // initials match Co-Travelers (e.g. "Farhana Tasmin" vs truncated "Farhana").
+      const participants = next.participants.map((person) => {
+        const match = people.find(
+          (member) =>
+            (member.role === 'member' || member.role === 'cohost') &&
+            (member.inviteCode === person.inviteCode ||
+              (member.email &&
+                person.email &&
+                member.email.toLowerCase() === person.email.toLowerCase())),
+        );
+        if (!match?.displayName || match.displayName === person.name) return person;
+        changed = true;
+        return { ...person, name: match.displayName };
+      });
+      if (changed) {
+        savePlan({
+          ...next,
+          participants,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    };
+
+    void refreshRoster(canonicalId).then((people) => {
+      if (!active || !people) return;
+      syncRosterIntoPlan(people);
+    });
+
+    const inviteCodes = latest.participants.map((person) => person.inviteCode);
+    if (inviteCodes.length > 0 && !isMember) {
+      void loadTravelInviteStatuses(inviteCodes)
+        .then((statuses) => {
+          if (!active || Object.keys(statuses).length === 0) return;
+          const current =
+            useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
+          let changed = false;
+          const participants = current.participants.map((person) => {
+            const acceptedAt = statuses[person.inviteCode];
+            if (!acceptedAt || person.acceptedAt === acceptedAt) return person;
+            changed = true;
+            return { ...person, acceptedAt };
+          });
+          if (changed) {
+            savePlan({
+              ...current,
+              participants,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    if (!isMember) {
+      const alreadyHaveCode = Boolean(latest.openJoinCode);
+      const alreadyEnsured = ensuredOpenJoinForPlanRef.current === plan.id;
+      if (!alreadyHaveCode && !alreadyEnsured) {
+        ensuredOpenJoinForPlanRef.current = plan.id;
+        setOpenJoinBusy(true);
+        void ensureTravelOpenJoinLink(latest)
+          .then((code) => {
+            if (!active) return;
+            setOpenJoinCode(code);
+            setOpenJoinError(undefined);
+            const current =
+              useTravel.getState().plans.find((item) => item.id === plan.id) ??
+              latest;
+            if (current.openJoinCode !== code) {
+              const next = {
+                ...current,
+                openJoinCode: code,
+                updatedAt: new Date().toISOString(),
+              };
+              savePlan(next);
+              void publishTravelTripExpenses(next).catch(() => undefined);
+            }
+            return refreshJoinRequests(canonicalId);
+          })
+          .catch((reason: unknown) => {
+            if (!active) return;
+            ensuredOpenJoinForPlanRef.current = undefined;
+            setOpenJoinError(
+              reason instanceof Error
+                ? reason.message
+                : 'The open join link could not be created.',
+            );
+          })
+          .finally(() => {
+            if (active) setOpenJoinBusy(false);
+          });
+      } else if (alreadyHaveCode) {
+        setOpenJoinCode(latest.openJoinCode);
+        void refreshJoinRequests(canonicalId);
+      }
+    }
+
+    const poll = setInterval(() => {
+      void refreshRoster(canonicalId).then((people) => {
+        if (!active || !people) return;
+        syncRosterIntoPlan(people);
+      });
+      if (!isMember) void refreshJoinRequests(canonicalId);
+    }, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(poll);
+    };
+  }, [
+    visible,
+    plan,
+    onSavePlanRef,
+    refreshJoinRequests,
+    refreshRoster,
+    setCopiedCode,
+    setCopiedOpenJoin,
+    setDecidingRequestId,
+    setEditingInvite,
+    setInviteEmail,
+    setInviteError,
+    setInviteName,
+    setManagingParticipantId,
+    setOpenJoinBusy,
+    setOpenJoinCode,
+    setOpenJoinError,
+    setTransferringUserId,
+  ]);
+}

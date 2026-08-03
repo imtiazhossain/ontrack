@@ -321,6 +321,8 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
       <Stack.Screen name="l/[code]" />
       <Stack.Screen name="c/[code]" />
       <Stack.Screen name="v/[code]" />
+      <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen name="terms" options={{ title: 'Terms of Use' }} />
       <Stack.Screen
         name="agent/ui"
         options={{

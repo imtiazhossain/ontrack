@@ -36,7 +36,7 @@ export async function importRentalConfirmation(
 ): Promise<ImportedRentalConfirmation | undefined> {
   if (!TravelDocumentReader) {
     throw new Error(
-      'Confirmation document import is not available in this app build. Enter the rental details manually or install the latest TestFlight build.',
+      'Confirmation document import is not available in this app build. Enter the rental details manually.',
     );
   }
   const assets = await runConfirmationPicker(options, () =>
