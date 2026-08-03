@@ -191,3 +191,16 @@ export async function signOutLocalSession() {
   const { error } = await requireClient().auth.signOut({ scope: 'local' });
   if (error) throw new CloudAccountError(error.message);
 }
+
+/**
+ * Permanently deletes the signed-in auth user and cascaded cloud data.
+ * Call while a session is still active; the session is invalid afterward.
+ */
+export async function deleteOwnCloudAccount() {
+  const { error } = await requireClient().rpc('delete_own_account');
+  if (error) {
+    throw new CloudAccountError(
+      error.message || 'Account deletion could not be completed. Try again in a moment.',
+    );
+  }
+}

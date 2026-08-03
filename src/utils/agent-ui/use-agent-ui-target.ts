@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { type LayoutChangeEvent, type View } from 'react-native';
 
 import {
@@ -12,6 +12,12 @@ type AgentUiTargetOptions = {
   onPress?: () => void;
 };
 
+export type AgentUiTarget = {
+  ref: RefObject<View | null>;
+  onLayout: ((event?: LayoutChangeEvent) => void) | undefined;
+  testID: string | undefined;
+};
+
 /**
  * Registers a native view with the __DEV__ agent-ui registry so dump/tap
  * deep links can find it without screenshot coordinates.
@@ -19,7 +25,7 @@ type AgentUiTargetOptions = {
 export function useAgentUiTarget(
   testID: string | undefined,
   options: AgentUiTargetOptions = {},
-) {
+): AgentUiTarget {
   const ref = useRef<View>(null);
   const label = options.label;
   const onPress = options.onPress;

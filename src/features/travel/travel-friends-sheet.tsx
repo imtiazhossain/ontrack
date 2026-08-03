@@ -1,36 +1,23 @@
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
 
 import {
-  AppText,
   appPrompt,
-  Button,
-  Symbol,
 } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
   createTravelInviteUrl,
   createTravelOpenJoinUrl,
   decideTravelOpenJoin,
-  ensureTravelOpenJoinLink,
   listTravelOpenJoinRequests,
-  loadTravelInviteStatuses,
   resendTravelInvite,
   revokeTravelInvite,
   shareTravelOpenJoinLink,
   shareTravelPlan,
 } from '@/features/travel/share';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
-import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import { TripPeople } from '@/features/travel/trip-people';
 import {
   canonicalTravelTripId,
@@ -50,10 +37,7 @@ import type {
   TravelPlan,
   TravelTripRosterPerson,
 } from '@/features/travel/types';
-import {
-  isTravelExpenseMemberId,
-  publishTravelTripExpenses,
-} from '@/services/travel/expense-collaboration';
+import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -65,27 +49,17 @@ import {
   TravelRemoveConfirmModal,
   type TravelRemoveConfirmPayload,
 } from '@/features/travel/travel-remove-confirm-modal';
-
-function tripNameSlug(title: string): string {
-  const slug = title
-    .trim()
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug || 'trip';
-}
-
-/** Pretty join path for display — always uses the trip name. Copy/share keep the real code URL. */
-function displayJoinLink(tripTitle: string, realUrl: string): string {
-  try {
-    const host = new URL(realUrl).host.replace(/^www\./, '');
-    return `${host}/j/${tripNameSlug(tripTitle)}`;
-  } catch {
-    return `ontrack--links.expo.app/j/${tripNameSlug(tripTitle)}`;
-  }
-}
+import {
+  TravelJoinRequestsPanel,
+  TravelOpenJoinCard,
+  TravelPendingInviteLinks,
+} from '@/features/travel/travel-friends-join-panels';
+import {
+  filterTravelFriendsVisibleParticipants,
+  resolveTravelFriendsHostPerson,
+  resolveTravelFriendsRosterMembers,
+} from '@/features/travel/travel-friends-roster-model';
+import { useTravelFriendsSheetSync } from '@/features/travel/use-travel-friends-sheet-sync';
 
 export function TravelFriendsSheet({
   plan,
@@ -124,7 +98,6 @@ export function TravelFriendsSheet({
     useState<TravelRemoveConfirmPayload | null>(null);
   const onSavePlanRef = useRef(onSavePlan);
   onSavePlanRef.current = onSavePlan;
-  const ensuredOpenJoinForPlanRef = useRef<string | undefined>(undefined);
 
   const tripId = canonicalTravelTripId(plan);
   const memberPlan = isTravelMemberPlan(plan);
@@ -137,113 +110,40 @@ export function TravelFriendsSheet({
   const canManage = isSoleHost || myRosterRole === 'cohost';
 
   const hostFromRoster = roster.find((person) => person.role === 'host');
-  const rosterMembers = useMemo(() => {
-    const fromServer = roster.filter(
-      (person) => person.role === 'member' || person.role === 'cohost',
-    );
-    if (fromServer.length > 0) return fromServer;
-    // Fallback before list_travel_trip_roster is available: expense sync
-    // stores accepted friends as member:<auth_uid>.
-    const byUserId = new Map<string, TravelTripRosterPerson>();
-    for (const person of plan.sharedExpensePeople ?? []) {
-      if (!isTravelExpenseMemberId(person.id)) continue;
-      const userId = person.id.slice('member:'.length);
-      if (!userId || (user?.id && userId === user.id)) continue;
-      const match = plan.participants.find(
-        (participant) =>
-          Boolean(participant.acceptedAt) &&
-          participant.name.trim().toLowerCase() === person.name.trim().toLowerCase(),
-      );
-      byUserId.set(userId, {
-        userId,
-        displayName: person.name,
-        role: 'member',
-        ...(match?.email ? { email: match.email } : {}),
-        ...(match?.inviteCode ? { inviteCode: match.inviteCode } : {}),
-        ...(match?.acceptedAt ? { acceptedAt: match.acceptedAt } : {}),
-      });
-    }
-    return [...byUserId.values()];
-  }, [roster, plan.sharedExpensePeople, plan.participants, user?.id]);
+  const rosterMembers = useMemo(
+    () =>
+      resolveTravelFriendsRosterMembers({
+        roster,
+        plan,
+        selfUserId: user?.id,
+      }),
+    [roster, plan, user?.id],
+  );
   const hostFallbackName = resolveSelfDisplayName({
     preferencesName,
     user,
     fallback: 'Host',
   });
-  const hostPerson = (() => {
-    const isSelfHost = Boolean(
-      user?.id && hostFromRoster?.userId === user.id,
-    );
-    // Prefer the signed-in profile name for yourself — roster/JWT helpers can
-    // fall back to a generic label like "You" / "Traveler".
-    // Never claim host on a member copy before roster confirms — that duplicated
-    // a friend into the host slot after rename.
-    if (isSelfHost || (isSoleHost && !memberPlan && !hostFromRoster)) {
-      return {
-        name: hostFallbackName,
-        email: user?.email ?? hostFromRoster?.email,
-        isSelf: true,
-        userId: user?.id ?? hostFromRoster?.userId,
-      };
-    }
-    if (hostFromRoster) {
-      return {
-        name: hostFromRoster.displayName,
-        email: hostFromRoster.email,
-        isSelf: false,
-        userId: hostFromRoster.userId,
-      };
-    }
-    if (memberPlan && plan.hostDisplayName?.trim()) {
-      return { name: plan.hostDisplayName.trim(), isSelf: false };
-    }
-    if (!memberPlan) {
-      return {
-        name: hostFallbackName,
-        email: user?.email,
-        isSelf: true,
-        userId: user?.id,
-      };
-    }
-    return { name: 'Host', isSelf: false };
-  })();
-
-  const visibleParticipants = useMemo(() => {
-    const hostEmail = hostPerson.email?.trim().toLowerCase();
-    const hostName = hostPerson.name.trim().toLowerCase();
-    const rosterLoaded = roster.length > 0;
-    const rosterEmails = new Set(
-      roster
-        .map((person) => person.email?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value)),
-    );
-    return plan.participants.filter((person) => {
-      const email = person.email?.trim().toLowerCase();
-      const name = person.name.trim().toLowerCase();
-      // Never list the host again under an older invite / display name.
-      if (hostEmail && email && email === hostEmail) return false;
-      if (hostName && name === hostName) return false;
-      if (
-        hostFromRoster &&
-        name &&
-        hostFromRoster.displayName.trim().toLowerCase() === name
-      ) {
-        return false;
-      }
-      // Member copies: once the server roster is in, hide stale accepted
-      // local rows (they duplicate host/friends under prior names).
-      if (memberPlan && rosterLoaded && person.acceptedAt) return false;
-      if (email && rosterEmails.has(email) && person.acceptedAt) return false;
-      return true;
-    });
-  }, [
+  const hostPerson = resolveTravelFriendsHostPerson({
     hostFromRoster,
-    hostPerson.email,
-    hostPerson.name,
+    isSoleHost,
     memberPlan,
-    plan.participants,
-    roster,
-  ]);
+    hostFallbackName,
+    hostDisplayName: plan.hostDisplayName,
+    selfUserId: user?.id,
+    selfEmail: user?.email,
+  });
+  const visibleParticipants = useMemo(
+    () =>
+      filterTravelFriendsVisibleParticipants({
+        participants: plan.participants,
+        hostPerson,
+        hostFromRoster,
+        roster,
+        memberPlan,
+      }),
+    [hostFromRoster, hostPerson, memberPlan, plan.participants, roster],
+  );
 
   const renameSelf = (nextName: string) => {
     setPreferencesName(nextName);
@@ -278,167 +178,26 @@ export function TravelFriendsSheet({
     }
   }, []);
 
-  // Keep the displayed code in sync when the plan already has one — without
-  // toggling busy state (that was flickering the Join Link card).
-  useEffect(() => {
-    if (!visible) return;
-    if (plan.openJoinCode && plan.openJoinCode !== openJoinCode) {
-      setOpenJoinCode(plan.openJoinCode);
-    }
-  }, [visible, plan.openJoinCode, openJoinCode]);
-
-  useEffect(() => {
-    if (!visible) {
-      setEditingInvite(false);
-      setInviteName('');
-      setInviteEmail('');
-      setInviteError(undefined);
-      setManagingParticipantId(undefined);
-      setTransferringUserId(undefined);
-      setCopiedCode(undefined);
-      setOpenJoinError(undefined);
-      setCopiedOpenJoin(false);
-      setDecidingRequestId(undefined);
-      ensuredOpenJoinForPlanRef.current = undefined;
-      return;
-    }
-
-    let active = true;
-    const latest =
-      useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
-    const canonicalId = canonicalTravelTripId(latest);
-    const isMember = isTravelMemberPlan(latest);
-    const savePlan = (next: TravelPlan) => onSavePlanRef.current(next);
-
-    const syncRosterIntoPlan = (people: TravelTripRosterPerson[]) => {
-      const current =
-        useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
-      const host = people.find((person) => person.role === 'host');
-      let next = current;
-      let changed = false;
-
-      if (
-        host?.displayName &&
-        current.hostDisplayName !== host.displayName &&
-        (isTravelMemberPlan(current) || current.hostDisplayName)
-      ) {
-        next = {
-          ...next,
-          hostDisplayName: host.displayName,
-        };
-        changed = true;
-      }
-
-      // Keep local invite labels in sync with roster names so trip-card
-      // initials match Co-Travelers (e.g. "Farhana Tasmin" vs truncated "Farhana").
-      const participants = next.participants.map((person) => {
-        const match = people.find(
-          (member) =>
-            (member.role === 'member' || member.role === 'cohost') &&
-            (member.inviteCode === person.inviteCode ||
-              (member.email &&
-                person.email &&
-                member.email.toLowerCase() === person.email.toLowerCase())),
-        );
-        if (!match?.displayName || match.displayName === person.name) return person;
-        changed = true;
-        return { ...person, name: match.displayName };
-      });
-      if (changed) {
-        savePlan({
-          ...next,
-          participants,
-          updatedAt: new Date().toISOString(),
-        });
-      }
-    };
-
-    void refreshRoster(canonicalId).then((people) => {
-      if (!active || !people) return;
-      syncRosterIntoPlan(people);
-    });
-
-    const inviteCodes = latest.participants.map((person) => person.inviteCode);
-    if (inviteCodes.length > 0 && !isMember) {
-      void loadTravelInviteStatuses(inviteCodes)
-        .then((statuses) => {
-          if (!active || Object.keys(statuses).length === 0) return;
-          const current =
-            useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
-          let changed = false;
-          const participants = current.participants.map((person) => {
-            const acceptedAt = statuses[person.inviteCode];
-            if (!acceptedAt || person.acceptedAt === acceptedAt) return person;
-            changed = true;
-            return { ...person, acceptedAt };
-          });
-          if (changed) {
-            savePlan({
-              ...current,
-              participants,
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        })
-        .catch(() => undefined);
-    }
-
-    if (!isMember) {
-      const alreadyHaveCode = Boolean(latest.openJoinCode);
-      const alreadyEnsured = ensuredOpenJoinForPlanRef.current === plan.id;
-      if (!alreadyHaveCode && !alreadyEnsured) {
-        ensuredOpenJoinForPlanRef.current = plan.id;
-        setOpenJoinBusy(true);
-        void ensureTravelOpenJoinLink(latest)
-          .then((code) => {
-            if (!active) return;
-            setOpenJoinCode(code);
-            setOpenJoinError(undefined);
-            const current =
-              useTravel.getState().plans.find((item) => item.id === plan.id) ??
-              latest;
-            if (current.openJoinCode !== code) {
-              const next = {
-                ...current,
-                openJoinCode: code,
-                updatedAt: new Date().toISOString(),
-              };
-              savePlan(next);
-              void publishTravelTripExpenses(next).catch(() => undefined);
-            }
-            return refreshJoinRequests(canonicalId);
-          })
-          .catch((reason: unknown) => {
-            if (!active) return;
-            ensuredOpenJoinForPlanRef.current = undefined;
-            setOpenJoinError(
-              reason instanceof Error
-                ? reason.message
-                : 'The open join link could not be created.',
-            );
-          })
-          .finally(() => {
-            if (active) setOpenJoinBusy(false);
-          });
-      } else if (alreadyHaveCode) {
-        setOpenJoinCode(latest.openJoinCode);
-        void refreshJoinRequests(canonicalId);
-      }
-    }
-
-    const poll = setInterval(() => {
-      void refreshRoster(canonicalId).then((people) => {
-        if (!active || !people) return;
-        syncRosterIntoPlan(people);
-      });
-      if (!isMember) void refreshJoinRequests(canonicalId);
-    }, 5000);
-
-    return () => {
-      active = false;
-      clearInterval(poll);
-    };
-  }, [visible, plan.id, refreshJoinRequests, refreshRoster]);
+  useTravelFriendsSheetSync({
+    visible,
+    plan,
+    onSavePlanRef,
+    openJoinCode,
+    setOpenJoinCode,
+    setOpenJoinBusy,
+    setOpenJoinError,
+    setCopiedOpenJoin,
+    setEditingInvite,
+    setInviteName,
+    setInviteEmail,
+    setInviteError,
+    setManagingParticipantId,
+    setTransferringUserId,
+    setCopiedCode,
+    setDecidingRequestId,
+    refreshJoinRequests,
+    refreshRoster,
+  });
 
   const inviteFriend = async () => {
     setInviteError(undefined);
@@ -983,212 +742,37 @@ export function TravelFriendsSheet({
             />
 
             {canManage ? (
-              <TravelSurfaceCard bodyStyle={styles.openJoinCard}>
-                <View style={[styles.joinHeader, { gap: rs.sm }]}>
-                  <View
-                    style={[
-                      styles.joinIcon,
-                      {
-                        width: Math.max(36, s(36)),
-                        height: Math.max(36, s(36)),
-                        borderRadius: radii.pill,
-                        backgroundColor: chrome.icons.link.bg,
-                      },
-                    ]}>
-                    <Symbol name="link" size="sm" color={chrome.icons.link.fg} />
-                  </View>
-                  <View style={styles.joinHeaderCopy}>
-                    <AppText variant="subheading" fit numberOfLines={1}>
-                      Join Link
-                    </AppText>
-                    <AppText variant="caption" color="secondary" fit numberOfLines={1}>
-                      Anyone can request to join.
-                    </AppText>
-                  </View>
-                </View>
-
-                {openJoinUrl ? (
-                  <View
-                    style={[
-                      styles.urlField,
-                      {
-                        backgroundColor: chrome.fieldBg,
-                        borderColor: chrome.fieldBorder,
-                        minHeight: Math.max(44, s(44)),
-                        paddingLeft: rs.md,
-                        gap: rs.sm,
-                      },
-                    ]}>
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      fit
-                      numberOfLines={1}
-                      style={styles.urlText}
-                      selectable>
-                      {displayJoinLink(plan.title, openJoinUrl)}
-                    </AppText>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Copy open join link"
-                      hitSlop={8}
-                      disabled={!openJoinCode || openJoinBusy}
-                      onPress={() => {
-                        haptics.tap();
-                        void copyOpenJoinLink();
-                      }}
-                      style={({ pressed }) => [
-                        styles.urlCopy,
-                        {
-                          width: Math.max(40, s(40)),
-                          height: Math.max(40, s(40)),
-                          opacity: pressed ? 0.6 : 1,
-                        },
-                      ]}>
-                      <Symbol
-                        name="copy"
-                        size="sm"
-                        color={copiedOpenJoin ? chrome.ctaFrom : chrome.label}
-                      />
-                    </Pressable>
-                  </View>
-                ) : openJoinError ? (
-                  <AppText variant="caption" color="danger">
-                    {openJoinError}
-                  </AppText>
-                ) : (
-                  <AppText variant="caption" color="secondary">
-                    {openJoinBusy ? 'Creating link…' : 'Sign in to create an open join link.'}
-                  </AppText>
-                )}
-
-                <View style={styles.linkActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Copy open join link"
-                    disabled={!openJoinCode || openJoinBusy}
-                    onPress={() => {
-                      haptics.tap();
-                      void copyOpenJoinLink();
-                    }}
-                    style={({ pressed }) => [
-                      styles.joinAction,
-                      {
-                        backgroundColor: chrome.fieldBg,
-                        borderColor: chrome.fieldBorder,
-                        minHeight: Math.max(44, s(48)),
-                        opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
-                      },
-                    ]}>
-                    <Symbol name="link" size="sm" color={chrome.label} />
-                    <AppText variant="callout" fit numberOfLines={1}>
-                      {copiedOpenJoin ? 'Copied' : 'Copy Link'}
-                    </AppText>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Share open join link"
-                    disabled={!openJoinCode || openJoinBusy}
-                    onPress={() => {
-                      haptics.tap();
-                      void shareOpenJoin();
-                    }}
-                    style={({ pressed }) => [
-                      styles.joinAction,
-                      {
-                        backgroundColor: chrome.fieldBg,
-                        borderColor: chrome.fieldBorder,
-                        minHeight: Math.max(44, s(48)),
-                        opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
-                      },
-                    ]}>
-                    <Symbol name="share" size="sm" color={chrome.label} />
-                    <AppText variant="callout" fit numberOfLines={1}>
-                      Share
-                    </AppText>
-                  </Pressable>
-                </View>
-              </TravelSurfaceCard>
+              <TravelOpenJoinCard
+                tripTitle={plan.title}
+                openJoinUrl={openJoinUrl}
+                openJoinCode={openJoinCode}
+                openJoinBusy={openJoinBusy}
+                openJoinError={openJoinError}
+                copiedOpenJoin={copiedOpenJoin}
+                chrome={chrome}
+                s={s}
+                rs={rs}
+                onCopy={() => void copyOpenJoinLink()}
+                onShare={() => void shareOpenJoin()}
+              />
             ) : null}
 
-            {canManage && joinRequests.length > 0 ? (
-              <View style={styles.linksSection}>
-                <AppText variant="overline" color="tertiary" style={travelOverlineStyle} fit>
-                  Waiting for Approval
-                </AppText>
-                {joinRequests.map((request) => {
-                  const deciding = decidingRequestId === request.id;
-                  return (
-                    <TravelSurfaceCard key={request.id} bodyStyle={styles.linkCard}>
-                      <AppText variant="subheading" fit>
-                        {request.requesterName}
-                      </AppText>
-                      <AppText variant="caption" color="secondary" selectable>
-                        {request.requesterEmail}
-                      </AppText>
-                      <View style={styles.linkActions}>
-                        <Button
-                          style={styles.linkAction}
-                          disabled={deciding}
-                          accessibilityLabel={`Approve ${request.requesterName}`}
-                          onPress={() => void decideRequest(request, true)}>
-                          {deciding ? 'Working…' : 'Approve'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          style={styles.linkAction}
-                          disabled={deciding}
-                          accessibilityLabel={`Decline ${request.requesterName}`}
-                          onPress={() => void decideRequest(request, false)}>
-                          Decline
-                        </Button>
-                      </View>
-                    </TravelSurfaceCard>
-                  );
-                })}
-              </View>
+            {canManage ? (
+              <TravelJoinRequestsPanel
+                joinRequests={joinRequests}
+                decidingRequestId={decidingRequestId}
+                onDecide={(request, approve) => void decideRequest(request, approve)}
+              />
             ) : null}
 
-            {canManage && pending.length > 0 ? (
-              <View style={styles.linksSection}>
-                <AppText variant="overline" color="tertiary" style={travelOverlineStyle} fit>
-                  Private Invite Links
-                </AppText>
-                {pending.map((participant) => {
-                  const url = createTravelInviteUrl(
-                    participant.inviteCode,
-                    process.env.EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL,
-                  );
-                  const copied = copiedCode === participant.inviteCode;
-                  return (
-                    <TravelSurfaceCard key={participant.id} bodyStyle={styles.linkCard}>
-                      <AppText variant="subheading" fit>
-                        {participant.name}
-                      </AppText>
-                      <AppText variant="caption" color="secondary" selectable>
-                        {url}
-                      </AppText>
-                      <View style={styles.linkActions}>
-                        <Button
-                          variant="secondary"
-                          style={styles.linkAction}
-                          accessibilityLabel={`Copy invite link for ${participant.name}`}
-                          onPress={() => void copyInviteLink(participant)}>
-                          {copied ? 'Copied' : 'Copy Link'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          style={styles.linkAction}
-                          disabled={managingParticipantId === participant.id}
-                          accessibilityLabel={`Share invite link for ${participant.name}`}
-                          onPress={() => void resendInvite(participant)}>
-                          Share
-                        </Button>
-                      </View>
-                    </TravelSurfaceCard>
-                  );
-                })}
-              </View>
+            {canManage ? (
+              <TravelPendingInviteLinks
+                pending={pending}
+                copiedCode={copiedCode}
+                managingParticipantId={managingParticipantId}
+                onCopy={(participant) => void copyInviteLink(participant)}
+                onShare={(participant) => void resendInvite(participant)}
+              />
             ) : null}
     </TravelSheetModal>
     <TravelRemoveConfirmModal
@@ -1199,53 +783,3 @@ export function TravelFriendsSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  openJoinCard: { gap: spacing.md },
-  joinHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  joinIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  joinHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
-    gap: 2,
-  },
-  urlField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-  },
-  urlText: {
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  urlCopy: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  linksSection: { gap: spacing.sm },
-  linkCard: { gap: spacing.sm },
-  linkActions: { flexDirection: 'row', gap: spacing.sm },
-  linkAction: { flex: 1, minWidth: 0 },
-  joinAction: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-  },
-});

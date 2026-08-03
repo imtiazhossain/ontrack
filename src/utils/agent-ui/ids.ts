@@ -61,7 +61,18 @@ export const AgentUiIds = {
     agents: 'ontrack.profile.agents',
     nutrition: 'ontrack.profile.nutrition',
     resetData: 'ontrack.profile.resetData',
+    signOut: 'ontrack.profile.signOut',
+    deleteAccount: 'ontrack.profile.deleteAccount',
+    privacy: 'ontrack.profile.privacy',
+    terms: 'ontrack.profile.terms',
     theme: (themeId: string) => `ontrack.profile.theme.${themeId}`,
+  },
+  auth: {
+    privacy: 'ontrack.auth.privacy',
+    terms: 'ontrack.auth.terms',
+  },
+  prompt: {
+    close: 'ontrack.prompt.close',
   },
   travel: {
     list: {

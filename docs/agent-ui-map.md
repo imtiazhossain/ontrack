@@ -111,7 +111,19 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.profile.homeLocation` | Home location |
 | `ontrack.profile.agents` | Manage Agents |
 | `ontrack.profile.nutrition` | Nutrition profiles |
+| `ontrack.profile.privacy` | Privacy Policy |
+| `ontrack.profile.terms` | Terms of Use |
+| `ontrack.profile.signOut` | Sign Out of This Device (signed-in) |
+| `ontrack.profile.deleteAccount` | Delete Account (signed-in) |
 | `ontrack.profile.resetData` | Reset All Data |
+
+## Auth (`/welcome`, `/account`)
+
+| testID | Control |
+|--------|---------|
+| `ontrack.auth.privacy` | Privacy Policy link |
+| `ontrack.auth.terms` | Terms of Use link |
+| `ontrack.prompt.close` | Prompt / alert dismiss (X) |
 
 ## Travel list (`/(tabs)/travel`)
 

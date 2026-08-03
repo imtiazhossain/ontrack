@@ -7,12 +7,14 @@ import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { useTheme } from '@/hooks/use-theme';
 import { useCloudSyncStatus } from '@/services/cloud/sync';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export function CloudAccountCard() {
   const router = useRouter();
   const theme = useTheme();
   const sync = useCloudSyncStatus();
-  const { isGuest, user, signOutCurrentDevice } = useAuthSession();
+  const { isGuest, user, signOutCurrentDevice, deleteAccount } = useAuthSession();
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string>();
 
@@ -46,6 +48,33 @@ export function CloudAccountCard() {
     } finally {
       setWorking(false);
     }
+  };
+
+  const confirmDeleteAccount = () => {
+    confirmDestructiveAction({
+      title: 'Delete Account?',
+      message:
+        'This permanently deletes your onTrack account, synced cloud data, and app-owned cloud photos. Shared trips or lists you host become unavailable to others. This cannot be undone.',
+      actionLabel: 'Delete Account',
+      onConfirm: () => {
+        void (async () => {
+          setWorking(true);
+          setMessage(undefined);
+          try {
+            const result = await deleteAccount();
+            if (result.status === 'failed') {
+              setMessage(result.message ?? 'Account deletion failed.');
+            }
+          } catch (deleteError) {
+            setMessage(
+              deleteError instanceof Error ? deleteError.message : 'Account deletion failed.',
+            );
+          } finally {
+            setWorking(false);
+          }
+        })();
+      },
+    });
   };
 
   return (
@@ -90,9 +119,18 @@ export function CloudAccountCard() {
           <Button
             variant="secondary"
             disabled={working}
+            testID={AgentUiIds.profile.signOut}
             onPress={() => void signOut()}
             accessibilityLabel="Sign Out of This Device">
-            {working ? 'Finishing sync…' : 'Sign Out of This Device'}
+            {working ? 'Working…' : 'Sign Out of This Device'}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={working}
+            testID={AgentUiIds.profile.deleteAccount}
+            onPress={confirmDeleteAccount}
+            accessibilityLabel="Delete Account">
+            Delete Account
           </Button>
         </>
       )}

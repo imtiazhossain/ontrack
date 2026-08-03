@@ -36,7 +36,7 @@ export async function importStayConfirmation(
 ): Promise<ImportedStayConfirmation | undefined> {
   if (!TravelDocumentReader) {
     throw new Error(
-      'Confirmation document import is not available in this app build. Enter the stay details manually or install the latest TestFlight build.',
+      'Confirmation document import is not available in this app build. Enter the stay details manually.',
     );
   }
   const assets = await runConfirmationPicker(options, () =>
