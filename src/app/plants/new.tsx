@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -7,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, spacing } from '@/design-system';
+import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import {
     createPlantCarePlan,
     identifyPlant,
@@ -64,13 +64,7 @@ export default function NewPlantScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  useEffect(() => {
-    void ImagePicker.getPendingResultAsync().then((result) => {
-      if (result && 'canceled' in result && !result.canceled && result.assets[0]?.uri) {
-        setPlantPhoto(result.assets[0].uri);
-      }
-    });
-  }, []);
+  usePendingImagePickerResult(setPlantPhoto);
 
   useEffect(() => {
     const query = identity?.commonName.trim() ?? '';

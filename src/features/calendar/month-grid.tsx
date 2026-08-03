@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { Activity } from '@/types/models';
 import { dayIndicator } from '@/utils/completion';
 import { isToday, monthGrid } from '@/utils/date';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -16,6 +17,62 @@ interface MonthGridProps {
   selected: string;
   activitiesByDate: Record<string, Activity[]>;
   onSelect: (dateKey: string) => void;
+}
+
+function MonthDayCell({
+  cellKey,
+  day,
+  inMonth,
+  isSelected,
+  today,
+  dot,
+  onSelect,
+}: {
+  cellKey: string;
+  day: number;
+  inMonth: boolean;
+  isSelected: boolean;
+  today: boolean;
+  dot: string | null;
+  onSelect: (dateKey: string) => void;
+}) {
+  const theme = useTheme();
+  const handlePress = () => {
+    haptics.select();
+    onSelect(cellKey);
+  };
+  const agent = useAgentUiTarget(AgentUiIds.calendar.day(cellKey), {
+    label: cellKey,
+    onPress: handlePress,
+  });
+
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={AgentUiIds.calendar.day(cellKey)}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={cellKey}
+      onPress={handlePress}
+      style={[
+        styles.cell,
+        styles.dayCell,
+        isSelected && { backgroundColor: theme.accentFaint },
+        today && !isSelected && { borderWidth: 1, borderColor: theme.accentPrimary },
+      ]}>
+      <AppText
+        variant="callout"
+        color={inMonth ? (isSelected ? 'accent' : 'primary') : 'tertiary'}>
+        {day}
+      </AppText>
+      <View
+        style={[
+          styles.dot,
+          { backgroundColor: dot && inMonth ? dot : 'transparent' },
+        ]}
+      />
+    </Pressable>
+  );
 }
 
 export function MonthGrid({ year, month, selected, activitiesByDate, onSelect }: MonthGridProps) {
@@ -47,39 +104,18 @@ export function MonthGrid({ year, month, selected, activitiesByDate, onSelect }:
       </View>
       {Array.from({ length: 6 }, (_, week) => (
         <View key={week} style={styles.weekRow}>
-          {cells.slice(week * 7, week * 7 + 7).map((cell) => {
-            const today = isToday(cell.key);
-            const isSelected = cell.key === selected;
-            const dot = indicatorColor(cell.key);
-            return (
-              <Pressable
-                key={cell.key}
-                accessibilityRole="button"
-                accessibilityLabel={cell.key}
-                onPress={() => {
-                  haptics.select();
-                  onSelect(cell.key);
-                }}
-                style={[
-                  styles.cell,
-                  styles.dayCell,
-                  isSelected && { backgroundColor: theme.accentFaint },
-                  today && !isSelected && { borderWidth: 1, borderColor: theme.accentPrimary },
-                ]}>
-                <AppText
-                  variant="callout"
-                  color={cell.inMonth ? (isSelected ? 'accent' : 'primary') : 'tertiary'}>
-                  {cell.day}
-                </AppText>
-                <View
-                  style={[
-                    styles.dot,
-                    { backgroundColor: dot && cell.inMonth ? dot : 'transparent' },
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
+          {cells.slice(week * 7, week * 7 + 7).map((cell) => (
+            <MonthDayCell
+              key={cell.key}
+              cellKey={cell.key}
+              day={cell.day}
+              inMonth={cell.inMonth}
+              isSelected={cell.key === selected}
+              today={isToday(cell.key)}
+              dot={indicatorColor(cell.key)}
+              onSelect={onSelect}
+            />
+          ))}
         </View>
       ))}
     </View>

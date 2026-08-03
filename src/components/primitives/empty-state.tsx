@@ -13,9 +13,17 @@ interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionTestID?: string;
 }
 
-export function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  message,
+  actionLabel,
+  onAction,
+  actionTestID,
+}: EmptyStateProps) {
   const theme = useTheme();
   const { spacing } = useResponsive();
   return (
@@ -36,7 +44,12 @@ export function EmptyState({ icon, title, message, actionLabel, onAction }: Empt
         {message}
       </AppText>
       {actionLabel && onAction ? (
-        <Button variant="secondary" onPress={onAction} style={{ marginTop: spacing.sm }}>
+        <Button
+          variant="secondary"
+          onPress={onAction}
+          testID={actionTestID}
+          accessibilityLabel={actionLabel}
+          style={{ marginTop: spacing.sm }}>
           {actionLabel}
         </Button>
       ) : null}

@@ -1,6 +1,10 @@
 import * as WebBrowser from 'expo-web-browser';
 
 import type { AppIconName } from '@/design-system';
+import {
+  resolveHostelworldCity,
+  type HostelworldCity,
+} from '@/features/travel/stays/hostelworld-city';
 import type { TravelPlan } from '@/features/travel/types';
 
 export type StayProviderId = 'booking' | 'airbnb' | 'hostelworld';
@@ -17,8 +21,16 @@ export interface StayProvider {
   name: string;
   description: string;
   icon: AppIconName;
+  /** Public website domain used to resolve the live brand logo. */
+  domain: string;
   searchUrl: (input: StaySearchInput) => string;
 }
+
+export {
+  googleFaviconLogoUrl,
+  lookupStayProviderLogoUrl,
+  stayProviderLogoUrl,
+} from '@/features/travel/stays/stay-provider-logo-lookup';
 
 function addSearchParams(
   baseUrl: string,
@@ -56,7 +68,29 @@ export function airbnbSearchUrl(input: StaySearchInput): string {
   });
 }
 
-export function hostelworldSearchUrl(input: StaySearchInput): string {
+/**
+ * Hostelworld only honors dates on the dynamic `/pwa/s` results URL, which
+ * needs a resolved city id (+ city/country names). Without a city, fall back
+ * to the legacy hostels listing (destination/guests only — dates are ignored).
+ */
+export function hostelworldSearchUrl(
+  input: StaySearchInput,
+  city?: HostelworldCity | null,
+): string {
+  if (city) {
+    return addSearchParams('https://www.hostelworld.com/pwa/s', {
+      q: city.city,
+      country: city.country,
+      city: city.city,
+      type: 'city',
+      id: city.id,
+      from: input.checkIn,
+      to: input.checkOut,
+      guests: input.guests,
+      page: 1,
+    });
+  }
+
   return addSearchParams('https://www.hostelworld.com/hostels/', {
     q: input.destination,
     from: input.checkIn,
@@ -65,26 +99,36 @@ export function hostelworldSearchUrl(input: StaySearchInput): string {
   });
 }
 
+export async function resolveHostelworldSearchUrl(
+  input: StaySearchInput,
+): Promise<string> {
+  const city = await resolveHostelworldCity(input.destination);
+  return hostelworldSearchUrl(input, city);
+}
+
 export const stayProviders: StayProvider[] = [
   {
     id: 'booking',
     name: 'Booking.com',
-    description: 'Hotels, apartments, and resorts',
+    description: 'Hotels, apartments, resorts, villas, and more',
     icon: 'building',
+    domain: 'booking.com',
     searchUrl: bookingSearchUrl,
   },
   {
     id: 'airbnb',
     name: 'Airbnb',
-    description: 'Homes, rooms, and unique stays',
+    description: 'Homes, rooms, unique stays, and local experiences',
     icon: 'home',
+    domain: 'airbnb.com',
     searchUrl: airbnbSearchUrl,
   },
   {
     id: 'hostelworld',
     name: 'Hostelworld',
-    description: 'Hostels and social stays',
+    description: 'Hostels, social stays, budget rooms, and shared spaces',
     icon: 'lodging',
+    domain: 'hostelworld.com',
     searchUrl: hostelworldSearchUrl,
   },
 ];
@@ -102,5 +146,10 @@ export async function searchStays(
   provider: StayProvider,
   plan: TravelPlan,
 ): Promise<void> {
-  await WebBrowser.openBrowserAsync(provider.searchUrl(staySearchInput(plan)));
+  const input = staySearchInput(plan);
+  const url =
+    provider.id === 'hostelworld'
+      ? await resolveHostelworldSearchUrl(input)
+      : provider.searchUrl(input);
+  await WebBrowser.openBrowserAsync(url);
 }

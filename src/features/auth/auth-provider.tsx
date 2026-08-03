@@ -7,6 +7,7 @@ import {
     beginBrowserSignIn,
     beginNativeAppleSignIn,
     CloudAccountError,
+    deleteOwnCloudAccount,
     exchangeOAuthCallback,
     isProviderCancellation,
     shouldUseNativeApple,
@@ -50,6 +51,11 @@ export interface SignOutResult {
   message?: string;
 }
 
+export interface DeleteAccountResult {
+  status: 'deleted' | 'failed';
+  message?: string;
+}
+
 interface AuthContextValue {
   phase: AuthPhase;
   session: Session | null;
@@ -62,6 +68,7 @@ interface AuthContextValue {
   completeOAuthCallback: (url: string) => Promise<void>;
   resolveDataConflict: (choice: DataResolution) => Promise<void>;
   signOutCurrentDevice: (force?: boolean) => Promise<SignOutResult>;
+  deleteAccount: () => Promise<DeleteAccountResult>;
   clearError: () => void;
 }
 
@@ -398,6 +405,31 @@ export function AuthSessionProvider({
     }
   }, []);
 
+  const deleteAccount = useCallback(async (): Promise<DeleteAccountResult> => {
+    explicitSignOutRef.current = true;
+    setPhase('loading');
+    try {
+      await deleteOwnCloudAccount();
+      await clearLocalAccountData();
+      useFriends.getState().clear();
+      useAuthAccess.getState().resetAccess();
+      initializedUserRef.current = undefined;
+      setSession(null);
+      setError(undefined);
+      setPhase('welcome');
+      return { status: 'deleted' };
+    } catch (deleteError) {
+      setError(accessibleAuthError(deleteError));
+      setPhase(session ? 'authenticated' : 'error');
+      return {
+        status: 'failed',
+        message: accessibleAuthError(deleteError),
+      };
+    } finally {
+      explicitSignOutRef.current = false;
+    }
+  }, [session]);
+
   const clearError = useCallback(() => {
     setError(undefined);
     const access = useAuthAccess.getState();
@@ -427,6 +459,7 @@ export function AuthSessionProvider({
         completeOAuthCallback,
         resolveDataConflict,
         signOutCurrentDevice,
+        deleteAccount,
         clearError,
       }}>
       {children}

@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
@@ -13,6 +14,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { AppText, ErrorMessage, Screen } from '@/components/primitives';
 import { radii, shadows, spacing, timeOfDayGradient } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { AppleProviderButton } from './apple-provider-button';
 import { useAuthSession } from './auth-provider';
@@ -41,6 +43,7 @@ export function AuthScreen({
   const reduceMotion = useReducedMotion();
   const busy = phase === 'authenticating';
   const gradient = timeOfDayGradient(theme, new Date().getHours());
+  const router = useRouter();
 
   useEffect(() => {
     if (reduceMotion) {
@@ -172,6 +175,34 @@ export function AuthScreen({
             </>
           ) : null}
 
+          <View style={styles.legalRow}>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Privacy Policy"
+              testID={AgentUiIds.auth.privacy}
+              disabled={busy}
+              onPress={() => router.push('/privacy' as never)}
+              style={({ pressed }) => [styles.legalLink, { opacity: pressed ? 0.65 : 1 }]}>
+              <AppText variant="caption" color="accent" fit>
+                Privacy Policy
+              </AppText>
+            </Pressable>
+            <AppText variant="caption" color="tertiary">
+              ·
+            </AppText>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Terms of Use"
+              testID={AgentUiIds.auth.terms}
+              disabled={busy}
+              onPress={() => router.push('/terms' as never)}
+              style={({ pressed }) => [styles.legalLink, { opacity: pressed ? 0.65 : 1 }]}>
+              <AppText variant="caption" color="accent" fit>
+                Terms of Use
+              </AppText>
+            </Pressable>
+          </View>
+
           {workingProvider ? (
             <AppText
               accessibilityLiveRegion="polite"
@@ -242,4 +273,12 @@ const styles = StyleSheet.create({
   divider: { flex: 1, height: StyleSheet.hairlineWidth },
   guest: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dismiss: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  legalLink: { minHeight: 44, justifyContent: 'center' },
 });

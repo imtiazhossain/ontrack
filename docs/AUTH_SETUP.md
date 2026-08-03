@@ -47,7 +47,8 @@ Only the Supabase project URL and publishable/anon key are public client values.
 Before release:
 
 - Record the final deployed HTTPS web origin and add its callback to Supabase and both provider consoles.
-- Publish final privacy-policy and terms URLs, then add them to the Google/Apple consent configuration. No approved legal content currently exists in this repository.
+- Publish privacy-policy and terms URLs (`https://ontrack.expo.app/privacy` and `https://ontrack.expo.app/terms`). Add those URLs to App Store Connect, Google OAuth consent, and Apple Services ID configuration.
 - Validate native Apple authentication on a physical iPhone development or TestFlight build.
 - Validate Google and Apple browser authentication on Android and deployed HTTPS web.
+- Confirm signed-in Profile shows **Delete Account** and that `delete_own_account` is applied in Supabase.
 - Run production iOS and Android configuration builds after provider-console setup.

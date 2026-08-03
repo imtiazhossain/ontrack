@@ -1,6 +1,10 @@
 ---
 description: Always auto-apply database updates and Supabase migrations — never leave them pending
-alwaysApply: true
+globs:
+  - supabase/**/*
+  - "**/*migration*"
+  - "**/*.sql"
+alwaysApply: false
 ---
 
 # Auto-apply database updates and migrations

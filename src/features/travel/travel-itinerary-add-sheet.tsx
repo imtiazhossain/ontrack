@@ -24,6 +24,7 @@ import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 type FormProps = Omit<ComponentProps<typeof TravelItineraryForm>, 'kind' | 'hideSubmit'>;
 
@@ -130,6 +131,7 @@ export function TravelItineraryAddSheet({
               title={title}
               subtitle={sheetSubtitle(kind)}
               closeAccessibilityLabel="Close add to timeline"
+              closeTestID={AgentUiIds.travel.itineraryAdd.close}
               onClose={onClose}
             />
           </View>

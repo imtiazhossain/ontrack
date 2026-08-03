@@ -9,6 +9,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export function ItinerarySheetImportCard({
@@ -126,41 +127,53 @@ export function ItinerarySheetImportCard({
 export function ItinerarySheetSubmitButton({
   label,
   onPress,
-  icon = 'calendar-add',
+  icon,
   editorialGold = false,
+  testID,
 }: {
   label: string;
   onPress: () => void;
   icon?: AppIconName;
   editorialGold?: boolean;
+  testID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout } = useResponsive();
   const colors =
     editorialGold && theme.name === 'light'
-      ? (['#D5A13E', '#A86E20'] as const)
+      ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
       : ([chrome.ctaFrom, chrome.ctaTo] as const);
-  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 48 : 52));
+  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 52 : 52));
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={() => {
-        haptics.tap();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.submitWrap,
         {
           opacity: pressed ? 0.86 : 1,
           minHeight,
           borderRadius: radii.pill,
+          boxShadow:
+            editorialGold && theme.name === 'light'
+              ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+              : undefined,
         },
       ]}>
       <LinearGradient
         colors={[...colors]}
+        locations={editorialGold && theme.name === 'light' ? [0, 0.45, 1] : undefined}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={[
@@ -168,11 +181,11 @@ export function ItinerarySheetSubmitButton({
           {
             minHeight,
             paddingHorizontal: rs.lg,
-            gap: rs.sm,
+            gap: icon ? rs.sm : 0,
             borderRadius: radii.pill,
           },
         ]}>
-        <Symbol name={icon} size="sm" color={chrome.ctaText} />
+        {icon ? <Symbol name={icon} size="sm" color={chrome.ctaText} /> : null}
         <AppText
           variant="callout"
           fit
@@ -181,8 +194,9 @@ export function ItinerarySheetSubmitButton({
             styles.submitLabel,
             {
               color: chrome.ctaText,
-              fontSize: editorialGold ? s(19) : undefined,
-              lineHeight: editorialGold ? s(24) : undefined,
+              textAlign: 'center',
+              fontSize: editorialGold ? s(20) : undefined,
+              lineHeight: editorialGold ? s(25) : undefined,
             },
           ]}>
           {label}

@@ -23,6 +23,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 type TravelSheetHeaderProps = {
@@ -33,8 +34,11 @@ type TravelSheetHeaderProps = {
   subtitleIcon?: AppIconName;
   onClose: () => void;
   closeAccessibilityLabel: string;
+  closeTestID?: string;
   /** Override itinerary chrome colors (e.g. Convert Currency forest palette). */
   chrome?: ItinerarySheetChrome;
+  /** Override default top padding (full-screen routes often want 0). */
+  paddingTop?: number;
 };
 
 /** Canonical editorial header for every travel sheet and sheet-like route. */
@@ -45,15 +49,34 @@ export function TravelSheetHeader({
   subtitleIcon,
   onClose,
   closeAccessibilityLabel,
+  closeTestID,
   chrome: chromeProp,
+  paddingTop,
 }: TravelSheetHeaderProps) {
   const theme = useTheme();
   const chrome = chromeProp ?? itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
   const closeSize = Math.max(48, s(50));
+  const handleClose = () => {
+    haptics.tap();
+    Keyboard.dismiss();
+    onClose();
+  };
+  const closeAgent = useAgentUiTarget(closeTestID, {
+    label: closeAccessibilityLabel,
+    onPress: handleClose,
+  });
 
   return (
-    <View style={[styles.header, { gap: rs.lg, paddingTop: rs.md, paddingBottom: rs.xl }]}>
+    <View
+      style={[
+        styles.header,
+        {
+          gap: rs.lg,
+          paddingTop: paddingTop ?? rs.md,
+          paddingBottom: rs.xl,
+        },
+      ]}>
       <View style={[styles.headerRow, { gap: rs.md }]}>
         <View style={[styles.headerCopy, { gap: rs.sm }]}>
           <AppText
@@ -100,14 +123,13 @@ export function TravelSheetHeader({
           ) : null}
         </View>
         <Pressable
+          ref={closeAgent.ref}
+          testID={closeTestID}
+          onLayout={closeAgent.onLayout}
           accessibilityRole="button"
           accessibilityLabel={closeAccessibilityLabel}
           hitSlop={8}
-          onPress={() => {
-            haptics.tap();
-            Keyboard.dismiss();
-            onClose();
-          }}
+          onPress={handleClose}
           style={({ pressed }) => [
             styles.close,
             {
@@ -134,6 +156,7 @@ type TravelSheetModalProps = PropsWithChildren<{
   subtitleIcon?: AppIconName;
   onClose: () => void;
   closeAccessibilityLabel: string;
+  closeTestID?: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footer?: ReactNode;
   /** Optional cap; always clamped to the space below the status bar. */
@@ -163,6 +186,7 @@ export function TravelSheetModal({
   subtitleIcon,
   onClose,
   closeAccessibilityLabel,
+  closeTestID,
   contentContainerStyle,
   footer,
   maxHeight,
@@ -257,6 +281,7 @@ export function TravelSheetModal({
                 subtitleIcon={subtitleIcon}
                 onClose={onClose}
                 closeAccessibilityLabel={closeAccessibilityLabel}
+                closeTestID={closeTestID}
                 chrome={chrome}
               />
             </View>

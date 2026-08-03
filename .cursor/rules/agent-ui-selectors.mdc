@@ -1,0 +1,49 @@
+---
+description: Always stamp agent-ui testIDs on interactive controls; never tap by screenshot coordinates
+alwaysApply: true
+---
+
+# Agent UI selectors (mandatory)
+
+Interactive controls **must** have a stable `testID`. Agents find and tap UI by id — never by guessing screenshot coordinates.
+
+An ID is “missing” only when someone shipped an interactive control without stamping one. That is a defect: **add the ID in the same change**, do not work around it with coordinates.
+
+## Always add an ID (authoring rule)
+
+When you **create or edit** any interactive / agent-tappable control, you **must** in the same change:
+
+1. Add a constant to [`src/utils/agent-ui/ids.ts`](../../src/utils/agent-ui/ids.ts) using `ontrack.<feature>.<surface>.<control>`
+2. Pass it as `testID` (primitives auto-register via `useAgentUiTarget`; custom `Pressable`s use `useAgentUiTarget` / `AgentTestId`)
+3. Document it in [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md)
+
+**Requires a `testID`:** buttons, icon buttons, tabs, links, inputs, date/time fields, switches, rows with `onPress`, sheet/modal close/dismiss, primary/secondary CTAs, provider/list row actions, anything an agent would tap or focus.
+
+**Does not need a `testID`:** pure decorative views, static labels, non-interactive layout wrappers.
+
+Do not merge UI that agents must exercise without an id. Do not leave “add testID later.”
+
+## Required test workflow
+
+1. Jump to the surface with `./scripts/agent-ui-open.sh <alias>` when known ([`docs/agent-routes.md`](../../docs/agent-routes.md)); otherwise dump/tap tabs.
+2. Prefer known IDs from [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md) / [`AgentUiIds`](../../src/utils/agent-ui/ids.ts).
+3. Dump when unsure: `./scripts/agent-ui-dump.sh` (optional `--prefix ontrack.feature`); dump includes `route`.
+4. Wait if needed: `./scripts/agent-ui-wait.sh --prefix ontrack.feature.` or `--route /calendar`.
+5. Tap by id: `./scripts/agent-ui-tap.sh <testID>`
+6. Screenshot for **proof only** after the interaction.
+7. If the packager looks lost: `./scripts/ensure-packager.sh` (reconnects only when needed).
+
+## Rules
+
+- **Never** use screenshot / vision coordinates to tap when a registry id exists or can be added.
+- If dump has no matching id for a control you need: **stop**, add `testID` + map entry + ids constant, then tap by id. Coordinates are not an alternative.
+- Keep `accessibilityLabel` for VoiceOver; labels alone are not unique selectors (`Close`, `Done` collide).
+- Bridge is `__DEV__` only (`ontrack:///agent/ui?op=dump|tap|exists|goto|reset`).
+
+## Do not
+
+- Tap by approximate screenshot pixels.
+- Tab-hop when `./scripts/agent-ui-open.sh` / a deep link can land on the surface directly.
+- Invent HTML `data-*` attributes for native screens — use RN `testID`.
+- Ship new interactive UI without `ontrack.*` testIDs.
+- Reconnect the packager “just in case” — use `ensure-packager.sh` so reconnect only happens when the probe fails.

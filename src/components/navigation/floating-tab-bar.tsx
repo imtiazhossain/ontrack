@@ -17,7 +17,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { Symbol } from '@/components/primitives';
+import { AppText, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { borders, radii } from '@/design-system';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
@@ -26,6 +26,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
 import { useTodos } from '@/store/todos';
 import { useUI } from '@/store/ui';
+import {
+  isAgentUiEnabled,
+  registerAgentUiTarget,
+  tabTestIdForRoute,
+  unregisterAgentUiTarget,
+} from '@/utils/agent-ui';
 
 type FloatingTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>['tabBar']>
@@ -95,7 +101,8 @@ const TAB_META: Record<
   plants: { label: 'Plants', icon: 'plant', href: '/(tabs)/plants' },
   travel: { label: 'Travel', icon: 'flight', href: '/(tabs)/travel' },
   'vision-board': {
-    label: 'Vision Board',
+    // Short chrome label so five equal slots keep even visual gutters.
+    label: 'Vision',
     icon: 'vision-board',
     href: '/(tabs)/vision-board',
   },
@@ -126,7 +133,7 @@ export function FloatingTabBar({
     : '';
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { spacing, layout, s, typography } = useResponsive();
+  const { spacing, layout, s } = useResponsive();
   const collapsed = useUI((store) => store.tabBarCollapsed);
   const setTabBarCollapsed = useUI((store) => store.setTabBarCollapsed);
   const carouselBrowse = useUI((store) => store.carouselBrowse);
@@ -152,6 +159,26 @@ export function FloatingTabBar({
       }),
     [enabledAddons, state.routes],
   );
+
+  useEffect(() => {
+    if (!isAgentUiEnabled()) return;
+    const registered: string[] = [];
+    for (const route of visibleRoutes) {
+      const testID = tabTestIdForRoute(route.name);
+      const meta = TAB_META[route.name];
+      if (!testID || !meta) continue;
+      registerAgentUiTarget(testID, {
+        label:
+          route.name === 'vision-board' ? 'Vision Board' : meta.label,
+        press: () => router.navigate(meta.href),
+      });
+      registered.push(testID);
+    }
+    return () => {
+      for (const testID of registered) unregisterAgentUiTarget(testID);
+    };
+  }, [router, visibleRoutes]);
+
   const selectedRoute = state.routes[state.index];
   const selectedVisibleIndex = visibleRoutes.findIndex(
     (route) => route.key === selectedRoute?.key,
@@ -160,7 +187,10 @@ export function FloatingTabBar({
     width - layout.screenPadding * 2,
     MAX_CAROUSEL_WIDTH,
   );
-  const itemWidth = carouselWidth / VISIBLE_ITEM_COUNT;
+  // Inset from the pill’s rounded ends so outer and inner gutters match.
+  const capsuleInset = Math.max(spacing.xs, s(6));
+  const itemWidth =
+    (carouselWidth - capsuleInset * 2) / VISIBLE_ITEM_COUNT;
   const browsedIndex = visibleRoutes.findIndex(
     (route) =>
       carouselBrowse?.anchorRouteName === selectedRoute?.name &&
@@ -411,7 +441,11 @@ export function FloatingTabBar({
                     : '0 5px 22px rgba(154, 118, 84, 0.22)',
               },
             ]}>
-            <View style={styles.capsuleClip}>
+            <View
+              style={[
+                styles.capsuleClip,
+                { paddingHorizontal: capsuleInset },
+              ]}>
               <Animated.View
                 style={[
                   styles.carouselTrack,
@@ -435,7 +469,9 @@ export function FloatingTabBar({
             descriptors[route.key].options.tabBarAccessibilityLabel ??
             (route.name === 'index'
               ? `${meta.label}${todayAccessibilityExtra}`
-              : meta.label);
+              : route.name === 'vision-board'
+                ? 'Vision Board'
+                : meta.label);
 
           const onPress = () => {
             if (useUI.getState().carouselSwipeClaimed) return;
@@ -471,6 +507,7 @@ export function FloatingTabBar({
           return (
             <Pressable
               key={`${route.key}-${slotIndex}`}
+              testID={tabTestIdForRoute(route.name)}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={accessibilityLabel}
@@ -482,12 +519,12 @@ export function FloatingTabBar({
                 {
                   width: itemWidth,
                   minHeight: layout.minTapTarget,
-                  gap: 0,
                   paddingVertical: spacing.xxs,
+                  paddingHorizontal: s(2),
                 },
                 pressed && styles.pressed,
               ]}>
-              <View>
+              <View style={styles.iconSlot}>
                 <Symbol name={tabIcon} size={20} color={color} />
                 {badge > 0 ? (
                   <View
@@ -510,25 +547,23 @@ export function FloatingTabBar({
                   </View>
                 ) : null}
               </View>
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
+              <AppText
+                variant="caption"
+                fit
+                fitMinimumScale={0.68}
                 maxFontSizeMultiplier={1.1}
-                style={[
-                  typography.caption,
-                  {
-                    color,
-                    fontWeight: visuallySelected ? '600' : '400',
-                    fontSize: s(9.5),
-                    lineHeight: s(11),
-                    maxWidth: '100%',
-                    width: '100%',
-                    textAlign: 'center',
-                  },
-                ]}>
+                align="center"
+                style={{
+                  color,
+                  fontWeight: visuallySelected ? '600' : '400',
+                  fontSize: s(9.5),
+                  lineHeight: s(11),
+                  width: '100%',
+                  minWidth: 0,
+                  flexShrink: 1,
+                }}>
                 {meta.label}
-              </Text>
+              </AppText>
               <View
                 style={[
                   styles.indicator,
@@ -597,6 +632,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    minWidth: 0,
+  },
+  iconSlot: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.58,
@@ -604,6 +646,7 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     bottom: 3,
+    alignSelf: 'center',
     width: 4,
     height: 4,
     borderRadius: radii.pill,

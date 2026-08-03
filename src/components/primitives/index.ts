@@ -8,6 +8,10 @@ export { DateField } from './date-field';
 export { DragHandle } from './drag-handle';
 export { EmptyState } from './empty-state';
 export { ErrorMessage } from './error-message';
+export {
+  FieldLeadingIcon,
+  fieldLeadingIconRowStyle,
+} from './field-leading-icon';
 export { Input } from './input';
 export { LoadingBlock } from './loading-block';
 export { LoadingSpinner } from './loading-spinner';

@@ -21,6 +21,7 @@ import type { Activity } from '@/types/models';
 import { confirmDeleteActivity, showActivityActions, type ActivityAction } from '@/utils/activity-actions';
 import { addDays, isToday, nowMinutes, todayKey } from '@/utils/date';
 import { listReferenceEquality } from '@/utils/list-equality';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 interface DayViewProps {
   date: string;
@@ -205,6 +206,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
                   title="A blank page"
                   message="Nothing planned for this day yet. Add your first activity to begin shaping it."
                   actionLabel="Add Activity"
+                  actionTestID={AgentUiIds.today.emptyAddActivity}
                   onAction={() => router.push({ pathname: '/activity-form', params: { date } })}
                 />
               ) : (
@@ -222,6 +224,8 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
               category={findCategory(categories, activity.categoryId)}
               isCurrent={activity.id === currentId}
               index={index}
+              testID={AgentUiIds.today.activity(activity.id)}
+              toggleTestID={AgentUiIds.today.activityToggle(activity.id)}
               onPress={() => openActivity(activity)}
               onLongPress={activity.plantId ? undefined : () =>
                 showActivityActions({
@@ -247,6 +251,7 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
           background={theme.accentPrimary}
           color={theme.textOnAccent}
           accessibilityLabel="Add Activity"
+          testID={AgentUiIds.today.addActivity}
           onPress={() => router.push({ pathname: '/activity-form', params: { date } })}
         />
       </View>

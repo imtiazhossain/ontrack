@@ -1,30 +1,141 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 import {
   AppText,
-  Button,
   Card,
   DateField,
   EmptyState,
-  ErrorMessage,
-  IconButton,
   Input,
   Screen,
   SectionHeader,
+  Symbol,
 } from '@/components/primitives';
 import { featureFlags } from '@/constants/feature-flags';
-import { spacing } from '@/design-system';
+import { fontFamilies, radii, spacing } from '@/design-system';
 import { compareOnGoogleFlights } from '@/features/travel/provider';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
+import {
+  TRAVEL_EDITORIAL_ACCENT,
+  TravelSurfaceCard,
+  travelPageBg,
+} from '@/features/travel/travel-surface';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { formatDateKey } from '@/utils/date';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { haptics } from '@/utils/haptics';
+import { goBackOrReplace } from '@/utils/navigation';
 
 import { FlightSearchError, searchFlights } from './client';
 import { getCurrentDepartureLocation } from './departure-location';
 import type { FlightLeg, FlightSearchResponse } from './types';
 
+export type FlightSearchNotice = {
+  title: string;
+  detail: string;
+};
+
+export const AIRPORT_LOOKUP_NOTICE: FlightSearchNotice = {
+  title: 'Airports not found',
+  detail:
+    'Check From and To — try a city name like San Francisco, or a 3-letter code like SFO or KEF.',
+};
+
+const VALIDATION_NOTICE: FlightSearchNotice = {
+  title: 'Check your search details',
+  detail:
+    'Add a From and To city or airport, choose 1–9 travelers, and a 3-letter currency like USD.',
+};
+
+function FlightSearchErrorBanner({ notice }: { notice: FlightSearchNotice }) {
+  const theme = useTheme();
+  const { s, spacing: rs } = useResponsive();
+  const light = theme.name === 'light';
+  const iconSize = Math.max(36, s(36));
+  const fill = light ? '#F8EBE6' : 'rgba(206, 108, 96, 0.16)';
+  const border = light ? 'rgba(176, 74, 63, 0.18)' : 'rgba(206, 108, 96, 0.28)';
+  const iconBg = light ? '#F3D8D2' : 'rgba(206, 108, 96, 0.28)';
+  const titleColor = light ? '#8F3A32' : '#E8A098';
+  const detailColor = light ? '#6E4A44' : '#C9A8A2';
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      AccessibilityInfo.announceForAccessibility(
+        `Error: ${notice.title}. ${notice.detail}`,
+      );
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, [notice.detail, notice.title]);
+
+  return (
+    <View
+      accessibilityRole="alert"
+      accessibilityLabel={`Error: ${notice.title}. ${notice.detail}`}
+      style={[
+        styles.errorBanner,
+        {
+          backgroundColor: fill,
+          borderColor: border,
+          borderRadius: radii.lg,
+          paddingHorizontal: rs.md,
+          paddingVertical: rs.md,
+          gap: rs.sm,
+        },
+      ]}>
+      <View
+        style={[
+          styles.errorIcon,
+          {
+            width: iconSize,
+            height: iconSize,
+            borderRadius: radii.sm,
+            backgroundColor: iconBg,
+          },
+        ]}>
+        <Symbol name="itinerary" size="sm" color={theme.danger} />
+      </View>
+      <View style={styles.errorCopy}>
+        <AppText
+          fit
+          numberOfLines={1}
+          style={[
+            styles.errorTitle,
+            {
+              color: titleColor,
+              fontSize: Math.max(15, s(16)),
+              lineHeight: Math.max(20, s(21)),
+            },
+          ]}>
+          {notice.title}
+        </AppText>
+        <AppText
+          numberOfLines={4}
+          style={[
+            styles.errorDetail,
+            {
+              color: detailColor,
+              fontSize: Math.max(13, s(14)),
+              lineHeight: Math.max(18, s(19)),
+            },
+          ]}>
+          {notice.detail}
+        </AppText>
+      </View>
+    </View>
+  );
+}
 function formatPrice(value: string, currency: string): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return `${currency} ${value}`;
@@ -57,32 +168,48 @@ function LegSummary({
   label,
   leg,
   dateDisplayFormat,
+  labelColor,
 }: {
   label: string;
   leg: FlightLeg;
   dateDisplayFormat: 'mdy' | 'iso';
+  labelColor: string;
 }) {
   return (
     <View style={styles.leg}>
-      <AppText variant="overline" color="tertiary" style={travelOverlineStyle}>
+      <AppText variant="overline" style={{ color: labelColor, textTransform: 'none' }}>
         {label}
       </AppText>
       <View style={styles.route}>
         <View style={styles.flex}>
-          <AppText variant="subheading">{leg.departureCode} → {leg.arrivalCode}</AppText>
+          <AppText variant="subheading">
+            {leg.departureCode} → {leg.arrivalCode}
+          </AppText>
           <AppText variant="caption" color="secondary">
             {formatDateTime(leg.departureAt, dateDisplayFormat)}
           </AppText>
         </View>
         <AppText variant="caption" color="secondary">
-          {formatDuration(leg.duration)} · {leg.stops === 0 ? 'Nonstop' : `${leg.stops} stop${leg.stops === 1 ? '' : 's'}`}
+          {formatDuration(leg.duration)} ·{' '}
+          {leg.stops === 0 ? 'Nonstop' : `${leg.stops} stop${leg.stops === 1 ? '' : 's'}`}
         </AppText>
       </View>
     </View>
   );
 }
 
-export function FlightSearchScreen({ planId }: { planId: string }) {
+export function FlightSearchScreen({
+  planId,
+  initialNotice,
+}: {
+  planId: string;
+  /** DEV-only preview of the error banner. */
+  initialNotice?: FlightSearchNotice;
+}) {
+  const theme = useTheme();
+  const router = useRouter();
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs, layout, typography } = useResponsive();
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const controllerRef = useRef<AbortController | undefined>(undefined);
@@ -95,20 +222,27 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
   const [adults, setAdults] = useState('1');
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [result, setResult] = useState<FlightSearchResponse>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<FlightSearchNotice | undefined>(initialNotice);
   const [loading, setLoading] = useState(false);
   const [comparing, setComparing] = useState(false);
-  const [locatingDeparture, setLocatingDeparture] = useState(false);
 
-  const fillDepartureFromLocation = useCallback(async () => {
-    setLocatingDeparture(true);
-    const suggestion = await getCurrentDepartureLocation();
-    if (!mountedRef.current) return;
-    if (suggestion.status === 'suggested') {
-      setOrigin(suggestion.label);
-    }
-    setLocatingDeparture(false);
-  }, []);
+  const light = theme.name === 'light';
+  const accent = light ? TRAVEL_EDITORIAL_ACCENT : chrome.ctaFrom;
+  const field = (tone: keyof typeof chrome.icons) => {
+    const icon = chrome.icons[tone];
+    return {
+      iconBackground: icon.bg,
+      iconColor: icon.fg,
+      fieldBackground: chrome.fieldBg,
+      stackedLabelColor: accent,
+      placeholderColor: chrome.placeholder,
+      placeholderTextColor: chrome.placeholder,
+    };
+  };
+
+  useEffect(() => {
+    if (initialNotice) setError(initialNotice);
+  }, [initialNotice]);
 
   useEffect(() => {
     let active = true;
@@ -133,7 +267,7 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
 
   if (!plan) {
     return (
-      <Screen>
+      <Screen style={{ backgroundColor: travelPageBg(theme) }} refresh={false}>
         <EmptyState icon="flight" title="Trip Not Found" message="This trip may have been removed." />
       </Screen>
     );
@@ -150,27 +284,38 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
       travelerCount > 9 ||
       !/^[A-Z]{3}$/.test(currencyCode.trim().toUpperCase())
     ) {
-      return setError('Enter both airports, 1–9 travelers, and a three-letter currency.');
+      return setError(VALIDATION_NOTICE);
     }
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
     setLoading(true);
     try {
-      setResult(await searchFlights({
-        origin: origin.trim(),
-        destination: destination.trim(),
-        departureDate,
-        returnDate,
-        adults: travelerCount,
-        currencyCode: currencyCode.trim().toUpperCase(),
-      }, controller.signal));
+      setResult(
+        await searchFlights(
+          {
+            origin: origin.trim(),
+            destination: destination.trim(),
+            departureDate,
+            returnDate,
+            adults: travelerCount,
+            currencyCode: currencyCode.trim().toUpperCase(),
+          },
+          controller.signal,
+        ),
+      );
     } catch (searchError) {
       if (searchError instanceof Error && searchError.name === 'AbortError') return;
       setError(
         searchError instanceof FlightSearchError
-          ? searchError.message
-          : 'Flight search is temporarily unavailable.',
+          ? {
+              title: 'Live prices unavailable',
+              detail: searchError.message,
+            }
+          : {
+              title: 'Live prices unavailable',
+              detail: 'Flight search is temporarily unavailable. Try again in a moment.',
+            },
       );
     } finally {
       if (controllerRef.current === controller) setLoading(false);
@@ -193,124 +338,246 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
         adults: Math.max(1, Number(adults) || 1),
       });
     } catch {
-      setError(
-        'We could not find airports for one of those cities. Check the city names and try again.',
-      );
+      setError(AIRPORT_LOOKUP_NOTICE);
     } finally {
       setComparing(false);
     }
   };
 
+  const canCompare =
+    !comparing && origin.trim().length >= 3 && destination.trim().length >= 3;
+  const compareAgent = useAgentUiTarget(AgentUiIds.travel.flightSearch.compareGoogle, {
+    label: comparing ? 'Finding nearby airports' : 'Compare on Google Flights',
+    onPress: canCompare
+      ? () => {
+          haptics.tap();
+          void compareFlights();
+        }
+      : undefined,
+  });
+  const ctaMinHeight = Math.max(layout.minTapTarget, s(52));
+  const ctaColors = light
+    ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
+    : ([chrome.ctaFrom, chrome.ctaTo] as const);
+  const headingSize = Math.max(32, s(34));
+
   return (
-    <Screen contentStyle={styles.screen}>
-      <View style={styles.heading}>
-        <AppText variant="overline" color="accent" style={travelOverlineStyle}>
-          Flight Search
-        </AppText>
-        <AppText variant="title">Flights for {plan.title}</AppText>
-        <AppText variant="body" color="secondary">
-          Live availability and total prices without leaving onTrack.
-        </AppText>
+    <Screen
+      style={{ backgroundColor: travelPageBg(theme) }}
+      contentStyle={{ gap: rs.lg }}
+      refresh={false}>
+      <View style={[styles.header, { gap: rs.md }]}>
+        <TravelSheetIconControl
+          icon="back"
+          size={Math.max(40, s(42))}
+          tone="accent"
+          testID={AgentUiIds.travel.flightSearch.back}
+          accessibilityLabel="Back to trip"
+          onPress={() =>
+            goBackOrReplace(router, { pathname: '/travel/[id]', params: { id: planId } })
+          }
+        />
+        <View style={[styles.headerCopy, { gap: rs.sm }]}>
+          <AppText
+            variant="overline"
+            fit
+            numberOfLines={1}
+            style={[styles.eyebrow, { color: accent }]}>
+            FLIGHT SEARCH
+          </AppText>
+          <Text
+            allowFontScaling={false}
+            style={[
+              styles.title,
+              {
+                color: chrome.title,
+                fontSize: headingSize,
+                lineHeight: headingSize,
+                paddingTop: Math.max(8, s(10)),
+                paddingBottom: Math.max(2, s(2)),
+              },
+            ]}>
+            Flights for {plan.title}
+          </Text>
+          <AppText
+            numberOfLines={2}
+            style={[
+              styles.subtitle,
+              typography.callout,
+              {
+                color: chrome.subtitle,
+                fontSize: Math.max(15, s(16)),
+                lineHeight: Math.max(20, s(21)),
+              },
+            ]}>
+            Live availability and total prices without leaving onTrack.
+          </AppText>
+        </View>
       </View>
 
-      <Card variant="elevated" style={styles.searchCard}>
-        <View style={styles.twoColumns}>
-          <View style={styles.flex}>
+      <TravelSurfaceCard stripe={false} padding={0}>
+        <View style={[styles.cardBody, { padding: rs.lg, gap: rs.md }]}>
+          <View style={{ gap: rs.sm }}>
             <Input
-              label="From"
               value={origin}
               onChangeText={(value) => {
                 originEditedRef.current = true;
                 setOrigin(value);
               }}
+              icon="flight"
+              stackedLabel="FROM"
               placeholder="JFK or New York"
-              autoCapitalize="characters"
-              trailing={
-                <IconButton
-                  icon="location"
-                  background="transparent"
-                  disabled={locatingDeparture}
-                  onPress={() => void fillDepartureFromLocation()}
-                  accessibilityLabel={
-                    locatingDeparture
-                      ? 'Finding current departure location'
-                      : 'Use current location for departure'
-                  }
-                />
-              }
+              autoCapitalize="words"
+              accessibilityLabel="From"
+              testID={AgentUiIds.travel.flightSearch.from}
+              {...field('flight')}
             />
-          </View>
-          <View style={styles.flex}>
             <Input
-              label="To"
               value={destination}
               onChangeText={setDestination}
+              icon="location"
+              stackedLabel="TO"
               placeholder="KEF or Reykjavik"
               autoCapitalize="words"
+              accessibilityLabel="To"
+              testID={AgentUiIds.travel.flightSearch.to}
+              {...field('location')}
             />
           </View>
+
+          <View style={[styles.twoColumns, { gap: rs.sm }]}>
+            <View style={styles.flex}>
+              <DateField
+                value={departureDate}
+                stackedLabel="DEPARTURE"
+                placeholder="Select date"
+                accessibilityLabel="Departure date"
+                testID={AgentUiIds.travel.flightSearch.departure}
+                onChange={(value) => {
+                  setDepartureDate(value);
+                  if (returnDate < value) setReturnDate(value);
+                }}
+                {...field('calendar')}
+              />
+            </View>
+            <View style={styles.flex}>
+              <DateField
+                value={returnDate}
+                stackedLabel="RETURN"
+                placeholder="Select date"
+                minimumDate={departureDate}
+                accessibilityLabel="Return date"
+                testID={AgentUiIds.travel.flightSearch.return}
+                onChange={setReturnDate}
+                {...field('calendar')}
+              />
+            </View>
+          </View>
+
+          <View style={[styles.twoColumns, { gap: rs.sm }]}>
+            <View style={styles.flex}>
+              <Input
+                value={adults}
+                onChangeText={setAdults}
+                icon="personal"
+                stackedLabel="TRAVELERS"
+                stackedAlign="center"
+                keyboardType="number-pad"
+                placeholder="1"
+                accessibilityLabel="Travelers"
+                testID={AgentUiIds.travel.flightSearch.travelers}
+                {...field('note')}
+              />
+            </View>
+            <View style={styles.flex}>
+              <Input
+                value={currencyCode}
+                onChangeText={setCurrencyCode}
+                icon="currency"
+                stackedLabel="CURRENCY"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={3}
+                placeholder="USD"
+                accessibilityLabel="Currency"
+                testID={AgentUiIds.travel.flightSearch.currency}
+                {...field('currency')}
+              />
+            </View>
+          </View>
+
+          {error ? <FlightSearchErrorBanner notice={error} /> : null}
+
+          {featureFlags.liveFlightSearch ? (
+            <TravelSheetSecondaryAction
+              icon={loading ? 'close' : 'search'}
+              label={loading ? 'Cancel Live Price Check' : 'Search Flights'}
+              testID={AgentUiIds.travel.flightSearch.searchLive}
+              onPress={loading ? cancelSearch : () => void runSearch()}
+            />
+          ) : null}
+
+          <Pressable
+            ref={compareAgent.ref}
+            testID={AgentUiIds.travel.flightSearch.compareGoogle}
+            onLayout={compareAgent.onLayout}
+            accessibilityRole="button"
+            accessibilityLabel={
+              comparing ? 'Finding nearby airports' : 'Compare on Google Flights'
+            }
+            accessibilityState={{ disabled: !canCompare }}
+            disabled={!canCompare}
+            onPress={() => {
+              if (!canCompare) return;
+              haptics.tap();
+              void compareFlights();
+            }}
+            style={({ pressed }) => [
+              styles.ctaWrap,
+              {
+                minHeight: ctaMinHeight,
+                borderRadius: radii.pill,
+                opacity: !canCompare ? 0.45 : pressed ? 0.88 : 1,
+                boxShadow: light
+                  ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+                  : '0 8px 18px rgba(0, 0, 0, 0.35)',
+              },
+            ]}>
+            <LinearGradient
+              colors={[...ctaColors]}
+              locations={light ? [0, 0.45, 1] : undefined}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[
+                styles.ctaGradient,
+                {
+                  minHeight: ctaMinHeight,
+                  paddingHorizontal: rs.lg,
+                  gap: rs.sm,
+                  borderRadius: radii.pill,
+                },
+              ]}>
+              <Symbol name="open-external" size="sm" color={chrome.ctaText} />
+              <AppText
+                variant="callout"
+                fit
+                numberOfLines={1}
+                style={[
+                  styles.ctaLabel,
+                  {
+                    color: chrome.ctaText,
+                    fontSize: s(18),
+                    lineHeight: s(23),
+                    flexShrink: 1,
+                    minWidth: 0,
+                  },
+                ]}>
+                {comparing ? 'Finding nearby airports…' : 'Compare on Google Flights'}
+              </AppText>
+            </LinearGradient>
+          </Pressable>
         </View>
-        <View style={styles.twoColumns}>
-          <View style={styles.flex}>
-            <DateField
-              label="Departure"
-              value={departureDate}
-              onChange={(value) => {
-                setDepartureDate(value);
-                if (returnDate < value) setReturnDate(value);
-              }}
-            />
-          </View>
-          <View style={styles.flex}>
-            <DateField
-              label="Return"
-              value={returnDate}
-              minimumDate={departureDate}
-              onChange={setReturnDate}
-            />
-          </View>
-        </View>
-        <View style={styles.twoColumns}>
-          <View style={styles.flex}>
-            <Input
-              label="Travelers"
-              value={adults}
-              onChangeText={setAdults}
-              keyboardType="number-pad"
-              placeholder="1"
-            />
-          </View>
-          <View style={styles.flex}>
-            <Input
-              label="Currency"
-              value={currencyCode}
-              onChangeText={setCurrencyCode}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={3}
-              placeholder="USD"
-            />
-          </View>
-        </View>
-        {error ? <ErrorMessage message={error} /> : null}
-        {featureFlags.liveFlightSearch ? (
-          <Button
-            icon={loading ? 'close' : 'search'}
-            onPress={loading ? cancelSearch : () => void runSearch()}>
-            {loading ? 'Cancel Live Price Check' : 'Search Flights'}
-          </Button>
-        ) : null}
-        <Button
-          icon="open-external"
-          disabled={
-            comparing ||
-            origin.trim().length < 3 ||
-            destination.trim().length < 3
-          }
-          onPress={() => void compareFlights()}>
-          {comparing ? 'Finding nearby airports…' : 'Compare on Google Flights'}
-        </Button>
-      </Card>
+      </TravelSurfaceCard>
 
       {result ? (
         <>
@@ -318,15 +585,19 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
             <SectionHeader
               title={`${result.originCode} → ${result.destinationCode}`}
               detail={`${result.offers.length} options`}
-              titleStyle={travelOverlineStyle}
             />
             <AppText variant="caption" color={result.dataMode === 'live' ? 'success' : 'secondary'}>
               {result.dataMode === 'live' ? 'Live Prices' : 'Test Data'}
             </AppText>
           </View>
           <AppText variant="caption" color="secondary">
-            Checked {new Date(result.searchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-            {' · '}Prices can change until ticketing.
+            Checked{' '}
+            {new Date(result.searchedAt).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+            })}
+            {' · '}
+            Prices can change until ticketing.
           </AppText>
           {result.offers.length === 0 ? (
             <EmptyState
@@ -360,37 +631,96 @@ export function FlightSearchScreen({ planId }: { planId: string }) {
                 label="Outbound"
                 leg={offer.outbound}
                 dateDisplayFormat={dateDisplayFormat}
+                labelColor={accent}
               />
               {offer.inbound ? (
                 <LegSummary
                   label="Return"
                   leg={offer.inbound}
                   dateDisplayFormat={dateDisplayFormat}
+                  labelColor={accent}
                 />
               ) : null}
             </Card>
           ))}
           {result.offers.length > 0 ? (
-            <Button variant="secondary" onPress={() => void runSearch()} disabled={loading}>
-              Refresh prices
-            </Button>
+            <TravelSheetSecondaryAction
+              label="Refresh prices"
+              onPress={() => void runSearch()}
+            />
           ) : null}
         </>
-      ) : (
-        <AppText variant="caption" color="secondary">
-          Your trip dates are prefilled: {formatDateKey(plan.startDate, dateDisplayFormat)} → {formatDateKey(plan.endDate, dateDisplayFormat)}.
-        </AppText>
-      )}
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { gap: spacing.lg },
-  heading: { gap: spacing.sm },
-  searchCard: { gap: spacing.lg },
-  twoColumns: { flexDirection: 'row', gap: spacing.sm },
-  flex: { flex: 1 },
+  header: {},
+  headerCopy: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  eyebrow: {
+    letterSpacing: 1.4,
+  },
+  title: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    letterSpacing: -0.65,
+  },
+  subtitle: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+  },
+  cardBody: {},
+  twoColumns: { flexDirection: 'row' },
+  flex: { flex: 1, flexShrink: 1, minWidth: 0 },
+  ctaWrap: {
+    width: '100%',
+    overflow: 'hidden',
+    borderCurve: 'continuous',
+  },
+  ctaGradient: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaLabel: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    overflow: 'hidden',
+    borderCurve: 'continuous',
+  },
+  errorIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  errorCopy: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  errorTitle: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  errorDetail: {
+    fontFamily: fontFamilies.serif,
+    fontWeight: '400',
+    flexShrink: 1,
+    minWidth: 0,
+  },
   resultsHeader: { gap: spacing.xs },
   offerCard: { gap: spacing.lg },
   offerHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },

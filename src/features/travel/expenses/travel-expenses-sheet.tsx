@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 
 import {
   AppText,
-  Button,
   Symbol,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
@@ -20,8 +21,8 @@ import {
   type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
 import {
-  abbreviatedPersonName,
   expenseInBase,
+  expensePayerLabel,
   expensePeople,
   personName,
   removeTravelExpense,
@@ -33,11 +34,18 @@ import {
 import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import {
+  flightExpenseDisplayTitle,
+  isRoundTripFlightExpense,
+  withRoundTripFlightExpenseTitles,
+} from '@/features/travel/flight-expense-title';
+import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelExpense,
   type TravelExpenseCategory,
+  type TravelItemKind,
   type TravelPlan,
 } from '@/features/travel/types';
+import { kindChrome } from '@/features/travel/travel-kind-chrome';
 import {
   travelAccent,
   TravelSectionLabel,
@@ -46,6 +54,10 @@ import {
 import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
+import {
+  TravelRemoveConfirmModal,
+  type TravelRemoveConfirmPayload,
+} from '@/features/travel/travel-remove-confirm-modal';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -55,7 +67,7 @@ import {
   shouldSyncTravelExpenses,
 } from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
-import { formatDateKey } from '@/utils/date';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
@@ -77,6 +89,22 @@ const CATEGORY_LABELS: Record<TravelExpenseCategory, string> = {
   other: 'Other',
 };
 
+/** Map expense categories onto itinerary kind chrome when they have a counterpart. */
+function expenseCategoryKind(category: TravelExpenseCategory): TravelItemKind | undefined {
+  switch (category) {
+    case 'flight':
+      return 'flight';
+    case 'stay':
+      return 'stay';
+    case 'transport':
+      return 'rental';
+    case 'activity':
+      return 'activity';
+    default:
+      return undefined;
+  }
+}
+
 export function TravelExpensesSheet({
   plan,
   visible,
@@ -91,11 +119,11 @@ export function TravelExpensesSheet({
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const dateLocale = usePreferences((state) => state.dateLocale);
-  const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [rates, setRates] = useState<FxRates | undefined>();
   const [form, setForm] = useState<ExpenseFormState | undefined>();
   const [formError, setFormError] = useState<string>();
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -107,6 +135,12 @@ export function TravelExpensesSheet({
       .catch(() => undefined);
     return () => controller.abort();
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const next = withRoundTripFlightExpenseTitles(plan);
+    if (next !== plan) onSavePlan(next);
+  }, [visible, plan, onSavePlan]);
 
   useEffect(() => {
     if (!visible || !shouldSyncTravelExpenses(plan)) return;
@@ -153,13 +187,13 @@ export function TravelExpensesSheet({
 
   const beginAdd = () => {
     setFormError(undefined);
-    setConfirmingDelete(false);
+    setRemoveConfirm(null);
     setForm(emptyExpenseForm(plan));
   };
 
   const beginEdit = (expense: TravelExpense) => {
     setFormError(undefined);
-    setConfirmingDelete(false);
+    setRemoveConfirm(null);
     setForm(expenseFormFromExpense(expense));
   };
 
@@ -175,31 +209,30 @@ export function TravelExpensesSheet({
     syncSharedExpenses(next);
     setForm(undefined);
     setFormError(undefined);
-    setConfirmingDelete(false);
+    setRemoveConfirm(null);
   };
 
   const requestDelete = () => {
     if (!form?.existing) return;
-    // Confirm inside this Modal. Root appPrompt sits behind RN Modal windows,
-    // so a nested confirm there is invisible / untappable.
-    setConfirmingDelete(true);
-  };
-
-  const confirmDelete = () => {
-    if (!form?.existing) return;
-    const expenseId = form.existing.id;
-    const next = removeTravelExpense(plan, expenseId);
-    onSavePlan(next);
-    syncSharedExpenses(next);
-    setForm(undefined);
-    setFormError(undefined);
-    setConfirmingDelete(false);
+    const expense = form.existing;
+    setRemoveConfirm({
+      title: 'Delete Expense?',
+      message: `This action will permanently remove “${expense.title}”.`,
+      actionLabel: 'Delete Expense',
+      onConfirm: () => {
+        const next = removeTravelExpense(plan, expense.id);
+        onSavePlan(next);
+        syncSharedExpenses(next);
+        setForm(undefined);
+        setFormError(undefined);
+      },
+    });
   };
 
   const dismissForm = () => {
     setForm(undefined);
     setFormError(undefined);
-    setConfirmingDelete(false);
+    setRemoveConfirm(null);
   };
 
   const closeSheet = () => {
@@ -210,6 +243,7 @@ export function TravelExpensesSheet({
   const editingExpense = Boolean(form?.existing);
 
   return (
+    <>
     <TravelSheetModal
       visible={visible}
       eyebrow="Expenses"
@@ -219,61 +253,42 @@ export function TravelExpensesSheet({
           ? editingExpense
             ? 'Update what you spent and who shared it'
             : 'Add what you spent and who shared it'
-          : 'Track Spending · Settle Up with Friends'
+          : 'Track Spending · Settle up with co-travelers'
       }
       closeAccessibilityLabel={form ? 'Close expense editor' : 'Close Expenses'}
+      closeTestID={AgentUiIds.travel.expenses.close}
       onClose={form ? dismissForm : closeSheet}
       scrollKey={form ? (form.existing?.id ?? 'add') : 'list'}
       footer={
-        form && !confirmingDelete ? (
+        form ? (
           <ItinerarySheetSubmitButton
             label={editingExpense ? 'Save Expense' : 'Add Expense'}
             icon="receipt"
             onPress={saveForm}
           />
-        ) : !form ? (
-          <TravelSheetPrimaryAction label="Add expense" icon="add" onPress={beginAdd} />
-        ) : undefined
+        ) : (
+          <TravelSheetPrimaryAction
+            label="Add Expense"
+            testID={AgentUiIds.travel.expenses.addExpense}
+            onPress={beginAdd}
+          />
+        )
       }>
             {form ? (
-              confirmingDelete && form.existing ? (
-                <View style={styles.deleteConfirm} accessibilityLabel="Confirm delete expense">
-                  <Symbol name="delete" size="lg" color={theme.danger} />
-                  <AppText variant="subheading" fit>
-                    Delete expense?
-                  </AppText>
-                  <AppText variant="body" color="secondary" style={styles.deleteConfirmCopy}>
-                    Remove “{form.existing.title}”? This can’t be undone.
-                  </AppText>
-                  <Button
-                    variant="danger"
-                    accessibilityLabel="Confirm delete expense"
-                    onPress={confirmDelete}>
-                    Delete expense
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    accessibilityLabel="Cancel delete expense"
-                    onPress={() => setConfirmingDelete(false)}>
-                    Keep expense
-                  </Button>
-                </View>
-              ) : (
                 <TravelExpenseForm
                   plan={plan}
                   form={form}
                   rates={rates}
                   error={formError}
                   onChange={(next) => {
-                    setConfirmingDelete(false);
+                    setRemoveConfirm(null);
                     setForm(next);
                   }}
                   onDelete={form.existing ? requestDelete : undefined}
                 />
-              )
-            ) : (
+              ) : (
               <View style={styles.listBody}>
-                <TravelSurfaceCard bodyStyle={styles.summaryCard} padding={rs.lg}>
+                <TravelSurfaceCard bodyStyle={styles.summaryCard} padding={rs.md}>
                   <AppText
                     variant="overline"
                     fit
@@ -287,24 +302,13 @@ export function TravelExpensesSheet({
                       styles.summaryValue,
                       {
                         color: travelAccent(theme),
-                        fontSize: Math.max(43, s(52)),
-                        lineHeight: Math.max(49, s(58)),
+                        fontSize: Math.max(32, s(38)),
+                        lineHeight: Math.max(38, s(44)),
                       },
                     ]}>
                     {convertible || plan.expenses.length === 0
                       ? formatMoney(total, plan.baseCurrency, dateLocale)
                       : '—'}
-                  </AppText>
-                  <AppText variant="callout" color="secondary" fit numberOfLines={1}>
-                    {plan.expenses.length === 0
-                      ? 'No expenses yet'
-                      : convertible
-                        ? `${plan.expenses.length} expense${plan.expenses.length === 1 ? '' : 's'}${
-                            rates
-                              ? ` · Rate from ${formatDateKey(rates.date, 'mdy')}`
-                              : ' · conversion pending'
-                          }`
-                        : 'Some amounts need exchange rates'}
                   </AppText>
                 </TravelSurfaceCard>
 
@@ -339,16 +343,22 @@ export function TravelExpensesSheet({
                 ) : (
                   sortedExpenses.map((expense) => {
                     const converted = expenseInBase(expense, plan.baseCurrency, rates);
+                    const title = flightExpenseDisplayTitle(expense, plan);
+                    const categoryLabel =
+                      expense.category === 'flight' && isRoundTripFlightExpense(expense, plan)
+                        ? 'Flights'
+                        : CATEGORY_LABELS[expense.category];
+                    const kind = expenseCategoryKind(expense.category);
+                    const chrome = kind
+                      ? kindChrome(kind, theme)
+                      : { accent: theme.accentPrimary, tint: theme.accentFaint };
                     return (
-                      <Pressable
+                      <ExpenseRowButton
                         key={expense.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${expense.title}`}
+                        testID={AgentUiIds.travel.expenses.row(expense.id)}
+                        label={`Edit ${title}`}
                         onPress={() => beginEdit(expense)}
-                        style={({ pressed }) => [
-                          styles.expensePress,
-                          pressed ? styles.pressed : undefined,
-                        ]}>
+                        style={styles.expensePress}>
                         <TravelSurfaceCard bodyStyle={styles.expenseCard} padding={rs.md}>
                           <View
                             style={[
@@ -356,26 +366,27 @@ export function TravelExpensesSheet({
                               {
                                 width: Math.max(48, s(52)),
                                 height: Math.max(48, s(52)),
-                                backgroundColor: theme.accentFaint,
+                                backgroundColor: chrome.tint,
                               },
                             ]}>
                             <Symbol
                               name={CATEGORY_ICONS[expense.category]}
                               size="sm"
-                              color={theme.accentPrimary}
+                              color={chrome.accent}
                             />
                           </View>
                           <View style={styles.expenseCopy}>
                             <View style={styles.expenseTitleRow}>
-                              <AppText
-                                variant="subheading"
-                                fit
-                                numberOfLines={1}
-                                style={styles.expenseTitle}>
-                                {expense.title}
-                              </AppText>
+                              <View style={styles.expenseTitle}>
+                                <AppText
+                                  variant="subheading"
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail">
+                                  {title}
+                                </AppText>
+                              </View>
                               <View style={styles.amountCol}>
-                                <AppText variant="subheading" color="accent" fit numberOfLines={1}>
+                                <AppText variant="subheading" color="accent" numberOfLines={1}>
                                   {formatMoney(expense.amount, expense.currency, dateLocale)}
                                 </AppText>
                                 {converted !== undefined &&
@@ -392,13 +403,11 @@ export function TravelExpensesSheet({
                               <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
                             </View>
                             <AppText variant="body" color="secondary" numberOfLines={1}>
-                              {CATEGORY_LABELS[expense.category]} ·{' '}
-                              {formatDateKey(expense.date, dateDisplayFormat)} ·{' '}
-                              {abbreviatedPersonName(personName(people, expense.paidById))} paid
+                              {categoryLabel} · {expensePayerLabel(people, expense.paidById)} paid
                             </AppText>
                           </View>
                         </TravelSurfaceCard>
-                      </Pressable>
+                      </ExpenseRowButton>
                     );
                   })
                 )}
@@ -406,12 +415,45 @@ export function TravelExpensesSheet({
               </View>
             )}
     </TravelSheetModal>
+    <TravelRemoveConfirmModal
+      payload={removeConfirm}
+      onCancel={() => setRemoveConfirm(null)}
+    />
+    </>
+  );
+}
+
+function ExpenseRowButton({
+  testID,
+  label,
+  onPress,
+  style,
+  children,
+}: {
+  testID: string;
+  label: string;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const agent = useAgentUiTarget(testID, { label, onPress });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [style, pressed ? styles.pressed : undefined]}>
+      {children}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   listBody: { gap: spacing.lg },
-  summaryCard: { minHeight: 178, justifyContent: 'center' },
+  summaryCard: { justifyContent: 'center', gap: spacing.xxs },
   summaryLabel: {
     ...appTextStyle('overline'),
     letterSpacing: 2,
@@ -456,10 +498,4 @@ const styles = StyleSheet.create({
   },
   expenseTitle: { flex: 1, flexShrink: 1, minWidth: 0 },
   amountCol: { alignItems: 'flex-end', flexShrink: 0, gap: 2 },
-  deleteConfirm: {
-    gap: spacing.md,
-    alignItems: 'stretch',
-    paddingVertical: spacing.md,
-  },
-  deleteConfirmCopy: { textAlign: 'center' },
 });

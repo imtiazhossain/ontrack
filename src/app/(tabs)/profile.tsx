@@ -34,6 +34,8 @@ import { deletePlant } from '@/services/plants/schedule';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import { useVisionBoard } from '@/store/vision-board';
 import { haptics } from '@/utils/haptics';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -74,32 +76,50 @@ export default function ProfileSettingsScreen() {
 
   const displayName = resolveSelfDisplayName({ preferencesName: name, user });
   const avatarSize = Math.max(72, s(80));
+  const openAvatar = () => {
+    haptics.tap();
+    setAvatarOpen(true);
+  };
+  const avatarAgent = useAgentUiTarget(AgentUiIds.profile.avatar, {
+    label: 'Customize profile icon',
+    onPress: openAvatar,
+  });
 
-  const handleReset = async () => {
-    await Promise.all([
-      ...plants.map((plant) => deletePlant(plant.id)),
-      deleteAllVisionBoardImages(),
-    ]);
-    resetPlants();
-    resetPreferences();
-    resetAddons();
-    resetAgents();
-    resetSchedule();
-    resetTravel();
-    resetTodos();
-    resetVisionBoard();
-    seedIfNeeded();
+  const handleReset = () => {
+    confirmDestructiveAction({
+      title: 'Reset All Data?',
+      message:
+        'This clears schedules, add-ons data, and app-owned photos on this device. Cloud account data is not deleted. You can sign in again to restore synced data.',
+      actionLabel: 'Reset',
+      onConfirm: () => {
+        void (async () => {
+          await Promise.all([
+            ...plants.map((plant) => deletePlant(plant.id)),
+            deleteAllVisionBoardImages(),
+          ]);
+          resetPlants();
+          resetPreferences();
+          resetAddons();
+          resetAgents();
+          resetSchedule();
+          resetTravel();
+          resetTodos();
+          resetVisionBoard();
+          seedIfNeeded();
+        })();
+      },
+    });
   };
 
   return (
     <Screen>
       <Pressable
+        ref={avatarAgent.ref}
         accessibilityRole="button"
         accessibilityLabel="Customize profile icon"
-        onPress={() => {
-          haptics.tap();
-          setAvatarOpen(true);
-        }}
+        testID={avatarAgent.testID}
+        onLayout={avatarAgent.onLayout}
+        onPress={openAvatar}
         style={[
           styles.hero,
           {
@@ -128,22 +148,13 @@ export default function ProfileSettingsScreen() {
       <SectionHeader title="Appearance" />
       <View style={styles.segment}>
         {THEME_OPTIONS.map((opt) => (
-          <Pressable
+          <ProfileThemeOption
             key={opt.value}
-            accessibilityRole="button"
-            accessibilityLabel={`Theme ${opt.label}`}
-            onPress={() => setThemePreference(opt.value)}
-            style={[
-              styles.segmentItem,
-              {
-                backgroundColor: themePreference === opt.value ? theme.accentFaint : theme.backgroundSunken,
-                borderColor: themePreference === opt.value ? theme.accentPrimary : theme.separator,
-              },
-            ]}>
-            <AppText variant="callout" color={themePreference === opt.value ? 'accent' : 'primary'}>
-              {opt.label}
-            </AppText>
-          </Pressable>
+            value={opt.value}
+            label={opt.label}
+            selected={themePreference === opt.value}
+            onSelect={setThemePreference}
+          />
         ))}
       </View>
 
@@ -152,6 +163,7 @@ export default function ProfileSettingsScreen() {
         label="Home location"
         detail={homeLocation.trim() || 'Uses phone location · tap to change'}
         icon="location"
+        testID={AgentUiIds.profile.homeLocation}
         onPress={() => setLocationOpen(true)}
         accessibilityLabel="Set home location for weather"
       />
@@ -170,7 +182,7 @@ export default function ProfileSettingsScreen() {
 
       <SectionHeader title="Add-ons" />
       <AppText variant="body" color="secondary" style={styles.sectionIntro}>
-        Testers have access to every add-on. Turn one off to hide it on this account; its data is kept.
+        Turn an add-on off to hide it on this account; its data is kept.
       </AppText>
       {ADDONS.map((addon) => (
         <SettingsToggleRow
@@ -188,23 +200,51 @@ export default function ProfileSettingsScreen() {
         detail={
           installedAgentCount > 0
             ? `${installedAgentCount} installed · permissions and access`
-            : 'Agent-ready · none installed'
+            : 'None installed yet'
         }
         icon="agents"
+        testID={AgentUiIds.profile.agents}
         onPress={() => router.push('/agents' as never)}
         accessibilityLabel="Manage Agents"
       />
 
       <SectionHeader title="Nutrition" />
-      <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+      <Button
+        variant="secondary"
+        icon="nutrition-profiles"
+        testID={AgentUiIds.profile.nutrition}
+        onPress={() => router.push('/nutrition-profile' as never)}
+        accessibilityLabel="Open nutrition profiles">
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>
-        Youth and infant guidance remains disabled until its release gates are complete.
+        Youth and infant clinical guidance is not available in this version.
       </AppText>
 
+      <SectionHeader title="Legal" />
+      <SettingsActionRow
+        label="Privacy Policy"
+        detail="How onTrack handles your data"
+        icon="shield"
+        testID={AgentUiIds.profile.privacy}
+        onPress={() => router.push('/privacy' as never)}
+        accessibilityLabel="Privacy Policy"
+      />
+      <SettingsActionRow
+        label="Terms of Use"
+        detail="Rules for using onTrack"
+        icon="note"
+        testID={AgentUiIds.profile.terms}
+        onPress={() => router.push('/terms' as never)}
+        accessibilityLabel="Terms of Use"
+      />
+
       <SectionHeader title="Data" />
-      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset All Data">
+      <Button
+        variant="danger"
+        testID={AgentUiIds.profile.resetData}
+        onPress={handleReset}
+        accessibilityLabel="Reset All Data">
         Reset All Data
       </Button>
 
@@ -227,6 +267,45 @@ export default function ProfileSettingsScreen() {
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
       <ProfileAvatarEditorSheet visible={avatarOpen} onClose={() => setAvatarOpen(false)} />
     </Screen>
+  );
+}
+
+function ProfileThemeOption({
+  value,
+  label,
+  selected,
+  onSelect,
+}: {
+  value: ThemePreference;
+  label: string;
+  selected: boolean;
+  onSelect: (value: ThemePreference) => void;
+}) {
+  const theme = useTheme();
+  const select = () => onSelect(value);
+  const agent = useAgentUiTarget(AgentUiIds.profile.theme(value), {
+    label: `Theme ${label}`,
+    onPress: select,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      accessibilityRole="button"
+      accessibilityLabel={`Theme ${label}`}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      onPress={select}
+      style={[
+        styles.segmentItem,
+        {
+          backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
+          borderColor: selected ? theme.accentPrimary : theme.separator,
+        },
+      ]}>
+      <AppText variant="callout" color={selected ? 'accent' : 'primary'}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 

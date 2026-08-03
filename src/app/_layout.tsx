@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
+import * as Linking from 'expo-linking';
 import { getSharedPayloads } from 'expo-sharing';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +31,12 @@ import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import {
+  AgentUiRouteSync,
+  handleAgentUiUrl,
+  isAgentUiEnabled,
+  isAgentUiUrl,
+} from '@/utils/agent-ui';
 import { deferUntilIdle } from '@/utils/defer-until-idle';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
@@ -138,6 +145,17 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
     void SplashScreen.hideAsync().catch(() => undefined);
   }, [hydrated, phase]);
 
+  useEffect(() => {
+    if (!isAgentUiEnabled()) return;
+    const run = (url: string | null) => {
+      if (!url || !isAgentUiUrl(url)) return;
+      void handleAgentUiUrl(url);
+    };
+    void Linking.getInitialURL().then(run);
+    const sub = Linking.addEventListener('url', ({ url }) => run(url));
+    return () => sub.remove();
+  }, []);
+
   if (!hydrated || phase === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary, justifyContent: 'center' }}>
@@ -147,7 +165,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   }
 
   return (
-    <Stack
+    <>
+      {isAgentUiEnabled() ? <AgentUiRouteSync /> : null}
+      <Stack
       screenOptions={{
         headerShown: true,
         headerTitle: '',
@@ -243,7 +263,10 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
         <Stack.Screen name="travel/[id]" />
-        <Stack.Screen name="travel/[id]/flights" />
+        <Stack.Screen
+          name="travel/[id]/flights"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="travel/[id]/stays" />
         <Stack.Screen name="travel/[id]/chat" options={{ headerShown: false }} />
         <Stack.Screen name="nutrition-profile" />
@@ -298,6 +321,18 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
       <Stack.Screen name="l/[code]" />
       <Stack.Screen name="c/[code]" />
       <Stack.Screen name="v/[code]" />
+      <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen name="terms" options={{ title: 'Terms of Use' }} />
+      <Stack.Screen
+        name="agent/ui"
+        options={{
+          headerShown: false,
+          animation: 'none',
+          gestureEnabled: false,
+          contentStyle: { backgroundColor: theme.backgroundPrimary },
+        }}
+      />
     </Stack>
+    </>
   );
 }

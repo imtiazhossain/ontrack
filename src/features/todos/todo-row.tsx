@@ -11,6 +11,7 @@ import { AppText, DragHandle, Symbol } from '@/components/primitives';
 import { layout, radii, spacing, typography } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoMember, TodoTask } from '@/store/todos';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 const TITLE_COLLAPSED_LINES = 2;
@@ -34,6 +35,7 @@ export function TodoRow({
   onToggleExpanded,
   onToggleImportant,
   onUpdate,
+  testID,
 }: {
   task: TodoTask;
   canComplete: boolean;
@@ -53,6 +55,7 @@ export function TodoRow({
   onToggleExpanded: () => void;
   onToggleImportant: () => void;
   onUpdate: (title: string) => void;
+  testID?: string;
 }) {
   const theme = useTheme();
   const [draft, setDraft] = useState(task.title);
@@ -108,6 +111,16 @@ export function TodoRow({
     });
   };
 
+  const pressRow = () => {
+    Keyboard.dismiss();
+    if (editMode) onCollapseTitle();
+    else onToggleExpanded();
+  };
+  const rowAgent = useAgentUiTarget(testID, {
+    label: task.title,
+    onPress: pressRow,
+  });
+
   const titleText = (
     <AppText
       variant="bodyMedium"
@@ -126,7 +139,10 @@ export function TodoRow({
 
   return (
     <Pressable
+      ref={rowAgent.ref}
       accessible={false}
+      testID={rowAgent.testID}
+      onLayout={rowAgent.onLayout}
       accessibilityActions={
         listOwner && editMode
           ? [{ name: 'delete', label: `Delete ${task.title}` }]
@@ -141,11 +157,7 @@ export function TodoRow({
           confirmDelete();
         }
       }}
-      onPress={() => {
-        Keyboard.dismiss();
-        if (editMode) onCollapseTitle();
-        else onToggleExpanded();
-      }}
+      onPress={pressRow}
       style={[
         styles.taskRow,
         {

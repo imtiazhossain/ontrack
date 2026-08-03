@@ -1,18 +1,11 @@
 import { createWithEqualityFn as create } from 'zustand/traditional';
 import { persist } from 'zustand/middleware';
 
-import { isGuestDirtyTrackingSuppressed } from '@/features/auth/guest-dirty-tracking';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
-import { useAuthAccess } from '@/store/auth-access';
 import { newUuid } from '@/utils/id';
-import { asFiniteNonNegative, asPositiveNumber, formatCompactNumber } from '@/utils/parse';
 import {
-  canonicalIngredientKey,
-  cleanHttpsUrl,
   cleanName,
-  cleanOptional,
   cleanTitle,
-  formatIngredientTitle,
   normalizeInvite,
   normalizeList,
   normalizeMember,
@@ -21,6 +14,12 @@ import {
   normalizeTodoState,
   nowIso,
 } from './todos-normalize';
+import {
+  canCompleteTodo,
+  markGuestEdit,
+  queuedMutation,
+} from './todos-helpers';
+import { createTodoRecipeActions } from './todos-recipe-actions';
 
 export {
   canonicalIngredientKey,
@@ -30,138 +29,42 @@ export {
   normalizeTodoTasks,
 } from './todos-normalize';
 
-export type TodoListMode = 'private' | 'shared';
-export type TodoListRole = 'owner' | 'member';
-export type TodoListKind = 'checklist' | 'grocery';
-export type TodoRecipeSourceKind = 'url' | 'image';
+export {
+  canCompleteTodo,
+  privateTodoPayload,
+} from './todos-helpers';
 
-export interface TodoList {
-  id: string;
-  name: string;
-  kind: TodoListKind;
-  mode: TodoListMode;
-  role: TodoListRole;
-  ownerUserId?: string;
-  ownerName?: string;
-  shareCode?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TodoRecipe {
-  id: string;
-  listId: string;
-  name: string;
-  sourceKind: TodoRecipeSourceKind;
-  sourceUrl?: string;
-  sourceImageUri?: string;
-  sourceImagePath?: string;
-  originalServings?: number;
-  targetServings?: number;
-  position?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TodoIngredientInput {
-  name: string;
-  canonicalKey?: string;
-  quantityValue?: number;
-  quantityText?: string;
-  unit?: string;
-  preparation?: string;
-  originalText?: string;
-  confidence?: number;
-}
-
-export interface TodoRecipeInput {
-  name: string;
-  sourceKind: TodoRecipeSourceKind;
-  sourceUrl?: string;
-  sourceImageUri?: string;
-  originalServings?: number;
-  targetServings?: number;
-  ingredients: TodoIngredientInput[];
-}
-
-export interface TodoTask {
-  id: string;
-  listId: string;
-  position?: number;
-  recipeId?: string;
-  ingredientPosition?: number;
-  ingredientName?: string;
-  canonicalKey?: string;
-  quantityValue?: number;
-  quantityText?: string;
-  unit?: string;
-  preparation?: string;
-  originalText?: string;
-  confidence?: number;
-  title: string;
-  completed: boolean;
-  important: boolean;
-  assigneeUserId?: string;
-  completedByUserId?: string;
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  version: number;
-}
-
-export interface TodoMember {
-  listId: string;
-  userId: string;
-  displayName: string;
-  role: TodoListRole;
-  joinedAt: string;
-}
-
-export interface TodoInvite {
-  id: string;
-  listId: string;
-  listName: string;
-  inviterName: string;
-  inviteeEmail: string;
-  code: string;
-  createdAt: string;
-}
-
-export type TodoMutationOperation =
-  | 'rename_list'
-  | 'set_list_kind'
-  | 'add_task'
-  | 'add_recipe'
-  | 'update_recipe'
-  | 'delete_recipe'
-  | 'update_ingredient'
-  | 'reorder_tasks'
-  | 'reorder_recipes'
-  | 'update_task'
-  | 'delete_task'
-  | 'set_completion'
-  | 'set_tasks_completion'
-  | 'set_assignee'
-  | 'clear_completed';
-
-export interface PendingTodoMutation {
-  id: string;
-  listId: string;
-  operation: TodoMutationOperation;
-  payload: Record<string, unknown>;
-  createdAt: string;
-  attempts: number;
-}
-
-export interface TodoPersistedState {
-  groceryMigrationVersion: 1;
-  lists: TodoList[];
-  tasks: TodoTask[];
-  recipes: TodoRecipe[];
-  members: TodoMember[];
-  invites: TodoInvite[];
-  pendingMutations: PendingTodoMutation[];
-}
+export type {
+  PendingTodoMutation,
+  TodoIngredientInput,
+  TodoInvite,
+  TodoList,
+  TodoListKind,
+  TodoListMode,
+  TodoListRole,
+  TodoMember,
+  TodoMutationOperation,
+  TodoPersistedState,
+  TodoRecipe,
+  TodoRecipeInput,
+  TodoRecipeSourceKind,
+  TodoSharedSnapshot,
+  TodoTask,
+} from './todos-types';
+import type {
+  PendingTodoMutation,
+  TodoIngredientInput,
+  TodoInvite,
+  TodoList,
+  TodoListKind,
+  TodoMember,
+  TodoMutationOperation,
+  TodoPersistedState,
+  TodoRecipe,
+  TodoRecipeInput,
+  TodoSharedSnapshot,
+  TodoTask,
+} from './todos-types';
 
 interface TodoState extends TodoPersistedState {
   syncError?: string;
@@ -202,56 +105,6 @@ interface TodoState extends TodoPersistedState {
   rejectMutation: (id: string, message: string) => void;
   clearSyncError: () => void;
   reset: () => void;
-}
-
-export interface TodoSharedSnapshot {
-  list: TodoList;
-  tasks: TodoTask[];
-  recipes?: TodoRecipe[];
-  members: TodoMember[];
-}
-
-function markGuestEdit() {
-  if (!isGuestDirtyTrackingSuppressed()) {
-    useAuthAccess.getState().markGuestDataDirty();
-  }
-}
-
-export function privateTodoPayload(state: TodoPersistedState) {
-  const privateListIds = new Set(
-    state.lists.filter((list) => list.mode === 'private').map((list) => list.id),
-  );
-  return {
-    groceryMigrationVersion: 1 as const,
-    lists: state.lists.filter((list) => privateListIds.has(list.id)),
-    tasks: state.tasks.filter((task) => privateListIds.has(task.listId)),
-    recipes: state.recipes.filter((recipe) => privateListIds.has(recipe.listId)),
-  };
-}
-
-export function canCompleteTodo(
-  list: TodoList,
-  task: TodoTask,
-  actorUserId?: string,
-): boolean {
-  if (list.role === 'owner' || list.mode === 'private') return true;
-  return Boolean(actorUserId && (!task.assigneeUserId || task.assigneeUserId === actorUserId));
-}
-
-function queuedMutation(
-  list: TodoList | undefined,
-  operation: TodoMutationOperation,
-  payload: Record<string, unknown>,
-): PendingTodoMutation[] {
-  if (!list || list.mode !== 'shared') return [];
-  return [{
-    id: newUuid(),
-    listId: list.id,
-    operation,
-    payload,
-    createdAt: nowIso(),
-    attempts: 0,
-  }];
 }
 
 const initialState = normalizeTodoState(undefined);
@@ -428,243 +281,7 @@ export const useTodos = create<TodoState>()(
         return task;
       },
 
-      addRecipe: (listId, input) => {
-        const list = get().lists.find((item) => item.id === listId);
-        const name = cleanName(input.name);
-        const ingredients = input.ingredients.flatMap((ingredient) => {
-          const ingredientName = cleanOptional(ingredient.name, 100);
-          if (!ingredientName) return [];
-          const quantityValue = asFiniteNonNegative(ingredient.quantityValue);
-          const quantityText =
-            cleanOptional(ingredient.quantityText, 40) ??
-            (quantityValue !== undefined
-              ? formatCompactNumber(quantityValue)
-              : undefined);
-          const normalized: TodoIngredientInput = {
-            name: ingredientName,
-            canonicalKey:
-              cleanOptional(ingredient.canonicalKey, 120) ??
-              canonicalIngredientKey(ingredientName),
-            quantityValue,
-            quantityText,
-            unit: cleanOptional(ingredient.unit, 40),
-            preparation: cleanOptional(ingredient.preparation, 80),
-            originalText: cleanOptional(ingredient.originalText, 240),
-            confidence:
-              typeof ingredient.confidence === 'number' &&
-              Number.isFinite(ingredient.confidence)
-                ? Math.max(0, Math.min(1, ingredient.confidence))
-                : undefined,
-          };
-          return [normalized];
-        });
-        if (
-          !list ||
-          list.kind !== 'grocery' ||
-          list.role !== 'owner' ||
-          !name ||
-          ingredients.length === 0
-        ) {
-          return undefined;
-        }
-
-        const now = nowIso();
-        const recipePositions = get().recipes
-          .filter((recipe) => recipe.listId === listId)
-          .flatMap((recipe) =>
-            typeof recipe.position === 'number' ? [recipe.position] : [],
-          );
-        const recipe: TodoRecipe = {
-          id: newUuid(),
-          listId,
-          name,
-          sourceKind: input.sourceKind === 'image' ? 'image' : 'url',
-          sourceUrl: cleanHttpsUrl(input.sourceUrl, 2_000),
-          sourceImageUri:
-            typeof input.sourceImageUri === 'string' && input.sourceImageUri.trim()
-              ? input.sourceImageUri.trim()
-              : undefined,
-          originalServings: asPositiveNumber(input.originalServings),
-          targetServings:
-            asPositiveNumber(input.targetServings) ??
-            asPositiveNumber(input.originalServings),
-          position: recipePositions.length
-            ? Math.min(...recipePositions) - 1
-            : 0,
-          createdAt: now,
-          updatedAt: now,
-        };
-        const tasks: TodoTask[] = ingredients.map((ingredient, index) => ({
-          id: newUuid(),
-          listId,
-          recipeId: recipe.id,
-          ingredientPosition: index,
-          ingredientName: ingredient.name,
-          canonicalKey: ingredient.canonicalKey,
-          quantityValue: ingredient.quantityValue,
-          quantityText: ingredient.quantityText,
-          unit: ingredient.unit,
-          preparation: ingredient.preparation,
-          originalText: ingredient.originalText,
-          confidence: ingredient.confidence,
-          title: formatIngredientTitle(ingredient),
-          completed: false,
-          important: false,
-          createdAt: now,
-          updatedAt: now,
-          version: 0,
-        }));
-
-        markGuestEdit();
-        set((state) => ({
-          recipes: [recipe, ...state.recipes],
-          tasks: [...tasks, ...state.tasks],
-          lists: state.lists.map((item) =>
-            item.id === listId ? { ...item, updatedAt: now } : item,
-          ),
-          pendingMutations: [
-            ...state.pendingMutations,
-            ...queuedMutation(list, 'add_recipe', { recipe, tasks }),
-          ],
-        }));
-        return recipe;
-      },
-
-      updateRecipe: (id, patch) => {
-        const recipe = get().recipes.find((item) => item.id === id);
-        const list = recipe
-          ? get().lists.find((item) => item.id === recipe.listId)
-          : undefined;
-        if (!recipe || !list || list.role !== 'owner') return;
-        const name =
-          patch.name === undefined ? recipe.name : cleanName(patch.name);
-        if (!name) return;
-        const updatedAt = nowIso();
-        const next: TodoRecipe = {
-          ...recipe,
-          name,
-          sourceUrl:
-            patch.sourceUrl === undefined
-              ? recipe.sourceUrl
-              : cleanHttpsUrl(patch.sourceUrl, 2_000),
-          targetServings:
-            patch.targetServings === undefined
-              ? recipe.targetServings
-              : asPositiveNumber(patch.targetServings),
-          updatedAt,
-        };
-        markGuestEdit();
-        set((state) => ({
-          recipes: state.recipes.map((item) => (item.id === id ? next : item)),
-          lists: state.lists.map((item) =>
-            item.id === list.id ? { ...item, updatedAt } : item,
-          ),
-          pendingMutations: [
-            ...state.pendingMutations,
-            ...queuedMutation(list, 'update_recipe', { recipe: next }),
-          ],
-        }));
-      },
-
-      deleteRecipe: (id) => {
-        const recipe = get().recipes.find((item) => item.id === id);
-        const list = recipe
-          ? get().lists.find((item) => item.id === recipe.listId)
-          : undefined;
-        if (!recipe || !list || list.role !== 'owner') return;
-        const updatedAt = nowIso();
-        markGuestEdit();
-        set((state) => ({
-          recipes: state.recipes.filter((item) => item.id !== id),
-          tasks: state.tasks.filter((task) => task.recipeId !== id),
-          lists: state.lists.map((item) =>
-            item.id === list.id ? { ...item, updatedAt } : item,
-          ),
-          pendingMutations: [
-            ...state.pendingMutations,
-            ...queuedMutation(list, 'delete_recipe', {
-              recipeId: id,
-              sourceImagePath: recipe.sourceImagePath,
-            }),
-          ],
-        }));
-      },
-
-      updateIngredient: (id, patch) => {
-        const task = get().tasks.find((item) => item.id === id);
-        const list = task
-          ? get().lists.find((item) => item.id === task.listId)
-          : undefined;
-        if (!task?.recipeId || !list || list.role !== 'owner') return;
-        const ingredientName =
-          patch.name === undefined
-            ? task.ingredientName
-            : cleanOptional(patch.name, 100);
-        if (!ingredientName) return;
-        const quantityValue =
-          patch.quantityValue === undefined
-            ? task.quantityValue
-            : asFiniteNonNegative(patch.quantityValue);
-        const quantityText =
-          patch.quantityText === undefined
-            ? task.quantityText
-            : cleanOptional(patch.quantityText, 40);
-        const updatedAt = nowIso();
-        const next: TodoTask = {
-          ...task,
-          ingredientName,
-          canonicalKey:
-            patch.canonicalKey === undefined
-              ? task.canonicalKey ?? canonicalIngredientKey(ingredientName)
-              : cleanOptional(patch.canonicalKey, 120) ??
-                canonicalIngredientKey(ingredientName),
-          quantityValue,
-          quantityText,
-          unit:
-            patch.unit === undefined
-              ? task.unit
-              : cleanOptional(patch.unit, 40),
-          preparation:
-            patch.preparation === undefined
-              ? task.preparation
-              : cleanOptional(patch.preparation, 80),
-          originalText:
-            patch.originalText === undefined
-              ? task.originalText
-              : cleanOptional(patch.originalText, 240),
-          confidence:
-            patch.confidence === undefined
-              ? task.confidence
-              : typeof patch.confidence === 'number' &&
-                  Number.isFinite(patch.confidence)
-                ? Math.max(0, Math.min(1, patch.confidence))
-                : undefined,
-          title: formatIngredientTitle({
-            name: ingredientName,
-            quantityText,
-            unit:
-              patch.unit === undefined
-                ? task.unit
-                : cleanOptional(patch.unit, 40),
-            preparation:
-              patch.preparation === undefined
-                ? task.preparation
-                : cleanOptional(patch.preparation, 80),
-          }),
-          updatedAt,
-        };
-        markGuestEdit();
-        set((state) => ({
-          tasks: state.tasks.map((item) => (item.id === id ? next : item)),
-          lists: state.lists.map((item) =>
-            item.id === list.id ? { ...item, updatedAt } : item,
-          ),
-          pendingMutations: [
-            ...state.pendingMutations,
-            ...queuedMutation(list, 'update_ingredient', { task: next }),
-          ],
-        }));
-      },
+      ...createTodoRecipeActions(set, get),
 
       updateTask: (id, title) => {
         const clean = cleanTitle(title);

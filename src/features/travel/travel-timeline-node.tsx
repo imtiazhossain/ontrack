@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -34,16 +33,19 @@ import {
   kindIcon,
   kindTint,
 } from '@/features/travel/travel-kind-chrome';
-import {
-  TravelItemNotesButton,
-  TravelItemNotesSheet,
-} from '@/features/travel/travel-item-notes-sheet';
+import { TravelItemNotesButton, TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
+import { AgentUiIds } from '@/utils/agent-ui';
 import {
   TRAVEL_CARD_SHADOW,
   travelCardBorder,
   travelCardFill,
 } from '@/features/travel/travel-surface';
 import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
+import {
+  PhotoStrip,
+  TimelineItemTitle,
+  validBookingUrl,
+} from '@/features/travel/travel-timeline-node-chrome';
 import {
   timelineEntryCaption,
   type TravelTimelinePhase,
@@ -53,104 +55,11 @@ import type { TravelItemNote, TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
-import { isHttpsUrl } from '@/utils/safe-url';
 import { useState } from 'react';
 
 export { kindDotColor } from '@/features/travel/travel-kind-chrome';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
-
-function validBookingUrl(value: string): boolean {
-  return !value || isHttpsUrl(value);
-}
-
-/** Split “Company · Location” titles so the location is readable on its own line. */
-function TimelineItemTitle({
-  title,
-  compact = false,
-  dense = false,
-}: {
-  title: string;
-  compact?: boolean;
-  dense?: boolean;
-}) {
-  const primaryVariant = dense ? 'caption' : compact ? 'callout' : 'subheading';
-  const separator = ' · ';
-  const breakAt = title.indexOf(separator);
-  if (breakAt <= 0) {
-    return (
-      <AppText
-        variant={primaryVariant}
-        fit
-        style={compact ? styles.compactTitle : undefined}>
-        {title}
-      </AppText>
-    );
-  }
-  const head = title.slice(0, breakAt);
-  const tail = title.slice(breakAt + separator.length);
-  return (
-    <View style={styles.titleStack}>
-      <AppText
-        variant={primaryVariant}
-        fit
-        style={compact ? styles.compactTitle : undefined}>
-        {head}
-      </AppText>
-      <AppText
-        variant={compact ? 'caption' : 'subheading'}
-        color={compact ? 'secondary' : 'primary'}
-        fit>
-        {tail}
-      </AppText>
-    </View>
-  );
-}
-
-function PhotoStrip({
-  uris,
-  onRemove,
-}: {
-  uris: string[];
-  onRemove?: (uri: string) => void;
-}) {
-  const theme = useTheme();
-  const { s } = useResponsive();
-  const size = Math.max(72, s(88));
-  if (!uris.length) return null;
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.photoStrip}>
-      {uris.map((uri) => (
-        <View
-          key={uri}
-          style={[styles.photoWrap, { width: size, height: size }]}>
-          <Image
-            source={{ uri }}
-            style={styles.photo}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-          {onRemove ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Remove photo"
-              hitSlop={6}
-              onPress={() => onRemove(uri)}
-              style={[
-                styles.photoRemove,
-                { backgroundColor: theme.overlayScrim },
-              ]}>
-              <Symbol name="close" size="sm" color={theme.textOnAccent} />
-            </Pressable>
-          ) : null}
-        </View>
-      ))}
-    </ScrollView>
-  );
-}
 
 export function TravelTimelineNode({
   item,
@@ -661,6 +570,7 @@ export function TravelTimelineNode({
                       iconSize="sm"
                       background={theme.backgroundSunken}
                       color={theme.danger}
+                      testID={AgentUiIds.travel.removeConfirm.open}
                       accessibilityLabel={`Remove ${item.title}`}
                       onPress={onRemove}
                     />
@@ -732,24 +642,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   itemHeader: { flexDirection: 'row', alignItems: 'flex-start' },
-  titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
-  compactTitle: { fontWeight: '400' },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
-  photoStrip: { gap: spacing.sm, paddingVertical: spacing.xxs },
-  photoWrap: {
-    borderRadius: radii.md,
-    overflow: 'hidden',
-  },
-  photo: { width: '100%', height: '100%' },
-  photoRemove: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

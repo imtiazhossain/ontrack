@@ -11,6 +11,7 @@ import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
 import { useUI } from '@/store/ui';
 import { formatMonthTitle, fromDateKey, toDateKey, todayKey } from '@/utils/date';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export default function CalendarScreen() {
   const theme = useTheme();
@@ -54,7 +55,11 @@ export default function CalendarScreen() {
     <Screen>
       <View style={styles.header}>
         <AppText variant="title">Calendar</AppText>
-        <Button variant="ghost" onPress={() => setSelectedDate(today)} accessibilityLabel="Jump to today">
+        <Button
+          variant="ghost"
+          onPress={() => setSelectedDate(today)}
+          testID={AgentUiIds.calendar.jumpToday}
+          accessibilityLabel="Jump to today">
           Today
         </Button>
       </View>
@@ -63,6 +68,7 @@ export default function CalendarScreen() {
         <IconButton
           icon="chevron-left"
           accessibilityLabel="Previous month"
+          testID={AgentUiIds.calendar.prevMonth}
           background="transparent"
           onPress={() => shiftMonth(-1)}
         />
@@ -70,6 +76,7 @@ export default function CalendarScreen() {
         <IconButton
           icon="chevron-right"
           accessibilityLabel="Next month"
+          testID={AgentUiIds.calendar.nextMonth}
           background="transparent"
           onPress={() => shiftMonth(1)}
         />
@@ -91,6 +98,7 @@ export default function CalendarScreen() {
         </AppText>
         <Button
           onPress={openDay}
+          testID={AgentUiIds.calendar.openDay}
           accessibilityLabel="Open day">
           Open day
         </Button>

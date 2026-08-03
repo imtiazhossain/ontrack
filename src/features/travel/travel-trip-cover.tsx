@@ -18,8 +18,7 @@ export function TravelTripCover({ plan }: { plan: TravelPlan }) {
   const chrome = itinerarySheetChrome(theme);
   const flightTone = chrome.icons.flight;
   const { s } = useResponsive();
-  // ~80pt square thumb — matches mock proportion vs the Travel title.
-  const size = Math.max(76, s(80));
+  const size = Math.max(88, s(96));
   const localUri = localTripCoverUri(plan);
   const [uri, setUri] = useState<string | undefined>(localUri);
   const destinationKey = `${plan.id}:${plan.destination}:${plan.title}`;
@@ -33,13 +32,15 @@ export function TravelTripCover({ plan }: { plan: TravelPlan }) {
       };
     }
     setUri(undefined);
+    // Key on destination fields only — `plan` identity churn (weather/sync) must not abort.
     void fetchDestinationCoverUri(plan).then((next) => {
       if (active) setUri(next);
     });
     return () => {
       active = false;
     };
-  }, [destinationKey, localUri, plan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields used for remote covers
+  }, [destinationKey, localUri]);
 
   return (
     <View
@@ -48,7 +49,7 @@ export function TravelTripCover({ plan }: { plan: TravelPlan }) {
         {
           width: size,
           height: size,
-          borderRadius: Math.max(18, s(18)),
+          borderRadius: Math.max(16, s(18)),
           backgroundColor: flightTone.bg,
         },
       ]}>

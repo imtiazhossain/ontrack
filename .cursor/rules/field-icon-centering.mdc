@@ -1,0 +1,45 @@
+---
+description: REQUIRED — leading field icons must be vertically centered
+globs:
+  - src/components/primitives/**/*
+  - src/features/**/*.{ts,tsx}
+  - src/app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Field leading-icon vertical centering (mandatory)
+
+**All agents must follow this on every UI change that touches form fields with leading icons.**
+
+Leading icons (glyph plates beside label/value chrome) must be **vertically centered** in the field row — never top-aligned, and never nudged with `paddingTop` to optically sit near the label.
+
+## Required
+
+1. Use the shared helpers from `@/components/primitives/field-leading-icon`:
+   - `FieldLeadingIcon` for the icon plate
+   - `fieldLeadingIconRowStyle(...)` for the field row (`flexDirection: 'row'` + `alignItems: 'center'`)
+2. Prefer `Input` / `DateField` / `TimeField` primitives — they already center icons.
+3. Custom fields that render `FieldLeadingIcon` must wrap the row with `fieldLeadingIconRowStyle` (or equivalent `alignItems: 'center'`).
+
+## Do / Don't
+
+```tsx
+// ✅
+<View style={fieldLeadingIconRowStyle({ minHeight: s(60), gap: spacing.sm, ... })}>
+  <FieldLeadingIcon name="flight" backgroundColor={bg} color={fg} />
+  <View style={{ flex: 1, minWidth: 0 }}>{/* label + value */}</View>
+</View>
+
+// ❌ Top-aligned stacked chrome
+<View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+  <View style={{ paddingTop: s(2) }}>
+    <FieldLeadingIcon name="flight" />
+  </View>
+  …
+</View>
+```
+
+## Never reintroduce
+
+- `alignItems: 'flex-start'` on a row that hosts `FieldLeadingIcon`
+- `paddingTop` / `marginTop` nudges on the leading-icon slot to fake alignment with stacked labels

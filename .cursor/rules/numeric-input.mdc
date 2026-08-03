@@ -1,6 +1,11 @@
 ---
 description: Number-only fields must strip letters via shared sanitize helpers
-alwaysApply: true
+globs:
+  - src/components/primitives/**/*
+  - src/features/**/*.{ts,tsx}
+  - src/app/**/*.{ts,tsx}
+  - src/utils/parse.ts
+alwaysApply: false
 ---
 
 # Numeric input (no letters)

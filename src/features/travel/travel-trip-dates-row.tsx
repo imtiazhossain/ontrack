@@ -11,14 +11,15 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
-const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.08)';
+const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.07)';
 
 /** Gold calendar well matching the trip-dates mock (not the pink sheet calendar tone). */
-const DATE_ICON_WELL_LIGHT = '#F5F0E8';
+const DATE_ICON_WELL_LIGHT = '#EFE8DC';
 const DATE_ICON_WELL_DARK = 'rgba(212,165,116,0.18)';
-const DATE_BADGE_BORDER_LIGHT = 'rgba(201, 164, 106, 0.38)';
+const DATE_BADGE_BORDER_LIGHT = 'rgba(176, 140, 80, 0.55)';
 const DATE_BADGE_BORDER_DARK = '#D4A574';
-const DATE_BADGE_FILL_LIGHT = '#F7F2E9';
+const DATE_BADGE_FILL_LIGHT = '#FBF7F0';
+const DATE_BAR_BORDER_LIGHT = 'rgba(180,150,110,0.22)';
 
 interface TravelTripDatesRowProps {
   startLabel: string;
@@ -40,7 +41,7 @@ export function TravelTripDatesRow({
   const light = theme.name === 'light';
   const gold = light ? TRAVEL_EDITORIAL_ACCENT : chrome.ctaFrom;
   const badgeBorder = light ? DATE_BADGE_BORDER_LIGHT : DATE_BADGE_BORDER_DARK;
-  const iconBox = compact ? Math.max(24, s(26)) : Math.max(32, s(34));
+  const iconBox = compact ? Math.max(24, s(26)) : Math.max(34, s(36));
   const daysLabel = `${dayCount} ${dayCount === 1 ? 'Day' : 'Days'}`;
 
   return (
@@ -51,9 +52,9 @@ export function TravelTripDatesRow({
         styles.row,
         {
           backgroundColor: compact ? travelCardFill(theme) : travelPillBg(theme),
-          borderColor: light ? 'rgba(180,150,110,0.28)' : chrome.fieldBorder,
-          boxShadow: compact ? TRAVEL_DATE_SHADOW : undefined,
-          minHeight: compact ? Math.max(40, s(40)) : Math.max(60, s(62)),
+          borderColor: light ? DATE_BAR_BORDER_LIGHT : chrome.fieldBorder,
+          boxShadow: compact ? TRAVEL_DATE_SHADOW : TRAVEL_DATE_SHADOW,
+          minHeight: compact ? Math.max(40, s(40)) : Math.max(58, s(60)),
           paddingHorizontal: compact ? rs.md : rs.lg,
           paddingVertical: compact ? rs.xxs : rs.sm,
           gap: rs.md,
@@ -67,6 +68,7 @@ export function TravelTripDatesRow({
             width: iconBox,
             height: iconBox,
             backgroundColor: light ? DATE_ICON_WELL_LIGHT : DATE_ICON_WELL_DARK,
+            boxShadow: light ? '0 1px 3px rgba(51, 39, 28, 0.08)' : undefined,
           },
         ]}>
         <Symbol name="calendar" size={compact ? 18 : 'sm'} color={gold} />
@@ -77,11 +79,11 @@ export function TravelTripDatesRow({
             variant="caption"
             numberOfLines={1}
             style={[
-              styles.serif,
+              styles.label,
               {
                 color: chrome.subtitle,
-                fontSize: Math.max(13, typography.caption.fontSize),
-                lineHeight: Math.max(17, s(17)),
+                fontSize: Math.max(12, typography.caption.fontSize - 0.5),
+                lineHeight: Math.max(16, s(16)),
               },
             ]}>
             Trip Dates
@@ -97,10 +99,10 @@ export function TravelTripDatesRow({
               color: chrome.title,
               fontSize: compact
                 ? Math.max(13, typography.caption.fontSize)
-                : Math.max(17, typography.callout.fontSize + 2),
+                : Math.max(16, typography.callout.fontSize + 1),
               lineHeight: compact
                 ? Math.max(18, typography.caption.lineHeight)
-                : Math.max(23, s(23)),
+                : Math.max(22, s(22)),
             },
           ]}>
           {`${startLabel} → ${endLabel}`}
@@ -112,9 +114,9 @@ export function TravelTripDatesRow({
           {
             backgroundColor: light ? DATE_BADGE_FILL_LIGHT : 'transparent',
             borderColor: badgeBorder,
-            minHeight: compact ? Math.max(18, s(18)) : Math.max(32, s(34)),
-            paddingHorizontal: compact ? rs.xs : Math.max(14, rs.md),
-            borderWidth: compact ? StyleSheet.hairlineWidth : 1,
+            minHeight: compact ? Math.max(18, s(18)) : Math.max(30, s(32)),
+            paddingHorizontal: compact ? rs.xs : Math.max(12, rs.md),
+            borderWidth: compact ? StyleSheet.hairlineWidth : 1.25,
           },
         ]}>
         <AppText
@@ -127,7 +129,7 @@ export function TravelTripDatesRow({
               color: gold,
               fontSize: compact
                 ? Math.max(10, s(10))
-                : Math.max(13, typography.caption.fontSize + 1),
+                : Math.max(14, typography.caption.fontSize + 1.5),
             },
           ]}>
           {daysLabel}
@@ -158,14 +160,14 @@ const styles = StyleSheet.create({
     gap: 2,
     justifyContent: 'center',
   },
-  serif: {
+  label: {
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
   },
   dates: {
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
-    letterSpacing: -0.25,
+    letterSpacing: -0.2,
   },
   badge: {
     borderRadius: radii.pill,

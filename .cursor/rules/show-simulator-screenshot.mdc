@@ -7,17 +7,15 @@ alwaysApply: true
 
 After any change that affects the running Expo/iOS app UI, **always test in the iOS Simulator** and do not end the turn until the simulator is left in a **working state that shows the change**, with a fully loaded screenshot in the reply.
 
+Metro / Node 24 / Fast Refresh / reconnect details live in `.cursor/rules/verify-working-app.mdc` — follow that; do not restate here.
+
 ## Required close-out
 
-1. Confirm Metro `/status` is 200. Prefer the already-running bundler so Fast Refresh can apply the edit. Start only if down:
-   - Use Node 24 (`nvm use`, see `.nvmrc`). Put nvm ahead of Homebrew on `PATH` — Homebrew `node@25` crashes Metro on Fast Refresh.
-   - `REACT_NATIVE_PACKAGER_HOSTNAME=<en0 IP> npm start` (no `--clear`). Use `npm run start:clear` only when the bundle is demonstrably stale after reconnect.
-2. Boot/open the iOS Simulator (`open -a Simulator`) with the onTrack app (`com.imtihoss.ontracknow`) or Expo Go as appropriate.
-3. Deep-link or navigate to the changed surface (e.g. `xcrun simctl openurl booted 'ontrack://workouts'`).
-4. **Test the change** on that surface via Fast Refresh (visible result of the edit, not just that the app launched). Do not terminate/relaunch solely to pick up JS/UI edits.
-5. Wait until the screen is fully loaded (no blank/white/error boundary, anatomy art visible when relevant).
-6. Capture a screenshot with `xcrun simctl io booted screenshot` and **read the image** so it appears in the reply.
-7. Leave the simulator on that working screen. If the first capture is a splash, loading state, wrong tab, or does not show the change, wait for Fast Refresh / reconnect the dev client and capture again before finishing.
+1. Confirm Metro `/status` is 200 (reuse running bundler; `./scripts/ensure-packager.sh --start` only if down).
+2. Open the changed surface with `./scripts/agent-ui-open.sh <alias>` (see `docs/agent-routes.md`). Prefer `./scripts/agent-ui-tap.sh` / dump over screenshot coordinates.
+3. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
+4. Wait until fully loaded (`./scripts/agent-ui-wait.sh` when waiting on an id/prefix/route).
+5. Capture `xcrun simctl io booted screenshot`, **read the image**, and leave the simulator on that working screen.
 
 ## Do not
 

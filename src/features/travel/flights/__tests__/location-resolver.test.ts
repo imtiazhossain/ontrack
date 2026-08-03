@@ -1,4 +1,7 @@
-import { airportCodesForLocation } from '../location-resolver';
+import {
+  airportCodesForLocation,
+  locationQueryCandidates,
+} from '../location-resolver';
 
 describe('flight location resolver', () => {
   it('returns every airport associated with a city', () => {
@@ -27,5 +30,35 @@ describe('flight location resolver', () => {
         { type: 'city', code: 'LIS', name: 'Lisbon' },
       ]),
     ).toEqual(['LIS']);
+  });
+
+  it('accepts city names with region or country suffixes', () => {
+    expect(
+      airportCodesForLocation('San Francisco, CA', [
+        { type: 'city', code: 'SFO', name: 'San Francisco' },
+      ]),
+    ).toEqual(['SFO']);
+  });
+
+  it('matches accented city names to unaccented API results', () => {
+    expect(
+      airportCodesForLocation('Reykjavík, Iceland', [
+        { type: 'city', code: 'REK', name: 'Reykjavik' },
+        { type: 'airport', code: 'KEF', city_code: 'REK' },
+        { type: 'airport', code: 'RKV', city_code: 'REK' },
+      ]),
+    ).toEqual(['KEF', 'RKV']);
+  });
+
+  it('builds lookup candidates from City, Region entries', () => {
+    expect(locationQueryCandidates('San Francisco, CA')).toEqual([
+      'San Francisco, CA',
+      'San Francisco',
+    ]);
+    expect(locationQueryCandidates('Reykjavík, Iceland')).toEqual([
+      'Reykjavík, Iceland',
+      'Reykjavík',
+    ]);
+    expect(locationQueryCandidates('  SFO  ')).toEqual(['SFO']);
   });
 });

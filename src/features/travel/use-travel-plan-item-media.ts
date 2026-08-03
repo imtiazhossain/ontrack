@@ -1,0 +1,138 @@
+import { useRef, useState } from 'react';
+
+import { appPrompt } from '@/components/primitives';
+import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
+import type { TravelRemoveConfirmPayload } from '@/features/travel/travel-remove-confirm-modal';
+import type { TravelPlan } from '@/features/travel/types';
+import { useTravel } from '@/store/travel';
+
+type ItineraryItem = TravelPlan['itinerary'][number];
+
+/** Photos, notes, and remove-confirm for plan-detail itinerary items. */
+export function useTravelPlanItemMedia({
+  planId,
+  plan,
+  itinerary,
+  updatePlan,
+}: {
+  planId: string;
+  plan: TravelPlan;
+  itinerary: TravelPlan['itinerary'];
+  updatePlan: (next: TravelPlan) => void;
+}) {
+  const [addPhotosItemId, setAddPhotosItemId] = useState<string>();
+  const addPhotosItemIdRef = useRef<string | undefined>(undefined);
+  const [removeConfirm, setRemoveConfirm] =
+    useState<TravelRemoveConfirmPayload | null>(null);
+
+  const removeItem = (itemId: string) => {
+    updatePlan({
+      ...plan,
+      itinerary: itinerary.filter((item) => item.id !== itemId),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const confirmRemoveItem = (item: ItineraryItem) => {
+    setRemoveConfirm({
+      title: 'Remove Itinerary Item?',
+      message: 'This action will permanently remove this itinerary item.',
+      actionLabel: 'Remove Item',
+      onConfirm: () => removeItem(item.id),
+    });
+  };
+
+  const setItemPhotos = (itemId: string, nextUris: string[]) => {
+    updatePlan({
+      ...plan,
+      itinerary: itinerary.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              photoUris: nextUris.length ? nextUris : undefined,
+            }
+          : item,
+      ),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const saveItemNotes = (
+    itemId: string,
+    notes: NonNullable<ItineraryItem['notes']>,
+  ) => {
+    updatePlan({
+      ...plan,
+      itinerary: itinerary.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              notes: notes.length ? notes : undefined,
+            }
+          : item,
+      ),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const removePhotoFromItem = (itemId: string, uri: string) => {
+    const current = itinerary.find((item) => item.id === itemId);
+    if (!current) return;
+    setItemPhotos(
+      itemId,
+      (current.photoUris ?? []).filter((entry) => entry !== uri),
+    );
+  };
+
+  const appendPhotosToItem = async (itemId: string, uris: string[]) => {
+    if (!uris.length) return;
+    try {
+      const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
+      if (!latest) return;
+      const current = latest.itinerary.find((entry) => entry.id === itemId);
+      const persisted = await persistTravelMomentPhotos(uris, itemId);
+      const next = [...(current?.photoUris ?? []), ...persisted];
+      updatePlan({
+        ...latest,
+        itinerary: latest.itinerary.map((item) =>
+          item.id === itemId
+            ? { ...item, photoUris: next.length ? next : undefined }
+            : item,
+        ),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (__DEV__) console.warn('[addPhotosToItem]', error);
+      appPrompt.alert(
+        'Couldn’t save photo',
+        'Something went wrong while saving. Try again with another image.',
+      );
+    }
+  };
+
+  const addPhotosToItem = (itemId: string) => {
+    addPhotosItemIdRef.current = itemId;
+    setAddPhotosItemId(itemId);
+  };
+
+  const clearAddPhotos = () => {
+    addPhotosItemIdRef.current = undefined;
+    setAddPhotosItemId(undefined);
+  };
+
+  return {
+    addPhotosItemId,
+    addPhotosItemIdRef,
+    removeConfirm,
+    setRemoveConfirm,
+    confirmRemoveItem,
+    saveItemNotes,
+    removePhotoFromItem,
+    appendPhotosToItem,
+    addPhotosToItem,
+    clearAddPhotos,
+  };
+}
+
+// Re-export type for callers that previously imported from the modal module via this surface.
+export type { TravelRemoveConfirmPayload };

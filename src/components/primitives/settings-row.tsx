@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
@@ -16,6 +17,7 @@ interface SettingsRowProps {
   trailing?: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 export function SettingsRow({
@@ -25,9 +27,20 @@ export function SettingsRow({
   trailing,
   onPress,
   accessibilityLabel = label,
+  testID,
 }: SettingsRowProps) {
   const theme = useTheme();
   const { spacing, layout, s } = useResponsive();
+  const handlePress = onPress
+    ? () => {
+        haptics.select();
+        onPress();
+      }
+    : undefined;
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: handlePress,
+  });
   const content = (
     <>
       {icon ? (
@@ -66,16 +79,22 @@ export function SettingsRow({
     },
   ];
 
-  if (!onPress) return <View style={surface}>{content}</View>;
+  if (!onPress) {
+    return (
+      <View ref={agent.ref} testID={testID} onLayout={agent.onLayout} style={surface}>
+        {content}
+      </View>
+    );
+  }
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={() => {
-        haptics.select();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [surface, { opacity: pressed ? 0.78 : 1 }]}>
       {content}
     </Pressable>
@@ -123,6 +142,7 @@ export function SettingsActionRow({
   icon,
   onPress,
   accessibilityLabel,
+  testID,
 }: Omit<SettingsRowProps, 'trailing'> & { onPress: () => void }) {
   const theme = useTheme();
   return (
@@ -132,6 +152,7 @@ export function SettingsActionRow({
       icon={icon}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
+      testID={testID}
       trailing={<Symbol name="chevron-right" size="sm" color={theme.textTertiary} />}
     />
   );
