@@ -31,7 +31,12 @@ import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { handleAgentUiUrl, isAgentUiEnabled, isAgentUiUrl } from '@/utils/agent-ui';
+import {
+  AgentUiRouteSync,
+  handleAgentUiUrl,
+  isAgentUiEnabled,
+  isAgentUiUrl,
+} from '@/utils/agent-ui';
 import { deferUntilIdle } from '@/utils/defer-until-idle';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
@@ -160,7 +165,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   }
 
   return (
-    <Stack
+    <>
+      {isAgentUiEnabled() ? <AgentUiRouteSync /> : null}
+      <Stack
       screenOptions={{
         headerShown: true,
         headerTitle: '',
@@ -324,5 +331,6 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         }}
       />
     </Stack>
+    </>
   );
 }

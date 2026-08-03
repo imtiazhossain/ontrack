@@ -21,7 +21,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 
 - If a touched screen/module is **>700 lines** and you add non-trivial UI, extract a focused panel/helper into a colocated file instead of growing the monolith.
 - Keep orchestration (state, store calls, navigation) in the screen; move presentational sections + their styles out.
-- Update the `AGENTS.md` feature entry table when you add a new entry module.
+- Update the `AGENTS.md` feature entry table with a **one-line pointer** when you add a top-level entry module. Do not dump module lists into always-on AGENTS.md — put encyclopedic maps in `.cursor/skills/<domain>/` (e.g. travel).
 
 ## Never reintroduce
 

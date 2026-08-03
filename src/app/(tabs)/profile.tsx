@@ -34,6 +34,7 @@ import { deletePlant } from '@/services/plants/schedule';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import { useVisionBoard } from '@/store/vision-board';
 import { haptics } from '@/utils/haptics';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -74,6 +75,14 @@ export default function ProfileSettingsScreen() {
 
   const displayName = resolveSelfDisplayName({ preferencesName: name, user });
   const avatarSize = Math.max(72, s(80));
+  const openAvatar = () => {
+    haptics.tap();
+    setAvatarOpen(true);
+  };
+  const avatarAgent = useAgentUiTarget(AgentUiIds.profile.avatar, {
+    label: 'Customize profile icon',
+    onPress: openAvatar,
+  });
 
   const handleReset = async () => {
     await Promise.all([
@@ -94,12 +103,12 @@ export default function ProfileSettingsScreen() {
   return (
     <Screen>
       <Pressable
+        ref={avatarAgent.ref}
         accessibilityRole="button"
         accessibilityLabel="Customize profile icon"
-        onPress={() => {
-          haptics.tap();
-          setAvatarOpen(true);
-        }}
+        testID={avatarAgent.testID}
+        onLayout={avatarAgent.onLayout}
+        onPress={openAvatar}
         style={[
           styles.hero,
           {
@@ -128,22 +137,13 @@ export default function ProfileSettingsScreen() {
       <SectionHeader title="Appearance" />
       <View style={styles.segment}>
         {THEME_OPTIONS.map((opt) => (
-          <Pressable
+          <ProfileThemeOption
             key={opt.value}
-            accessibilityRole="button"
-            accessibilityLabel={`Theme ${opt.label}`}
-            onPress={() => setThemePreference(opt.value)}
-            style={[
-              styles.segmentItem,
-              {
-                backgroundColor: themePreference === opt.value ? theme.accentFaint : theme.backgroundSunken,
-                borderColor: themePreference === opt.value ? theme.accentPrimary : theme.separator,
-              },
-            ]}>
-            <AppText variant="callout" color={themePreference === opt.value ? 'accent' : 'primary'}>
-              {opt.label}
-            </AppText>
-          </Pressable>
+            value={opt.value}
+            label={opt.label}
+            selected={themePreference === opt.value}
+            onSelect={setThemePreference}
+          />
         ))}
       </View>
 
@@ -152,6 +152,7 @@ export default function ProfileSettingsScreen() {
         label="Home location"
         detail={homeLocation.trim() || 'Uses phone location · tap to change'}
         icon="location"
+        testID={AgentUiIds.profile.homeLocation}
         onPress={() => setLocationOpen(true)}
         accessibilityLabel="Set home location for weather"
       />
@@ -191,12 +192,18 @@ export default function ProfileSettingsScreen() {
             : 'Agent-ready · none installed'
         }
         icon="agents"
+        testID={AgentUiIds.profile.agents}
         onPress={() => router.push('/agents' as never)}
         accessibilityLabel="Manage Agents"
       />
 
       <SectionHeader title="Nutrition" />
-      <Button variant="secondary" icon="nutrition-profiles" onPress={() => router.push('/nutrition-profile' as never)} accessibilityLabel="Open nutrition profiles">
+      <Button
+        variant="secondary"
+        icon="nutrition-profiles"
+        testID={AgentUiIds.profile.nutrition}
+        onPress={() => router.push('/nutrition-profile' as never)}
+        accessibilityLabel="Open nutrition profiles">
         Profiles, dependents & targets
       </Button>
       <AppText variant="caption" color="secondary" style={styles.clinicalNote}>
@@ -204,7 +211,11 @@ export default function ProfileSettingsScreen() {
       </AppText>
 
       <SectionHeader title="Data" />
-      <Button variant="danger" onPress={() => void handleReset()} accessibilityLabel="Reset All Data">
+      <Button
+        variant="danger"
+        testID={AgentUiIds.profile.resetData}
+        onPress={() => void handleReset()}
+        accessibilityLabel="Reset All Data">
         Reset All Data
       </Button>
 
@@ -227,6 +238,45 @@ export default function ProfileSettingsScreen() {
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
       <ProfileAvatarEditorSheet visible={avatarOpen} onClose={() => setAvatarOpen(false)} />
     </Screen>
+  );
+}
+
+function ProfileThemeOption({
+  value,
+  label,
+  selected,
+  onSelect,
+}: {
+  value: ThemePreference;
+  label: string;
+  selected: boolean;
+  onSelect: (value: ThemePreference) => void;
+}) {
+  const theme = useTheme();
+  const select = () => onSelect(value);
+  const agent = useAgentUiTarget(AgentUiIds.profile.theme(value), {
+    label: `Theme ${label}`,
+    onPress: select,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      accessibilityRole="button"
+      accessibilityLabel={`Theme ${label}`}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      onPress={select}
+      style={[
+        styles.segmentItem,
+        {
+          backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
+          borderColor: selected ? theme.accentPrimary : theme.separator,
+        },
+      ]}>
+      <AppText variant="callout" color={selected ? 'accent' : 'primary'}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 

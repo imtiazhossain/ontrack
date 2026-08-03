@@ -8,7 +8,8 @@ Keep this repo optimized for future AI-agent token usage. When a change is in sc
 
 - Prefer shared helpers listed under **Shared patterns** — do not copy-paste ID, parse, image pick/persist, API fetch, vision transport, or destructive-confirm logic.
 - Prefer editing the smallest feature entry file; extract presentational panels when a touched file would stay **>700 lines**.
-- Update the feature entry table when you add a new module agents should start from.
+- Keep **Feature entry points** as short pointers only. Put encyclopedic domain maps in `.cursor/skills/<domain>/` (see travel skill) — do not grow always-on AGENTS.md with file dumps.
+- Update the feature entry table (one-line pointer) when you add a new top-level entry module; update the domain skill/reference for fat domains.
 - Follow `.cursor/rules/token-optimization.mdc` on every session.
 - Follow `.cursor/rules/responsive-layout.mdc` on every UI change (mandatory for all agents).
 
@@ -37,19 +38,21 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 ## Commands
 
 - `npm start` — Metro + Expo dev client on **Node 24** (keeps cache; Fast Refresh). Requires Node `<25` (see `.nvmrc`).
+- `npm run packager:ensure` — check Metro, sync local API base URL, reconnect the iOS Simulator **only if** the app lost the packager (`scripts/ensure-packager.sh`; prefer `127.0.0.1` for Simulator)
+- `npm run packager:ensure:start` — same, and start Metro if it is down
 - `npm run start:clear` — Metro with cache clear (only when the bundle is stuck/stale)
 - `npm run ios` / `android` / `web` — Metro targeting that platform (no default cache clear)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — Jest (`**/__tests__/**/*.test.ts`)
 - `npm run lint` — ESLint
 
-Prefer leaving Metro running so Fast Refresh updates the simulator without app relaunches. Do not kill Metro or pass `--clear` after routine JS/UI edits. Do not start Metro with Homebrew Node 25 ahead of nvm on `PATH`.
+Prefer leaving Metro running so Fast Refresh updates the simulator without app relaunches. Do not kill Metro or pass `--clear` after routine JS/UI edits. Do not start Metro with Homebrew Node 25 ahead of nvm on `PATH`. If the simulator shows the launcher / blank / LoadBundleFromServerError, run `npm run packager:ensure` before terminating the app.
 
 ## Agent close-out (required)
 
 After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator via Fast Refresh when possible**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
 
-When exercising UI in the simulator, **find controls by `testID`** (`./scripts/agent-ui-dump.sh` / `./scripts/agent-ui-tap.sh`, map in `docs/agent-ui-map.md`) — never screenshot coordinates. **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change (see `.cursor/rules/agent-ui-selectors.mdc`).
+When exercising UI in the simulator, **find controls by `testID`** (`./scripts/agent-ui-dump.sh` / `./scripts/agent-ui-tap.sh`, map in `docs/agent-ui-map.md`) — never screenshot coordinates. **Jump to surfaces with `./scripts/agent-ui-open.sh <alias>`** (route map in `docs/agent-routes.md`) instead of tab-hopping when the destination is known. **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change (see `.cursor/rules/agent-ui-selectors.mdc`).
 
 If the change touches `supabase/migrations/` (or other DB schema), **auto-apply** with `supabase db push` in the same turn — never leave migrations pending. See `.cursor/rules/auto-apply-migrations.mdc` and the parent **Database Updates and Migrations Rule**.
 
@@ -63,25 +66,27 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 
 ## Feature entry points
 
+Short pointers only. For travel depth, use the **travel** skill (`.cursor/skills/travel/`).
+
 | Change | Start here |
 |--------|------------|
-| Checklist / todo list UI | `features/todos/todo-list-screen.tsx` (+ `todo-sort`, `todo-empty-state`, `todo-row`) |
-| Lists overview / create list | `features/todos/todo-lists-overview.tsx` (+ `todo-list-card`, `empty-checklists`) |
-| Grocery meals / combined view | `features/todos/grocery-list-screen.tsx` (+ `grocery-rows`, `grocery-utils`) |
-| Recipe import | `features/todos/recipe-import-screen.tsx` (+ `recipe-ingredient-editor`) |
+| Checklist / todo list UI | `features/todos/todo-list-screen.tsx` |
+| Lists overview / create list | `features/todos/todo-lists-overview.tsx` |
+| Grocery meals / combined view | `features/todos/grocery-list-screen.tsx` |
+| Recipe import | `features/todos/recipe-import-screen.tsx` |
 | Todo store / normalize | `store/todos.ts`, `store/todos-normalize.ts` |
-| Today / day timeline | `features/daily-tracking/day-view.tsx` (+ `day-header`, `use-home-weather`, `home-location-sheet`; device place via `@/utils/device-location`) |
-| Activity add/edit | `app/activity-form.tsx` (+ `activity-form-editors.tsx`) |
+| Today / day timeline | `features/daily-tracking/day-view.tsx` |
+| Activity add/edit | `app/activity-form.tsx` |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
-| Plants list / detail / new | `app/(tabs)/plants.tsx`, `app/plants/` (+ `features/plants/sample` for shelf demo, green `FeatureThemeProvider feature="plants"`) |
-| Travel plans | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` (+ canonical `travel-sheet` frame/header for every sheet, `travel-chat-screen` / `travel-chat-chrome` / `chat` for group chat, `travel-calendar-updated-modal` / `travel-add-photos-modal` / `travel-remove-confirm-modal` / `travel-dialog-chrome` / `travel-plan-hero` / `travel-trip-dates-row` / `travel-trip-cover` / `destination-cover` / `travel-plan-cover-field` / `weather/travel-weather-sheet` / `travel-kind-chrome` / `travel-collapsible-section` / `travel-transport-sections` / `travel-itinerary-timeline` / `travel-timeline-node` / `travel-timeline-add-modal` / `flight-details-card-editor` / `flight-schedule` / `stays/stay-provider-screen` / `stays/stay-provider-logo` / `stays/stay-provider-logo-lookup` / `stays/provider` / `stay-details-card-editor` / `rental-details-card-editor` / `travel-range-fields` / `travel-range-schedule` / `travel-itinerary-form` / `travel-itinerary-add-sheet` / `travel-itinerary-sheet-chrome` / `travel-itinerary-sheet-fields` / `address-autofind-field` / `address-lookup` / `stay-details` / `stay-details-summary` / `stay-confirmation-import` / `stay-confirmation-parser` / `confirmation-import-banner` / `booking-open` / `booking-open-sheet` / `travel-moment-media`, `travel-plan-actions`, `travel-currency-sheet` / `travel-currency-side-card` / `travel-currency-rate-panel` / `travel-currency-chrome` / `currency-for-destination` / `destination-cover` / `destination-cover-lookup` + `app/api/destination-cover+api` (Wikipedia/Commons destination photos) / `expenses/fx-rates` + `expenses/fx-providers` (`ACTIVE_FX_PROVIDER` to swap feeds) for origin↔destination FX, `expenses/travel-expenses-sheet`, `services/travel/expense-collaboration` for shared trip expenses, `travel-friends-sheet` / `trip-people` / `trip-roster` for host roster + co-hosts + host transfer, open join `/j/{code}` + host approval, `flight-confirmation-*` / `apply-imported-flights` / `flight-expense-from-import`, `rental-confirmation-*` / `apply-imported-rental`) |
-| Social / friends | `app/(tabs)/social.tsx` (+ `features/social/social-hub-screen`, `people-picker`, `services/friends`, `store/friends`, invite `/f/{code|slug}`) |
-| Vision board | `features/vision-board/` (`vision-board-consolidated` + `consolidated-model` / `consolidated-card`) |
-| Workouts tab | `app/(tabs)/workouts.tsx` (+ `muscle-atlas`, `muscle-atlas-dropdowns`, `atlas-workout-selection`, `muscle-focus-exercises` / `exercise-load`, `human-body-map`, `muscle-highlight-plate` / `muscle-highlight-images`, `exercise-anatomy-demo`, `exercise-anatomy-still` / `exercise-form-steps`, `bench-press-animation` step slides, `front-plank-animation`, `challenge-friend-button`) |
-| Vehicles tab | `app/(tabs)/vehicles.tsx` (+ `features/vehicles/*`, `store/vehicles.ts`, `services/vehicles/` for VIN/parts + `collaboration.ts`, join via `app/v/[code].tsx`) |
-| Games tab | `app/(tabs)/games.tsx` (+ `features/games/games-hub`, `balloon-pop/*`) |
+| Plants | `app/(tabs)/plants.tsx`, `app/plants/`, `features/plants/` |
+| Travel | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` → **travel** skill |
+| Social / friends | `app/(tabs)/social.tsx`, `features/social/`, `services/friends`, `store/friends` |
+| Vision board | `features/vision-board/` |
+| Workouts | `app/(tabs)/workouts.tsx` (+ Muscle Explorer under Shared patterns) |
+| Vehicles | `app/(tabs)/vehicles.tsx`, `features/vehicles/`, `store/vehicles.ts`, `services/vehicles/` |
+| Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |
-| Profile avatar | `features/account/profile-avatar.tsx` (+ `profile-avatar-editor-sheet`, `profile-avatar-model`, `profile-avatar-media`, `avatar-cache`, Iconify via `iconify-search`) |
+| Profile avatar | `features/account/profile-avatar.tsx` |
 | Cloud sync | `services/cloud/sync.ts` |
 | Design tokens / prompts / DateField | `design-system/`, `components/primitives/` |
 
@@ -101,7 +106,7 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
 - **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
 - **Field leading icons:** `@/components/primitives/field-leading-icon` — `FieldLeadingIcon` + `fieldLeadingIconRowStyle` (`field-leading-icon-style.ts`) so icon plates stay vertically centered in every field (see `.cursor/rules/field-icon-centering.mdc`).
-- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui-dump.sh` / `agent-ui-tap.sh` + `docs/agent-ui-map.md`. **Always stamp `testID` on interactive controls you add or edit**; tap by id, never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
+- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui-dump.sh` / `agent-ui-tap.sh` / `agent-ui-open.sh` / `agent-ui-wait.sh` + `docs/agent-ui-map.md` + `docs/agent-routes.md`. **Always stamp `testID` on interactive controls you add or edit**; tap by id, open by route alias, never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
 - **Typography:** `@/design-system` `typeConfig` + `appTextStyle(variant, { bold? })`. One UI font app-wide; default weight is regular — only pass `bold` / `{ bold: true }` when emphasis is explicit. Prefer `AppText` (optional `bold` prop) over raw `Text` / ad-hoc `fontFamily` / `fontWeight`.
 - **Pull-to-refresh:** Scrollable `Screen`s refresh by default via `usePullToRefresh` / `refreshAppData` (cloud pull + shared todos/vehicles + friends). List screens that use `scroll={false}` should attach `refreshControl` from `usePullToRefresh()`. Set `refresh={false}` on dense editors/forms.
 - **Server HTTP:** auth/rate-limit/cors/compression live under `src/services/http/`.
@@ -125,4 +130,4 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 - Plant/travel entity IDs should use `@/utils/id` (or schedule’s re-export), not ad-hoc generators.
 - Platform extension files (`*.ios.tsx`, `*.android.tsx`, `*.web.tsx`) are resolved by Metro — do not delete because imports look unused.
 - **Avatar initials:** never use `AppText fit` / shrink-to-fit inside `ProfileAvatar` — use fixed `Text` + `avatarInitialsFontSize()` (see `profile-avatar-initials` tests).
-- **Stay confirmation address:** Only extract high-confidence addresses (explicit labels, recognized street formats, or clean multi-part geographic locations). If an address is unclear or ambiguous, do not populate it with noisy text (e.g. phone numbers or date lines) — leave it blank so the user can manually enter it.
+- Travel-specific pitfalls (sheet chrome, stay confirmation addresses, etc.) live in the **travel** skill.

@@ -31,6 +31,7 @@ import {
     type TodoListKind,
 } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { listReferenceEquality } from '@/utils/list-equality';
 
@@ -170,6 +171,25 @@ export function TodoListsOverview() {
     else haptics.select();
   };
 
+  const editModeAgent = useAgentUiTarget(AgentUiIds.checklists.editMode, {
+    label: editMode ? 'Finish editing checklists' : 'Edit checklists',
+    onPress: () => {
+      if (editMode) finishEditing();
+      else beginEditing();
+    },
+  });
+  const collaboratorsAgent = useAgentUiTarget(AgentUiIds.checklists.collaborators, {
+    label: 'Add collaborators',
+    onPress: () => router.push('/todo-collaborators' as never),
+  });
+  const createListAgent = useAgentUiTarget(AgentUiIds.checklists.createList, {
+    label: 'Create list',
+    onPress: add,
+  });
+  const newListNameAgent = useAgentUiTarget(AgentUiIds.checklists.newListName, {
+    label: 'New list name',
+  });
+
   const removeList = useCallback(
     (list: TodoList) => {
       const leaving = list.mode === 'shared' && list.role === 'member';
@@ -233,6 +253,7 @@ export function TodoListsOverview() {
             open={count.open}
             total={count.total}
             nameDraft={nameDrafts[item.id] ?? item.name}
+            testID={AgentUiIds.checklists.list(item.id)}
             onDragStart={drag}
             onNameChange={(name) =>
               setNameDrafts((current) => ({ ...current, [item.id]: name }))
@@ -307,12 +328,15 @@ export function TodoListsOverview() {
                 <View style={styles.headingActions}>
                   {lists.length > 0 ? (
                     <Pressable
+                      ref={editModeAgent.ref}
                       accessibilityRole="button"
                       accessibilityLabel={
                         editMode
                           ? 'Finish editing checklists'
                           : 'Edit checklists'
                       }
+                      testID={editModeAgent.testID}
+                      onLayout={editModeAgent.onLayout}
                       onPress={() => {
                         if (editMode) finishEditing();
                         else beginEditing();
@@ -337,12 +361,15 @@ export function TodoListsOverview() {
                     </Pressable>
                   ) : null}
                   <Pressable
+                    ref={collaboratorsAgent.ref}
                     accessibilityRole="button"
                     accessibilityLabel={
                       invites.length
                         ? `Add collaborators, ${invites.length} invitations waiting`
                         : 'Add collaborators'
                     }
+                    testID={collaboratorsAgent.testID}
+                    onLayout={collaboratorsAgent.onLayout}
                     onPress={() => router.push('/todo-collaborators' as never)}
                     style={({ pressed }) => [
                       styles.inviteButton,
@@ -421,25 +448,35 @@ export function TodoListsOverview() {
                       },
                     ]}>
                     <Symbol name="add" size={21} color={theme.accentPrimary} />
-                    <TextInput
-                      accessibilityLabel="New list name"
-                      maxLength={80}
-                      onChangeText={setDraft}
-                      onSubmitEditing={add}
-                      placeholder={
-                        draftKind === 'grocery'
-                          ? 'New grocery list'
-                          : 'New checklist'
-                      }
-                      placeholderTextColor={theme.textTertiary}
-                      returnKeyType="done"
-                      underlineColorAndroid="transparent"
-                      style={[styles.input, { color: theme.textPrimary }]}
-                      value={draft}
-                    />
+                    <View
+                      ref={newListNameAgent.ref}
+                      testID={newListNameAgent.testID}
+                      onLayout={newListNameAgent.onLayout}
+                      collapsable={false}
+                      style={styles.inputWrap}>
+                      <TextInput
+                        accessibilityLabel="New list name"
+                        maxLength={80}
+                        onChangeText={setDraft}
+                        onSubmitEditing={add}
+                        placeholder={
+                          draftKind === 'grocery'
+                            ? 'New grocery list'
+                            : 'New checklist'
+                        }
+                        placeholderTextColor={theme.textTertiary}
+                        returnKeyType="done"
+                        underlineColorAndroid="transparent"
+                        style={[styles.input, { color: theme.textPrimary }]}
+                        value={draft}
+                      />
+                    </View>
                     <Pressable
+                      ref={createListAgent.ref}
                       accessibilityRole="button"
                       accessibilityLabel="Create list"
+                      testID={createListAgent.testID}
+                      onLayout={createListAgent.onLayout}
                       disabled={!draft.trim()}
                       onPress={add}
                       style={({ pressed }) => [
@@ -553,6 +590,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 52,
     paddingVertical: spacing.md,
+  },
+  inputWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   addButton: {
     width: 40,

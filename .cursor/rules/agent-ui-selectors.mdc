@@ -25,21 +25,25 @@ Do not merge UI that agents must exercise without an id. Do not leave “add tes
 
 ## Required test workflow
 
-1. Deep-link or navigate to the surface under test.
+1. Jump to the surface with `./scripts/agent-ui-open.sh <alias>` when known ([`docs/agent-routes.md`](../../docs/agent-routes.md)); otherwise dump/tap tabs.
 2. Prefer known IDs from [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md) / [`AgentUiIds`](../../src/utils/agent-ui/ids.ts).
-3. Dump when unsure: `./scripts/agent-ui-dump.sh`
-4. Tap by id: `./scripts/agent-ui-tap.sh <testID>`
-5. Screenshot for **proof only** after the interaction.
+3. Dump when unsure: `./scripts/agent-ui-dump.sh` (optional `--prefix ontrack.feature`); dump includes `route`.
+4. Wait if needed: `./scripts/agent-ui-wait.sh --prefix ontrack.feature.` or `--route /calendar`.
+5. Tap by id: `./scripts/agent-ui-tap.sh <testID>`
+6. Screenshot for **proof only** after the interaction.
+7. If the packager looks lost: `./scripts/ensure-packager.sh` (reconnects only when needed).
 
 ## Rules
 
 - **Never** use screenshot / vision coordinates to tap when a registry id exists or can be added.
 - If dump has no matching id for a control you need: **stop**, add `testID` + map entry + ids constant, then tap by id. Coordinates are not an alternative.
 - Keep `accessibilityLabel` for VoiceOver; labels alone are not unique selectors (`Close`, `Done` collide).
-- Bridge is `__DEV__` only (`ontrack:///agent/ui?op=dump|tap|exists`).
+- Bridge is `__DEV__` only (`ontrack:///agent/ui?op=dump|tap|exists|goto|reset`).
 
 ## Do not
 
 - Tap by approximate screenshot pixels.
+- Tab-hop when `./scripts/agent-ui-open.sh` / a deep link can land on the surface directly.
 - Invent HTML `data-*` attributes for native screens — use RN `testID`.
 - Ship new interactive UI without `ontrack.*` testIDs.
+- Reconnect the packager “just in case” — use `ensure-packager.sh` so reconnect only happens when the probe fails.

@@ -3,6 +3,7 @@ import { Pressable, View, type ViewStyle } from 'react-native';
 
 import { radii, shadows, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 interface CardProps extends PropsWithChildren {
@@ -13,6 +14,7 @@ interface CardProps extends PropsWithChildren {
   padded?: boolean;
   style?: ViewStyle;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 export function Card({
@@ -23,8 +25,19 @@ export function Card({
   padded = true,
   style,
   accessibilityLabel,
+  testID,
 }: CardProps) {
   const theme = useTheme();
+  const handlePress = onPress
+    ? () => {
+        haptics.select();
+        onPress();
+      }
+    : undefined;
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: handlePress,
+  });
   const base: ViewStyle = {
     borderRadius: radii.lg,
     backgroundColor: variant === 'elevated' ? theme.backgroundElevated : theme.backgroundSunken,
@@ -33,21 +46,21 @@ export function Card({
   };
 
   if (!onPress && !onLongPress) {
-    return <View style={[base, style]}>{children}</View>;
+    return (
+      <View ref={agent.ref} testID={testID} onLayout={agent.onLayout} style={[base, style]}>
+        {children}
+      </View>
+    );
   }
 
   return (
     <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={
-        onPress
-          ? () => {
-              haptics.select();
-              onPress();
-            }
-          : undefined
-      }
+      onPress={handlePress}
       onLongPress={
         onLongPress
           ? () => {

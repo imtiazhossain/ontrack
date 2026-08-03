@@ -10,6 +10,12 @@ import {
   tapAgentUiTarget,
   unregisterAgentUiTarget,
 } from '../registry';
+import {
+  agentUiDeepLinkForDestination,
+  resolveAgentUiDestination,
+  setAgentUiNavigator,
+  setAgentUiRoute,
+} from '../route';
 
 const mockWrite = jest.fn();
 const mockCreate = jest.fn();
@@ -57,7 +63,7 @@ describe('agent-ui registry', () => {
 });
 
 describe('agent-ui url parsing', () => {
-  it('detects and parses dump/tap/exists urls', () => {
+  it('detects and parses dump/tap/exists/goto/reset urls', () => {
     expect(isAgentUiUrl('ontrack://agent/ui?op=dump')).toBe(true);
     expect(parseAgentUiUrl('ontrack://agent/ui?op=dump')).toEqual({
       op: 'dump',
@@ -74,19 +80,42 @@ describe('agent-ui url parsing', () => {
       op: 'exists',
       id: 'ontrack.tabs.travel',
     });
+    expect(parseAgentUiUrl('ontrack://agent/ui?op=goto&to=calendar')).toEqual({
+      op: 'goto',
+      to: 'calendar',
+    });
+    expect(parseAgentUiUrl('ontrack://agent/ui?op=reset')).toEqual({
+      op: 'reset',
+    });
     expect(isAgentUiUrl('ontrack://travel/abc')).toBe(false);
+  });
+});
+
+describe('agent-ui routes', () => {
+  it('resolves aliases and deep links', () => {
+    expect(resolveAgentUiDestination('today')).toBe('/');
+    expect(resolveAgentUiDestination('checklists')).toBe('/to-do');
+    expect(resolveAgentUiDestination('travel/abc')).toBe('/travel/abc');
+    expect(resolveAgentUiDestination('/profile')).toBe('/profile');
+    expect(agentUiDeepLinkForDestination('reset')).toBe('ontrack:///');
+    expect(agentUiDeepLinkForDestination('calendar')).toBe(
+      'ontrack:///calendar',
+    );
   });
 });
 
 describe('agent-ui request handler', () => {
   beforeEach(() => {
     resetAgentUiRegistry();
+    setAgentUiRoute(null);
+    setAgentUiNavigator(null);
     mockWrite.mockClear();
     mockCreate.mockClear();
   });
 
   it('dumps registered elements and taps by id', async () => {
     const press = jest.fn();
+    setAgentUiRoute('/travel');
     registerAgentUiTarget('ontrack.tabs.travel', {
       label: 'Travel',
       press,
@@ -95,6 +124,8 @@ describe('agent-ui request handler', () => {
 
     await expect(handleAgentUiRequest({ op: 'dump' })).resolves.toBe(true);
     expect(mockWrite).toHaveBeenCalled();
+    const dumpPayload = JSON.parse(mockWrite.mock.calls[0][0] as string);
+    expect(dumpPayload.route).toBe('/travel');
 
     await expect(
       handleAgentUiRequest({ op: 'tap', id: 'ontrack.tabs.travel' }),
@@ -107,5 +138,18 @@ describe('agent-ui request handler', () => {
     await expect(
       handleAgentUiRequest({ op: 'exists', id: 'missing' }),
     ).resolves.toBe(false);
+  });
+
+  it('navigates via goto and reset when a navigator is registered', async () => {
+    const navigate = jest.fn();
+    setAgentUiNavigator(navigate);
+
+    await expect(
+      handleAgentUiRequest({ op: 'goto', to: 'calendar' }),
+    ).resolves.toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/calendar');
+
+    await expect(handleAgentUiRequest({ op: 'reset' })).resolves.toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/');
   });
 });

@@ -48,6 +48,7 @@ import { useUI } from '@/store/ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { haptics } from '@/utils/haptics';
 import { listReferenceEquality } from '@/utils/list-equality';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function TodoListScreen({ listId }: { listId: string }) {
@@ -131,6 +132,29 @@ export function TodoListScreen({ listId }: { listId: string }) {
     setFilter('open');
     haptics.success();
   };
+
+  const addTaskAgent = useAgentUiTarget(AgentUiIds.checklists.detail.addTask, {
+    label: 'Add task',
+    onPress: () => add(),
+  });
+  const newTaskAgent = useAgentUiTarget(AgentUiIds.checklists.detail.newTask, {
+    label: 'New task',
+    onPress: () => inputRef.current?.focus(),
+  });
+  const editModeAgent = useAgentUiTarget(AgentUiIds.checklists.detail.editMode, {
+    label: editMode ? 'Finish editing checklist' : 'Edit checklist',
+    onPress: () => {
+      dismissChrome();
+      setInlineEditingTaskId(null);
+      if (editMode) {
+        setEditingTaskIds(null);
+      } else {
+        setSort('manual');
+        setEditingTaskIds(new Set(visibleTasks.map((task) => task.id)));
+      }
+      haptics.select();
+    },
+  });
 
   const clearDone = () => {
     confirmDestructiveAction({
@@ -228,6 +252,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                     size={40}
                     background="transparent"
                     accessibilityLabel="Back to checklists"
+                    testID={AgentUiIds.checklists.detail.back}
                     onPress={() => {
                       if (router.canGoBack()) router.back();
                       else router.replace('/(tabs)/to-do' as never);
@@ -295,23 +320,33 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   ]}
                 >
                   <Symbol name="add" size={21} color={theme.accentPrimary} />
-                  <TextInput
-                    ref={inputRef}
-                    accessibilityLabel="New task"
-                    blurOnSubmit={false}
-                    maxLength={160}
-                    onChangeText={setDraft}
-                    onSubmitEditing={() => add()}
-                    placeholder="What needs your attention?"
-                    placeholderTextColor={theme.textTertiary}
-                    returnKeyType="done"
-                    underlineColorAndroid="transparent"
-                    style={[styles.composerInput, { color: theme.textPrimary }]}
-                    value={draft}
-                  />
+                  <View
+                    ref={newTaskAgent.ref}
+                    testID={newTaskAgent.testID}
+                    onLayout={newTaskAgent.onLayout}
+                    collapsable={false}
+                    style={styles.composerInputWrap}>
+                    <TextInput
+                      ref={inputRef}
+                      accessibilityLabel="New task"
+                      blurOnSubmit={false}
+                      maxLength={160}
+                      onChangeText={setDraft}
+                      onSubmitEditing={() => add()}
+                      placeholder="What needs your attention?"
+                      placeholderTextColor={theme.textTertiary}
+                      returnKeyType="done"
+                      underlineColorAndroid="transparent"
+                      style={[styles.composerInput, { color: theme.textPrimary }]}
+                      value={draft}
+                    />
+                  </View>
                   <Pressable
+                    ref={addTaskAgent.ref}
                     accessibilityRole="button"
                     accessibilityLabel="Add task"
+                    testID={addTaskAgent.testID}
+                    onLayout={addTaskAgent.onLayout}
                     disabled={!draft.trim()}
                     hitSlop={4}
                     onPress={() => add()}
@@ -417,10 +452,13 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   <View style={styles.toolbarMenus}>
                     {owner && visibleTasks.length > 0 ? (
                       <Pressable
+                        ref={editModeAgent.ref}
                         accessibilityRole="button"
                         accessibilityLabel={
                           editMode ? 'Finish editing checklist' : 'Edit checklist'
                         }
+                        testID={editModeAgent.testID}
+                        onLayout={editModeAgent.onLayout}
                         onPress={() => {
                           dismissChrome();
                           setInlineEditingTaskId(null);
@@ -457,6 +495,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                       accessibilityLabel="Sort checklist"
                       title="Sort Items"
                       triggerIcon="sort"
+                      testID={AgentUiIds.checklists.detail.sort}
                       items={[
                         {
                           id: 'manual',
@@ -511,6 +550,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                       accessibilityLabel={`${list.name} actions`}
                       title="List Actions"
                       triggerIcon="more"
+                      testID={AgentUiIds.checklists.detail.actions}
                       items={[
                         {
                           id: 'copy',
@@ -600,6 +640,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   isActive={isActive}
                   listOwner={owner}
                   members={members}
+                  testID={AgentUiIds.checklists.detail.task(item.id)}
                   onCollapseTitle={() => setExpandedTaskId(null)}
                   onDragStart={drag}
                   onDelete={() => {
@@ -720,6 +761,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 52,
     paddingVertical: spacing.md,
+  },
+  composerInputWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   addButton: {
     width: 36,

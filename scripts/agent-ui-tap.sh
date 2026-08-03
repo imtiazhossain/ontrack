@@ -10,7 +10,8 @@ fi
 TEST_ID="$1"
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 STATUS_NAME="${STATUS_NAME:-agent-ui-status.json}"
-WAIT_SECS="${WAIT_SECS:-8}"
+WAIT_SECS="${WAIT_SECS:-6}"
+POLL_SLEEP="${POLL_SLEEP:-0.05}"
 
 DATA_DIR="$(xcrun simctl get_app_container booted "$BUNDLE_ID" data 2>/dev/null || true)"
 if [[ -z "${DATA_DIR}" ]]; then
@@ -24,16 +25,26 @@ rm -f "${STATUS_PATH}"
 # URL-encode the id (keeps dots/underscores; encodes spaces & reserved chars).
 ENCODED_ID="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe='._-'))" "${TEST_ID}")"
 
+STARTED_MTIME="$(python3 -c 'import time; print(time.time())')"
 xcrun simctl openurl booted "ontrack:///agent/ui?op=tap&id=${ENCODED_ID}"
 
 deadline=$((SECONDS + WAIT_SECS))
 while (( SECONDS < deadline )); do
   if [[ -f "${STATUS_PATH}" ]]; then
-    RESULT="$(STATUS_PATH="${STATUS_PATH}" TEST_ID="${TEST_ID}" python3 - <<'PY'
+    RESULT="$(STARTED_MTIME="${STARTED_MTIME}" STATUS_PATH="${STATUS_PATH}" TEST_ID="${TEST_ID}" python3 - <<'PY'
 import json, os
 from pathlib import Path
-data = json.loads(Path(os.environ["STATUS_PATH"]).read_text())
+status_path = Path(os.environ["STATUS_PATH"])
+started = float(os.environ["STARTED_MTIME"])
 test_id = os.environ["TEST_ID"]
+try:
+    data = json.loads(status_path.read_text())
+except Exception:
+    print("wait")
+    raise SystemExit
+if status_path.stat().st_mtime < started - 2:
+    print("wait")
+    raise SystemExit
 if data.get("op") == "tap" and data.get("id") == test_id:
     print("ok" if data.get("ok") else "fail")
     print(data.get("detail", ""))
@@ -52,7 +63,7 @@ PY
       exit 1
     fi
   fi
-  sleep 0.25
+  sleep "${POLL_SLEEP}"
 done
 
 echo "error: timed out waiting for tap status for ${TEST_ID}" >&2

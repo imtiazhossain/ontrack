@@ -21,6 +21,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import type { DateDisplayFormat } from '@/utils/date';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { getCurrentPlaceLabel } from '@/utils/device-location';
 import { haptics } from '@/utils/haptics';
 
@@ -150,7 +151,12 @@ export function HomeLocationSheet({
                 Used for weather on Today. Use your phone location or enter a city.
               </AppText>
             </View>
-            <IconButton icon="close" accessibilityLabel="Close" onPress={onClose} />
+            <IconButton
+              icon="close"
+              accessibilityLabel="Close"
+              testID={AgentUiIds.today.location.close}
+              onPress={onClose}
+            />
           </View>
         </View>
 
@@ -166,6 +172,7 @@ export function HomeLocationSheet({
             onPress={() => void useCurrentLocation()}
             loading={detecting}
             disabled={saving}
+            testID={AgentUiIds.today.location.useCurrent}
             accessibilityLabel="Use current location">
             Use current location
           </Button>
@@ -183,6 +190,7 @@ export function HomeLocationSheet({
             returnKeyType="done"
             onSubmitEditing={() => void save()}
             placeholder="e.g. Austin, TX"
+            testID={AgentUiIds.today.location.place}
             accessibilityLabel="Home location city or place"
           />
           {error ? <ErrorMessage message={error} /> : null}
@@ -191,6 +199,7 @@ export function HomeLocationSheet({
             onPress={() => void save()}
             loading={saving}
             disabled={detecting}
+            testID={AgentUiIds.today.location.save}
             accessibilityLabel="Save home location">
             Save
           </Button>
@@ -199,6 +208,7 @@ export function HomeLocationSheet({
               variant="ghost"
               onPress={clear}
               disabled={busy}
+              testID={AgentUiIds.today.location.clear}
               accessibilityLabel="Clear home location">
               Clear location
             </Button>

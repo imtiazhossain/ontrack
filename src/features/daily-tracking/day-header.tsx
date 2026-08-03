@@ -12,6 +12,7 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, formatDateLong, formatWeekday, isToday } from '@/utils/date';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 interface DayHeaderProps {
@@ -38,6 +39,14 @@ export function DayHeader({
   const viewingToday = isToday(date);
   const { hasLocation, weather, icon, loading, detectingLocation, error } = useHomeWeather();
   const [locationOpen, setLocationOpen] = useState(false);
+  const openWeather = () => {
+    haptics.tap();
+    setLocationOpen(true);
+  };
+  const weatherAgent = useAgentUiTarget(AgentUiIds.today.weather, {
+    label: 'Home weather',
+    onPress: openWeather,
+  });
 
   return (
     <LinearGradient colors={gradient} style={[styles.container, { paddingTop: topInset + spacing.md }]}>
@@ -45,6 +54,7 @@ export function DayHeader({
         <IconButton
           icon="chevron-left"
           accessibilityLabel="Previous day"
+          testID={AgentUiIds.today.prevDay}
           onPress={() => onChangeDate(addDays(date, -1))}
           background="transparent"
         />
@@ -59,6 +69,7 @@ export function DayHeader({
         <IconButton
           icon="chevron-right"
           accessibilityLabel="Next day"
+          testID={AgentUiIds.today.nextDay}
           onPress={() => onChangeDate(addDays(date, 1))}
           background="transparent"
         />
@@ -66,6 +77,9 @@ export function DayHeader({
 
       {viewingToday ? (
         <Pressable
+          ref={weatherAgent.ref}
+          testID={AgentUiIds.today.weather}
+          onLayout={weatherAgent.onLayout}
           accessibilityRole="button"
           accessibilityLabel={
             weather
@@ -74,10 +88,7 @@ export function DayHeader({
                 ? 'Edit home location for weather'
                 : 'Set location for weather'
           }
-          onPress={() => {
-            haptics.tap();
-            setLocationOpen(true);
-          }}
+          onPress={openWeather}
           style={({ pressed }) => [
             styles.weatherRow,
             {
