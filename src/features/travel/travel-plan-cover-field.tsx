@@ -33,6 +33,7 @@ export function TravelPlanCoverField({
   const localFallback = localTripCoverUri({ ...plan, coverUri: undefined });
   const [remoteFallback, setRemoteFallback] = useState<string | undefined>();
   const preview = coverUri ?? localFallback ?? remoteFallback;
+  const destinationKey = `${plan.id}:${plan.destination}:${plan.title}`;
 
   useEffect(() => {
     if (coverUri || localFallback) {
@@ -46,7 +47,8 @@ export function TravelPlanCoverField({
     return () => {
       active = false;
     };
-  }, [coverUri, localFallback, plan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields used for remote covers
+  }, [coverUri, localFallback, destinationKey]);
 
   const chooseLibrary = async () => {
     const uri = await pickLibraryImage({
