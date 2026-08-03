@@ -548,9 +548,8 @@ export default function TravelScreen() {
                       accessibilityLabel={`View weather for ${plan.destination}`}
                     />
                     <TravelSheetAction
-                      label="Currency"
-                      icon="currency"
-                      iconImage={require('../../../assets/images/travel/currency-converter-icon.png')}
+                      label="Currency Calc"
+                      icon="calculator"
                       tone="currency"
                       onPress={() => openCurrency(plan.id)}
                       accessibilityLabel={`Convert Currency for ${plan.destination}`}
