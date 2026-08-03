@@ -139,9 +139,9 @@ export function ItinerarySheetSubmitButton({
   const { s, spacing: rs, layout } = useResponsive();
   const colors =
     editorialGold && theme.name === 'light'
-      ? (['#D5A13E', '#A86E20'] as const)
+      ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
       : ([chrome.ctaFrom, chrome.ctaTo] as const);
-  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 48 : 52));
+  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 52 : 52));
 
   return (
     <Pressable
@@ -157,10 +157,15 @@ export function ItinerarySheetSubmitButton({
           opacity: pressed ? 0.86 : 1,
           minHeight,
           borderRadius: radii.pill,
+          boxShadow:
+            editorialGold && theme.name === 'light'
+              ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+              : undefined,
         },
       ]}>
       <LinearGradient
         colors={[...colors]}
+        locations={editorialGold && theme.name === 'light' ? [0, 0.45, 1] : undefined}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={[
@@ -181,8 +186,8 @@ export function ItinerarySheetSubmitButton({
             styles.submitLabel,
             {
               color: chrome.ctaText,
-              fontSize: editorialGold ? s(19) : undefined,
-              lineHeight: editorialGold ? s(24) : undefined,
+              fontSize: editorialGold ? s(20) : undefined,
+              lineHeight: editorialGold ? s(25) : undefined,
             },
           ]}>
           {label}

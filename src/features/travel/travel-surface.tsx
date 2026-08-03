@@ -105,7 +105,7 @@ export function TravelSurfaceCard({
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs } = useResponsive();
   const pad = padding ?? rs.md;
-  const stripeW = Math.max(4, s(4));
+  const stripeW = Math.max(3, s(3));
   const showStripe = stripe || Boolean(stripeColor);
   const railColors =
     theme.name === 'dark' ? TRAVEL_RAIL_GOLD_DARK : TRAVEL_RAIL_GOLD_LIGHT;
@@ -115,7 +115,7 @@ export function TravelSurfaceCard({
         styles.card,
         {
           backgroundColor: travelCardFill(theme),
-          borderRadius: 18,
+          borderRadius: 22,
           borderCurve: 'continuous',
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: chrome.fieldBorder,
@@ -156,9 +156,11 @@ export function TravelSectionLabel({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const accent = travelAccent(theme);
+  /** Warm bronze count chip matching the travel mock. */
+  const badgeFill = theme.name === 'light' ? '#8B6B45' : chrome.ctaFrom;
   const { spacing: rs, s } = useResponsive();
-  const badge = Math.max(24, s(26));
-  const titleSize = Math.max(20, s(22));
+  const badge = Math.max(22, s(24));
+  const titleSize = Math.max(22, s(24));
   return (
     <View
       style={[
@@ -177,9 +179,9 @@ export function TravelSectionLabel({
           {
             color: theme.textPrimary,
             fontSize: titleSize,
-            lineHeight: Math.max(26, s(28)),
+            lineHeight: Math.max(28, s(30)),
             fontWeight: '400',
-            letterSpacing: -0.2,
+            letterSpacing: -0.25,
           },
         ]}
         numberOfLines={1}
@@ -191,7 +193,7 @@ export function TravelSectionLabel({
           style={[
             styles.countBadge,
             {
-              backgroundColor: accent,
+              backgroundColor: badgeFill,
               width: badge,
               height: badge,
               borderRadius: badge / 2,
@@ -201,7 +203,7 @@ export function TravelSectionLabel({
             variant="callout"
             fit
             fitMinimumScale={0.85}
-            style={{ color: chrome.ctaText, fontWeight: '600' }}>
+            style={{ color: '#FFFFFF', fontWeight: '600', fontSize: s(13) }}>
             {count}
           </AppText>
         </View>

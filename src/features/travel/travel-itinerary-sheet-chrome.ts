@@ -30,6 +30,12 @@ export type ItinerarySheetChrome = {
     flight: { bg: string; fg: string };
     note: { bg: string; fg: string };
     photo: { bg: string; fg: string };
+    /** Soft purple — Expenses row. */
+    expense: { bg: string; fg: string };
+    /** Soft green — Currency row. */
+    currency: { bg: string; fg: string };
+    /** Warm brown — Group Chat row. */
+    chat: { bg: string; fg: string };
   };
 };
 
@@ -64,6 +70,9 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
         flight: { bg: 'rgba(120,150,180,0.18)', fg: '#90B0D0' },
         note: { bg: 'rgba(160,140,120,0.16)', fg: '#C0B0A0' },
         photo: { bg: 'rgba(160,140,120,0.16)', fg: '#C0B0A0' },
+        expense: { bg: 'rgba(160,130,170,0.18)', fg: '#C0A0C8' },
+        currency: { bg: 'rgba(110,150,120,0.18)', fg: '#90C0A0' },
+        chat: { bg: 'rgba(160,120,90,0.18)', fg: '#D0B090' },
       },
     };
   }
@@ -97,6 +106,9 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
       flight: { bg: '#D8E4EE', fg: '#4A6A88' },
       note: { bg: '#E8E2D8', fg: '#6E675E' },
       photo: { bg: '#E8E2D8', fg: '#6E675E' },
+      expense: { bg: '#E6DCE8', fg: '#7A6088' },
+      currency: { bg: '#DCE8DC', fg: '#5A7A60' },
+      chat: { bg: '#E6D8C8', fg: '#6B5344' },
     },
   };
 }
