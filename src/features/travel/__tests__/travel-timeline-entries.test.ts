@@ -119,4 +119,29 @@ describe('travel timeline entries', () => {
       }),
     ]);
   });
+
+  it('expands transport into departure, timed stops, and arrival', () => {
+    const transport: TravelItineraryItem = {
+      id: 'transport-1',
+      kind: 'transport',
+      title: 'Road trip',
+      date: '2026-09-10',
+      startMinutes: 8 * 60,
+      durationMinutes: 10 * 60,
+      transport: {
+        mode: 'driving',
+        origin: 'New York',
+        destination: 'Washington',
+        arrivalDate: '2026-09-10',
+        arrivalMinutes: 18 * 60,
+        stops: [
+          { id: 'timed', name: 'Philadelphia', arrivalDate: '2026-09-10', arrivalMinutes: 11 * 60 },
+          { id: 'untimed', name: 'Scenic overlook' },
+        ],
+      },
+    };
+    expect(expandTimelineEntries([transport]).map((entry) => entry.phase)).toEqual([
+      'depart', 'stop', 'arrive',
+    ]);
+  });
 });

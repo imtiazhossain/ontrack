@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +17,15 @@ import {
 import { spacing } from '@/design-system';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
+import {
+    TravelAtmosphereProvider,
+    useTravelRouteAtmosphere,
+} from '@/features/travel/travel-atmosphere';
+import { selectTravelAtmospherePlan } from '@/features/travel/travel-atmosphere-model';
+import {
+    travelSafeAreaStyle,
+    useTravelPageStyle,
+} from '@/features/travel/travel-surface';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
 import { useRootStartupEffects } from '@/hooks/use-root-startup-effects';
@@ -26,7 +35,9 @@ import { useVehicleCollaboration } from '@/hooks/use-vehicle-collaboration';
 import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
+import { useTravel } from '@/store/travel';
 import { AgentUiRouteSync } from '@/utils/agent-ui';
+import { todayKey } from '@/utils/date';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
 export { RouteErrorBoundary as ErrorBoundary };
@@ -36,18 +47,31 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 export default function RootLayout() {
   const theme = useTheme();
   const hydrated = useHydrated();
+  const pathname = usePathname();
+  const travelRoute = pathname === '/travel' || pathname.startsWith('/travel/');
+  const plans = useTravel((state) => state.plans);
+  const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
+  const atmospherePlan = selectTravelAtmospherePlan(plans, pathname, todayKey());
+  const atmosphere = useTravelRouteAtmosphere(
+    atmospherePlan?.destination,
+    dateDisplayFormat,
+    travelRoute && hydrated,
+  );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <ThemeProvider value={theme.name === 'dark' ? DarkTheme : DefaultTheme}>
           <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-          <AppSafeArea>
-            <AuthSessionProvider hydrated={hydrated}>
-              <RootNavigator hydrated={hydrated} />
-              <AppPromptHost />
-            </AuthSessionProvider>
-          </AppSafeArea>
+          <TravelAtmosphereProvider atmosphere={atmosphere}>
+            <AppSafeArea
+              style={travelRoute ? travelSafeAreaStyle(theme, atmosphere) : undefined}>
+              <AuthSessionProvider hydrated={hydrated}>
+                <RootNavigator hydrated={hydrated} />
+                <AppPromptHost />
+              </AuthSessionProvider>
+            </AppSafeArea>
+          </TravelAtmosphereProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -56,6 +80,7 @@ export default function RootLayout() {
 
 function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
   const { phase, isGuest } = useAuthSession();
   const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
@@ -185,19 +210,20 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           options={{ presentation: 'modal' }}
         />
         <Stack.Screen name="agents" />
+        <Stack.Screen name="design-system" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]/settings" />
         <Stack.Screen name="todos/[id]/recipe-import" />
         <Stack.Screen name="todo-collaborators" />
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
-        <Stack.Screen name="travel/[id]" />
         <Stack.Screen
-          name="travel/[id]/flights"
-          options={{ headerShown: false }}
+          name="travel"
+          options={{
+            headerShown: false,
+            contentStyle: { ...travelStyle, paddingTop: 0 },
+          }}
         />
-        <Stack.Screen name="travel/[id]/stays" />
-        <Stack.Screen name="travel/[id]/chat" options={{ headerShown: false }} />
         <Stack.Screen name="nutrition-profile" />
         <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
         <Stack.Screen name="detail/food/[id]" />

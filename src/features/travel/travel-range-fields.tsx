@@ -18,6 +18,10 @@ export function TravelRangeFields({
   minimumDate,
   maximumDate,
   onChange,
+  startDateTestID,
+  startTimeTestID,
+  endDateTestID,
+  endTimeTestID,
 }: {
   value: TravelRangeScheduleDraft;
   startDateLabel: string;
@@ -27,6 +31,10 @@ export function TravelRangeFields({
   minimumDate?: string;
   maximumDate?: string;
   onChange: (value: TravelRangeScheduleDraft) => void;
+  startDateTestID?: string;
+  startTimeTestID?: string;
+  endDateTestID?: string;
+  endTimeTestID?: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -38,6 +46,7 @@ export function TravelRangeFields({
       <View style={[styles.row, { gap: rs.sm }]}>
         <View style={[styles.field, { minWidth: fieldMinWidth }]}>
           <DateField
+            testID={startDateTestID}
             value={value.startDate}
             onChange={(startDate) => onChange({ ...value, startDate })}
             stackedLabel={startDateLabel}
@@ -50,6 +59,7 @@ export function TravelRangeFields({
         </View>
         <View style={[styles.field, { minWidth: fieldMinWidth }]}>
           <TimeField
+            testID={startTimeTestID}
             value={value.startMinutes}
             onChange={(startMinutes) => onChange({ ...value, startMinutes })}
             stackedLabel={startTimeLabel}
@@ -62,6 +72,7 @@ export function TravelRangeFields({
       <View style={[styles.row, { gap: rs.sm }]}>
         <View style={[styles.field, { minWidth: fieldMinWidth }]}>
           <DateField
+            testID={endDateTestID}
             value={value.endDate}
             onChange={(endDate) => onChange({ ...value, endDate })}
             stackedLabel={endDateLabel}
@@ -74,6 +85,7 @@ export function TravelRangeFields({
         </View>
         <View style={[styles.field, { minWidth: fieldMinWidth }]}>
           <TimeField
+            testID={endTimeTestID}
             value={value.endMinutes}
             onChange={(endMinutes) => onChange({ ...value, endMinutes })}
             stackedLabel={endTimeLabel}

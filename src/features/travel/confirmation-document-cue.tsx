@@ -1,19 +1,12 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Modal, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
-import { useResponsive } from '@/hooks/use-responsive';
+import { AppText, Button, ScreenHeader } from '@/components/primitives';
+import { spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import {
   confirmationUrisForDisplay,
@@ -24,26 +17,23 @@ import {
 export function ConfirmationDocumentCue({
   uris,
   kind,
-  accentColor,
+  accentColor: _accentColor,
   accessibilityLabel = 'View uploaded confirmation',
 }: {
   uris?: string[];
-  kind: 'flight' | 'rental' | 'stay';
+  kind: 'flight' | 'rental' | 'stay' | 'transport';
   accentColor?: string;
   accessibilityLabel?: string;
 }) {
-  const theme = useTheme();
-  const { s } = useResponsive();
   const { width } = useWindowDimensions();
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [viewerOpen, setViewerOpen] = useState(false);
-  const accent = accentColor ?? theme.accentPrimary;
   const openableUris = confirmationUrisForDisplay(uris, kind);
   if (!openableUris.length) return null;
 
   const imageUris = openableUris.filter(isImageConfirmationUri);
   const open = () => {
-    // PDFs and other docs open in system Preview / Quick Look (no share sheet).
-    // Image-only uploads keep the in-app zoom viewer.
     if (imageUris.length > 0 && imageUris.length === openableUris.length) {
       setViewerOpen(true);
       return;
@@ -53,59 +43,37 @@ export function ConfirmationDocumentCue({
 
   return (
     <>
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        size="sm"
+        icon="receipt"
+        testID={AgentUiIds.travel.confirmation.open(kind)}
         accessibilityLabel={accessibilityLabel}
-        hitSlop={8}
         onPress={open}
-        style={({ pressed }) => [
-          styles.cue,
-          {
-            alignSelf: 'center',
-            borderColor: accent,
-            backgroundColor: accent,
-            minHeight: Math.max(44, s(40)),
-            opacity: pressed ? 0.85 : 1,
-          },
-        ]}>
-        <Symbol name="receipt" size="sm" color={theme.textOnAccent} />
-        <AppText
-          variant="callout"
-          fit
-          style={[styles.cueText, { color: theme.textOnAccent }]}> 
-          View Confirmation
-        </AppText>
-        <Symbol name="chevron-right" size="sm" color={theme.textOnAccent} />
-      </Pressable>
+        style={styles.openButton}>
+        View Confirmation
+      </Button>
 
       <Modal
         visible={viewerOpen}
         animationType="fade"
         presentationStyle="fullScreen"
         onRequestClose={() => setViewerOpen(false)}>
-        <SafeAreaView
-          edges={['top', 'bottom']}
-          style={[styles.viewer, { backgroundColor: theme.backgroundPrimary }]}>
-          <View style={styles.viewerHeader}>
-            <AppText variant="subheading" fit style={styles.cueTitle}>
-              Confirmation
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close confirmation"
-              hitSlop={12}
-              onPress={() => setViewerOpen(false)}
-              style={({ pressed }) => [
-                styles.closeButton,
-                {
-                  minHeight: Math.max(44, s(44)),
-                  minWidth: Math.max(44, s(44)),
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}>
-              <Symbol name="close" size="md" color={theme.textPrimary} />
-            </Pressable>
-          </View>
+        <View
+          style={[
+            styles.viewer,
+            {
+              backgroundColor: theme.backgroundPrimary,
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}>
+          <ScreenHeader
+            title="Confirmation"
+            onClose={() => setViewerOpen(false)}
+            closeAccessibilityLabel="Close confirmation"
+            closeTestID={AgentUiIds.travel.confirmation.close}
+            style={styles.header}
+          />
           <ScrollView
             horizontal
             pagingEnabled
@@ -128,41 +96,20 @@ export function ConfirmationDocumentCue({
             ))}
           </ScrollView>
           {imageUris.length > 1 ? (
-            <AppText
-              variant="caption"
-              color="secondary"
-              style={styles.pageHint}>
+            <AppText variant="caption" color="secondary" style={styles.pageHint}>
               Swipe for More Pages
             </AppText>
           ) : null}
-        </SafeAreaView>
+        </View>
       </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  cue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  cueText: { flexShrink: 1, minWidth: 0 },
+  openButton: { alignSelf: 'center' },
   viewer: { flex: 1 },
-  viewerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  closeButton: { alignItems: 'center', justifyContent: 'center' },
-  cueTitle: { flexShrink: 1, minWidth: 0 },
+  header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   pages: { alignItems: 'center' },
   page: {
     flexGrow: 1,

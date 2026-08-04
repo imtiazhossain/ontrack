@@ -13,6 +13,7 @@ Prefer these over tapping through the carousel when you already know the destina
 ./scripts/agent-ui-open.sh checklists
 ./scripts/agent-ui-open.sh travel
 ./scripts/agent-ui-open.sh profile
+./scripts/agent-ui-open.sh design-system
 
 # Reset to Today (known-good state)
 ./scripts/agent-ui-open.sh reset
@@ -20,6 +21,9 @@ Prefer these over tapping through the carousel when you already know the destina
 # Nested path
 ./scripts/agent-ui-open.sh travel/<planId>
 ./scripts/agent-ui-open.sh travel/<planId>/flights
+
+# DEV-only modal QA
+./scripts/agent-ui-open.sh 'travel/<planId>?previewModal=import'
 
 # Wait helpers
 ./scripts/agent-ui-wait.sh --prefix ontrack.today.
@@ -65,6 +69,7 @@ Dump JSON includes `"route": "<pathname>"` so hosts know where they landed.
 | `games` | `/games` | `ontrack:///games` |
 | `vehicles` | `/vehicles` | `ontrack:///vehicles` |
 | `agents` | `/agents` | `ontrack:///agents` |
+| `designSystem` / `design-system` | `/design-system` | `ontrack:///design-system` |
 | `nutrition` | `/nutrition-profile` | `ontrack:///nutrition-profile` |
 | `activityForm` | `/activity-form` | `ontrack:///activity-form` |
 | `privacy` | `/privacy` | `ontrack:///privacy` |

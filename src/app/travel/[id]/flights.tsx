@@ -1,10 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 
 import {
-  AIRPORT_LOOKUP_NOTICE,
   FlightSearchScreen,
+  GOOGLE_FLIGHTS_NOTICE,
 } from '@/features/travel/flights/flight-search-screen';
-import { travelPageBg } from '@/features/travel/travel-surface';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function FlightsScreen() {
@@ -13,9 +13,10 @@ export default function FlightsScreen() {
     previewError?: string;
   }>();
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const initialNotice =
-    __DEV__ && (previewError === '1' || previewError === 'airports')
-      ? AIRPORT_LOOKUP_NOTICE
+    __DEV__ && (previewError === '1' || previewError === 'google')
+      ? GOOGLE_FLIGHTS_NOTICE
       : undefined;
 
   return (
@@ -23,10 +24,7 @@ export default function FlightsScreen() {
       <Stack.Screen
         options={{
           headerShown: false,
-          contentStyle: {
-            backgroundColor: travelPageBg(theme),
-            paddingTop: 0,
-          },
+          contentStyle: { ...travelStyle, paddingTop: 0 },
         }}
       />
       <FlightSearchScreen planId={id} initialNotice={initialNotice} />

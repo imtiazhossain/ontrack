@@ -13,7 +13,7 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { appPrompt, AppText, Screen, Symbol } from '@/components/primitives';
+import { appPrompt, AppText, Screen, SegmentedControl, Symbol } from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
@@ -402,52 +402,24 @@ export function TodoListsOverview() {
 
               {!editMode ? (
                 <View style={styles.newListBlock}>
-                  <View
-                    accessibilityRole="radiogroup"
-                    style={styles.kindChoices}>
-                    {([
-                      ['checklist', 'Checklist', 'tasks'],
-                      ['grocery', 'Grocery', 'groceries'],
-                    ] as const).map(([kind, label, icon]) => {
-                      const selected = draftKind === kind;
-                      return (
-                        <Pressable
-                          key={kind}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: selected }}
-                          onPress={() => {
-                            setDraftKind(kind);
-                            haptics.select();
-                          }}
-                          style={[
-                            styles.kindChoice,
-                            {
-                              backgroundColor: selected
-                                ? theme.accentFaint
-                                : theme.backgroundSunken,
-                              borderColor: selected
-                                ? theme.accentPrimary
-                                : theme.separator,
-                            },
-                          ]}>
-                          <Symbol
-                            name={icon}
-                            size={17}
-                            color={
-                              selected
-                                ? theme.accentPrimary
-                                : theme.textSecondary
-                            }
-                          />
-                          <AppText
-                            variant="caption"
-                            color={selected ? 'accent' : 'secondary'}>
-                            {label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                  <SegmentedControl
+                    value={draftKind}
+                    options={[
+                      {
+                        value: 'checklist',
+                        label: 'Checklist',
+                        icon: 'tasks',
+                        testID: AgentUiIds.checklists.newListKind('checklist'),
+                      },
+                      {
+                        value: 'grocery',
+                        label: 'Grocery',
+                        icon: 'groceries',
+                        testID: AgentUiIds.checklists.newListKind('grocery'),
+                      },
+                    ]}
+                    onChange={setDraftKind}
+                  />
                   <View
                     style={[
                       styles.composer,
@@ -586,19 +558,6 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   newListBlock: { gap: spacing.sm },
-  kindChoices: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  kindChoice: {
-    minHeight: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-  },
   input: {
     ...typography.body,
     flex: 1,

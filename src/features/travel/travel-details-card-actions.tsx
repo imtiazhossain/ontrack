@@ -1,18 +1,19 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Symbol } from '@/components/primitives';
-import { spacing } from '@/design-system';
+import { Button, DestructiveSection, IconButton } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export function TravelDetailsCardActions({
+  itemId,
   itemTitle,
   saveLabel,
   onSave,
   onCancel,
   onRemove,
 }: {
+  itemId: string;
   itemTitle: string;
   saveLabel: string;
   onSave: () => void;
@@ -20,73 +21,38 @@ export function TravelDetailsCardActions({
   onRemove: () => void;
 }) {
   const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
-  const ctaColor = theme.name === 'dark' ? '#95683F' : '#A57A4B';
+  const { spacing } = useResponsive();
   return (
-    <View style={{ gap: rs.sm }}>
+    <View style={{ gap: spacing.lg }}>
+      <View style={styles.closeRow}>
+        <IconButton
+          icon="close"
+          testID={AgentUiIds.travel.detailsEditor.cancel(itemId)}
+          accessibilityLabel={`Cancel editing ${itemTitle}`}
+          onPress={onCancel}
+          background={theme.backgroundSunken}
+          borderColor={theme.separator}
+        />
+      </View>
       <Button
+        variant="primary"
         size="lg"
         icon="check"
-        style={{
-          width: '100%',
-          minHeight: Math.max(52, s(52)),
-          borderRadius: Math.max(14, s(16)),
-          backgroundColor: ctaColor,
-        }}
+        testID={AgentUiIds.travel.detailsEditor.save(itemId)}
+        accessibilityLabel={saveLabel}
         onPress={onSave}>
         {saveLabel}
       </Button>
-      <View
-        style={[
-          styles.secondaryActions,
-          {
-            borderTopColor: theme.separator,
-            gap: rs.sm,
-            paddingTop: rs.sm,
-          },
-        ]}>
-        <Button variant="ghost" style={styles.flex} onPress={onCancel}>
-          Cancel
-        </Button>
-        <AgentTestId
-          testID={AgentUiIds.travel.removeConfirm.open}
-          label={`Remove ${itemTitle}`}
-          onPress={onRemove}
-          style={styles.removeAction}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${itemTitle}`}
-            hitSlop={8}
-            onPress={onRemove}
-            style={({ pressed }) => [
-              styles.removeAction,
-              pressed ? styles.pressed : undefined,
-            ]}>
-            <Symbol name="delete" size="sm" color={theme.danger} />
-            <AppText variant="callout" color="danger" fit>
-              Remove
-            </AppText>
-          </Pressable>
-        </AgentTestId>
-      </View>
+      <DestructiveSection
+        label="Remove Item"
+        testID={AgentUiIds.travel.detailsEditor.remove(itemId)}
+        accessibilityLabel={`Remove ${itemTitle}`}
+        onPress={onRemove}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  secondaryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  flex: { flex: 1, minWidth: 0 },
-  removeAction: {
-    flex: 1,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  pressed: { opacity: 0.6 },
+  closeRow: { width: '100%', flexDirection: 'row', justifyContent: 'flex-end' },
 });

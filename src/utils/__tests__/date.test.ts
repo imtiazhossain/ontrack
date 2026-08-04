@@ -3,6 +3,7 @@ import {
   formatDateKey,
   formatDateKeyShort,
   formatDatePickerTitle,
+  formatMonthTitle,
   formatTimePickerTitle,
   fromDateKey,
   isDateKey,
@@ -30,8 +31,13 @@ describe('date keys', () => {
 
   it('changes presentation without changing the stored date key', () => {
     const stored = '2026-07-26';
-    expect(formatDateKey(stored, 'mdy')).toBe('7/26/2026');
-    expect(formatDateKey(stored, 'iso')).toBe(stored);
+    expect(formatDateKey(stored, 'mdy')).toBe('7/26/26');
+    expect(formatDateKey(stored, 'iso')).toBe('26-07-26');
+    expect(stored).toBe('2026-07-26');
+  });
+
+  it('keeps the full year in calendar picker month titles', () => {
+    expect(formatMonthTitle(2026, 8)).toBe('September 2026');
   });
 
   it('formats short timeline dates without year or leading zeros', () => {

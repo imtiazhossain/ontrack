@@ -2,11 +2,9 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
-  ActivityIndicator,
   Keyboard,
   Platform,
   StyleSheet,
-  TextInput,
   View,
   type KeyboardEvent,
 } from 'react-native';
@@ -18,9 +16,11 @@ import {
   EmptyState,
   ErrorMessage,
   IconButton,
+  Input,
+  LoadingBlock,
 } from '@/components/primitives';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
-import { layout, radii, spacing, typography } from '@/design-system';
+import { layout, radii, spacing } from '@/design-system';
 import {
   buildTravelChatListItems,
   chatNotificationsAreEnabled,
@@ -33,7 +33,6 @@ import {
   type TravelChatMessage,
 } from '@/features/travel/chat';
 import {
-  TravelChatComposerSparkle,
   TravelChatDateSeparator,
   TravelChatDestinationStamp,
   TravelChatLandscape,
@@ -41,18 +40,19 @@ import {
   travelChatPalette,
   type TravelChatMember,
 } from '@/features/travel/travel-chat-chrome';
-import { travelPageBg } from '@/features/travel/travel-surface';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
 export function TravelChatScreen({ planId }: { planId: string }) {
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { layout: responsiveLayout, spacing: rs, s } = useResponsive();
@@ -247,17 +247,15 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   };
 
   const composerBottomPad = Math.max(insets.bottom, spacing.sm);
-  const sendSize = Math.max(48, s(52));
+  const sendSize = Math.max(44, s(44));
 
   if (!plan) {
     return (
       <View
         style={[
           styles.fill,
-          {
-            backgroundColor: travelPageBg(theme),
-            paddingHorizontal: responsiveLayout.screenPadding,
-          },
+          travelStyle,
+          { paddingHorizontal: responsiveLayout.screenPadding },
         ]}>
         <TravelSheetHeader
           eyebrow="Group Chat"
@@ -265,7 +263,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           subtitle="Plan Together · Stay Connected"
           closeAccessibilityLabel="Close Group Chat"
           closeTestID={AgentUiIds.travel.chat.close}
-          paddingTop={0}
+          paddingTop={rs.sm}
           onClose={() => router.back()}
         />
         <EmptyState icon="chat" title="Trip Not Found" message="This trip is no longer available." />
@@ -278,7 +276,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
       <View
         style={[
           styles.fill,
-          { backgroundColor: travelPageBg(theme) },
+          travelStyle,
         ]}>
         <TravelChatLandscape color={palette.mountainColor} />
         <View style={{ paddingHorizontal: responsiveLayout.screenPadding, zIndex: 1 }}>
@@ -288,7 +286,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             subtitle={memberSubtitle}
             closeAccessibilityLabel="Close Group Chat"
             closeTestID={AgentUiIds.travel.chat.close}
-            paddingTop={0}
+            paddingTop={rs.sm}
             onClose={() => router.back()}
           />
           <TravelChatMemberStack members={members} />
@@ -308,7 +306,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
     <View
       style={[
         styles.fill,
-        { backgroundColor: travelPageBg(theme) },
+        travelStyle,
       ]}>
       <TravelChatLandscape color={palette.mountainColor} />
       <TravelChatDestinationStamp
@@ -324,7 +322,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           subtitle={memberSubtitle}
           closeAccessibilityLabel="Close Group Chat"
           closeTestID={AgentUiIds.travel.chat.close}
-          paddingTop={0}
+          paddingTop={rs.sm}
           onClose={() => router.back()}
         />
         <View style={{ marginTop: -rs.md, marginBottom: rs.md }}>
@@ -354,9 +352,10 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           </View>
           <Button
             testID={AgentUiIds.travel.chat.enableNotifications}
-            disabled={enablingNotifications || !deviceId}
+            loading={enablingNotifications}
+            disabled={!deviceId}
             onPress={() => void enableNotifications()}>
-            {enablingNotifications ? 'Turning On…' : 'Turn On'}
+            Turn On
           </Button>
         </View>
       ) : null}
@@ -369,8 +368,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
       {loading ? (
         <View style={[styles.center, { zIndex: 1 }]}>
-          <ActivityIndicator color={palette.goldFrom} />
-          <AppText variant="body" color="secondary">Loading messages…</AppText>
+          <LoadingBlock label="Loading messages…" />
         </View>
       ) : (
         <FlashList<TravelChatListItem>
@@ -465,59 +463,45 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
       <View
         style={[
-          styles.composer,
+          styles.composerArea,
           {
             paddingBottom: composerBottomPad,
             marginBottom: keyboardInset,
             paddingHorizontal: responsiveLayout.screenPadding,
-            gap: rs.sm,
             zIndex: 2,
           },
         ]}>
-        <AgentTestId
-          testID={AgentUiIds.travel.chat.composer}
-          label="Trip Message"
+        <View
           style={[
-            styles.composerField,
+            styles.composerDock,
             {
-              backgroundColor: palette.composerBg,
-              borderColor: palette.composerBorder,
-              borderRadius: radii.pill,
-              minHeight: Math.max(48, s(52)),
-              paddingLeft: rs.sm,
-              paddingRight: rs.md,
-              gap: rs.sm,
+              minHeight: Math.max(56, s(58)),
+              padding: rs.xs,
+              gap: rs.xs,
+              backgroundColor: theme.backgroundElevated,
+              borderColor: theme.separator,
             },
           ]}>
-          <TravelChatComposerSparkle color={palette.goldFrom} ring={palette.sparkleRing} />
-          <TextInput
+          <Input
+            testID={AgentUiIds.travel.chat.composer}
             value={draft}
             onChangeText={setDraft}
             placeholder="Message the Trip…"
-            placeholderTextColor={palette.timestamp}
             multiline
             maxLength={2000}
             accessibilityLabel="Trip Message"
-            underlineColorAndroid="transparent"
-            style={[
-              styles.input,
-              typography.body,
-              {
-                color: palette.senderName,
-                fontSize: Math.max(15, s(16)),
-                paddingVertical: Platform.OS === 'ios' ? rs.sm : rs.xs,
-              },
-            ]}
+            containerStyle={styles.composerInput}
+            fieldBackground="transparent"
+            style={[styles.input, { paddingVertical: rs.sm }]}
           />
-        </AgentTestId>
-        <View style={{ boxShadow: palette.sendShadow, borderRadius: sendSize / 2 }}>
           <IconButton
             icon="arrow-up"
             accessibilityLabel="Send message"
             testID={AgentUiIds.travel.chat.send}
-            disabled={!draft.trim() || !deviceId || sending}
-            color={palette.chrome.ctaText}
-            background={palette.goldFrom}
+            loading={sending}
+            disabled={!draft.trim() || !deviceId}
+            color={theme.textOnAccent}
+            background={theme.accentPrimary}
             size={sendSize}
             onPress={() => void send()}
           />
@@ -561,24 +545,25 @@ const styles = StyleSheet.create({
   },
   pendingBubble: { opacity: 0.66 },
   myTimestamp: { textAlign: 'right' },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+  composerArea: {
     paddingTop: spacing.sm,
   },
-  composerField: {
-    flex: 1,
-    minWidth: 0,
+  composerDock: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.pill,
+    borderCurve: 'continuous',
+    boxShadow: '0 4px 18px rgba(17, 74, 110, 0.16)',
+  },
+  composerInput: {
+    flex: 1,
+    minWidth: 0,
   },
   input: {
     flex: 1,
     minWidth: 0,
-    minHeight: 28,
-    maxHeight: 120,
-    paddingTop: 0,
-    paddingBottom: 0,
+    minHeight: 40,
+    maxHeight: 112,
   },
 });

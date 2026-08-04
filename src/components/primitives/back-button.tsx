@@ -37,12 +37,15 @@ export function HeaderBackButton({
   accessibilityLabel = 'Go Back',
   fallback = '/(tabs)',
   alwaysNavigateTo,
+  onPress,
   testID = AgentUiIds.chrome.headerBack,
 }: {
   accessibilityLabel?: string;
   fallback?: Href;
   /** When set, always navigate here instead of popping the stack. */
   alwaysNavigateTo?: Href;
+  /** Embedded flows can provide their own back/cancel transition. */
+  onPress?: () => void;
   testID?: string;
 }) {
   const router = useRouter();
@@ -54,7 +57,9 @@ export function HeaderBackButton({
       background="transparent"
       testID={testID}
       onPress={() =>
-        alwaysNavigateTo
+        onPress
+          ? onPress()
+          : alwaysNavigateTo
           ? router.replace(alwaysNavigateTo)
           : goBackOrReplace(router, fallback)
       }

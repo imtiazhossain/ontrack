@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, IconButton, Input, LoadingBlock, SectionHeader } from '@/components/primitives';
+import { AppText, Button, ErrorMessage, IconButton, Input, LoadingBlock, SectionHeader, SegmentedControl } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
@@ -18,6 +18,7 @@ import type {
   WorkSession,
   WorkTask,
 } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack', 'pre-workout', 'post-workout'];
 const WORKOUT_TYPES: WorkoutType[] = ['strength', 'cardio', 'mobility', 'custom'];
@@ -57,18 +58,19 @@ export function cloneMovie(movie: Movie | undefined, activityId: string): Movie 
 }
 
 export function ChoiceRow<T extends string>({ label, options, value, onChange }: { label: string; options: T[]; value: T; onChange: (value: T) => void }) {
-  const theme = useTheme();
+  const group = label.toLowerCase().replaceAll(' ', '-');
   return (
-    <View style={styles.choiceSection}>
-      <AppText variant="overline" color="tertiary">{label}</AppText>
-      <View style={styles.wrap}>
-        {options.map((option) => (
-          <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: option === value }} onPress={() => onChange(option)} style={[styles.choice, { borderColor: option === value ? theme.accentPrimary : theme.separator, backgroundColor: option === value ? theme.accentFaint : theme.backgroundSunken }]}>
-            <AppText variant="caption">{option.replace('-', ' ')}</AppText>
-          </Pressable>
-        ))}
-      </View>
-    </View>
+    <SegmentedControl
+      label={label}
+      value={value}
+      options={options.map((option) => ({
+        value: option,
+        label: option.replace('-', ' '),
+        testID: AgentUiIds.activityForm.choice(group, option),
+      }))}
+      onChange={onChange}
+      wrap
+    />
   );
 }
 
@@ -261,9 +263,6 @@ export function MovieEditor({ movie, onSelect, guided = false }: { movie?: Movie
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  choiceSection: { gap: spacing.sm },
-  choice: { borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   twoColumns: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nestedCard: { gap: spacing.md, padding: spacing.md, borderRadius: radii.lg },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

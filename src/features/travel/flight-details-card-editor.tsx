@@ -71,6 +71,7 @@ export function FlightDetailsCardEditor({
         }
       />
       <TravelDetailsCardActions
+        itemId={item.id}
         itemTitle={item.title}
         saveLabel="Save Flight Details"
         onSave={() => onSave(schedule)}

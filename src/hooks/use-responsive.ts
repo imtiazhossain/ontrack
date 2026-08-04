@@ -35,6 +35,8 @@ export interface ResponsiveTokens {
   width: number;
   /** Clamped width / BASE_WIDTH. */
   scale: number;
+  /** Current accessibility text scale reported by the platform. */
+  fontScale: number;
   /** Linear scale helper bound to the current window. */
   s: (size: number) => number;
   /** Moderate (dampened) scale for padding/gaps. */
@@ -62,7 +64,7 @@ function scaleRecord<T extends Record<string, number>>(
  * chrome labels or overflow controls.
  */
 export function useResponsive(): ResponsiveTokens {
-  const { width, height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
   // Prefer the narrower edge so landscape doesn't inflate type/chrome.
   const layoutWidth = Math.min(width, height);
 
@@ -81,6 +83,7 @@ export function useResponsive(): ResponsiveTokens {
     return {
       width: layoutWidth,
       scale,
+      fontScale,
       s,
       ms,
       typography,
@@ -94,7 +97,7 @@ export function useResponsive(): ResponsiveTokens {
       } satisfies LayoutScale,
       iconSizes: scaleRecord(baseIconSizes, s) as IconSizeScale,
     };
-  }, [layoutWidth]);
+  }, [fontScale, layoutWidth]);
 }
 
 export { MAX_SCALE, MIN_SCALE, windowScale, scaleSize, moderateScale };

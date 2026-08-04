@@ -9,11 +9,11 @@ import {
   localTripCoverUri,
 } from '@/features/travel/destination-cover';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
-import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 import { haptics } from '@/utils/haptics';
 
@@ -77,22 +77,32 @@ export function TravelPlanCoverField({
     haptics.tap();
     setPickerVisible(true);
   };
+  const coverAgent = useAgentUiTarget(AgentUiIds.travel.editTrip.cover, {
+    label: 'Change trip cover photo',
+    onPress: openPicker,
+  });
 
   return (
     <>
-      <View style={[styles.row, { gap: rs.md }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Change trip cover photo"
-          onPress={openPicker}
-          style={({ pressed }) => [
+      <Pressable
+        ref={coverAgent.ref}
+        accessibilityRole="button"
+        accessibilityLabel="Change trip cover photo"
+        testID={coverAgent.testID}
+        onLayout={coverAgent.onLayout}
+        onPress={openPicker}
+        style={({ pressed }) => [
+          styles.row,
+          { gap: rs.md, opacity: pressed ? 0.78 : 1 },
+        ]}>
+        <View
+          style={[
             styles.thumb,
             {
               width: size,
               height: size,
               borderRadius: Math.max(16, s(16)),
               backgroundColor: chrome.icons.flight.bg,
-              opacity: pressed ? 0.85 : 1,
             },
           ]}>
           {preview ? (
@@ -105,12 +115,8 @@ export function TravelPlanCoverField({
           ) : (
             <Symbol name="flight" size="md" color={chrome.icons.flight.fg} />
           )}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Change trip cover photo"
-          onPress={openPicker}
-          style={({ pressed }) => [styles.copy, { opacity: pressed ? 0.7 : 1 }]}>
+        </View>
+        <View style={styles.copy}>
           <AppText
             style={[styles.label, { color: chrome.title }]}
             fit
@@ -123,15 +129,8 @@ export function TravelPlanCoverField({
             numberOfLines={2}>
             Shown on your trip card. Tap to change.
           </AppText>
-        </Pressable>
-        <TravelSheetIconControl
-          icon="edit"
-          size={36}
-          tone="accent"
-          accessibilityLabel="Change trip cover photo"
-          onPress={openPicker}
-        />
-      </View>
+        </View>
+      </Pressable>
 
       <TravelAddPhotosModal
         visible={pickerVisible}

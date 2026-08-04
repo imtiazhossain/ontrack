@@ -446,7 +446,7 @@ function UpcomingCard({
         },
       ]}>
       <View style={[styles.coverWrap, { height: Math.max(108, s(116)) }]}>
-        <TravelTripCover plan={plan} width="100%" height="100%" borderRadius={0} />
+        <TravelTripCover plan={plan} width="100%" height="100%" borderRadius={0} expandable={false} />
         <View style={[styles.avatarStack, { left: spacing.md, bottom: spacing.sm }]}>
           {visible.map((person, index) => (
             <View

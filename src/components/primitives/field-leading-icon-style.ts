@@ -14,3 +14,32 @@ export function fieldLeadingIconRowStyle(
     alignItems: 'center',
   };
 }
+
+/** Minimum height for a stacked label + value at the active Dynamic Type scale. */
+export function stackedFieldMinHeight({
+  baseMinHeight,
+  fontScale,
+  labelLineHeight,
+  valueLineHeight,
+  verticalPadding,
+  gap = 2,
+}: {
+  baseMinHeight: number;
+  fontScale: number;
+  labelLineHeight: number;
+  valueLineHeight: number;
+  verticalPadding: number;
+  gap?: number;
+}): number {
+  const labelScale = Math.min(fontScale, 1.15);
+  const valueScale = Math.min(fontScale, 1.3);
+  return Math.max(
+    baseMinHeight,
+    Math.ceil(
+      labelLineHeight * labelScale
+        + valueLineHeight * valueScale
+        + verticalPadding * 2
+        + gap,
+    ),
+  );
+}

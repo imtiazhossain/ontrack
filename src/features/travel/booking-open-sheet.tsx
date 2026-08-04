@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 
 import type { StayBookingOpen } from '@/features/travel/booking-open';
-import type { TravelSheetHeader } from '@/features/travel/travel-sheet';
 
 type WebViewOpen = Extract<StayBookingOpen, { mode: 'webview' }>;
 
@@ -29,4 +28,3 @@ export function BookingOpenSheet({ target, onClose }: BookingOpenSheetProps) {
 
   return null;
 }
-

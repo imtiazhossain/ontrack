@@ -1,4 +1,4 @@
-import type { FlightLeg, FlightOffer } from './types';
+import type { FlightLeg, FlightOffer, FlightSegment } from './types';
 
 interface AmadeusSegment {
   departure?: { iataCode?: string; at?: string };
@@ -19,31 +19,51 @@ interface AmadeusOffer {
   itineraries?: AmadeusItinerary[];
 }
 
+function normalizeSegment(
+  segment: AmadeusSegment,
+  carriers: Record<string, string>,
+): FlightSegment | undefined {
+  if (
+    !segment.departure?.iataCode ||
+    !segment.departure.at ||
+    !segment.arrival?.iataCode ||
+    !segment.arrival.at
+  ) {
+    return undefined;
+  }
+  const carrierCode = segment.carrierCode ?? '';
+  return {
+    departureCode: segment.departure.iataCode,
+    departureAt: segment.departure.at,
+    arrivalCode: segment.arrival.iataCode,
+    arrivalAt: segment.arrival.at,
+    carrier: carriers[carrierCode] ?? carrierCode,
+    flightNumber: `${carrierCode}${segment.number ?? ''}`,
+  };
+}
+
 function normalizeLeg(
   itinerary: AmadeusItinerary | undefined,
   carriers: Record<string, string>,
 ): FlightLeg | undefined {
-  const segments = itinerary?.segments;
-  const first = segments?.[0];
-  const last = segments?.[segments.length - 1];
-  if (
-    !first?.departure?.iataCode ||
-    !first.departure.at ||
-    !last?.arrival?.iataCode ||
-    !last.arrival.at
-  ) {
-    return undefined;
-  }
-  const carrierCode = first.carrierCode ?? '';
+  const rawSegments = itinerary?.segments ?? [];
+  const segments = rawSegments.flatMap((segment) => {
+    const normalized = normalizeSegment(segment, carriers);
+    return normalized ? [normalized] : [];
+  });
+  if (segments.length === 0 || segments.length !== rawSegments.length) return undefined;
+  const first = segments[0];
+  const last = segments[segments.length - 1];
   return {
-    departureCode: first.departure.iataCode,
-    departureAt: first.departure.at,
-    arrivalCode: last.arrival.iataCode,
-    arrivalAt: last.arrival.at,
+    departureCode: first.departureCode,
+    departureAt: first.departureAt,
+    arrivalCode: last.arrivalCode,
+    arrivalAt: last.arrivalAt,
     duration: itinerary?.duration ?? '',
-    stops: Math.max(0, (segments?.length ?? 1) - 1),
-    carrier: carriers[carrierCode] ?? carrierCode,
-    flightNumber: `${carrierCode}${first.number ?? ''}`,
+    stops: Math.max(0, segments.length - 1),
+    carrier: first.carrier,
+    flightNumber: first.flightNumber,
+    segments,
   };
 }
 

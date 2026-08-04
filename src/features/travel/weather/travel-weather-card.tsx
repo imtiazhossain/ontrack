@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, ErrorMessage, Symbol } from '@/components/primitives';
+import { AppText, ErrorMessage, LoadingSpinner, Symbol } from '@/components/primitives';
 import type { Theme } from '@/design-system';
 import { fontFamilies, radii } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
@@ -141,7 +141,7 @@ export function TravelWeatherCard({
             {locationLabel}
           </AppText>
         </View>
-        {!weather && !error ? <ActivityIndicator color={accent} /> : null}
+        {!weather && !error ? <LoadingSpinner color={accent} /> : null}
       </View>
 
       {weather?.availability === 'too-early' ? (

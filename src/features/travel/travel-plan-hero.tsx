@@ -7,6 +7,7 @@ import { tripDayCount } from '@/features/travel/date-range';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import type { TravelPlan } from '@/features/travel/types';
+import { travelPlanModeLabel } from '@/features/travel/travel-mode';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateKey, type DateDisplayFormat } from '@/utils/date';
@@ -48,7 +49,8 @@ export function TravelPlanHero({
               color="secondary"
               fit
               style={[travelOverlineStyle, styles.serif]}>
-              {plan.destination}
+              {travelPlanModeLabel(plan.mode ?? 'flight')} ·{' '}
+              {plan.origin ? `${plan.origin} → ${plan.destination}` : plan.destination}
             </AppText>
           ) : null}
           <AppText

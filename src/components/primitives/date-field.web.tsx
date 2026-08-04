@@ -27,15 +27,15 @@ export function DateField({
   minimumDate,
   maximumDate,
   disabled = false,
-  placeholder = 'MM/DD/YYYY',
+  placeholder = 'MM/DD/YY',
   accessibilityLabel,
   testID,
 }: DateFieldProps) {
   const theme = useTheme();
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const resolvedPlaceholder =
-    placeholder === 'MM/DD/YYYY' && dateDisplayFormat === 'iso'
-      ? 'YYYY-MM-DD'
+    placeholder === 'MM/DD/YY' && dateDisplayFormat === 'iso'
+      ? 'YY-MM-DD'
       : placeholder;
   const style: CSSProperties = {
     minHeight: 48,

@@ -9,6 +9,7 @@ import {
   TRAVEL_EDITORIAL_ACCENT,
   travelCardBorder,
   travelCardFill,
+  travelMainCardFill,
   travelPanelTint,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -24,6 +25,7 @@ export function TravelCollapsibleSection({
   onToggle,
   onAddPress,
   addTestID,
+  toggleTestID,
   titleVariant = 'overline',
   nested = false,
   icon,
@@ -41,6 +43,7 @@ export function TravelCollapsibleSection({
   /** Optional plus control to the right of the title (e.g. add timeline item). */
   onAddPress?: () => void;
   addTestID?: string;
+  toggleTestID?: string;
   /** Slightly larger parent headers can use `caption` or `callout`. */
   titleVariant?: TypeVariant;
   /** Smaller chevron flush to the title — for sections nested under a parent. */
@@ -73,6 +76,14 @@ export function TravelCollapsibleSection({
       ? s(16)
       : Math.max(32, s(32));
   const headerGap = nested ? spacing.xxs : spacing.sm;
+  const mainCardFill = travelMainCardFill(theme);
+  const headerBackground = nested
+    ? 'transparent'
+    : card
+      ? mainCardFill
+      : compact
+        ? travelCardFill(theme)
+        : travelPanelTint(theme);
 
   return (
     <View
@@ -84,7 +95,7 @@ export function TravelCollapsibleSection({
               borderCurve: 'continuous',
               borderWidth: StyleSheet.hairlineWidth,
               borderColor: travelCardBorder(theme),
-              backgroundColor: travelCardFill(theme),
+              backgroundColor: mainCardFill,
               boxShadow: compact ? TRAVEL_HEADER_SHADOW : undefined,
               overflow: 'hidden',
             }
@@ -100,16 +111,17 @@ export function TravelCollapsibleSection({
             paddingRight: nested ? 0 : spacing.sm,
             paddingVertical: nested || compact ? 0 : spacing.xs,
             borderRadius: card || nested ? 0 : radii.lg,
-            backgroundColor: nested
-              ? 'transparent'
-              : compact
-                ? travelCardFill(theme)
-                : travelPanelTint(theme),
+            backgroundColor: headerBackground,
             borderWidth: card || nested ? 0 : StyleSheet.hairlineWidth,
             borderBottomWidth: card && expanded ? StyleSheet.hairlineWidth : 0,
             borderColor: nested ? 'transparent' : travelCardBorder(theme),
           },
         ]}>
+        <AgentTestId
+          testID={toggleTestID}
+          label={label}
+          onPress={onToggle}
+          style={styles.toggleWrapper}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ expanded }}
@@ -196,6 +208,7 @@ export function TravelCollapsibleSection({
           </View>
           )}
         </Pressable>
+        </AgentTestId>
         {onAddPress ? (
           <AgentTestId
             testID={addTestID}
@@ -249,6 +262,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  toggleWrapper: { flex: 1, minWidth: 0 },
   title: {
     flex: 1,
     flexShrink: 1,

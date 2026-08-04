@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -9,13 +9,16 @@ import { useTheme } from '@/hooks/use-theme';
  * Keeping the top inset outside route scroll views prevents content and
  * overscroll effects from ever moving behind the device clock or cutout.
  */
-export function AppSafeArea({ children }: PropsWithChildren) {
+export function AppSafeArea({
+  children,
+  style,
+}: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   const theme = useTheme();
 
   return (
     <SafeAreaView
       edges={['top']}
-      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
+      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
       {children}
     </SafeAreaView>
   );

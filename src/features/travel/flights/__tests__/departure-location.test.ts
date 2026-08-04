@@ -12,6 +12,17 @@ describe('departure location formatting', () => {
     })).toBe('Brooklyn, New York');
   });
 
+  it('uses the containing city instead of a neighborhood', () => {
+    expect(formatDepartureAddress({
+      city: 'San Francisco',
+      district: 'Union Square',
+      subregion: 'San Francisco County',
+      region: 'California',
+      country: 'United States',
+      isoCountryCode: 'US',
+    })).toBe('San Francisco, California');
+  });
+
   it('uses city and country for other locations', () => {
     expect(formatDepartureAddress({
       city: 'Lisbon',

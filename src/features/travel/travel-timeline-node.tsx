@@ -27,6 +27,8 @@ import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { StayDetailsCardEditor } from '@/features/travel/stay-details-card-editor';
 import { StayDetailsSummary } from '@/features/travel/stay-details-summary';
+import { TransportDetailsCardEditor } from '@/features/travel/transport-details-card-editor';
+import { TransportDetailsSummary } from '@/features/travel/transport-details-summary';
 import { titleCaseTravelKind } from '@/features/travel/travel-chrome';
 import {
   kindAccent,
@@ -34,7 +36,7 @@ import {
   kindTint,
 } from '@/features/travel/travel-kind-chrome';
 import { TravelItemNotesButton, TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
-import { AgentUiIds } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import {
   TRAVEL_CARD_SHADOW,
   travelCardBorder,
@@ -51,7 +53,7 @@ import {
   type TravelTimelinePhase,
 } from '@/features/travel/travel-timeline-entries';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import type { TravelItemNote, TravelPlan } from '@/features/travel/types';
+import type { TravelItemNote, TravelPlan, TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
@@ -111,6 +113,7 @@ export function TravelTimelineNode({
   onSaveStayDetails,
   onCancelStayEdit,
   onBeginStayEdit,
+  onSaveTransportDetails,
   onAddPhotos,
   onRemovePhoto,
   onRemove,
@@ -171,6 +174,10 @@ export function TravelTimelineNode({
   onSaveStayDetails: (schedule: TravelRangeScheduleDraft) => void;
   onCancelStayEdit: () => void;
   onBeginStayEdit: () => void;
+  onSaveTransportDetails?: (
+    details: TravelTransportDetails,
+    schedule: TravelRangeScheduleDraft,
+  ) => void;
   onAddPhotos: () => void;
   onRemovePhoto: (uri: string) => void;
   onRemove: () => void;
@@ -180,6 +187,7 @@ export function TravelTimelineNode({
   const { s, spacing: rs } = useResponsive();
   const { user } = useAuthSession();
   const [notesOpen, setNotesOpen] = useState(false);
+  const [editingTransport, setEditingTransport] = useState(false);
   const [bookingOpen, setBookingOpen] = useState<Extract<
     StayBookingOpen,
     { mode: 'webview' }
@@ -199,13 +207,13 @@ export function TravelTimelineNode({
   };
   const isMoment = item.kind === 'moment';
   const isStructuredTravelKind =
-    item.kind === 'flight' || item.kind === 'rental' || item.kind === 'stay';
+    item.kind === 'flight' || item.kind === 'transport' || item.kind === 'rental' || item.kind === 'stay';
   const editingFlight =
     allowStructuredEditing && editingFlightItemId === item.id;
   const editingRental =
     allowStructuredEditing && editingRentalItemId === item.id;
   const editingStay = allowStructuredEditing && editingStayItemId === item.id;
-  const editingStructured = editingFlight || editingRental || editingStay;
+  const editingStructured = editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
   const title = displayTitle ?? item.title;
   const caption = timelineEntryCaption(
@@ -274,6 +282,10 @@ export function TravelTimelineNode({
             gap: dense ? rs.xxs : compact ? rs.xs : rs.sm,
           },
         ]}>
+        <AgentTestId
+          testID={AgentUiIds.travel.timelineItem.toggle(item.id, phase)}
+          label={title}
+          onPress={onToggle}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ expanded: isExpanded }}
@@ -339,6 +351,7 @@ export function TravelTimelineNode({
             />
           </View>
         </Pressable>
+        </AgentTestId>
 
         {!isExpanded && photos.length > 0 ? (
           <PhotoStrip uris={photos.slice(0, 4)} />
@@ -402,6 +415,18 @@ export function TravelTimelineNode({
                 date={item.date}
                 startMinutes={item.startMinutes}
                 durationMinutes={item.durationMinutes}
+                dateDisplayFormat={dateDisplayFormat}
+              />
+            ) : null}
+            {showStructuredDetails &&
+            item.kind === 'transport' &&
+            item.transport &&
+            !editingTransport ? (
+              <TransportDetailsSummary
+                itemId={item.id}
+                details={item.transport}
+                departureDate={item.date}
+                departureMinutes={item.startMinutes}
                 dateDisplayFormat={dateDisplayFormat}
               />
             ) : null}
@@ -475,6 +500,19 @@ export function TravelTimelineNode({
                 onRemove={onRemove}
               />
             ) : null}
+            {item.kind === 'transport' && editingTransport ? (
+              <TransportDetailsCardEditor
+                item={item}
+                planStartDate={planStartDate}
+                planEndDate={planEndDate}
+                onSave={(nextDetails, schedule) => {
+                  onSaveTransportDetails?.(nextDetails, schedule);
+                  setEditingTransport(false);
+                }}
+                onCancel={() => setEditingTransport(false)}
+                onRemove={onRemove}
+              />
+            ) : null}
             {!editingStructured ? (
               <View style={styles.itineraryActionsWrap}>
                 <View
@@ -486,6 +524,7 @@ export function TravelTimelineNode({
                     hasNotes={(item.notes?.length ?? 0) > 0}
                     size={toolbarActionSize}
                     iconSize="sm"
+                    testID={AgentUiIds.travel.notes.open(item.id)}
                     onPress={() => setNotesOpen(true)}
                   />
                   <IconButton
@@ -534,6 +573,17 @@ export function TravelTimelineNode({
                         item.rental ? 'Edit Rental' : 'Add Rental Details'
                       }
                       onPress={onBeginRentalEdit}
+                    />
+                  ) : null}
+                  {allowStructuredEditing && item.kind === 'transport' ? (
+                    <IconButton
+                      icon="edit"
+                      size={toolbarActionSize}
+                      iconSize="sm"
+                      background={theme.backgroundSunken}
+                      accessibilityLabel="Edit Transport Details"
+                      testID={AgentUiIds.travel.transport.edit(item.id)}
+                      onPress={() => setEditingTransport(true)}
                     />
                   ) : null}
                   {allowStructuredEditing && item.kind === 'stay' ? (

@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 
@@ -13,6 +15,7 @@ export const STORAGE_KEYS = {
   authAccess: 'ontrack/auth-access/v1',
   visionBoard: 'ontrack/vision-board/v1',
   vehicles: 'ontrack/vehicles/v1',
+  health: 'ontrack/health/v1',
 } as const;
 
 const MIGRATION_FLAG = 'ontrack/storage/mmkv-migrated/v1';
@@ -24,6 +27,13 @@ type PersistBackend = StateStorage & {
 };
 
 let backendPromise: Promise<PersistBackend> | undefined;
+let sensitiveBackendPromise: Promise<PersistBackend> | undefined;
+
+const SENSITIVE_KEY_NAME = 'ontrack.health.storage-key.v1';
+const SENSITIVE_KEY_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainService: 'com.imtihoss.ontracknow.health-storage',
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
 
 function asyncBackend(): PersistBackend {
   return {
@@ -31,6 +41,20 @@ function asyncBackend(): PersistBackend {
     getItem: (name) => AsyncStorage.getItem(name),
     setItem: (name, value) => AsyncStorage.setItem(name, value),
     removeItem: (name) => AsyncStorage.removeItem(name),
+  };
+}
+
+function memoryBackend(): PersistBackend {
+  const values = new Map<string, string>();
+  return {
+    kind: 'async',
+    getItem: async (name) => values.get(name) ?? null,
+    setItem: async (name, value) => {
+      values.set(name, value);
+    },
+    removeItem: async (name) => {
+      values.delete(name);
+    },
   };
 }
 
@@ -109,9 +133,45 @@ async function createBackend(): Promise<PersistBackend> {
   return mmkv ?? asyncBackend();
 }
 
+async function sensitiveEncryptionKey(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(SENSITIVE_KEY_NAME, SENSITIVE_KEY_OPTIONS);
+  if (existing) return existing;
+  const created = Crypto.randomUUID().replace(/-/g, '') + Crypto.randomUUID().replace(/-/g, '');
+  await SecureStore.setItemAsync(SENSITIVE_KEY_NAME, created, SENSITIVE_KEY_OPTIONS);
+  return created;
+}
+
+async function createSensitiveBackend(): Promise<PersistBackend> {
+  if (Platform.OS === 'web') return memoryBackend();
+  try {
+    const key = await sensitiveEncryptionKey();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createMMKV } = require('react-native-mmkv') as typeof import('react-native-mmkv');
+    const mmkv = createMMKV({ id: 'ontrack-sensitive', encryptionKey: key });
+    return {
+      kind: 'mmkv',
+      getItem: (name) => mmkv.getString(name) ?? null,
+      setItem: (name, value) => {
+        mmkv.set(name, value);
+      },
+      removeItem: (name) => {
+        mmkv.remove(name);
+      },
+    };
+  } catch {
+    // Sensitive records must never silently fall back to unencrypted native storage.
+    return memoryBackend();
+  }
+}
+
 function getBackend() {
   backendPromise ??= createBackend();
   return backendPromise;
+}
+
+function getSensitiveBackend() {
+  sensitiveBackendPromise ??= createSensitiveBackend();
+  return sensitiveBackendPromise;
 }
 
 /**
@@ -132,7 +192,22 @@ export function createPersistStorage<T>() {
   return createJSONStorage<T>(() => storage);
 }
 
+/** Encrypted, device-only persistence for health and other sensitive records. */
+export function createSensitivePersistStorage<T>() {
+  const storage: StateStorage = {
+    getItem: async (name) => (await getSensitiveBackend()).getItem(name),
+    setItem: async (name, value) => {
+      await (await getSensitiveBackend()).setItem(name, value);
+    },
+    removeItem: async (name) => {
+      await (await getSensitiveBackend()).removeItem(name);
+    },
+  };
+  return createJSONStorage<T>(() => storage);
+}
+
 /** Test helper — reset cached backend between suites. */
 export function resetPersistBackendForTests() {
   backendPromise = undefined;
+  sensitiveBackendPromise = undefined;
 }

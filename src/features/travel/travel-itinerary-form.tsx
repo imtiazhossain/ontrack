@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
   Button,
   DateField,
   ErrorMessage,
@@ -26,8 +25,11 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetImportCard } from '@/features/travel/travel-itinerary-sheet-fields';
 import type { TravelItemKind } from '@/features/travel/types';
+import type { TransportDetailsDraft } from '@/features/travel/transport-details';
+import { TransportDetailsEditor } from '@/features/travel/transport-details-editor';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 
 /** Silent cap for itinerary details / notes (no counter in the UI). */
@@ -40,6 +42,7 @@ export const ITEM_KINDS: { value: TravelItemKind; label: string }[] = [
   { value: 'moment', label: 'Moment' },
   { value: 'activity', label: 'Activity' },
   { value: 'flight', label: 'Flight' },
+  { value: 'transport', label: 'Transport' },
   { value: 'stay', label: 'Stay' },
   { value: 'rental', label: 'Rental' },
 ];
@@ -59,6 +62,8 @@ export function TravelItineraryForm({
   flightDetailsError,
   importedFlightFileName,
   importingFlight,
+  transportDetails,
+  transportDetailsError,
   rentalDetails,
   rentalDetailsError,
   importedRentalFileName,
@@ -82,6 +87,7 @@ export function TravelItineraryForm({
   onPhotoUrisChange,
   onFlightDetailsChange,
   onImportFlight,
+  onTransportDetailsChange,
   onRentalDetailsChange,
   onImportRental,
   onStayDetailsChange,
@@ -103,6 +109,8 @@ export function TravelItineraryForm({
   flightDetailsError?: string;
   importedFlightFileName?: string;
   importingFlight: boolean;
+  transportDetails: TransportDetailsDraft;
+  transportDetailsError?: string;
   rentalDetails: RentalDetailsDraft;
   rentalDetailsError?: string;
   importedRentalFileName?: string;
@@ -127,6 +135,7 @@ export function TravelItineraryForm({
   onPhotoUrisChange: (uris: string[]) => void;
   onFlightDetailsChange: (value: FlightDetailsDraft) => void;
   onImportFlight: (source: ConfirmationImportSource) => void;
+  onTransportDetailsChange: (value: TransportDetailsDraft) => void;
   onRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: (source: ConfirmationImportSource) => void;
   onStayDetailsChange: (value: StayDetailsDraft) => void;
@@ -210,6 +219,8 @@ export function TravelItineraryForm({
       ? ('lodging' as const)
       : kind === 'flight'
         ? ('flight' as const)
+        : kind === 'transport'
+          ? ('route' as const)
         : kind === 'moment'
           ? ('photo' as const)
           : ('note' as const);
@@ -248,6 +259,7 @@ export function TravelItineraryForm({
       ) : null}
 
       <Input
+        testID={AgentUiIds.travel.itineraryAdd.title}
         value={title}
         onChangeText={onTitleChange}
         icon={nameIcon}
@@ -260,7 +272,9 @@ export function TravelItineraryForm({
             : kind === 'stay'
               ? 'e.g. Summer Getaway'
               : kind === 'rental'
-                ? 'e.g. Hertz at KEF'
+              ? 'e.g. Hertz at KEF'
+              : kind === 'transport'
+                ? 'e.g. Train to Washington'
                 : kind === 'moment'
                   ? 'e.g. Sunset at the falls'
                   : 'e.g. Dinner in Alfama'
@@ -288,6 +302,7 @@ export function TravelItineraryForm({
             <View style={[styles.twoColumns, { gap: rs.sm }]}>
               <View style={styles.flex}>
                 <DateField
+                  testID={AgentUiIds.travel.itineraryAdd.date}
                   value={date}
                   stackedLabel={`${rangeStartLabel} *`}
                   placeholder="Select date"
@@ -300,6 +315,7 @@ export function TravelItineraryForm({
               </View>
               <View style={styles.flex}>
                 <TimeField
+                  testID={AgentUiIds.travel.itineraryAdd.time}
                   value={startMinutes}
                   stackedLabel="Time"
                   placeholder="Select time"
@@ -313,6 +329,7 @@ export function TravelItineraryForm({
             <View style={[styles.twoColumns, { gap: rs.sm }]}>
               <View style={styles.flex}>
                 <DateField
+                  testID={AgentUiIds.travel.itineraryAdd.endDate}
                   value={endDate}
                   stackedLabel={`${rangeEndLabel} *`}
                   placeholder="Select date"
@@ -325,6 +342,7 @@ export function TravelItineraryForm({
               </View>
               <View style={styles.flex}>
                 <TimeField
+                  testID={AgentUiIds.travel.itineraryAdd.endTime}
                   value={endMinutes}
                   stackedLabel="Time"
                   placeholder="Select time"
@@ -340,6 +358,7 @@ export function TravelItineraryForm({
           <View style={[styles.twoColumns, { gap: rs.sm }]}>
             <View style={styles.flex}>
               <DateField
+                testID={AgentUiIds.travel.itineraryAdd.date}
                 value={date}
                 stackedLabel="Date *"
                 placeholder="Select date"
@@ -351,6 +370,7 @@ export function TravelItineraryForm({
             </View>
             <View style={styles.flex}>
               <TimeField
+                testID={AgentUiIds.travel.itineraryAdd.time}
                 value={startMinutes}
                 stackedLabel="Time *"
                 placeholder="Select time"
@@ -393,9 +413,19 @@ export function TravelItineraryForm({
           hideHeader
         />
       ) : null}
+      {kind === 'transport' ? (
+        <TransportDetailsEditor
+          value={transportDetails}
+          onChange={onTransportDetailsChange}
+          planStartDate={planStartDate}
+          planEndDate={planEndDate}
+          error={transportDetailsError}
+        />
+      ) : null}
 
       {kind === 'stay' ? null : (
         <Input
+          testID={AgentUiIds.travel.itineraryAdd.details}
           value={details}
           icon="note"
           stackedLabel={isMoment ? 'Notes' : 'Details'}
@@ -551,6 +581,7 @@ export function TravelItineraryForm({
 
       {!isMoment ? (
         <Input
+          testID={AgentUiIds.travel.itineraryAdd.bookingUrl}
           value={bookingUrl}
           onChangeText={onBookingUrlChange}
           icon="link"

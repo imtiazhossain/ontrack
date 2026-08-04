@@ -1,6 +1,6 @@
 import type { Theme } from '@/design-system';
 
-/** Exact Add-to-Timeline sheet surfaces for light + dark mockups. */
+/** Compatibility shape for Travel callers; values now resolve from the shared semantic theme. */
 export type ItinerarySheetChrome = {
   sheetBg: string;
   fieldBg: string;
@@ -19,107 +19,88 @@ export type ItinerarySheetChrome = {
   ctaFrom: string;
   ctaTo: string;
   ctaText: string;
-  icons: {
-    import: { bg: string; fg: string };
-    lodging: { bg: string; fg: string };
-    location: { bg: string; fg: string };
-    calendar: { bg: string; fg: string };
-    clock: { bg: string; fg: string };
-    shield: { bg: string; fg: string };
-    link: { bg: string; fg: string };
-    flight: { bg: string; fg: string };
-    note: { bg: string; fg: string };
-    photo: { bg: string; fg: string };
-    /** Soft purple — Expenses row. */
-    expense: { bg: string; fg: string };
-    /** Soft green — Currency row. */
-    currency: { bg: string; fg: string };
-    /** Warm brown — Group Chat row. */
-    chat: { bg: string; fg: string };
-  };
+  icons: Record<
+    | 'import'
+    | 'lodging'
+    | 'location'
+    | 'calendar'
+    | 'clock'
+    | 'shield'
+    | 'link'
+    | 'flight'
+    | 'note'
+    | 'photo'
+    | 'expense'
+    | 'currency'
+    | 'chat'
+    | 'people',
+    { bg: string; fg: string; field: string }
+  >;
 };
 
 export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
-  if (theme.name === 'dark') {
-    return {
-      sheetBg: '#141312',
-      fieldBg: '#1C1A18',
-      fieldBorder: 'rgba(255,255,255,0.06)',
-      handle: '#3A3530',
-      title: '#F0E6DA',
-      subtitle: '#9A9086',
-      label: '#EDE4DA',
-      placeholder: '#8A8278',
-      importTitle: '#D4A574',
-      importSubtitle: '#9A9086',
-      importActionBorder: 'rgba(212,165,116,0.45)',
-      importActionBg: 'rgba(212,165,116,0.08)',
-      closeBg: '#2A2622',
-      closeIcon: '#D4A574',
-      ctaFrom: '#D4A574',
-      ctaTo: '#B8895A',
-      ctaText: '#1A1410',
-      icons: {
-        import: { bg: 'rgba(212,165,116,0.18)', fg: '#D4A574' },
-        lodging: { bg: 'rgba(196,140,110,0.18)', fg: '#E0B090' },
-        location: { bg: 'rgba(180,150,120,0.16)', fg: '#C8B090' },
-        calendar: { bg: 'rgba(170,100,90,0.18)', fg: '#D09080' },
-        clock: { bg: 'rgba(200,160,90,0.16)', fg: '#D4B070' },
-        shield: { bg: 'rgba(110,150,120,0.18)', fg: '#90C0A0' },
-        link: { bg: 'rgba(120,150,170,0.18)', fg: '#90B0C8' },
-        flight: { bg: 'rgba(120,150,180,0.18)', fg: '#90B0D0' },
-        note: { bg: 'rgba(160,140,120,0.16)', fg: '#C0B0A0' },
-        photo: { bg: 'rgba(160,140,120,0.16)', fg: '#C0B0A0' },
-        expense: { bg: 'rgba(160,130,170,0.18)', fg: '#C0A0C8' },
-        currency: { bg: 'rgba(110,150,120,0.18)', fg: '#90C0A0' },
-        chat: { bg: 'rgba(160,120,90,0.18)', fg: '#D0B090' },
-      },
-    };
-  }
-
+  const icons: ItinerarySheetChrome['icons'] = theme.name === 'dark'
+    ? {
+        import: { bg: '#164052', fg: '#79DCF2', field: '#132F3C' },
+        lodging: { bg: '#4A3021', fg: '#FFAA69', field: '#36271D' },
+        location: { bg: '#143F3C', fg: '#68D7CC', field: '#12302F' },
+        calendar: { bg: '#342E5A', fg: '#B9A7FF', field: '#292544' },
+        clock: { bg: '#493A1E', fg: '#FFD166', field: '#352D1D' },
+        shield: { bg: '#3E441A', fg: '#C7DD69', field: '#303417' },
+        link: { bg: '#302E5B', fg: '#AAA7FF', field: '#262548' },
+        flight: { bg: '#1D3761', fg: '#84B6FF', field: '#182B47' },
+        note: { bg: '#174047', fg: '#71D9E1', field: '#143136' },
+        photo: { bg: '#46401F', fg: '#E8CF6D', field: '#343019' },
+        expense: { bg: '#3B3150', fg: '#C6ADE1', field: '#2D273B' },
+        currency: { bg: '#1C493B', fg: '#75D8AE', field: '#18352D' },
+        chat: { bg: '#4E3028', fg: '#FFAA8A', field: '#38261F' },
+        people: { bg: '#263451', fg: '#92A9E8', field: '#202B42' },
+      }
+    : {
+        import: { bg: '#C9F0FA', fg: '#087F9D', field: '#FFFFFF' },
+        lodging: { bg: '#FFDCC2', fg: '#A94F13', field: '#FFFFFF' },
+        location: { bg: '#C9F2EC', fg: '#087E73', field: '#FFFFFF' },
+        calendar: { bg: '#E1DCFF', fg: '#6651C8', field: '#FFFFFF' },
+        clock: { bg: '#FFE7AE', fg: '#9A6500', field: '#FFFFFF' },
+        shield: { bg: '#E8F1BA', fg: '#657A12', field: '#FFFFFF' },
+        link: { bg: '#DEDFFF', fg: '#514DB0', field: '#FFFFFF' },
+        flight: { bg: '#D4E5FF', fg: '#2869B5', field: '#FFFFFF' },
+        note: { bg: '#CCF1F4', fg: '#177F88', field: '#FFFFFF' },
+        photo: { bg: '#F2E0B7', fg: '#806012', field: '#FFFFFF' },
+        expense: { bg: '#E6DAEB', fg: '#6D4B78', field: '#FFFFFF' },
+        currency: { bg: '#D2F0E3', fg: '#267A57', field: '#FFFFFF' },
+        chat: { bg: '#FFE0D4', fg: '#AE5435', field: '#FFFFFF' },
+        people: { bg: '#D8E1F7', fg: '#455FA6', field: '#FFFFFF' },
+      };
   return {
-    sheetBg: '#FCF9F5',
-    fieldBg: '#FFFFFF',
-    fieldBorder: 'rgba(51,39,28,0.06)',
-    handle: '#C4BBB0',
-    title: '#2D1C13',
-    subtitle: '#8A7A6C',
-    label: '#3D3229',
-    placeholder: '#A38D7D',
-    importTitle: '#2D1C13',
-    importSubtitle: '#8A7A6C',
-    importActionBorder: 'rgba(51,39,28,0.14)',
-    importActionBg: '#FCF9F5',
-    closeBg: '#EFE8DF',
-    closeIcon: '#5C4E42',
-    ctaFrom: '#A07850',
-    ctaTo: '#825F3F',
-    ctaText: '#FFF9F2',
-    icons: {
-      import: { bg: '#EFE6DA', fg: '#7A5A3A' },
-      lodging: { bg: '#F0E0D4', fg: '#9A6A50' },
-      location: { bg: '#E8DFD2', fg: '#8A7058' },
-      calendar: { bg: '#EAD8D0', fg: '#9A6050' },
-      clock: { bg: '#EDE0C8', fg: '#A08040' },
-      shield: { bg: '#DCE6DC', fg: '#5A7A60' },
-      link: { bg: '#DCE4EA', fg: '#5A7080' },
-      flight: { bg: '#D8E4EE', fg: '#4A6A88' },
-      note: { bg: '#E8E2D8', fg: '#6E675E' },
-      photo: { bg: '#E8E2D8', fg: '#6E675E' },
-      expense: { bg: '#E6DCE8', fg: '#7A6088' },
-      currency: { bg: '#DCE8DC', fg: '#5A7A60' },
-      chat: { bg: '#E6D8C8', fg: '#6B5344' },
-    },
+    sheetBg: theme.backgroundElevated,
+    fieldBg: theme.name === 'light' ? '#FFFFFF' : theme.backgroundSunken,
+    fieldBorder: theme.separator,
+    handle: theme.textTertiary,
+    title: theme.textPrimary,
+    subtitle: theme.textSecondary,
+    label: theme.textPrimary,
+    placeholder: theme.textTertiary,
+    importTitle: theme.textPrimary,
+    importSubtitle: theme.textSecondary,
+    importActionBorder: theme.separator,
+    importActionBg: theme.backgroundSunken,
+    closeBg: theme.backgroundSunken,
+    closeIcon: theme.textSecondary,
+    ctaFrom: theme.accentPrimary,
+    ctaTo: theme.accentSoft,
+    ctaText: theme.textOnAccent,
+    icons,
   };
 }
 
 export type SheetIconTone = keyof ItinerarySheetChrome['icons'];
 
 export function travelInputFieldBackground(theme: Theme): string {
-  return itinerarySheetChrome(theme).fieldBg;
+  return theme.name === 'light' ? '#FFFFFF' : theme.backgroundSunken;
 }
 
-/** Shared stacked-field colors used by Add Stay and structured travel editors. */
+/** Shared stacked-field colors used by Travel editors. */
 export function itinerarySheetFieldProps(
   chrome: ItinerarySheetChrome,
   tone: SheetIconTone,
@@ -128,7 +109,7 @@ export function itinerarySheetFieldProps(
   return {
     iconBackground: icon.bg,
     iconColor: icon.fg,
-    fieldBackground: chrome.fieldBg,
+    fieldBackground: icon.field,
     stackedLabelColor: chrome.label,
     placeholderColor: chrome.placeholder,
     placeholderTextColor: chrome.placeholder,

@@ -8,7 +8,7 @@ import { todoListIcon } from '@/features/todos/list-icon';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoList } from '@/store/todos';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 export type TodoListCollaboratorChip = {
   userId?: string;
@@ -86,35 +86,31 @@ export function TodoListCard({
       <View style={[styles.cardCopy, { gap: spacing.xs, minWidth: 0, flexShrink: 1 }]}>
         {canRename ? (
           <View style={styles.nameEditor}>
-            <TextInput
-              ref={nameInputRef}
-              accessibilityLabel="Checklist name"
-              maxLength={80}
-              onChangeText={onNameChange}
-              onSubmitEditing={() => onNameSubmit(nameDraft)}
-              placeholder="Checklist name"
-              placeholderTextColor={theme.textTertiary}
-              returnKeyType="done"
-              selectTextOnFocus
-              selectionColor={theme.accentPrimary}
-              underlineColorAndroid="transparent"
-              style={[
-                styles.nameInput,
-                typography.subheading,
-                { color: theme.textPrimary },
-              ]}
-              value={nameDraft}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Edit ${list.name} name`}
+            <AgentTestId
+              testID={AgentUiIds.checklists.listName(list.id)}
+              label={`Edit ${list.name} name`}
               onPress={() => nameInputRef.current?.focus()}
-              style={({ pressed }) => [
-                styles.nameEditButton,
-                pressed && styles.pressed,
-              ]}>
-              <Symbol name="edit" size={16} color={theme.accentPrimary} />
-            </Pressable>
+              style={styles.nameInputAgent}>
+              <TextInput
+                ref={nameInputRef}
+                accessibilityLabel="Checklist name"
+                maxLength={80}
+                onChangeText={onNameChange}
+                onSubmitEditing={() => onNameSubmit(nameDraft)}
+                placeholder="Checklist name"
+                placeholderTextColor={theme.textTertiary}
+                returnKeyType="done"
+                selectTextOnFocus
+                selectionColor={theme.accentPrimary}
+                underlineColorAndroid="transparent"
+                style={[
+                  styles.nameInput,
+                  typography.subheading,
+                  { color: theme.textPrimary },
+                ]}
+                value={nameDraft}
+              />
+            </AgentTestId>
           </View>
         ) : (
           <>
@@ -305,13 +301,7 @@ const styles = StyleSheet.create({
     minHeight: layout.minTapTarget,
     paddingVertical: 0,
   },
-  nameEditButton: {
-    width: layout.minTapTarget,
-    height: layout.minTapTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
+  nameInputAgent: { flex: 1, minWidth: 0 },
   collaborators: {
     flexDirection: 'row',
     alignItems: 'center',

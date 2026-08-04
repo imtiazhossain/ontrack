@@ -14,6 +14,8 @@ interface TravelDateRangeEditorProps {
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   stacked?: boolean;
+  startTestID?: string;
+  endTestID?: string;
 }
 
 export function TravelDateRangeEditor({
@@ -22,6 +24,8 @@ export function TravelDateRangeEditor({
   onStartDateChange,
   onEndDateChange,
   stacked = false,
+  startTestID,
+  endTestID,
 }: TravelDateRangeEditorProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -35,6 +39,7 @@ export function TravelDateRangeEditor({
     <View style={[styles.row, { gap: spacing.sm }]}>
       <View style={styles.flex}>
         <DateField
+          testID={startTestID}
           label={stacked ? undefined : 'Departure'}
           stackedLabel={stacked ? 'Departure' : undefined}
           value={startDate}
@@ -45,6 +50,7 @@ export function TravelDateRangeEditor({
       </View>
       <View style={styles.flex}>
         <DateField
+          testID={endTestID}
           label={stacked ? undefined : 'Return'}
           stackedLabel={stacked ? 'Return' : undefined}
           value={endDate}

@@ -25,6 +25,8 @@ export const AGENT_UI_ROUTE_ALIASES = {
   games: '/games',
   vehicles: '/vehicles',
   agents: '/agents',
+  designSystem: '/design-system',
+  'design-system': '/design-system',
   nutrition: '/nutrition-profile',
   activityForm: '/activity-form',
   privacy: '/privacy',

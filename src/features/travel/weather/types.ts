@@ -29,6 +29,9 @@ export interface TravelWeather {
 /** Live conditions at a destination (Open-Meteo current). */
 export interface DestinationCurrentWeather {
   locationLabel: string;
+  latitude: number;
+  longitude: number;
+  timezone?: string;
   temperature: number;
   temperatureUnit: TemperatureUnit;
   weatherCode: number;

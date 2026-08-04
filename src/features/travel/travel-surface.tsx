@@ -1,25 +1,33 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, Card, Symbol } from '@/components/primitives';
 import { type AppIconName, type Theme } from '@/design-system';
-import {
-  itinerarySheetChrome,
-  travelInputFieldBackground,
-} from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Warm copper accent aligned with Add Stay sheet CTA (light). */
-export const TRAVEL_EDITORIAL_ACCENT = '#A07850';
+import { useTravelAtmosphere } from './travel-atmosphere';
+import {
+  travelAtmosphereScheme,
+  type TravelAtmosphere,
+} from './travel-atmosphere-model';
 
-/** Metallic gold left-rail colors matching the trip-card mock (light / dark). */
-const TRAVEL_RAIL_GOLD_LIGHT = ['#E8C97A', '#DEB159', '#C49649'] as const;
-const TRAVEL_RAIL_GOLD_DARK = ['#E8C9A0', '#D4A574', '#B8895A'] as const;
+/** Travel's open-sky accent. Shared control semantics remain unchanged. */
+export const TRAVEL_EDITORIAL_ACCENT = '#2474A8';
 
-/** Soft brown-tint shadow matching Add Stay sheet elevation. */
-export const TRAVEL_CARD_SHADOW = '0 3px 12px rgba(51, 39, 28, 0.11)';
+/** Multicolor route rail: sky, lagoon, and twilight. */
+const TRAVEL_RAIL_LIGHT = ['#2F80ED', '#21B6A8', '#8B5CF6'] as const;
+const TRAVEL_RAIL_DARK = ['#78BCE8', '#4FD1C5', '#B69CFF'] as const;
+
+/** Cool shadow that sits naturally on Travel's sky wash. */
+export const TRAVEL_CARD_SHADOW = '0 3px 12px rgba(17, 74, 110, 0.16)';
 export const TRAVEL_CARD_SHADOW_DARK = '0 4px 16px rgba(0, 0, 0, 0.45)';
 
 export function travelCardShadow(theme: Theme): string {
@@ -27,60 +35,112 @@ export function travelCardShadow(theme: Theme): string {
 }
 
 /** Page / sheet backdrop — exact Add Stay sheet background. */
-export function travelPageBg(theme: Theme): string {
-  return itinerarySheetChrome(theme).sheetBg;
+const FALLBACK_ATMOSPHERE: TravelAtmosphere = {
+  destination: 'Travel',
+  timeOfDay: 'day',
+};
+
+export function travelPageBg(
+  theme: Theme,
+  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+): string {
+  return travelAtmosphereScheme(theme, atmosphere).fallback;
+}
+
+/** Layered Travel atmosphere from destination, live weather, and local time. */
+export function travelPageGradient(
+  theme: Theme,
+  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+): string {
+  const gradient = travelAtmosphereScheme(theme, atmosphere);
+  return `radial-gradient(circle at 90% 7%, ${gradient.topGlow} 0%, transparent 34%), radial-gradient(circle at 7% 43%, ${gradient.sideGlow} 0%, transparent 39%), linear-gradient(155deg, ${gradient.stops[0]} 0%, ${gradient.stops[1]} 43%, ${gradient.stops[2]} 73%, ${gradient.stops[3]} 100%)`;
+}
+
+/** Gradient page style with a solid-color fallback for unsupported renderers. */
+export function travelPageStyle(
+  theme: Theme,
+  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+): ViewStyle {
+  return {
+    backgroundColor: travelPageBg(theme, atmosphere),
+    experimental_backgroundImage: travelPageGradient(theme, atmosphere),
+  };
+}
+
+export function useTravelPageStyle(theme: Theme): ViewStyle {
+  return travelPageStyle(theme, useTravelAtmosphere());
+}
+
+/** Status-bar-safe continuation of the page gradient. */
+export function travelSafeAreaStyle(
+  theme: Theme,
+  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+): ViewStyle {
+  const gradient = travelAtmosphereScheme(theme, atmosphere);
+  return {
+    backgroundColor: gradient.fallback,
+    experimental_backgroundImage: `linear-gradient(to right, ${gradient.stops[0]} 0%, ${gradient.stops[1]} 52%, ${gradient.stops[3]} 100%)`,
+  };
 }
 
 /** Elevated card fill — cream sheet in light, field panel in dark. */
 export function travelCardFill(theme: Theme): string {
-  return travelInputFieldBackground(theme);
+  return theme.backgroundElevated;
+}
+
+/** White main cards on the light Travel wash; preserve dark-mode elevation. */
+export function travelMainCardFill(theme: Theme): string {
+  return theme.name === 'light' ? '#FFFFFF' : travelCardFill(theme);
 }
 
 /** Hairline card border from sheet chrome. */
 export function travelCardBorder(theme: Theme): string {
-  return itinerarySheetChrome(theme).fieldBorder;
+  return theme.separator;
 }
 
 /** Soft sunken / field panel tint (Add Stay input fill). */
 export function travelPanelTint(theme: Theme): string {
-  return travelInputFieldBackground(theme);
+  return theme.backgroundSunken;
 }
 
 /** Warm sand tint for secondary panels. */
 export function travelWarmTint(theme: Theme): string {
-  return itinerarySheetChrome(theme).fieldBg;
+  return theme.backgroundSunken;
 }
 
 /** Soft pill behind secondary labels — sheet field fill. */
 export function travelPillBg(theme: Theme): string {
-  return travelInputFieldBackground(theme);
+  return theme.backgroundSunken;
 }
 
 /** CTA / accent from sheet chrome (gradient start). */
 export function travelAccent(theme: Theme): string {
-  return itinerarySheetChrome(theme).ctaFrom;
+  return theme.accentPrimary;
 }
 
-/** @deprecated Flat paper — kept for call sites that still pass a wash. */
-export function travelWashColors(theme: Theme): [string, string, string] {
-  const base = travelPageBg(theme);
-  return [base, base, base];
+/** Three representative stops for callers that need concrete gradient colors. */
+export function travelWashColors(
+  theme: Theme,
+  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+): [string, string, string] {
+  const gradient = travelAtmosphereScheme(theme, atmosphere);
+  return [gradient.stops[0], gradient.stops[1], gradient.stops[3]];
 }
 
-/** @deprecated Editorial surfaces no longer use sky gradients. */
 export function travelSkyColors(theme: Theme): [string, string, string] {
   return travelWashColors(theme);
 }
 
 /** @deprecated Cream-on-sky text; prefer sheet chrome title. */
-export const TRAVEL_ON_SKY = '#2D1C13';
+export const TRAVEL_ON_SKY = '#0B1C28';
 
 /** Paper page backdrop matching Add Stay sheet. */
 export function TravelSkyBackdrop(_props?: { variant?: 'wash' | 'sky' }) {
   const theme = useTheme();
+  const pageStyle = useTravelPageStyle(theme);
   return (
     <View
-      style={[StyleSheet.absoluteFill, { backgroundColor: travelPageBg(theme) }]}
+      style={[StyleSheet.absoluteFill, pageStyle]}
       pointerEvents="none"
     />
   );
@@ -98,34 +158,27 @@ export function TravelSurfaceCard({
 }: PropsWithChildren<{
   /** @deprecated Prefer `stripe` — solid override when a non-gold accent is needed. */
   stripeColor?: string;
-  /** Metallic gold left rail (default when `stripeColor` is set). */
+  /** Multicolor Travel rail (default when `stripeColor` is not supplied). */
   stripe?: boolean;
-  style?: ViewStyle;
-  bodyStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  bodyStyle?: StyleProp<ViewStyle>;
   padding?: number;
   onLayout?: (event: LayoutChangeEvent) => void;
 }>) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs } = useResponsive();
   const pad = padding ?? rs.md;
   const stripeW = Math.max(3, s(3));
   const showStripe = stripe || Boolean(stripeColor);
   const railColors =
-    theme.name === 'dark' ? TRAVEL_RAIL_GOLD_DARK : TRAVEL_RAIL_GOLD_LIGHT;
+    theme.name === 'dark' ? TRAVEL_RAIL_DARK : TRAVEL_RAIL_LIGHT;
   return (
-    <View
+    <Card
+      padded={false}
       onLayout={onLayout}
       style={[
         styles.card,
-        {
-          backgroundColor: travelCardFill(theme),
-          borderRadius: 22,
-          borderCurve: 'continuous',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: chrome.fieldBorder,
-          boxShadow: travelCardShadow(theme),
-        },
+        { backgroundColor: travelMainCardFill(theme) },
         style,
       ]}>
       {showStripe ? (
@@ -144,7 +197,7 @@ export function TravelSurfaceCard({
         </View>
       ) : null}
       <View style={[styles.cardBody, { padding: pad, gap: rs.md }, bodyStyle]}>{children}</View>
-    </View>
+    </Card>
   );
 }
 
@@ -159,13 +212,9 @@ export function TravelSectionLabel({
   icon?: AppIconName;
 }) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
   const accent = travelAccent(theme);
-  /** Warm bronze count chip matching the travel mock. */
-  const badgeFill = theme.name === 'light' ? '#8B6B45' : chrome.ctaFrom;
   const { spacing: rs, s } = useResponsive();
   const badge = Math.max(22, s(24));
-  const titleSize = Math.max(22, s(24));
   return (
     <View
       style={[
@@ -179,18 +228,10 @@ export function TravelSectionLabel({
       {icon ? <Symbol name={icon} size="sm" color={accent} /> : null}
       <AppText
         variant="heading"
-        style={[
-          styles.flex,
-          {
-            color: theme.textPrimary,
-            fontSize: titleSize,
-            lineHeight: Math.max(28, s(30)),
-            fontWeight: '400',
-            letterSpacing: -0.25,
-          },
-        ]}
+        style={styles.flex}
+        fit
         numberOfLines={1}
-        maxFontSizeMultiplier={1.2}>
+        maxFontSizeMultiplier={1.15}>
         {title}
       </AppText>
       {count !== undefined ? (
@@ -198,7 +239,7 @@ export function TravelSectionLabel({
           style={[
             styles.countBadge,
             {
-              backgroundColor: badgeFill,
+              backgroundColor: theme.accentPrimary,
               width: badge,
               height: badge,
               borderRadius: badge / 2,
@@ -208,7 +249,8 @@ export function TravelSectionLabel({
             variant="callout"
             fit
             fitMinimumScale={0.85}
-            style={{ color: '#FFFFFF', fontWeight: '600', fontSize: s(13) }}>
+            color="onAccent"
+            bold>
             {count}
           </AppText>
         </View>
@@ -220,7 +262,6 @@ export function TravelSectionLabel({
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    overflow: 'hidden',
   },
   stripe: {
     alignSelf: 'stretch',

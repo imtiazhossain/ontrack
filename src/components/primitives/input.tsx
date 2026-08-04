@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -9,6 +16,7 @@ import { useAgentUiTarget } from '@/utils/agent-ui';
 import { formatNumericInput } from '@/utils/parse';
 import { AppText } from './app-text';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
+import { stackedFieldMinHeight } from './field-leading-icon-style';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -25,6 +33,8 @@ interface InputProps extends TextInputProps {
   /** Optional supporting copy shown below a stacked field value. */
   helperText?: string;
   trailing?: ReactNode;
+  /** Layout for the complete field wrapper, such as `flex: 1` in a toolbar. */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 function numericSanitizeOptions(keyboardType: TextInputProps['keyboardType']) {
@@ -72,6 +82,7 @@ export function Input({
   stackedLabelColor,
   helperText,
   trailing,
+  containerStyle,
   multiline,
   placeholder,
   placeholderTextColor,
@@ -85,9 +96,15 @@ export function Input({
   ...rest
 }: InputProps) {
   const theme = useTheme();
-  const { typography, spacing, s } = useResponsive();
+  const { typography, spacing, s, fontScale } = useResponsive();
   const minHeight = Math.max(44, s(48));
-  const stackedMinHeight = Math.max(56, s(60));
+  const stackedMinHeight = stackedFieldMinHeight({
+    baseMinHeight: Math.max(56, s(60)),
+    fontScale,
+    labelLineHeight: typography.caption.lineHeight,
+    valueLineHeight: typography.body.lineHeight,
+    verticalPadding: spacing.sm,
+  });
   const hasIcon = Boolean(icon);
   const stacked = Boolean(stackedLabel && icon);
   const stackedCentered = stacked && stackedAlign === 'center';
@@ -120,7 +137,7 @@ export function Input({
         ref={agent.ref}
         collapsable={false}
         onLayout={agent.onLayout}
-        style={[styles.wrapper, { gap: spacing.sm }]}>
+        style={[styles.wrapper, { gap: spacing.sm }, containerStyle]}>
         {label && !stacked ? (
           <AppText variant="overline" color="tertiary" fit>
             {label}
@@ -182,9 +199,14 @@ export function Input({
                     fontFamily: body.fontFamily,
                     fontSize: body.fontSize,
                     fontWeight: body.fontWeight,
-                    ...(multiline ? { lineHeight: body.lineHeight } : null),
+                    lineHeight: body.lineHeight,
                     color: theme.textPrimary,
-                    minHeight: multiline ? undefined : Math.max(20, s(22)),
+                    minHeight: multiline
+                      ? undefined
+                      : Math.max(
+                          s(24),
+                          Math.ceil(body.lineHeight * Math.min(fontScale, 1.3)),
+                        ),
                     padding: 0,
                     margin: 0,
                     textAlignVertical: multiline ? 'top' : 'center',
@@ -274,7 +296,7 @@ export function Input({
       ref={agent.ref}
       collapsable={false}
       onLayout={agent.onLayout}
-      style={[styles.wrapper, { gap: spacing.sm }]}>
+      style={[styles.wrapper, { gap: spacing.sm }, containerStyle]}>
       {label ? (
         <AppText variant="overline" color="tertiary" fit>
           {label}

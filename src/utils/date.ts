@@ -53,9 +53,11 @@ export function nativeDatePickerLocale(locale: unknown): string | undefined {
 export function formatDateKey(value: string, format: DateDisplayFormat): string {
   if (!isDateKey(value)) return value;
   const [year, month, day] = value.split('-');
-  if (format === 'iso') return value;
+  const shortYear = year.slice(-2);
   const normalized = normalizeDateParts(day, month);
-  return `${normalized.month}/${normalized.day}/${year}`;
+  return format === 'iso'
+    ? `${shortYear}-${month}-${day}`
+    : `${normalized.month}/${normalized.day}/${shortYear}`;
 }
 
 /** Visible calendar-sheet title derived from a spoken accessibility label. */

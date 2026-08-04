@@ -7,8 +7,9 @@ import {
   Card,
   ErrorMessage,
   Input,
+  ScreenHeader,
 } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { spacing } from '@/design-system';
 import type {
   TravelParticipant,
   TravelTripRosterPerson,
@@ -20,7 +21,7 @@ import {
   tripFriendTargetKey,
   type TripFriendTarget,
 } from '@/features/travel/trip-friend-row';
-import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export type TripHostPerson = {
   name: string;
@@ -215,6 +216,7 @@ export function TripPeople({
           {host ? (
             <View style={styles.rowPad}>
                 <TripFriendRow
+                  testIDBase="host"
                   displayName={hostLabel}
                   userId={host.userId}
                   isSelf={host.isSelf}
@@ -253,6 +255,7 @@ export function TripPeople({
             return (
               <View key={member.userId} style={styles.rowPad}>
                 <TripFriendRow
+                  testIDBase={tripFriendTargetKey(target).replace(':', '.')}
                   displayName={
                     isSelfMember && !/^you$/i.test(member.displayName.trim())
                       ? `${member.displayName.trim()} (You)`
@@ -309,6 +312,7 @@ export function TripPeople({
             return (
               <View key={person.id} style={styles.rowPad}>
                 <TripFriendRow
+                  testIDBase={tripFriendTargetKey(target).replace(':', '.')}
                   displayName={person.name}
                   busy={busy}
                   canOpenMenu={canManage}
@@ -345,6 +349,7 @@ export function TripPeople({
             return (
               <View key={person.id} style={styles.rowPad}>
                 <TripFriendRow
+                  testIDBase={tripFriendTargetKey(target).replace(':', '.')}
                   displayName={person.name}
                   badge="pending"
                   busy={busy}
@@ -385,10 +390,14 @@ export function TripPeople({
 
       {canManage && editing ? (
         <Card style={styles.form}>
-          <AppText variant="subheading" fit>
-            Invite a Friend
-          </AppText>
+          <ScreenHeader
+            title="Invite a Friend"
+            onClose={onCancelInvite}
+            closeAccessibilityLabel="Cancel friend invitation"
+            closeTestID={AgentUiIds.travel.friends.cancelInvite}
+          />
           <Input
+            testID={AgentUiIds.travel.friends.inviteName}
             label="Name"
             value={name}
             onChangeText={onNameChange}
@@ -396,6 +405,7 @@ export function TripPeople({
             autoCapitalize="words"
           />
           <Input
+            testID={AgentUiIds.travel.friends.inviteEmail}
             label="onTrack account email"
             value={email}
             onChangeText={onEmailChange}
@@ -408,19 +418,22 @@ export function TripPeople({
             Only this signed-in account can open and view the trip.
           </AppText>
           {error ? <ErrorMessage message={error} selectable /> : null}
-          <View style={styles.actions}>
-            <Button disabled={inviting} onPress={onInvite}>
-              {inviting ? 'Creating invite…' : 'Create Invite'}
-            </Button>
-            <Button variant="ghost" disabled={inviting} onPress={onCancelInvite}>
-              Cancel
-            </Button>
-          </View>
+          <Button
+            loading={inviting}
+            testID={AgentUiIds.travel.friends.createInvite}
+            accessibilityLabel="Create Invite"
+            onPress={onInvite}>
+            Create Invite
+          </Button>
         </Card>
       ) : null}
 
       {canManage && showInviteButton && !editing ? (
-        <Button icon="invite" onPress={onBeginInvite}>
+        <Button
+          icon="invite"
+          testID={AgentUiIds.travel.friends.openInvite}
+          accessibilityLabel="Invite a Friend"
+          onPress={onBeginInvite}>
           Invite a Friend
         </Button>
       ) : null}
@@ -429,7 +442,6 @@ export function TripPeople({
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   container: { gap: spacing.md },
   form: { gap: spacing.md },
   list: { gap: 0 },

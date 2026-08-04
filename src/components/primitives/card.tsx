@@ -1,5 +1,11 @@
 import type { PropsWithChildren } from 'react';
-import { Pressable, View, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { radii, shadows, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -12,9 +18,10 @@ interface CardProps extends PropsWithChildren {
   /** elevated = white/raised, sunken = inset panel */
   variant?: 'elevated' | 'sunken';
   padded?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   testID?: string;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export function Card({
@@ -26,6 +33,7 @@ export function Card({
   style,
   accessibilityLabel,
   testID,
+  onLayout,
 }: CardProps) {
   const theme = useTheme();
   const handlePress = onPress
@@ -47,7 +55,14 @@ export function Card({
 
   if (!onPress && !onLongPress) {
     return (
-      <View ref={agent.ref} testID={testID} onLayout={agent.onLayout} style={[base, style]}>
+      <View
+        ref={agent.ref}
+        testID={testID}
+        onLayout={(event) => {
+          agent.onLayout?.(event);
+          onLayout?.(event);
+        }}
+        style={[base, style]}>
         {children}
       </View>
     );
@@ -57,7 +72,10 @@ export function Card({
     <Pressable
       ref={agent.ref}
       testID={testID}
-      onLayout={agent.onLayout}
+      onLayout={(event) => {
+        agent.onLayout?.(event);
+        onLayout?.(event);
+      }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={handlePress}

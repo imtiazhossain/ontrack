@@ -3,11 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import {
-    appPrompt,
-    EmptyState,
-    Screen,
-} from '@/components/primitives';
+import { EmptyState, Screen } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
@@ -17,6 +13,7 @@ import {
 import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
+    emptyExpenseForm,
     expenseFormFromExpense,
     type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
@@ -42,16 +39,29 @@ import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-s
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
 import { ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
+import {
+  TravelImportResultModal,
+  type TravelImportResult,
+} from '@/features/travel/travel-import-result-modal';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
+import {
+  emptyTransportDetailsDraft,
+  validateTransportDetails,
+  type TransportDetailsDraft,
+} from '@/features/travel/transport-details';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import { validateTravelRangeSchedule } from '@/features/travel/travel-range-schedule';
 import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
@@ -59,17 +69,19 @@ import { addDays, formatDateKey, minutesBetween } from '@/utils/date';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 import { isHttpsUrl } from '@/utils/safe-url';
 
-type DetailSectionKey = 'transport' | 'flights' | 'stays' | 'rentals' | 'timeline';
+type DetailSectionKey = 'transport' | 'flights' | 'ground' | 'stays' | 'rentals' | 'timeline';
 
 function sectionDefaultExpanded(
   key: DetailSectionKey,
-  counts: { flights: number; stays: number; rentals: number },
+  counts: { flights: number; ground: number; stays: number; rentals: number },
 ): boolean {
   switch (key) {
     case 'transport':
-      return counts.flights + counts.stays + counts.rentals > 0;
+      return counts.flights + counts.ground + counts.stays + counts.rentals > 0;
     case 'flights':
       return counts.flights > 0;
+    case 'ground':
+      return counts.ground > 0;
     case 'stays':
       return counts.stays > 0;
     case 'rentals':
@@ -92,13 +104,17 @@ type TravelPlanDetailProps = {
   autoOpenStayBooking?: boolean;
   /** DEV: reservation email override when account email is unavailable. */
   autoOpenReservationEmail?: string;
+  /** DEV: open an import-result sheet on mount for simulator QA. */
+  initialImportResult?: TravelImportResult;
 };
 
 export function TravelPlanDetail(props: TravelPlanDetailProps) {
+  const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const plan = useTravel((state) => state.plans.find((item) => item.id === props.planId));
   if (!plan) {
     return (
-      <Screen>
+      <Screen style={travelStyle}>
         <EmptyState
           icon="flight"
           title="Trip Not Found"
@@ -117,7 +133,10 @@ function TravelPlanDetailLoaded({
   initialOpenAddPicker = false,
   autoOpenStayBooking = false,
   autoOpenReservationEmail,
+  initialImportResult,
 }: TravelPlanDetailProps & { plan: TravelPlan }) {
+  const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const savePlan = useTravel((state) => state.savePlan);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
@@ -155,6 +174,16 @@ function TravelPlanDetailLoaded({
   );
   const [flightDetailsError, setFlightDetailsError] = useState<string>();
   const [importedFlightFileName, setImportedFlightFileName] = useState<string>();
+  const [transportDetails, setTransportDetails] = useState<TransportDetailsDraft>(() =>
+    emptyTransportDetailsDraft({
+      origin: plan.origin,
+      destination: plan.destination,
+      arrivalDate: plan.startDate,
+      arrivalMinutes: 12 * 60,
+      currency: plan.baseCurrency,
+    }),
+  );
+  const [transportDetailsError, setTransportDetailsError] = useState<string>();
   const [rentalDetails, setRentalDetails] = useState<RentalDetailsDraft>(
     emptyRentalDetailsDraft,
   );
@@ -266,6 +295,13 @@ function TravelPlanDetailLoaded({
   const [openExpenseSheet, setOpenExpenseSheet] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState | undefined>();
   const [preparedExpenseDraft, setPreparedExpenseDraft] = useState<ExpenseFormState | undefined>();
+  const [importResult, setImportResult] = useState<TravelImportResult | null>(
+    initialImportResult ?? null,
+  );
+  const importResultExpenseRef = useRef<{
+    plan: TravelPlan;
+    draft: ExpenseFormState;
+  } | null>(null);
   const addItemInProgressRef = useRef(false);
   const setAddItemInProgressState = (value: boolean) => {
     addItemInProgressRef.current = value;
@@ -282,6 +318,8 @@ function TravelPlanDetailLoaded({
     setOpenExpenseSheet(false);
     setExpenseDraft(undefined);
     setPreparedExpenseDraft(undefined);
+    setImportResult(null);
+    importResultExpenseRef.current = null;
     setIsAddingItem(false);
     setIsChoosingAddKind(false);
     clearAddPhotos();
@@ -433,29 +471,8 @@ function TravelPlanDetailLoaded({
     setPreparedExpenseDraft(undefined);
     const kindLabel =
       ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
-    const lowerKindLabel = kindLabel.toLowerCase();
-    const baseMessage = duplicateItinerary
-      ? `This ${lowerKindLabel} was already in your itinerary. Review the related expense to avoid duplicates.`
-      : `Your ${lowerKindLabel} was imported. Review the related expense after saving this ${lowerKindLabel}.`;
-    appPrompt.alert(
-      `Added ${kindLabel} Information`,
-      baseMessage,
-      [
-        {
-          text: 'Review Expense',
-          style: 'primary' as const,
-          hideIcon: true,
-          onPress: () => openImportedExpenseReview(sourcePlan, draft),
-        },
-        {
-          text: 'Go to Itinerary',
-          style: 'secondary' as const,
-          hideIcon: true,
-          onPress: goToItinerarySafely,
-        },
-      ],
-      { cancelable: false },
-    );
+    importResultExpenseRef.current = { plan: sourcePlan, draft };
+    setImportResult({ stage: 'imported', kindLabel, duplicateItinerary });
   };
 
   const addItem = () => {
@@ -463,6 +480,7 @@ function TravelPlanDetailLoaded({
     setAddItemInProgressState(true);
     setError(undefined);
     setFlightDetailsError(undefined);
+    setTransportDetailsError(undefined);
     setRentalDetailsError(undefined);
     setStayDetailsError(undefined);
     const isMoment = kind === 'moment';
@@ -522,6 +540,7 @@ function TravelPlanDetailLoaded({
       }
     } else if (
       !isMoment &&
+      kind !== 'transport' &&
       (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 1440)
     ) {
       return addItemError('Duration must be between 1 and 1,440 minutes.');
@@ -536,6 +555,28 @@ function TravelPlanDetailLoaded({
     if (!validatedFlightDetails.ok) {
       stopAddItem();
       return setFlightDetailsError(validatedFlightDetails.error);
+    }
+    const validatedTransportDetails =
+      kind === 'transport'
+        ? validateTransportDetails({
+            draft: transportDetails,
+            departureDate: date,
+            departureMinutes: startMinutes,
+            planStartDate: plan.startDate,
+            planEndDate: plan.endDate,
+          })
+        : ({ ok: true, value: undefined } as const);
+    if (!validatedTransportDetails.ok) {
+      stopAddItem();
+      return setTransportDetailsError(validatedTransportDetails.error);
+    }
+    if (validatedTransportDetails.value) {
+      durationMinutes = minutesBetween(
+        date,
+        startMinutes,
+        validatedTransportDetails.value.arrivalDate,
+        validatedTransportDetails.value.arrivalMinutes,
+      );
     }
     const validatedRentalDetails =
       kind === 'rental'
@@ -574,6 +615,7 @@ function TravelPlanDetailLoaded({
       bookingUrl: isMoment ? undefined : bookingUrl.trim() || undefined,
       photoUris: photoUris.length ? photoUris : undefined,
       flight: validatedFlightDetails.value,
+      transport: validatedTransportDetails.value,
       rental: validatedRentalDetails.value,
       stay: validatedStayDetails.value,
     };
@@ -658,12 +700,33 @@ function TravelPlanDetailLoaded({
         ],
         updatedAt: now,
       });
+      const transportFare = incomingItem.transport?.fare;
+      const transportCurrency = incomingItem.transport?.currency;
+      if (transportFare && transportCurrency) {
+        setExpenseDraft({
+          ...emptyExpenseForm(planToUpdate, transportCurrency),
+          title: incomingItem.title,
+          amountText: String(transportFare),
+          currency: transportCurrency,
+          date: incomingItem.date,
+          category: 'transport',
+          travelItemId: incomingItem.id,
+        });
+        setOpenExpenseSheet(true);
+      }
       setTitle('');
       setDetails('');
       setBookingUrl('');
       setPhotoUris([]);
       setFlightDetails(emptyFlightDetailsDraft());
       setImportedFlightFileName(undefined);
+      setTransportDetails(emptyTransportDetailsDraft({
+        origin: plan.origin,
+        destination: plan.destination,
+        arrivalDate: plan.startDate,
+        arrivalMinutes: 12 * 60,
+        currency: plan.baseCurrency,
+      }));
       setRentalDetails(emptyRentalDetailsDraft());
       setImportedRentalFileName(undefined);
       setStayDetails(
@@ -690,6 +753,7 @@ function TravelPlanDetailLoaded({
 
   const transportCounts = {
     flights: sortedItinerary.filter((item) => item.kind === 'flight').length,
+    ground: sortedItinerary.filter((item) => item.kind === 'transport').length,
     stays: sortedItinerary.filter((item) => item.kind === 'stay').length,
     rentals: sortedItinerary.filter((item) => item.kind === 'rental').length,
   };
@@ -743,6 +807,14 @@ function TravelPlanDetailLoaded({
     setFlightDetails(emptyFlightDetailsDraft());
     setImportedFlightFileName(undefined);
     setFlightDetailsError(undefined);
+    setTransportDetails(emptyTransportDetailsDraft({
+      origin: plan.origin,
+      destination: plan.destination,
+      arrivalDate: plan.startDate,
+      arrivalMinutes: 12 * 60,
+      currency: plan.baseCurrency,
+    }));
+    setTransportDetailsError(undefined);
     setRentalDetails(emptyRentalDetailsDraft());
     setImportedRentalFileName(undefined);
     setRentalDetailsError(undefined);
@@ -777,6 +849,16 @@ function TravelPlanDetailLoaded({
       setStartMinutes(9 * 60);
       setEndDate(plan.startDate);
       setEndMinutes(12 * 60);
+    } else if (nextKind === 'transport') {
+      setDate(plan.startDate);
+      setStartMinutes(9 * 60);
+      setTransportDetails(emptyTransportDetailsDraft({
+        origin: plan.origin,
+        destination: plan.destination,
+        arrivalDate: plan.startDate,
+        arrivalMinutes: 12 * 60,
+        currency: plan.baseCurrency,
+      }));
     } else {
       setDate(plan.startDate);
       setStartMinutes(9 * 60);
@@ -832,6 +914,55 @@ function TravelPlanDetailLoaded({
     onSaveStayDetails: saveEditedStayDetails,
     onCancelStayEdit: () => setEditingStayItemId(undefined),
     onBeginStayEdit: beginEditingStayDetails,
+    onSaveTransportDetails: (
+      itemId: string,
+      nextDetails: NonNullable<TravelItineraryItem['transport']>,
+      schedule: TravelRangeScheduleDraft,
+    ) => {
+      const scheduleResult = validateTravelRangeSchedule(schedule, {
+        start: 'departure',
+        end: 'arrival',
+      });
+      if (!scheduleResult.ok || schedule.endMinutes === null) return;
+      const latest = useTravel.getState().plans.find((entry) => entry.id === planId) ?? plan;
+      const durationMinutes = minutesBetween(
+        schedule.startDate,
+        scheduleResult.value.startMinutes,
+        schedule.endDate,
+        schedule.endMinutes,
+      );
+      const nextPlan = {
+        ...latest,
+        itinerary: latest.itinerary.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                date: schedule.startDate,
+                startMinutes: scheduleResult.value.startMinutes,
+                durationMinutes,
+                transport: nextDetails,
+              }
+            : item,
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+      updatePlan(nextPlan);
+      if (nextDetails.fare && nextDetails.currency) {
+        const existing = latest.expenses.find((expense) => expense.travelItemId === itemId);
+        setExpenseDraft({
+          ...(existing
+            ? expenseFormFromExpense(existing)
+            : emptyExpenseForm(latest, nextDetails.currency)),
+          title: latest.itinerary.find((item) => item.id === itemId)?.title ?? 'Transport',
+          amountText: String(nextDetails.fare),
+          currency: nextDetails.currency,
+          date: schedule.startDate,
+          category: 'transport',
+          travelItemId: itemId,
+        });
+        setOpenExpenseSheet(true);
+      }
+    },
     onAddPhotos: addPhotosToItem,
     onRemovePhoto: removePhotoFromItem,
     onRemove: confirmRemoveItem,
@@ -840,7 +971,7 @@ function TravelPlanDetailLoaded({
 
   return (
     <View style={styles.root}>
-      <Screen contentStyle={styles.screen} refresh={false}>
+      <Screen style={travelStyle} contentStyle={styles.screen} refresh={false}>
         <TravelPlanHero
           plan={plan}
           dateDisplayFormat={dateDisplayFormat}
@@ -851,10 +982,12 @@ function TravelPlanDetailLoaded({
           items={sortedItinerary}
           transportExpanded={isSectionExpanded('transport')}
           flightsExpanded={isSectionExpanded('flights')}
+          groundExpanded={isSectionExpanded('ground')}
           staysExpanded={isSectionExpanded('stays')}
           rentalsExpanded={isSectionExpanded('rentals')}
           onToggleTransport={() => toggleSection('transport')}
           onToggleFlights={() => toggleSection('flights')}
+          onToggleGround={() => toggleSection('ground')}
           onToggleStays={() => toggleSection('stays')}
           onToggleRentals={() => toggleSection('rentals')}
           {...itemEditHandlers}
@@ -934,6 +1067,8 @@ function TravelPlanDetailLoaded({
         flightDetailsError={flightDetailsError}
         importedFlightFileName={importedFlightFileName}
         importingFlight={importingFlightTarget === 'new'}
+        transportDetails={transportDetails}
+        transportDetailsError={transportDetailsError}
         rentalDetails={rentalDetails}
         rentalDetailsError={rentalDetailsError}
         importedRentalFileName={importedRentalFileName}
@@ -958,6 +1093,7 @@ function TravelPlanDetailLoaded({
         onPhotoUrisChange={setPhotoUris}
         onFlightDetailsChange={setFlightDetails}
         onImportFlight={(source) => void importConfirmation('new', source)}
+        onTransportDetailsChange={setTransportDetails}
         onRentalDetailsChange={setRentalDetails}
         onImportRental={(source) => void importRental('new', source)}
         onStayDetailsChange={setStayDetails}
@@ -977,26 +1113,22 @@ function TravelPlanDetailLoaded({
           setOpenExpenseSheet(false);
           setExpenseDraft(undefined);
           if (mode === 'edit') return;
-          appPrompt.alert(
-            'Expense Saved',
-            'Your imported expense is now part of this trip.',
-            [
-              {
-                text: 'Review',
-                style: 'primary' as const,
-                hideIcon: true,
-                onPress: () => {
-                  setOpenExpenseSheet(true);
-                },
-              },
-              {
-                text: 'Go to Itinerary',
-                style: 'secondary' as const,
-                onPress: goToItinerarySafely,
-              },
-            ],
-            { cancelable: false },
-          );
+          importResultExpenseRef.current = null;
+          setImportResult({ stage: 'expense-saved' });
+        }}
+      />
+      <TravelImportResultModal
+        result={importResult}
+        onClose={goToItinerarySafely}
+        onReviewExpense={() => {
+          const pending = importResultExpenseRef.current;
+          setImportResult(null);
+          if (pending) {
+            importResultExpenseRef.current = null;
+            openImportedExpenseReview(pending.plan, pending.draft);
+            return;
+          }
+          setOpenExpenseSheet(true);
         }}
       />
       <BookingOpenSheet
@@ -1009,5 +1141,5 @@ function TravelPlanDetailLoaded({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  screen: { gap: spacing.xs, paddingTop: 0 },
+  screen: { gap: spacing.xs },
 });

@@ -1,28 +1,21 @@
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, type Theme } from '@/design-system';
-import { ProfileAvatar } from '@/features/account/profile-avatar';
 import {
-  noteAuthorColor,
-} from '@/features/travel/travel-item-note-colors';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+  AppText,
+  Card,
+  EmptyState,
+  IconButton,
+  Input,
+  SheetScaffold,
+} from '@/components/primitives';
+import type { Theme } from '@/design-system';
+import { ProfileAvatar } from '@/features/account/profile-avatar';
+import { noteAuthorColor } from '@/features/travel/travel-item-note-colors';
 import {
   TravelRemoveConfirmModal,
   type TravelRemoveConfirmPayload,
 } from '@/features/travel/travel-remove-confirm-modal';
-import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import {
   TRAVEL_EXPENSE_SELF_ID,
   type TravelItemNote,
@@ -32,6 +25,7 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { newId } from '@/utils/id';
 
 function formatNoteTime(iso: string): string {
@@ -50,26 +44,17 @@ function formatNoteTime(iso: string): string {
 function NoteCard({
   note,
   theme,
-  avatarSize,
-  actionSize,
-  gap,
-  padH,
-  padV,
   isEditing,
   onEdit,
   onDelete,
 }: {
   note: TravelItemNote;
   theme: Theme;
-  avatarSize: number;
-  actionSize: number;
-  gap: number;
-  padH: number;
-  padV: number;
   isEditing: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { spacing, s } = useResponsive();
   const accent = noteAuthorColor(note.authorId, theme);
   const isSelf = note.authorId === TRAVEL_EXPENSE_SELF_ID;
   const displayName =
@@ -83,57 +68,46 @@ function NoteCard({
     : formatNoteTime(note.createdAt);
 
   return (
-    <View
-      style={[
-        styles.noteCard,
-        {
-          backgroundColor: isEditing
-            ? theme.backgroundSunken
-            : theme.backgroundElevated,
-          gap,
-          paddingHorizontal: padH,
-          paddingVertical: padV,
-        },
-      ]}>
-      <View style={[styles.noteHeader, { gap }]}>
+    <Card variant={isEditing ? 'sunken' : 'elevated'} style={{ gap: spacing.sm }}>
+      <View style={[styles.noteHeader, { gap: spacing.sm }]}>
         <ProfileAvatar
           displayName={displayName}
           userId={isSelf ? undefined : note.authorId}
           isSelf={isSelf}
-          size={avatarSize}
+          size={Math.max(28, s(28))}
         />
-        <AppText
-          variant="callout"
-          fit
-          style={[styles.authorName, { color: accent }]}
-          numberOfLines={1}>
-          {displayName}
-        </AppText>
-        <AppText variant="caption" color="tertiary" fit numberOfLines={1}>
-          {timeLabel}
-        </AppText>
+        <View style={styles.authorCopy}>
+          <AppText variant="callout" fit style={{ color: accent }}>
+            {displayName}
+          </AppText>
+          <AppText variant="caption" color="tertiary" fit>
+            {timeLabel}
+          </AppText>
+        </View>
       </View>
-      <AppText variant="body">{note.body}</AppText>
+      <AppText>{note.body}</AppText>
       {isSelf ? (
-        <View style={[styles.noteActions, { gap: gap }]}>
+        <View style={[styles.noteActions, { gap: spacing.sm }]}>
           <IconButton
-            icon="edit"
-            size={actionSize}
+            icon={isEditing ? 'close' : 'edit'}
+            testID={AgentUiIds.travel.notes.edit(note.id)}
             background={theme.backgroundSunken}
+            borderColor={theme.separator}
             accessibilityLabel={isEditing ? 'Cancel edit' : 'Edit note'}
             onPress={onEdit}
           />
           <IconButton
             icon="delete"
-            size={actionSize}
+            testID={AgentUiIds.travel.notes.delete(note.id)}
             background={theme.backgroundSunken}
+            borderColor={theme.separator}
             color={theme.danger}
             accessibilityLabel="Delete note"
             onPress={onDelete}
           />
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -150,40 +124,25 @@ export function TravelItemNotesSheet({
   onSaveNotes: (notes: TravelItemNote[]) => void;
 }) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
-  const insets = useSafeAreaInsets();
-  const { s, spacing: rs } = useResponsive();
+  const { spacing } = useResponsive();
   const preferenceName = usePreferences((state) => state.name).trim();
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [removeConfirm, setRemoveConfirm] =
-    useState<TravelRemoveConfirmPayload | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<TravelRemoveConfirmPayload | null>(null);
   const notes = item.notes ?? [];
-  const authorName = preferenceName || 'You';
-  const authorId = TRAVEL_EXPENSE_SELF_ID;
-  const avatarSize = Math.max(26, s(26));
-  const actionSize = Math.max(28, s(28));
-  const listPad = {
-    gap: rs.sm,
-    paddingHorizontal: rs.md,
-    paddingTop: rs.sm,
-    paddingBottom: rs.sm,
-  };
   const isEditing = editingId != null;
 
   useEffect(() => {
-    if (!visible) {
-      setDraft('');
-      setEditingId(null);
-      setRemoveConfirm(null);
-    }
+    if (visible) return;
+    setDraft('');
+    setEditingId(null);
+    setRemoveConfirm(null);
   }, [visible]);
 
   const cancelEdit = () => {
     setEditingId(null);
     setDraft('');
   };
-
   const beginEdit = (note: TravelItemNote) => {
     setRemoveConfirm(null);
     if (editingId === note.id) {
@@ -193,197 +152,112 @@ export function TravelItemNotesSheet({
     setEditingId(note.id);
     setDraft(note.body);
   };
-
   const requestDelete = (note: TravelItemNote) => {
     cancelEdit();
-    const preview =
-      note.body.length > 80 ? `${note.body.slice(0, 77).trimEnd()}…` : note.body;
+    const preview = note.body.length > 80 ? `${note.body.slice(0, 77).trimEnd()}…` : note.body;
     setRemoveConfirm({
       title: 'Delete Note?',
       message: `This action will permanently remove “${preview}”.`,
       actionLabel: 'Delete Note',
-      onConfirm: () => {
-        onSaveNotes(notes.filter((entry) => entry.id !== note.id));
-      },
+      confirmTestID: AgentUiIds.travel.notes.confirmDelete,
+      onConfirm: () => onSaveNotes(notes.filter((entry) => entry.id !== note.id)),
     });
   };
-
   const submit = () => {
     const body = draft.trim();
     if (!body) return;
     if (editingId) {
       onSaveNotes(
         notes.map((note) =>
-          note.id === editingId
-            ? { ...note, body, updatedAt: new Date().toISOString() }
-            : note,
+          note.id === editingId ? { ...note, body, updatedAt: new Date().toISOString() } : note,
         ),
       );
       cancelEdit();
       return;
     }
-    const next: TravelItemNote = {
-      id: newId('note'),
-      body,
-      authorId,
-      authorName,
-      createdAt: new Date().toISOString(),
-    };
-    onSaveNotes([...notes, next]);
+    onSaveNotes([
+      ...notes,
+      {
+        id: newId('note'),
+        body,
+        authorId: TRAVEL_EXPENSE_SELF_ID,
+        authorName: preferenceName || 'You',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
     setDraft('');
   };
 
-  const noteCards = notes.map((note) => (
-    <NoteCard
-      key={note.id}
-      note={note}
-      theme={theme}
-      avatarSize={avatarSize}
-      actionSize={actionSize}
-      gap={rs.xs}
-      padH={rs.md}
-      padV={rs.sm}
-      isEditing={editingId === note.id}
-      onEdit={() => beginEdit(note)}
-      onDelete={() => requestDelete(note)}
-    />
-  ));
+  const footer = (
+    <View style={[styles.composer, { gap: spacing.sm }]}>
+      {isEditing ? (
+        <IconButton
+          icon="close"
+          testID={AgentUiIds.travel.notes.cancelEdit}
+          background={theme.backgroundSunken}
+          borderColor={theme.separator}
+          accessibilityLabel="Cancel edit"
+          onPress={cancelEdit}
+        />
+      ) : null}
+      <Input
+        value={draft}
+        onChangeText={setDraft}
+        placeholder={isEditing ? 'Edit note…' : 'Add a note…'}
+        multiline
+        maxLength={500}
+        testID={AgentUiIds.travel.notes.composer}
+        accessibilityLabel={isEditing ? 'Edit trip note' : 'Trip note'}
+        style={styles.input}
+      />
+      <IconButton
+        icon={isEditing ? 'check' : 'send'}
+        testID={AgentUiIds.travel.notes.submit}
+        background={draft.trim() ? theme.accentPrimary : theme.backgroundSunken}
+        color={draft.trim() ? theme.textOnAccent : theme.textTertiary}
+        disabled={!draft.trim()}
+        accessibilityLabel={isEditing ? 'Save note' : 'Post note'}
+        onPress={submit}
+      />
+    </View>
+  );
 
   return (
     <>
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      presentationStyle="overFullScreen"
-      onRequestClose={onClose}>
-      <View
-        style={[
-          styles.modalRoot,
-          { backgroundColor: theme.overlayScrim, paddingTop: insets.top },
-        ]}>
-        <Pressable
-          accessibilityLabel="Close notes"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheetWrap}>
-          <View
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: chrome.sheetBg,
-                paddingBottom: Math.max(insets.bottom, rs.sm),
-              },
-            ]}>
-            <View style={{ paddingHorizontal: rs.md }}>
-              <TravelSheetHeader
-                eyebrow="Notes"
-                title={item.title}
-                subtitle="Share Details · Keep Everyone in the Loop"
-                closeAccessibilityLabel="Close Notes"
-                onClose={onClose}
+      <SheetScaffold
+        visible={visible}
+        eyebrow="Notes"
+        title={item.title}
+        subtitle="Share details and keep everyone in the loop"
+        closeAccessibilityLabel="Close Notes"
+        closeTestID={AgentUiIds.travel.notes.close}
+        onClose={onClose}
+        footer={footer}>
+        {notes.length === 0 ? (
+          <EmptyState
+            icon="note"
+            title="No notes yet"
+            message="Share a quick thought with the group."
+          />
+        ) : (
+          <View style={{ gap: spacing.sm }}>
+            {notes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                theme={theme}
+                isEditing={editingId === note.id}
+                onEdit={() => beginEdit(note)}
+                onDelete={() => requestDelete(note)}
               />
-            </View>
-
-            {notes.length === 0 ? (
-              <View
-                style={[
-                  styles.empty,
-                  {
-                    gap: rs.xs,
-                    paddingHorizontal: rs.md,
-                    paddingVertical: rs.md,
-                  },
-                ]}>
-                <Symbol name="note" size="md" color={theme.textTertiary} />
-                <AppText style={styles.emptyTitle} color="secondary">
-                  No notes yet
-                </AppText>
-                <AppText
-                  variant="caption"
-                  color="tertiary"
-                  style={styles.emptyCopy}>
-                  Share a quick thought with the group.
-                </AppText>
-              </View>
-            ) : notes.length <= 4 ? (
-              <View style={[styles.content, listPad]}>{noteCards}</View>
-            ) : (
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                showsVerticalScrollIndicator={false}
-                style={[styles.list, { maxHeight: Math.max(240, s(280)) }]}
-                contentContainerStyle={[styles.content, listPad]}>
-                {noteCards}
-              </ScrollView>
-            )}
-
-            <View
-              style={[
-                styles.composer,
-                {
-                  borderTopColor: theme.separator,
-                  gap: rs.sm,
-                  paddingHorizontal: rs.md,
-                  paddingTop: rs.sm,
-                },
-              ]}>
-              {isEditing ? (
-                <IconButton
-                  icon="close"
-                  size={Math.max(36, s(36))}
-                  background={theme.backgroundSunken}
-                  accessibilityLabel="Cancel edit"
-                  onPress={cancelEdit}
-                />
-              ) : null}
-              <TextInput
-                value={draft}
-                onChangeText={setDraft}
-                placeholder={isEditing ? 'Edit note…' : 'Add a note…'}
-                placeholderTextColor={theme.textTertiary}
-                multiline
-                maxLength={500}
-                accessibilityLabel={
-                  isEditing ? 'Edit trip note' : 'Trip note'
-                }
-                underlineColorAndroid="transparent"
-                style={[
-                  styles.input,
-                  {
-                    color: theme.textPrimary,
-                    backgroundColor: theme.backgroundSunken,
-                    minHeight: Math.max(40, s(40)),
-                    maxHeight: Math.max(88, s(88)),
-                    paddingHorizontal: rs.md,
-                    paddingVertical: rs.sm,
-                  },
-                ]}
-              />
-              <IconButton
-                icon={isEditing ? 'check' : 'send'}
-                size={Math.max(36, s(36))}
-                background={
-                  draft.trim() ? theme.accentPrimary : theme.backgroundSunken
-                }
-                color={draft.trim() ? theme.textOnAccent : theme.textTertiary}
-                disabled={!draft.trim()}
-                accessibilityLabel={isEditing ? 'Save note' : 'Post note'}
-                onPress={submit}
-              />
-            </View>
+            ))}
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
-    <TravelRemoveConfirmModal
-      payload={removeConfirm}
-      onCancel={() => setRemoveConfirm(null)}
-    />
+        )}
+      </SheetScaffold>
+      <TravelRemoveConfirmModal
+        payload={removeConfirm}
+        onCancel={() => setRemoveConfirm(null)}
+      />
     </>
   );
 }
@@ -394,11 +268,13 @@ export function TravelItemNotesButton({
   size,
   iconSize = 'md',
   onPress,
+  testID,
 }: {
   hasNotes: boolean;
   size: number;
   iconSize?: 'sm' | 'md' | 'lg' | 'xl' | number;
   onPress: () => void;
+  testID: string;
 }) {
   const theme = useTheme();
   return (
@@ -407,6 +283,7 @@ export function TravelItemNotesButton({
         icon="note"
         size={size}
         iconSize={iconSize}
+        testID={testID}
         background={theme.backgroundSunken}
         accessibilityLabel={hasNotes ? 'View notes' : 'Add notes'}
         onPress={onPress}
@@ -415,10 +292,7 @@ export function TravelItemNotesButton({
         <View
           style={[
             styles.dot,
-            {
-              backgroundColor: theme.accentPrimary,
-              borderColor: theme.backgroundElevated,
-            },
+            { backgroundColor: theme.accentPrimary, borderColor: theme.backgroundElevated },
           ]}
           pointerEvents="none"
         />
@@ -428,83 +302,11 @@ export function TravelItemNotesButton({
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheetWrap: {
-    width: '100%',
-  },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    width: '100%',
-  },
-  list: {
-    flexGrow: 0,
-    flexShrink: 1,
-  },
-  content: {
-    flexGrow: 0,
-  },
-  empty: {
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '400',
-  },
-  emptyCopy: {
-    textAlign: 'center',
-    maxWidth: 220,
-  },
-  noteCard: {
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    flexGrow: 0,
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  authorName: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  noteActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  input: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    fontFamily: fontFamilies.serif,
-    fontSize: 16,
-  },
+  noteHeader: { flexDirection: 'row', alignItems: 'center' },
+  authorCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
+  noteActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  composer: { flexDirection: 'row', alignItems: 'center' },
+  input: { flex: 1, minWidth: 0 },
   dot: {
     position: 'absolute',
     top: 2,
