@@ -35,23 +35,19 @@ export function TravelPlanCoverField({
   const { s, spacing: rs } = useResponsive();
   const size = Math.max(72, s(76));
   const localFallback = localTripCoverUri({ ...plan, coverUri: undefined });
-  const [remoteFallback, setRemoteFallback] = useState<string | undefined>();
+  const [remoteFallback, setRemoteFallback] = useState<{
+    key: string;
+    uri?: string;
+  }>({ key: `${plan.id}:${plan.destination}:${plan.title}` });
   const [pickerVisible, setPickerVisible] = useState(initialPickerOpen);
-
-  useEffect(() => {
-    if (initialPickerOpen) setPickerVisible(true);
-  }, [initialPickerOpen]);
-  const preview = coverUri ?? localFallback ?? remoteFallback;
   const destinationKey = `${plan.id}:${plan.destination}:${plan.title}`;
+  const preview = coverUri ?? localFallback ?? (remoteFallback.key === destinationKey ? remoteFallback.uri : undefined);
 
   useEffect(() => {
-    if (coverUri || localFallback) {
-      setRemoteFallback(undefined);
-      return;
-    }
+    if (coverUri || localFallback) return;
     let active = true;
     void fetchDestinationCoverUri({ ...plan, coverUri: undefined }).then((uri) => {
-      if (active) setRemoteFallback(uri);
+      if (active) setRemoteFallback({ key: destinationKey, uri });
     });
     return () => {
       active = false;

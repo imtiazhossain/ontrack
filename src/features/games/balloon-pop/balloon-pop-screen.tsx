@@ -8,6 +8,7 @@ import { layout, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
 import { goBackOrReplace } from '@/utils/navigation';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { balloonColor } from './colors';
 import { BalloonPopHud } from './balloon-pop-hud';
@@ -135,7 +136,9 @@ export function BalloonPopScreen() {
                 time runs out. Wrong colors cost time. Fans push balloons harder as you climb
                 levels.
               </AppText>
-              <Button onPress={() => startLevel(1, false)}>Play</Button>
+              <Button testID={AgentUiIds.games.balloonPopPlay} onPress={() => startLevel(1, false)}>
+                Play
+              </Button>
             </View>
           </View>
         ) : null}

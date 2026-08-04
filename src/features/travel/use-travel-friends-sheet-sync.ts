@@ -1,17 +1,17 @@
-import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 
 import {
-  ensureTravelOpenJoinLink,
-  loadTravelInviteStatuses,
+    ensureTravelOpenJoinLink,
+    loadTravelInviteStatuses,
 } from '@/features/travel/share';
-import type {
-  TravelPlan,
-  TravelTripRosterPerson,
-} from '@/features/travel/types';
 import {
-  canonicalTravelTripId,
-  isTravelMemberPlan,
+    canonicalTravelTripId,
+    isTravelMemberPlan,
 } from '@/features/travel/trip-roster';
+import type {
+    TravelPlan,
+    TravelTripRosterPerson,
+} from '@/features/travel/types';
 import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { useTravel } from '@/store/travel';
 
@@ -24,7 +24,7 @@ type SetOptStr = Dispatch<SetStateAction<string | undefined>>;
 export function useTravelFriendsSheetSync({
   visible,
   plan,
-  onSavePlanRef,
+  onSavePlan,
   openJoinCode,
   setOpenJoinCode,
   setOpenJoinBusy,
@@ -43,7 +43,7 @@ export function useTravelFriendsSheetSync({
 }: {
   visible: boolean;
   plan: TravelPlan;
-  onSavePlanRef: MutableRefObject<(plan: TravelPlan) => void>;
+  onSavePlan: (plan: TravelPlan) => void;
   openJoinCode?: string;
   setOpenJoinCode: SetOptStr;
   setOpenJoinBusy: Dispatch<SetStateAction<boolean>>;
@@ -90,7 +90,7 @@ export function useTravelFriendsSheetSync({
       useTravel.getState().plans.find((item) => item.id === plan.id) ?? plan;
     const canonicalId = canonicalTravelTripId(latest);
     const isMember = isTravelMemberPlan(latest);
-    const savePlan = (next: TravelPlan) => onSavePlanRef.current(next);
+    const savePlan = (next: TravelPlan) => onSavePlan(next);
 
     const syncRosterIntoPlan = (people: TravelTripRosterPerson[]) => {
       const current =
@@ -209,10 +209,12 @@ export function useTravelFriendsSheetSync({
     }
 
     const poll = setInterval(() => {
+      if (!active) return;
       void refreshRoster(canonicalId).then((people) => {
         if (!active || !people) return;
         syncRosterIntoPlan(people);
       });
+      if (!active) return;
       if (!isMember) void refreshJoinRequests(canonicalId);
     }, 5000);
 
@@ -223,7 +225,7 @@ export function useTravelFriendsSheetSync({
   }, [
     visible,
     plan,
-    onSavePlanRef,
+    onSavePlan,
     refreshJoinRequests,
     refreshRoster,
     setCopiedCode,

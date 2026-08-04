@@ -1,11 +1,9 @@
 import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
-import * as Linking from 'expo-linking';
-import { getSharedPayloads } from 'expo-sharing';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -21,23 +19,14 @@ import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provid
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
+import { useRootStartupEffects } from '@/hooks/use-root-startup-effects';
 import { useTheme } from '@/hooks/use-theme';
 import { useTodoCollaboration } from '@/hooks/use-todo-collaboration';
 import { useVehicleCollaboration } from '@/hooks/use-vehicle-collaboration';
-import { getNotificationsModule } from '@/services/notifications/runtime';
-import { configurePlantNotifications } from '@/services/plants/notifications';
-import { reconcilePlantSchedules } from '@/services/plants/schedule';
 import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
-import { useTravel } from '@/store/travel';
-import {
-  AgentUiRouteSync,
-  handleAgentUiUrl,
-  isAgentUiEnabled,
-  isAgentUiUrl,
-} from '@/utils/agent-ui';
-import { deferUntilIdle } from '@/utils/defer-until-idle';
+import { AgentUiRouteSync } from '@/utils/agent-ui';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
 export { RouteErrorBoundary as ErrorBoundary };
@@ -76,6 +65,13 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
   useTodoCollaboration(hydrated && phase === 'authenticated');
   useVehicleCollaboration(hydrated && phase === 'authenticated');
+  useRootStartupEffects({
+    hydrated,
+    appAccess,
+    hasOnboarded,
+    phase,
+    router,
+  });
 
   useEffect(() => {
     if (phase !== 'authenticated') return;
@@ -89,73 +85,6 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
 
   useMealPhotoMigration(hydrated && appAccess && aiEnabled);
 
-  useEffect(() => {
-    if (!hydrated || !appAccess || !hasOnboarded || Platform.OS === 'web') return;
-    try {
-      if (getSharedPayloads().length > 0) router.replace('/share-import' as never);
-    } catch {
-      // Older native builds do not include incoming sharing.
-    }
-  }, [appAccess, hasOnboarded, hydrated, router]);
-
-  useEffect(() => {
-    if (!hydrated || !appAccess) return;
-    let active = true;
-    let subscription: { remove: () => void } | undefined;
-    const redirect = (
-      response: import('expo-notifications').NotificationResponse | null,
-    ) => {
-      const url = response?.notification.request.content.data?.url;
-      if (typeof url === 'string' && url.startsWith('/plants/')) {
-        router.push(url as never);
-        return;
-      }
-      // Prefer tripId (capability tokens are no longer sent in push payloads).
-      const tripId = response?.notification.request.content.data?.tripId;
-      const legacyChatCode = response?.notification.request.content.data?.chatCode;
-      if (url === '/travel-chat') {
-        const plan = useTravel.getState().plans.find((item) =>
-          (typeof tripId === 'string' && item.id === tripId) ||
-          (typeof legacyChatCode === 'string' &&
-            (item.chatAccessCode === legacyChatCode ||
-              item.participants.some((person) => person.inviteCode === legacyChatCode))),
-        );
-        if (plan) router.push(`/travel/${plan.id}/chat` as never);
-      }
-    };
-    const cancelIdle = deferUntilIdle(() => {
-      if (!active) return;
-      void configurePlantNotifications().catch(() => undefined).then(reconcilePlantSchedules);
-      if (Platform.OS === 'web') return;
-      void getNotificationsModule().then((notifications) => {
-        if (!notifications || !active) return;
-        void notifications.getLastNotificationResponseAsync().then(redirect);
-        subscription = notifications.addNotificationResponseReceivedListener(redirect);
-      });
-    });
-    return () => {
-      active = false;
-      cancelIdle();
-      subscription?.remove();
-    };
-  }, [appAccess, hydrated, router]);
-
-  useEffect(() => {
-    if (!hydrated || phase === 'loading') return;
-    void SplashScreen.hideAsync().catch(() => undefined);
-  }, [hydrated, phase]);
-
-  useEffect(() => {
-    if (!isAgentUiEnabled()) return;
-    const run = (url: string | null) => {
-      if (!url || !isAgentUiUrl(url)) return;
-      void handleAgentUiUrl(url);
-    };
-    void Linking.getInitialURL().then(run);
-    const sub = Linking.addEventListener('url', ({ url }) => run(url));
-    return () => sub.remove();
-  }, []);
-
   if (!hydrated || phase === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary, justifyContent: 'center' }}>
@@ -166,29 +95,29 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
 
   return (
     <>
-      {isAgentUiEnabled() ? <AgentUiRouteSync /> : null}
-      <Stack
-      screenOptions={{
-        headerShown: true,
-        headerTitle: '',
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: theme.backgroundPrimary },
-        ...(process.env.EXPO_OS === 'ios'
-          ? {
-              unstable_headerLeftItems: () => [
-                {
-                  type: 'custom' as const,
-                  element: <HeaderBackButton />,
-                  hidesSharedBackground: true,
-                },
-              ],
-            }
-          : { headerLeft: () => <HeaderBackButton /> }),
-        contentStyle: {
-          backgroundColor: theme.backgroundPrimary,
-          paddingTop: spacing.md,
-        },
-      }}>
+        <AgentUiRouteSync />
+        <Stack
+          screenOptions={{
+            headerShown: true,
+            headerTitle: '',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: theme.backgroundPrimary },
+            ...(process.env.EXPO_OS === 'ios'
+              ? {
+                  unstable_headerLeftItems: () => [
+                    {
+                      type: 'custom' as const,
+                      element: <HeaderBackButton />,
+                      hidesSharedBackground: true,
+                    },
+                  ],
+                }
+              : { headerLeft: () => <HeaderBackButton /> }),
+            contentStyle: {
+              backgroundColor: theme.backgroundPrimary,
+              paddingTop: spacing.md,
+            },
+          }}>
       <Stack.Protected guard={welcomeAccess}>
         <Stack.Screen
           name="welcome"

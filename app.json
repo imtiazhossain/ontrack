@@ -10,7 +10,6 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "productionSourceMap": false,
     "updates": {
       "url": "https://u.expo.dev/bd232bf6-7397-4463-b25a-9b67d78e5695"
     },

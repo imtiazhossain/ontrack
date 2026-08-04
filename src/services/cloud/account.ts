@@ -24,7 +24,11 @@ export function isProviderCancellation(error: unknown) {
     error && typeof error === 'object' && 'code' in error
       ? String((error as { code?: unknown }).code)
       : '';
-  return code === 'ERR_REQUEST_CANCELED';
+  // Expo uses ERR_REQUEST_CANCELED, while native auth bridges can surface the
+  // same cancellation with one of the common spelling/code variants.
+  return ['ERR_REQUEST_CANCELED', 'ERR_REQUEST_CANCELLED', 'ERR_CANCELED', 'ERR_CANCELLED'].includes(
+    code,
+  );
 }
 
 export function appleNameMetadata(fullName?: {

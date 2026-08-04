@@ -25,7 +25,7 @@ import {
   travelInviteLocalId,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { TravelSkyBackdrop, TravelSurfaceCard } from '@/features/travel/travel-surface';
+import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import type { TravelOpenJoinPreview, TravelOpenJoinStatus } from '@/features/travel/types';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
@@ -51,70 +51,8 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
   const [busy, setBusy] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(validCode);
   const openedApproved = useRef(false);
-
-  useEffect(() => {
-    if (!validCode || !code) {
-      setLoadingPreview(false);
-      setPreviewError('This join link is invalid or incomplete.');
-      return;
-    }
-    let active = true;
-    setLoadingPreview(true);
-    void previewTravelOpenJoin(code)
-      .then((result) => {
-        if (!active) return;
-        if (!result) {
-          setPreview(undefined);
-          setPreviewError('This join link is invalid or has expired.');
-          return;
-        }
-        setPreview(result);
-        setPreviewError(undefined);
-      })
-      .catch(() => {
-        if (!active) return;
-        setPreviewError('This join link could not be opened.');
-      })
-      .finally(() => {
-        if (active) setLoadingPreview(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [code, validCode]);
-
-  const refreshStatus = useCallback(async () => {
-    if (!code || !user || !validCode) return;
-    const result = await loadTravelOpenJoinStatus(code);
-    if (!result) {
-      setStatus(undefined);
-      return;
-    }
-    setStatus(result.status);
-    setGrantedInviteCode(result.grantedInviteCode);
-  }, [code, user, validCode]);
-
-  useEffect(() => {
-    if (isWeb || !user || !validCode) return;
-    let active = true;
-    void refreshStatus().catch((error: unknown) => {
-      if (!active) return;
-      setActionError(
-        error instanceof Error ? error.message : 'Join status could not be loaded.',
-      );
-    });
-    return () => {
-      active = false;
-    };
-  }, [isWeb, refreshStatus, user, validCode]);
-
-  useEffect(() => {
-    if (isWeb || !user || status !== 'pending' || !code) return;
-    const timer = setInterval(() => {
-      void refreshStatus().catch(() => undefined);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [code, isWeb, refreshStatus, status, user]);
+  const previewMessage =
+    !validCode || !code ? 'This join link is invalid or incomplete.' : previewError;
 
   const openApprovedTrip = useCallback(async () => {
     if (!code || openedApproved.current) return;
@@ -192,11 +130,74 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
   ]);
 
   useEffect(() => {
-    if (isWeb || !user) return;
-    if (status === 'approved' || status === 'host') {
-      void openApprovedTrip();
-    }
-  }, [isWeb, openApprovedTrip, status, user]);
+    if (!validCode || !code) return;
+    let active = true;
+    void previewTravelOpenJoin(code)
+      .then((result) => {
+        if (!active) return;
+        if (!result) {
+          setPreview(undefined);
+          setPreviewError('This join link is invalid or has expired.');
+          return;
+        }
+        setPreview(result);
+        setPreviewError(undefined);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPreviewError('This join link could not be opened.');
+      })
+      .finally(() => {
+        if (active) setLoadingPreview(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [code, validCode]);
+
+  useEffect(() => {
+    if (isWeb || !user || !validCode) return;
+    let active = true;
+    void loadTravelOpenJoinStatus(code!)
+      .then((result) => {
+        if (!active) return;
+        if (!result) {
+          setStatus(undefined);
+          return;
+        }
+        setStatus(result.status);
+        setGrantedInviteCode(result.grantedInviteCode);
+        if (result.status === 'approved' || result.status === 'host') {
+          void openApprovedTrip();
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setActionError(
+          error instanceof Error ? error.message : 'Join status could not be loaded.',
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [code, isWeb, openApprovedTrip, user, validCode]);
+
+  useEffect(() => {
+    if (isWeb || !user || status !== 'pending' || !code) return;
+    const timer = setInterval(() => {
+      void loadTravelOpenJoinStatus(code)
+        .then((result) => {
+          if (!result) return;
+          setStatus(result.status);
+          setGrantedInviteCode(result.grantedInviteCode);
+          if (result.status === 'approved' || result.status === 'host') {
+            void openApprovedTrip();
+          }
+        })
+        .catch(() => undefined);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [code, isWeb, openApprovedTrip, status, user]);
 
   const sendJoinRequest = async () => {
     if (!code) return;
@@ -237,8 +238,8 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         <TravelSurfaceCard>
           {loadingPreview ? (
             <LoadingBlock label="Loading trip…" />
-          ) : previewError ? (
-            <ErrorMessage message={previewError} variant="body" />
+          ) : previewMessage ? (
+            <ErrorMessage message={previewMessage} variant="body" />
           ) : preview ? (
             <>
               <AppText variant="title">{preview.title}</AppText>
@@ -253,11 +254,11 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
               </AppText>
             </>
           ) : (
-            <ErrorMessage message="This join link is invalid or incomplete." variant="body" />
+            <ErrorMessage message={previewMessage ?? 'This join link is invalid or incomplete.'} variant="body" />
           )}
         </TravelSurfaceCard>
 
-        {validCode && !previewError ? (
+        {validCode && !previewMessage ? (
           <View style={styles.buttons}>
             <Button
               size="lg"
@@ -369,7 +370,28 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
           <AppText variant="body" color="secondary" align="center">
             Request sent. Waiting for the trip host to approve you.
           </AppText>
-          <Button variant="secondary" disabled={busy} onPress={() => void refreshStatus()}>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onPress={() => {
+              if (!code || !user || !validCode) return;
+              void loadTravelOpenJoinStatus(code)
+                .then((result) => {
+                  if (!result) return;
+                  setStatus(result.status);
+                  setGrantedInviteCode(result.grantedInviteCode);
+                  if (result.status === 'approved' || result.status === 'host') {
+                    void openApprovedTrip();
+                  }
+                })
+                .catch((error: unknown) => {
+                  setActionError(
+                    error instanceof Error
+                      ? error.message
+                      : 'Join status could not be loaded.',
+                  );
+                });
+            }}>
             Check Again
           </Button>
         </>

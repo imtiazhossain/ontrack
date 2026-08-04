@@ -60,7 +60,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useFriends } from '@/store/friends';
 import { usePreferences } from '@/store/preferences';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { asPositiveNumber } from '@/utils/parse';
 
 const CATEGORIES: { value: TravelExpenseCategory; label: string }[] = [
@@ -142,55 +142,47 @@ function PersonAvatarToggle({
   const displayName = person.isSelf
     ? selfDisplayName.trim() || person.name
     : person.name;
-  const agent = useAgentUiTarget(testID, {
-    label: person.name,
-    onPress: onToggle,
-  });
-
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={agent.testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={person.name}
-      accessibilityState={{ selected: active }}
-      onPress={onToggle}
-      style={({ pressed }) => [
-        styles.personAvatarHit,
-        {
-          width: hit,
-          height: hit,
-          borderRadius: hit / 2,
-          borderWidth: active ? 2 : 0,
-          borderColor: ring,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}>
-      <ProfileAvatar
-        displayName={displayName}
-        userId={person.userId}
-        isSelf={person.isSelf}
-        size={avatarSize}
+    <AgentTestId testID={testID} label={person.name} onPress={onToggle} style={styles.personAvatarHit}>
+      <Pressable
+        accessibilityRole="button"
         accessibilityLabel={person.name}
-      />
-      {!single && active ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.personCheck,
-            {
-              width: Math.max(16, s(16)),
-              height: Math.max(16, s(16)),
-              borderRadius: Math.max(8, s(8)),
-              backgroundColor: theme.accentPrimary,
-              borderColor: theme.backgroundElevated,
-            },
-          ]}>
-          <Symbol name="check" size={Math.max(10, s(10))} color={theme.textOnAccent} />
-        </View>
-      ) : null}
-    </Pressable>
+        accessibilityState={{ selected: active }}
+        onPress={onToggle}
+        style={({ pressed }) => [
+          {
+            width: hit,
+            height: hit,
+            borderRadius: hit / 2,
+            borderWidth: active ? 2 : 0,
+            borderColor: ring,
+            opacity: pressed ? 0.85 : 1,
+          },
+        ]}>
+        <ProfileAvatar
+          displayName={displayName}
+          userId={person.userId}
+          isSelf={person.isSelf}
+          size={avatarSize}
+          accessibilityLabel={person.name}
+        />
+        {!single && active ? (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.personCheck,
+              {
+                width: Math.max(14, s(16)),
+                height: Math.max(14, s(16)),
+                borderRadius: Math.max(14, s(16)) / 2,
+                borderColor: theme.accentPrimary,
+              },
+            ]}>
+            <Symbol name="check" size={12} color={theme.textOnAccent} />
+          </View>
+        ) : null}
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -289,7 +281,7 @@ export function TravelExpenseForm({
   const refreshFriends = useFriends((state) => state.refresh);
   const selfDisplayName = usePreferences((state) => state.name);
   const [rosterLookup, setRosterLookup] = useState<
-    Array<{ userId: string; displayName: string }>
+    { userId: string; displayName: string }[]
   >([]);
   useEffect(() => {
     let active = true;
@@ -308,7 +300,7 @@ export function TravelExpenseForm({
     return () => {
       active = false;
     };
-  }, [plan.id, plan.hostTripId, refreshFriends]);
+  }, [plan, refreshFriends]);
   const people = useMemo(
     () =>
       enrichExpensePeopleAvatars(expensePeople(plan), [

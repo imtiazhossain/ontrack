@@ -49,6 +49,28 @@ export function StayProviderLogo({
   size: number;
   accessibilityLabel: string;
 }) {
+  return (
+    <StayProviderLogoContent
+      key={domain}
+      domain={domain}
+      icon={icon}
+      size={size}
+      accessibilityLabel={accessibilityLabel}
+    />
+  );
+}
+
+function StayProviderLogoContent({
+  domain,
+  icon,
+  size,
+  accessibilityLabel,
+}: {
+  domain: string;
+  icon: AppIconName;
+  size: number;
+  accessibilityLabel: string;
+}) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const [failed, setFailed] = useState(false);
@@ -58,8 +80,6 @@ export function StayProviderLogo({
 
   useEffect(() => {
     let active = true;
-    setFailed(false);
-    setMark(undefined);
 
     const applyUri = async (nextUri: string): Promise<boolean> => {
       if (isSvgSource(nextUri)) {

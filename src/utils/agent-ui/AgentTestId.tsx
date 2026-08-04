@@ -5,7 +5,7 @@ import { isAgentUiEnabled } from './registry';
 import { useAgentUiTarget } from './use-agent-ui-target';
 
 type AgentTestIdProps = PropsWithChildren<{
-  testID: string;
+  testID?: string;
   label?: string;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;

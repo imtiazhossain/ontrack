@@ -28,7 +28,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { formatDateKey } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import { goBackOrReplace } from '@/utils/navigation';
@@ -50,85 +50,83 @@ function StayProviderRow({
   chrome: ReturnType<typeof itinerarySheetChrome>;
   light: boolean;
 }) {
-  const { s, spacing: rs, layout, typography } = useResponsive();
+  const { s, spacing: rs, typography, layout } = useResponsive();
   const testID = AgentUiIds.travel.staySearch.provider(provider.id);
   const label = `Search ${provider.name} for stays in ${plan.destination}`;
   const handlePress = () => {
     haptics.tap();
     void searchStays(provider, plan);
   };
-  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
 
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={handlePress}
-      style={({ pressed }) => [{ opacity: pressed ? 0.82 : 1 }]}>
-      <TravelSurfaceCard stripe={false} padding={0}>
-        <View
-          style={[
-            styles.providerRow,
-            {
-              paddingHorizontal: rs.md,
-              paddingVertical: Math.max(14, rs.md),
-              gap: rs.md,
-              minHeight: Math.max(layout.minTapTarget + 28, s(88)),
-            },
-          ]}>
-          <StayProviderLogo
-            domain={provider.domain}
-            icon={provider.icon}
-            size={logoSize}
-            accessibilityLabel={`${provider.name} logo`}
-          />
-          <View style={styles.providerCopy}>
-            <AppText
-              fit
-              numberOfLines={1}
-              style={[
-                styles.providerName,
-                {
-                  color: chrome.title,
-                  fontSize: Math.max(19, s(20)),
-                  lineHeight: Math.max(24, s(26)),
-                },
-              ]}>
-              {provider.name}
-            </AppText>
-            <AppText
-              numberOfLines={2}
-              style={[
-                styles.providerDescription,
-                typography.caption,
-                {
-                  color: chrome.subtitle,
-                  fontSize: Math.max(13, s(14)),
-                  lineHeight: Math.max(17, s(18)),
-                },
-              ]}>
-              {provider.description}
-            </AppText>
-          </View>
+    <AgentTestId testID={testID} label={label} onPress={handlePress}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={handlePress}
+        style={({ pressed }) => [{ opacity: pressed ? 0.82 : 1 }]}>
+        <TravelSurfaceCard stripe={false} padding={0}>
           <View
             style={[
-              styles.chevronBadge,
+              styles.providerRow,
               {
-                width: chevronSize,
-                height: chevronSize,
-                borderRadius: chevronSize / 2,
-                backgroundColor: light ? '#FFFFFF' : chrome.fieldBg,
-                borderColor: light ? 'rgba(160, 120, 80, 0.14)' : chrome.fieldBorder,
+                paddingHorizontal: rs.md,
+                paddingVertical: Math.max(14, rs.md),
+                gap: rs.md,
+                minHeight: Math.max(layout.minTapTarget + 28, s(88)),
               },
             ]}>
-            <Symbol name="chevron-right" size="sm" color={accent} />
+            <StayProviderLogo
+              domain={provider.domain}
+              icon={provider.icon}
+              size={logoSize}
+              accessibilityLabel={`${provider.name} logo`}
+            />
+            <View style={styles.providerCopy}>
+              <AppText
+                fit
+                numberOfLines={1}
+                style={[
+                  styles.providerName,
+                  {
+                    color: chrome.title,
+                    fontSize: Math.max(19, s(20)),
+                    lineHeight: Math.max(24, s(26)),
+                  },
+                ]}>
+                {provider.name}
+              </AppText>
+              <AppText
+                numberOfLines={2}
+                style={[
+                  styles.providerDescription,
+                  typography.caption,
+                  {
+                    color: chrome.subtitle,
+                    fontSize: Math.max(13, s(14)),
+                    lineHeight: Math.max(17, s(18)),
+                  },
+                ]}>
+                {provider.description}
+              </AppText>
+            </View>
+            <View
+              style={[
+                styles.chevronBadge,
+                {
+                  width: chevronSize,
+                  height: chevronSize,
+                  borderRadius: chevronSize / 2,
+                  backgroundColor: light ? '#FFFFFF' : chrome.fieldBg,
+                  borderColor: light ? 'rgba(160, 120, 80, 0.14)' : chrome.fieldBorder,
+                },
+              ]}>
+              <Symbol name="chevron-right" size="sm" color={accent} />
+            </View>
           </View>
-        </View>
-      </TravelSurfaceCard>
-    </Pressable>
+        </TravelSurfaceCard>
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -235,7 +233,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
   const theme = useTheme();
   const router = useRouter();
   const chrome = itinerarySheetChrome(theme);
-  const { s, spacing: rs, typography, layout } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
 

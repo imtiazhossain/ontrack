@@ -15,7 +15,7 @@ import {
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 const ACTION_SHADOW_LIGHT =
@@ -54,11 +54,13 @@ export function TravelSheetAction({
     haptics.tap();
     onPress();
   };
+  // This control is a direct child of a wrapping two-column grid. Keep the
+  // registration on the Pressable itself: a wrapper view changes the
+  // percentage sizing context and collapses the label column.
   const agent = useAgentUiTarget(testID, {
     label: accessibilityLabel,
     onPress: handlePress,
   });
-
   return (
     <Pressable
       ref={agent.ref}
@@ -183,45 +185,42 @@ export function TravelSheetSecondaryAction({
     haptics.tap();
     onPress();
   };
-  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
-
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.secondaryAction,
-        {
-          backgroundColor: surface,
-          borderColor: chrome.fieldBorder,
-          minHeight,
-          paddingHorizontal: rs.lg,
-          gap: rs.sm,
-          borderRadius: radii.pill,
-          opacity: pressed ? 0.78 : 1,
-        },
-      ]}>
-      {icon ? <Symbol name={icon} size="sm" color={chrome.label} /> : null}
-      <AppText
-        variant="callout"
-        fit
-        numberOfLines={1}
-        style={[
-          styles.secondaryLabel,
+    <AgentTestId testID={testID} label={label} onPress={handlePress}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.secondaryAction,
           {
-            color: chrome.label,
-            fontFamily: fontFamilies.serif,
-            fontSize: s(19),
-            lineHeight: s(24),
+            backgroundColor: surface,
+            borderColor: chrome.fieldBorder,
+            minHeight,
+            paddingHorizontal: rs.lg,
+            gap: rs.sm,
+            borderRadius: radii.pill,
+            opacity: pressed ? 0.78 : 1,
           },
         ]}>
-        {label}
-      </AppText>
-    </Pressable>
+        {icon ? <Symbol name={icon} size="sm" color={chrome.label} /> : null}
+        <AppText
+          variant="callout"
+          fit
+          numberOfLines={1}
+          style={[
+            styles.secondaryLabel,
+            {
+              color: chrome.label,
+              fontFamily: fontFamilies.serif,
+              fontSize: s(19),
+              lineHeight: s(24),
+            },
+          ]}>
+          {label}
+        </AppText>
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -267,31 +266,26 @@ export function TravelSheetIconControl({
     haptics.tap();
     onPress();
   };
-  const agent = useAgentUiTarget(testID, {
-    label: accessibilityLabel,
-    onPress: handlePress,
-  });
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={8}
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.iconControl,
-        {
-          width: dim,
-          height: dim,
-          borderRadius: dim / 2,
-          ...elevated,
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}>
-      <Symbol name={icon} size={tone === 'accent' ? Math.max(18, s(20)) : 'sm'} color={iconColor} />
-    </Pressable>
+    <AgentTestId testID={testID} label={accessibilityLabel} onPress={handlePress}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        hitSlop={8}
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.iconControl,
+          {
+            width: dim,
+            height: dim,
+            borderRadius: dim / 2,
+            ...elevated,
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}>
+        <Symbol name={icon} size={tone === 'accent' ? Math.max(18, s(20)) : 'sm'} color={iconColor} />
+      </Pressable>
+    </AgentTestId>
   );
 }
 

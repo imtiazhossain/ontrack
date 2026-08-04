@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, RefObject } from 'react';
 import {
   Platform,
   ScrollView,
@@ -29,6 +29,8 @@ interface ScreenProps extends PropsWithChildren {
   refresh?: boolean;
   /** Extra work after the shared cloud/friends refresh. */
   onRefresh?: () => void | Promise<void>;
+  /** Optional access to the shared scroll container for targeted in-screen navigation. */
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
 export function Screen({
@@ -41,6 +43,7 @@ export function Screen({
   scrollEnabled = true,
   refresh = true,
   onRefresh,
+  scrollRef,
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -80,6 +83,7 @@ export function Screen({
       onTouchStart={notifyPageInteraction}
       style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
       <ScrollView
+        ref={scrollRef}
         automaticallyAdjustKeyboardInsets
         scrollEnabled={scrollEnabled}
         contentInsetAdjustmentBehavior="never"

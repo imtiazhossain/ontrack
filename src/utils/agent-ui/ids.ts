@@ -15,6 +15,14 @@ export const AgentUiIds = {
     games: 'ontrack.tabs.games',
     vehicles: 'ontrack.tabs.vehicles',
   },
+  vehicles: {
+    add: 'ontrack.vehicles.list.add',
+    vehicle: (vehicleId: string) => `ontrack.vehicles.list.vehicle.${vehicleId}`,
+    settings: 'ontrack.vehicles.detail.settings',
+    saveOdometer: 'ontrack.vehicles.detail.saveOdometer',
+    overviewSettingsTip: (vehicleId: string) =>
+      `ontrack.vehicles.detail.overviewSettingsTip.${vehicleId}`,
+  },
   today: {
     prevDay: 'ontrack.today.prevDay',
     nextDay: 'ontrack.today.nextDay',
@@ -68,8 +76,14 @@ export const AgentUiIds = {
     theme: (themeId: string) => `ontrack.profile.theme.${themeId}`,
   },
   auth: {
+    apple: 'ontrack.auth.apple',
+    google: 'ontrack.auth.google',
     privacy: 'ontrack.auth.privacy',
     terms: 'ontrack.auth.terms',
+  },
+  games: {
+    balloonPopPlay: 'ontrack.games.balloonPop.play',
+    balloon: (balloonId: string) => `ontrack.games.balloonPop.balloon.${balloonId}`,
   },
   prompt: {
     close: 'ontrack.prompt.close',
@@ -150,6 +164,46 @@ export const AgentUiIds = {
       composer: 'ontrack.travel.chat.composer',
       send: 'ontrack.travel.chat.send',
     },
+  },
+  social: {
+    header: {
+      addFriend: 'ontrack.social.header.addFriend',
+      messages: 'ontrack.social.header.messages',
+    },
+    friends: {
+      close: 'ontrack.social.friends.close',
+      signIn: 'ontrack.social.friends.signIn',
+      seeAll: 'ontrack.social.friends.seeAll',
+      add: 'ontrack.social.friends.add',
+      friend: (friendId: string) => `ontrack.social.friends.friend.${friendId}`,
+    },
+    quickAction: (actionId: string) => `ontrack.social.quickAction.${actionId}`,
+    upcoming: {
+      seeAll: 'ontrack.social.upcoming.seeAll',
+      empty: 'ontrack.social.upcoming.empty',
+      trip: (tripId: string) => `ontrack.social.upcoming.trip.${tripId}`,
+    },
+    feedFilter: (filter: string) => `ontrack.social.feed.filter.${filter}`,
+    feedItem: (itemId: string) => `ontrack.social.feed.item.${itemId}`,
+    feedPollChoice: (itemId: string, choiceId: string) =>
+      `ontrack.social.feed.poll.${itemId}.${choiceId}`,
+    feedLoadMore: 'ontrack.social.feed.loadMore',
+    actionModal: {
+      close: 'ontrack.social.actionModal.close',
+      primary: 'ontrack.social.actionModal.primary',
+    },
+    inviteSlug: 'ontrack.social.invite.slug',
+    inviteSave: 'ontrack.social.invite.save',
+    inviteCopy: 'ontrack.social.invite.copy',
+    inviteShare: 'ontrack.social.invite.share',
+    friendEmail: 'ontrack.social.friend.email',
+    friendSend: 'ontrack.social.friend.send',
+    requestAccept: (requestId: string) => `ontrack.social.request.accept.${requestId}`,
+    requestDecline: (requestId: string) => `ontrack.social.request.decline.${requestId}`,
+    requestCancel: (requestId: string) => `ontrack.social.request.cancel.${requestId}`,
+    friendAddToTrip: (friendId: string) =>
+      `ontrack.social.friend.addToTrip.${friendId}`,
+    friendRemove: (friendId: string) => `ontrack.social.friend.remove.${friendId}`,
   },
   chrome: {
     back: 'ontrack.chrome.back',

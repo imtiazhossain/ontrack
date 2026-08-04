@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   appPrompt,
@@ -44,7 +44,6 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { newId } from '@/utils/id';
-import { haptics } from '@/utils/haptics';
 import {
   TravelRemoveConfirmModal,
   type TravelRemoveConfirmPayload,
@@ -96,15 +95,11 @@ export function TravelFriendsSheet({
   const [roster, setRoster] = useState<TravelTripRosterPerson[]>([]);
   const [removeConfirm, setRemoveConfirm] =
     useState<TravelRemoveConfirmPayload | null>(null);
-  const onSavePlanRef = useRef(onSavePlan);
-  onSavePlanRef.current = onSavePlan;
-
   const tripId = canonicalTravelTripId(plan);
   const memberPlan = isTravelMemberPlan(plan);
-  const myRosterRole = useMemo(() => {
-    if (!user?.id) return undefined;
-    return roster.find((person) => person.userId === user.id)?.role;
-  }, [roster, user?.id]);
+  const myRosterRole = user?.id
+    ? roster.find((person) => person.userId === user.id)?.role
+    : undefined;
   // Sole host owns transfer / co-host grants. Cohosts share invite + friend manage.
   const isSoleHost = resolveIsTravelSoleHost({ myRosterRole, memberPlan });
   const canManage = isSoleHost || myRosterRole === 'cohost';
@@ -181,7 +176,7 @@ export function TravelFriendsSheet({
   useTravelFriendsSheetSync({
     visible,
     plan,
-    onSavePlanRef,
+    onSavePlan,
     openJoinCode,
     setOpenJoinCode,
     setOpenJoinBusy,

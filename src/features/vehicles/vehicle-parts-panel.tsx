@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 
-import { AppText, Button, Card, Input, SectionHeader } from '@/components/primitives';
+import { appPrompt, AppText, Button, Card, Input, SectionHeader } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import type { Vehicle, VehiclePart, VehiclePartStatus } from '@/features/vehicles/types';
 import { VEHICLE_PART_STATUSES, vehicleFitmentLabel } from '@/features/vehicles/types';
@@ -9,6 +9,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { newUuid } from '@/utils/id';
 import { asPositiveNumber } from '@/utils/parse';
+import { openHttpsUrl, safeHttpsUrl } from '@/utils/safe-url';
 
 const STATUS_LABELS: Record<VehiclePartStatus, string> = {
   needed: 'Needed',
@@ -37,13 +38,18 @@ export function VehiclePartsPanel({
   const addPart = () => {
     const title = name.trim();
     if (!title) return;
+    const safeVendorUrl = safeHttpsUrl(vendorUrl);
+    if (vendorUrl.trim() && !safeVendorUrl) {
+      appPrompt.alert('Use an HTTPS vendor link', 'Vendor links must start with https://.');
+      return;
+    }
     const now = new Date().toISOString();
     const part: VehiclePart = {
       id: newUuid(),
       name: title,
       partNumber: partNumber.trim() || undefined,
       category: category.trim() || undefined,
-      vendorUrl: vendorUrl.trim() || undefined,
+      vendorUrl: safeVendorUrl,
       status,
       price: asPositiveNumber(Number(price)),
       currency: vehicle.baseCurrency,
@@ -124,10 +130,10 @@ export function VehiclePartsPanel({
             {part.category ? ` · ${part.category}` : ''}
             {part.fitmentLabel ? ` · ${part.fitmentLabel}` : ''}
           </AppText>
-          {part.vendorUrl ? (
+          {safeHttpsUrl(part.vendorUrl) ? (
             <Button
               variant="ghost"
-              onPress={() => void Linking.openURL(part.vendorUrl!)}
+              onPress={() => void openHttpsUrl(part.vendorUrl)}
               accessibilityLabel={`Open ${part.name} vendor link`}>
               Open vendor
             </Button>

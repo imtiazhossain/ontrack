@@ -1,22 +1,21 @@
 import type { ComponentProps } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
-  BackHandler,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-  type LayoutChangeEvent,
+    BackHandler,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { radii } from '@/design-system';
 import {
-  ITEM_KINDS,
-  TravelItineraryForm,
+    ITEM_KINDS,
+    TravelItineraryForm,
 } from '@/features/travel/travel-itinerary-form';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
@@ -71,26 +70,15 @@ export function TravelItineraryAddSheet({
   const submitLabel = kind === 'moment' ? 'Add Moment' : 'Add to Timeline';
   // Keep room for the status bar; sheet itself is always flush to the screen bottom.
   const sheetMaxHeight = Math.round(windowHeight * 0.92);
-  /** Lock height after first layout so expanding fields scroll instead of growing the sheet. */
-  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!visible) {
-      setLockedHeight(null);
-      return;
-    }
+    if (!visible) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       onClose();
       return true;
     });
     return () => sub.remove();
   }, [visible, onClose]);
-
-  const onSheetLayout = (event: LayoutChangeEvent) => {
-    if (lockedHeight != null) return;
-    const next = Math.min(Math.round(event.nativeEvent.layout.height), sheetMaxHeight);
-    if (next > 0) setLockedHeight(next);
-  };
 
   if (!visible) return null;
 
@@ -109,13 +97,11 @@ export function TravelItineraryAddSheet({
         pointerEvents="box-none"
         style={styles.modalRoot}>
         <View
-          onLayout={onSheetLayout}
           style={[
             styles.sheet,
             {
               backgroundColor: chrome.sheetBg,
               maxHeight: sheetMaxHeight,
-              height: lockedHeight ?? undefined,
               paddingBottom: Math.max(insets.bottom, rs.sm),
             },
           ]}>

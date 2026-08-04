@@ -31,7 +31,7 @@ import {
     type TodoListKind,
 } from '@/store/todos';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { listReferenceEquality } from '@/utils/list-equality';
 
@@ -97,7 +97,7 @@ export function TodoListsOverview() {
   const collaboratorsByList = useMemo(() => {
     const byList = new Map<
       string,
-      Array<{ userId?: string; displayName: string; isSelf?: boolean }>
+      { userId?: string; displayName: string; isSelf?: boolean }[]
     >();
     for (const member of members) {
       if (member.userId === user?.id) continue;
@@ -327,65 +327,76 @@ export function TodoListsOverview() {
                 </View>
                 <View style={styles.headingActions}>
                   {lists.length > 0 ? (
-                    <Pressable
-                      ref={editModeAgent.ref}
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        editMode
-                          ? 'Finish editing checklists'
-                          : 'Edit checklists'
-                      }
+                    <AgentTestId
                       testID={editModeAgent.testID}
-                      onLayout={editModeAgent.onLayout}
+                      label={editMode ? 'Finish editing checklists' : 'Edit checklists'}
                       onPress={() => {
                         if (editMode) finishEditing();
                         else beginEditing();
                       }}
-                      style={({ pressed }) => [
-                        styles.editModeButton,
-                        {
-                          backgroundColor: editMode
-                            ? theme.accentPrimary
-                            : theme.backgroundSunken,
-                          borderColor: editMode
-                            ? theme.accentPrimary
-                            : theme.separator,
-                          opacity: pressed ? 0.72 : 1,
-                        },
-                      ]}>
-                      <AppText
-                        variant="caption"
-                        color={editMode ? 'onAccent' : 'accent'}>
-                        {editMode ? 'Done' : 'Edit'}
-                      </AppText>
-                    </Pressable>
+                      style={styles.editModeButton}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          editMode
+                            ? 'Finish editing checklists'
+                            : 'Edit checklists'
+                        }
+                        onPress={() => {
+                          if (editMode) finishEditing();
+                          else beginEditing();
+                        }}
+                        style={({ pressed }) => [
+                          {
+                            backgroundColor: editMode
+                              ? theme.accentPrimary
+                              : theme.backgroundSunken,
+                            borderColor: editMode
+                              ? theme.accentPrimary
+                              : theme.separator,
+                            opacity: pressed ? 0.72 : 1,
+                          },
+                        ]}>
+                        <AppText
+                          variant="caption"
+                          color={editMode ? 'onAccent' : 'accent'}>
+                          {editMode ? 'Done' : 'Edit'}
+                        </AppText>
+                      </Pressable>
+                    </AgentTestId>
                   ) : null}
-                  <Pressable
-                    ref={collaboratorsAgent.ref}
-                    accessibilityRole="button"
-                    accessibilityLabel={
+                  <AgentTestId
+                    testID={collaboratorsAgent.testID}
+                    label={
                       invites.length
                         ? `Add collaborators, ${invites.length} invitations waiting`
                         : 'Add collaborators'
                     }
-                    testID={collaboratorsAgent.testID}
-                    onLayout={collaboratorsAgent.onLayout}
                     onPress={() => router.push('/todo-collaborators' as never)}
-                    style={({ pressed }) => [
-                      styles.inviteButton,
-                      { backgroundColor: theme.backgroundSunken },
-                      pressed && styles.pressed,
-                    ]}>
-                    <Symbol
-                      name="invite"
-                      size={21}
-                      color={
+                    style={styles.inviteButton}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
                         invites.length
-                          ? theme.accentPrimary
-                          : theme.textSecondary
+                          ? `Add collaborators, ${invites.length} invitations waiting`
+                          : 'Add collaborators'
                       }
-                    />
-                  </Pressable>
+                      onPress={() => router.push('/todo-collaborators' as never)}
+                      style={({ pressed }) => [
+                        { backgroundColor: theme.backgroundSunken },
+                        pressed && styles.pressed,
+                      ]}>
+                      <Symbol
+                        name="invite"
+                        size={21}
+                        color={
+                          invites.length
+                            ? theme.accentPrimary
+                            : theme.textSecondary
+                        }
+                      />
+                    </Pressable>
+                  </AgentTestId>
                 </View>
               </View>
 
@@ -448,52 +459,55 @@ export function TodoListsOverview() {
                       },
                     ]}>
                     <Symbol name="add" size={21} color={theme.accentPrimary} />
-                    <View
-                      ref={newListNameAgent.ref}
+                    <AgentTestId
                       testID={newListNameAgent.testID}
-                      onLayout={newListNameAgent.onLayout}
-                      collapsable={false}
+                      label="New list name"
+                      onPress={() => undefined}
                       style={styles.inputWrap}>
-                      <TextInput
-                        accessibilityLabel="New list name"
-                        maxLength={80}
-                        onChangeText={setDraft}
-                        onSubmitEditing={add}
-                        placeholder={
-                          draftKind === 'grocery'
-                            ? 'New grocery list'
-                            : 'New checklist'
-                        }
-                        placeholderTextColor={theme.textTertiary}
-                        returnKeyType="done"
-                        underlineColorAndroid="transparent"
-                        style={[styles.input, { color: theme.textPrimary }]}
-                        value={draft}
-                      />
-                    </View>
-                    <Pressable
-                      ref={createListAgent.ref}
-                      accessibilityRole="button"
-                      accessibilityLabel="Create list"
+                      <View collapsable={false} style={styles.inputWrap}>
+                        <TextInput
+                          accessibilityLabel="New list name"
+                          maxLength={80}
+                          onChangeText={setDraft}
+                          onSubmitEditing={add}
+                          placeholder={
+                            draftKind === 'grocery'
+                              ? 'New grocery list'
+                              : 'New checklist'
+                          }
+                          placeholderTextColor={theme.textTertiary}
+                          returnKeyType="done"
+                          underlineColorAndroid="transparent"
+                          style={[styles.input, { color: theme.textPrimary }]}
+                          value={draft}
+                        />
+                      </View>
+                    </AgentTestId>
+                    <AgentTestId
                       testID={createListAgent.testID}
-                      onLayout={createListAgent.onLayout}
-                      disabled={!draft.trim()}
+                      label="Create list"
                       onPress={add}
-                      style={({ pressed }) => [
-                        styles.addButton,
-                        {
-                          backgroundColor: draft.trim()
-                            ? theme.accentPrimary
-                            : theme.separator,
-                          opacity: pressed ? 0.72 : 1,
-                        },
-                      ]}>
-                      <Symbol
-                        name="arrow-up"
-                        size={18}
-                        color={theme.textOnAccent}
-                      />
-                    </Pressable>
+                      style={styles.addButton}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Create list"
+                        disabled={!draft.trim()}
+                        onPress={add}
+                        style={({ pressed }) => [
+                          {
+                            backgroundColor: draft.trim()
+                              ? theme.accentPrimary
+                              : theme.separator,
+                            opacity: pressed ? 0.72 : 1,
+                          },
+                        ]}>
+                        <Symbol
+                          name="arrow-up"
+                          size={18}
+                          color={theme.textOnAccent}
+                        />
+                      </Pressable>
+                    </AgentTestId>
                   </View>
                 </View>
               ) : null}

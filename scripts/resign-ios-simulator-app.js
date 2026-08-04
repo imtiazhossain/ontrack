@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* global __dirname */
+
 /**
  * Re-signs an iOS Simulator .app with the local Keychain-capable identity.
  * Used after `expo run:ios` / xcodebuild, which ad-hoc sign simulator builds.

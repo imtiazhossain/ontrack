@@ -46,6 +46,17 @@ describe('cloud media preparation', () => {
     expect(mockUpload).toHaveBeenCalledTimes(1);
   });
 
+  it('uploads readable content-provider media instead of syncing a temporary URI', async () => {
+    const prepared = await prepareCloudMedia('user-1', 'travel', {
+      coverUri: 'content://provider/trip-cover.jpg',
+    });
+
+    expect(prepared).toEqual({
+      coverUri: expect.stringMatching(/^ontrack-media:user-1\/travel\/.+\.jpg$/),
+    });
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+  });
+
   it('omits expired local media without blocking the rest of the payload', async () => {
     const prepared = await prepareCloudMedia('user-1', 'schedule', {
       title: 'Lunch',

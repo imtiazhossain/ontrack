@@ -8,7 +8,7 @@ import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-c
 import { TRAVEL_CARD_SHADOW, travelPageBg } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export type TravelAddPhotosModalProps = {
@@ -106,8 +106,6 @@ function PhotoActionRow({
     haptics.tap();
     onPress();
   };
-  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
-
   const inner = (
     <View
       style={[
@@ -138,45 +136,41 @@ function PhotoActionRow({
   );
 
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.actionShell,
-        { borderRadius: radius, opacity: pressed ? 0.88 : 1 },
-      ]}>
-      {variant === 'primary' ? (
-        <LinearGradient
-          colors={[goldFrom, goldTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            styles.actionFill,
-            {
-              borderRadius: radius,
-              borderColor: goldTo,
-            },
-          ]}>
-          {inner}
-        </LinearGradient>
-      ) : (
-        <View
-          style={[
-            styles.actionFill,
-            {
-              borderRadius: radius,
-              borderColor: outlineBorder,
-              backgroundColor: outlineBg,
-            },
-          ]}>
-          {inner}
-        </View>
-      )}
-    </Pressable>
+    <AgentTestId testID={testID} label={label} onPress={handlePress} style={styles.actionShell}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={handlePress}
+        style={({ pressed }) => [{ borderRadius: radius, opacity: pressed ? 0.88 : 1 }] }>
+        {variant === 'primary' ? (
+          <LinearGradient
+            colors={[goldFrom, goldTo]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.actionFill,
+              {
+                borderRadius: radius,
+                borderColor: goldTo,
+              },
+            ]}>
+            {inner}
+          </LinearGradient>
+        ) : (
+          <View
+            style={[
+              styles.actionFill,
+              {
+                borderRadius: radius,
+                borderColor: outlineBorder,
+                backgroundColor: outlineBg,
+              },
+            ]}>
+            {inner}
+          </View>
+        )}
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -223,21 +217,6 @@ export function TravelAddPhotosModal({
     action();
     onClose();
   };
-  const dismissAgent = useAgentUiTarget(
-    visible ? AgentUiIds.travel.addPhotos.dismiss : undefined,
-    { label: 'Dismiss', onPress: onClose },
-  );
-  const closeAgent = useAgentUiTarget(
-    visible ? AgentUiIds.travel.addPhotos.close : undefined,
-    {
-      label: 'Close',
-      onPress: () => {
-        haptics.tap();
-        onClose();
-      },
-    },
-  );
-
   return (
     <Modal
       visible={visible}
@@ -252,14 +231,13 @@ export function TravelAddPhotosModal({
           entering={FadeIn.duration(170)}
           pointerEvents="box-none"
           style={[styles.overlay, { backgroundColor: theme.overlayScrim }]}>
-          <Pressable
-            ref={dismissAgent.ref}
+          <AgentTestId
             testID={AgentUiIds.travel.addPhotos.dismiss}
-            onLayout={dismissAgent.onLayout}
-            accessibilityLabel="Dismiss"
+            label="Dismiss"
             onPress={onClose}
-            style={StyleSheet.absoluteFill}
-          />
+            style={StyleSheet.absoluteFill}>
+            <Pressable accessibilityLabel="Dismiss" onPress={onClose} style={StyleSheet.absoluteFill} />
+          </AgentTestId>
           <Animated.View
             entering={FadeInDown.springify().damping(20).stiffness(220)}
             style={[
@@ -276,31 +254,36 @@ export function TravelAddPhotosModal({
                 boxShadow: light ? TRAVEL_CARD_SHADOW : undefined,
               },
             ]}>
-            <Pressable
-              ref={closeAgent.ref}
+            <AgentTestId
               testID={AgentUiIds.travel.addPhotos.close}
-              onLayout={closeAgent.onLayout}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              hitSlop={8}
+              label="Close"
               onPress={() => {
                 haptics.tap();
                 onClose();
               }}
-              style={({ pressed }) => [
-                styles.close,
-                {
-                  width: closeSize,
-                  height: closeSize,
-                  borderRadius: closeSize / 2,
-                  backgroundColor: closeBg,
-                  opacity: pressed ? 0.7 : 1,
-                  top: Math.max(12, rs.sm),
-                  right: Math.max(12, rs.sm),
-                },
-              ]}>
-              <Symbol name="close" size={Math.max(16, s(17))} color={closeFg} />
-            </Pressable>
+              style={styles.close}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                hitSlop={8}
+                onPress={() => {
+                  haptics.tap();
+                  onClose();
+                }}
+                style={({ pressed }) => [
+                  {
+                    width: closeSize,
+                    height: closeSize,
+                    borderRadius: closeSize / 2,
+                    backgroundColor: closeBg,
+                    opacity: pressed ? 0.7 : 1,
+                    top: Math.max(12, rs.sm),
+                    right: Math.max(12, rs.sm),
+                  },
+                ]}>
+                <Symbol name="close" size={Math.max(16, s(17))} color={closeFg} />
+              </Pressable>
+            </AgentTestId>
 
             <View style={[styles.content, { gap: Math.max(12, rs.sm + 2) }]}>
               <SparkleBadge color={badgeFg} bg={badgeBg} />

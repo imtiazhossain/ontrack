@@ -156,7 +156,6 @@ export function TravelCalendarUpdatedModal({
       },
     },
   );
-
   return (
     <Modal
       visible={visible}

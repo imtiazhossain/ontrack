@@ -33,9 +33,11 @@ function withTimeout<T>(promise: Promise<T>): Promise<T> {
   });
 }
 
-/** City + region/country label from a reverse-geocoded address. */
+/** Most specific locality + region/country label from a reverse-geocoded address. */
 export function formatPlaceAddress(address: PlaceAddress): string | undefined {
-  const locality = address.city ?? address.district ?? address.subregion ?? address.region;
+  // iOS reports NYC as `city` for all boroughs, while preserving the borough in
+  // `district` (for example, Brooklyn). Prefer that more precise locality.
+  const locality = address.district ?? address.city ?? address.subregion ?? address.region;
   if (!locality) return undefined;
 
   const countryCode = address.isoCountryCode?.toUpperCase();

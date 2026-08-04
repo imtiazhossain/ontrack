@@ -55,6 +55,51 @@ Dump/status files live in the app Documents directory:
 | `ontrack.tabs.visionBoard` | Vision Board | addon |
 | `ontrack.tabs.games` | Games | addon |
 | `ontrack.tabs.vehicles` | Vehicles | addon |
+| `ontrack.vehicles.list.add` | Vehicles | Add a vehicle |
+| `ontrack.vehicles.list.vehicle.<vehicleId>` | Vehicles | Open a vehicle |
+| `ontrack.vehicles.detail.settings` | Vehicle detail | Open vehicle settings |
+| `ontrack.vehicles.detail.saveOdometer` | Vehicle detail | Save the current odometer value |
+| `ontrack.vehicles.detail.overviewSettingsTip.<vehicleId>` | Vehicle detail | Open settings from the overview tip |
+
+## Social
+
+| testID | Control |
+|--------|---------|
+| `ontrack.social.header.addFriend` | Open add-friend flow |
+| `ontrack.social.header.messages` | Open Social messages |
+| `ontrack.social.friends.close` | Close friend-management modal |
+| `ontrack.social.friends.signIn` | Sign in from friend-management modal |
+| `ontrack.social.friends.seeAll` | Open complete friends list |
+| `ontrack.social.friends.add` | Open add-friend flow from Friends card |
+| `ontrack.social.friends.friend.<friendId>` | Open a friend’s Social profile |
+| `ontrack.social.quickAction.<actionId>` | Open a Social quick action |
+| `ontrack.social.upcoming.seeAll` | Open all trips |
+| `ontrack.social.upcoming.empty` | Create the first shared trip |
+| `ontrack.social.upcoming.trip.<tripId>` | Open an upcoming shared trip |
+| `ontrack.social.feed.filter.<all\|friends\|groups>` | Filter Social activity |
+| `ontrack.social.feed.item.<itemId>` | Open a Social feed item |
+| `ontrack.social.feed.poll.<itemId>.<choiceId>` | Vote in a Social poll |
+| `ontrack.social.feed.loadMore` | Load more local Social activity |
+| `ontrack.social.actionModal.close` | Close a Social empty-state flow |
+| `ontrack.social.actionModal.primary` | Continue from a Social empty-state flow |
+| `ontrack.social.invite.slug` | Invite link name input |
+| `ontrack.social.invite.save` | Save invite link name |
+| `ontrack.social.invite.copy` | Copy invite link |
+| `ontrack.social.invite.share` | Share invite link |
+| `ontrack.social.friend.email` | Friend email input |
+| `ontrack.social.friend.send` | Send friend request |
+| `ontrack.social.request.accept.<requestId>` | Accept incoming request |
+| `ontrack.social.request.decline.<requestId>` | Decline incoming request |
+| `ontrack.social.request.cancel.<requestId>` | Cancel outgoing request |
+| `ontrack.social.friend.addToTrip.<friendId>` | Add a friend to a trip |
+| `ontrack.social.friend.remove.<friendId>` | Remove a friend |
+
+## Games
+
+| testID | Control |
+|--------|---------|
+| `ontrack.games.balloonPop.play` | Start Balloon Pop |
+| `ontrack.games.balloonPop.balloon.<id>` | Pop a balloon |
 
 Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
@@ -121,6 +166,8 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
 | testID | Control |
 |--------|---------|
+| `ontrack.auth.apple` | Continue with Apple |
+| `ontrack.auth.google` | Continue with Google |
 | `ontrack.auth.privacy` | Privacy Policy link |
 | `ontrack.auth.terms` | Terms of Use link |
 | `ontrack.prompt.close` | Prompt / alert dismiss (X) |

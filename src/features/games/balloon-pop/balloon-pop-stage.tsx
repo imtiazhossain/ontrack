@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { newId } from '@/utils/id';
 
 import { balloonFill } from './colors';
@@ -155,6 +156,7 @@ function BalloonView({ balloon, darkMode, disabled, onPop }: BalloonViewProps) {
         disabled={disabled}
         hitSlop={6}
         onPress={onPop}
+        testID={AgentUiIds.games.balloon(balloon.id)}
         style={styles.pressable}>
         <View style={[styles.balloon, { width: size, height: size, backgroundColor: fill }]}>
           <View style={styles.highlight} />

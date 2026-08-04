@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Symbol } from '@/components/primitives';
@@ -94,6 +94,7 @@ export function TravelSurfaceCard({
   style,
   bodyStyle,
   padding,
+  onLayout,
 }: PropsWithChildren<{
   /** @deprecated Prefer `stripe` — solid override when a non-gold accent is needed. */
   stripeColor?: string;
@@ -102,6 +103,7 @@ export function TravelSurfaceCard({
   style?: ViewStyle;
   bodyStyle?: ViewStyle;
   padding?: number;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }>) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -113,6 +115,7 @@ export function TravelSurfaceCard({
     theme.name === 'dark' ? TRAVEL_RAIL_GOLD_DARK : TRAVEL_RAIL_GOLD_LIGHT;
   return (
     <View
+      onLayout={onLayout}
       style={[
         styles.card,
         {

@@ -12,7 +12,7 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, formatDateLong, formatWeekday, isToday } from '@/utils/date';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 interface DayHeaderProps {
@@ -43,11 +43,6 @@ export function DayHeader({
     haptics.tap();
     setLocationOpen(true);
   };
-  const weatherAgent = useAgentUiTarget(AgentUiIds.today.weather, {
-    label: 'Home weather',
-    onPress: openWeather,
-  });
-
   return (
     <LinearGradient colors={gradient} style={[styles.container, { paddingTop: topInset + spacing.md }]}>
       <View style={styles.topRow}>
@@ -76,12 +71,9 @@ export function DayHeader({
       </View>
 
       {viewingToday ? (
-        <Pressable
-          ref={weatherAgent.ref}
+        <AgentTestId
           testID={AgentUiIds.today.weather}
-          onLayout={weatherAgent.onLayout}
-          accessibilityRole="button"
-          accessibilityLabel={
+          label={
             weather
               ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
               : hasLocation
@@ -89,18 +81,29 @@ export function DayHeader({
                 : 'Set location for weather'
           }
           onPress={openWeather}
-          style={({ pressed }) => [
-            styles.weatherRow,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: theme.separator,
-              opacity: pressed ? 0.85 : 1,
-              minHeight: Math.max(44, s(44)),
-              paddingHorizontal: rs.md,
-              paddingVertical: rs.sm,
-              gap: rs.sm,
-            },
-          ]}>
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              weather
+                ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
+                : hasLocation
+                  ? 'Edit home location for weather'
+                  : 'Set location for weather'
+            }
+            onPress={openWeather}
+            style={({ pressed }) => [
+              styles.weatherRow,
+              {
+                backgroundColor: theme.backgroundElevated,
+                borderColor: theme.separator,
+                opacity: pressed ? 0.85 : 1,
+                minHeight: Math.max(44, s(44)),
+                paddingHorizontal: rs.md,
+                paddingVertical: rs.sm,
+                gap: rs.sm,
+              },
+            ]}>
           <Symbol
             name={icon ?? (hasLocation ? 'weather' : 'location')}
             size="md"
@@ -131,7 +134,8 @@ export function DayHeader({
             )}
           </View>
           <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-        </Pressable>
+          </Pressable>
+        </AgentTestId>
       ) : null}
 
       <View style={styles.progressRow}>

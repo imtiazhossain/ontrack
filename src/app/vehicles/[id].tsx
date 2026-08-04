@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Button, Screen } from '@/components/primitives';
+import { appPrompt, AppText, Button, Screen } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { VehicleActivityPanel } from '@/features/vehicles/vehicle-activity-panel';
 import { VehicleDocsPanel } from '@/features/vehicles/vehicle-docs-panel';
@@ -24,6 +24,7 @@ import { decodeVehicleVin, VehicleServiceError } from '@/services/vehicles';
 import { useVehicles } from '@/store/vehicles';
 import { asFiniteNonNegative } from '@/utils/parse';
 import { newUuid } from '@/utils/id';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 type Section =
   | 'overview'
@@ -118,7 +119,10 @@ function VehicleDetailContent() {
 
   const saveOdometer = () => {
     const miles = asFiniteNonNegative(Number(odometerDraft));
-    if (miles === undefined) return;
+    if (miles === undefined) {
+      appPrompt.alert('Enter a valid mileage', 'Mileage must be a non-negative number.');
+      return;
+    }
     const now = new Date().toISOString();
     persist(
       {
@@ -147,6 +151,10 @@ function VehicleDetailContent() {
     setDecodeError(undefined);
     try {
       const result = await decodeVehicleVin(vehicle.vin);
+      if (result.errorText) {
+        setDecodeError(result.errorText);
+        return;
+      }
       const now = new Date().toISOString();
       persist(
         {
@@ -211,7 +219,8 @@ function VehicleDetailContent() {
               params: { id: vehicle.id },
             })
           }
-          accessibilityLabel="Vehicle settings">
+          accessibilityLabel="Vehicle settings"
+          testID={AgentUiIds.vehicles.settings}>
           Settings
         </Button>
       </View>
@@ -225,6 +234,12 @@ function VehicleDetailContent() {
           onOdometerDraftChange={setOdometerDraft}
           onSaveOdometer={saveOdometer}
           onDecodeVin={() => void decodeVin()}
+          onOpenSettings={() =>
+            router.push({
+              pathname: '/vehicles/[id]/settings',
+              params: { id: vehicle.id },
+            })
+          }
           decoding={decoding}
           decodeError={decodeError}
         />

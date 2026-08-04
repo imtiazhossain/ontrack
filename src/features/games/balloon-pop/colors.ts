@@ -24,8 +24,8 @@ export const BALLOON_COLORS: readonly BalloonColorDef[] = [
   {
     id: 'yellow',
     label: 'Yellow',
-    light: categoryPalette.learning.light,
-    dark: categoryPalette.learning.dark,
+    light: '#D9A441',
+    dark: '#E8C15A',
   },
   {
     id: 'purple',
