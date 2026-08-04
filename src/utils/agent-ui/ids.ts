@@ -19,9 +19,20 @@ export const AgentUiIds = {
     add: 'ontrack.vehicles.list.add',
     vehicle: (vehicleId: string) => `ontrack.vehicles.list.vehicle.${vehicleId}`,
     settings: 'ontrack.vehicles.detail.settings',
+    section: (section: string) => `ontrack.vehicles.detail.section.${section}`,
     saveOdometer: 'ontrack.vehicles.detail.saveOdometer',
     overviewSettingsTip: (vehicleId: string) =>
       `ontrack.vehicles.detail.overviewSettingsTip.${vehicleId}`,
+    expenses: {
+      title: 'ontrack.vehicles.expenses.title',
+      amount: 'ontrack.vehicles.expenses.amount',
+      date: 'ontrack.vehicles.expenses.date',
+      category: (category: string) => `ontrack.vehicles.expenses.category.${category}`,
+      notes: 'ontrack.vehicles.expenses.notes',
+      add: 'ontrack.vehicles.expenses.add',
+      delete: (expenseId: string) => `ontrack.vehicles.expenses.delete.${expenseId}`,
+      confirmDelete: 'ontrack.vehicles.expenses.confirmDelete',
+    },
   },
   today: {
     prevDay: 'ontrack.today.prevDay',
@@ -87,6 +98,7 @@ export const AgentUiIds = {
   },
   prompt: {
     close: 'ontrack.prompt.close',
+    action: (index: number) => `ontrack.prompt.action.${index}`,
   },
   travel: {
     list: {
@@ -145,6 +157,7 @@ export const AgentUiIds = {
       saveExpense: 'ontrack.travel.expenses.saveExpense',
       deleteExpense: 'ontrack.travel.expenses.deleteExpense',
       deleteExpenseFooter: 'ontrack.travel.expenses.deleteExpenseFooter',
+      confirmDelete: 'ontrack.travel.expenses.confirmDelete',
       close: 'ontrack.travel.expenses.close',
       row: (expenseId: string) => `ontrack.travel.expenses.row.${expenseId}`,
     },

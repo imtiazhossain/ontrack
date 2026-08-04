@@ -5,6 +5,7 @@ import { radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { socialActionTones, socialChrome, socialShadow } from '@/features/social/social-chrome';
 import { SocialPressable } from '@/features/social/social-pressable';
+import { sharedUpcomingTrips } from '@/features/social/social-trip-membership';
 import {
   SOCIAL_QUICK_ACTIONS,
   type SocialQuickActionId,
@@ -15,7 +16,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { FriendProfile } from '@/services/friends';
 import { AgentUiIds } from '@/utils/agent-ui';
-import { formatDateLong, fromDateKey, todayKey } from '@/utils/date';
+import { formatDateLong, fromDateKey } from '@/utils/date';
 
 export function SocialHeader({
   pendingCount,
@@ -328,9 +329,7 @@ export function SocialUpcomingTogether({
   const chrome = socialChrome(theme);
   const { spacing, width, layout, s } = useResponsive();
   const cardWidth = Math.min(Math.max(246, width - layout.screenPadding * 2 - 48), 310);
-  const upcoming = plans
-    .filter((plan) => plan.endDate >= todayKey())
-    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const upcoming = sharedUpcomingTrips(plans);
 
   return (
     <View style={{ gap: spacing.md }}>

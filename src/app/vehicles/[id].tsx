@@ -225,7 +225,13 @@ function VehicleDetailContent() {
         </Button>
       </View>
 
-      <ChipRow options={SECTIONS} selected={section} onSelect={setSection} scrollable />
+      <ChipRow
+        options={SECTIONS}
+        selected={section}
+        onSelect={setSection}
+        scrollable
+        testIDForOption={AgentUiIds.vehicles.section}
+      />
 
       {section === 'overview' ? (
         <VehicleOverviewPanel

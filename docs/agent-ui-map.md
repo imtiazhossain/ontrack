@@ -58,8 +58,17 @@ Dump/status files live in the app Documents directory:
 | `ontrack.vehicles.list.add` | Vehicles | Add a vehicle |
 | `ontrack.vehicles.list.vehicle.<vehicleId>` | Vehicles | Open a vehicle |
 | `ontrack.vehicles.detail.settings` | Vehicle detail | Open vehicle settings |
+| `ontrack.vehicles.detail.section.<section>` | Vehicle detail | Switch detail section (`overview`, `maintenance`, `mileage`, `expenses`, `parts`, `docs`, `activity`) |
 | `ontrack.vehicles.detail.saveOdometer` | Vehicle detail | Save the current odometer value |
 | `ontrack.vehicles.detail.overviewSettingsTip.<vehicleId>` | Vehicle detail | Open settings from the overview tip |
+| `ontrack.vehicles.expenses.title` | Vehicle expenses | Expense description field |
+| `ontrack.vehicles.expenses.amount` | Vehicle expenses | Expense amount field |
+| `ontrack.vehicles.expenses.date` | Vehicle expenses | Expense date field |
+| `ontrack.vehicles.expenses.category.<category>` | Vehicle expenses | Select expense category |
+| `ontrack.vehicles.expenses.notes` | Vehicle expenses | Optional notes field |
+| `ontrack.vehicles.expenses.add` | Vehicle expenses | Add expense |
+| `ontrack.vehicles.expenses.delete.<expenseId>` | Vehicle expenses | Delete expense |
+| `ontrack.vehicles.expenses.confirmDelete` | Vehicle expenses | Confirm expense deletion prompt |
 
 ## Social
 
@@ -171,6 +180,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.auth.privacy` | Privacy Policy link |
 | `ontrack.auth.terms` | Terms of Use link |
 | `ontrack.prompt.close` | Prompt / alert dismiss (X) |
+| `ontrack.prompt.action.<index>` | Prompt action by visible position |
 
 ## Travel list (`/(tabs)/travel`)
 
@@ -239,6 +249,7 @@ Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 | `ontrack.travel.expenses.saveExpense` | Save Expense submit (editor) |
 | `ontrack.travel.expenses.deleteExpense` | Delete expense (legacy editor button) |
 | `ontrack.travel.expenses.deleteExpenseFooter` | Delete expense (editor footer) |
+| `ontrack.travel.expenses.confirmDelete` | Confirm expense deletion prompt |
 | `ontrack.travel.expenses.close` | Close Expenses sheet |
 | `ontrack.travel.expenses.row.<expenseId>` | Expense list row (edit) |
 

@@ -8,6 +8,7 @@ export function confirmDestructiveAction(options: {
   title: string;
   message?: string;
   actionLabel?: string;
+  confirmTestID?: string;
   onConfirm: () => void;
 }): void {
   appPrompt.alert(options.title, options.message, [
@@ -15,6 +16,7 @@ export function confirmDestructiveAction(options: {
     {
       text: options.actionLabel ?? 'Delete',
       style: 'destructive',
+      ...(options.confirmTestID ? { testID: options.confirmTestID } : {}),
       onPress: options.onConfirm,
     },
   ]);

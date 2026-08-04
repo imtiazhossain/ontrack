@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, ErrorMessage, Screen, Symbol } from '@/components/primitives';
@@ -28,7 +28,6 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
   const router = useRouter();
   const { user, continueWithProvider, workingProvider } = useAuthSession();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
-  const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const setAddonEnabled = useAddons((state) => state.setEnabled);
@@ -43,19 +42,6 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
   const remoteDecoded = currentRemoteResult?.plan;
   const inviteError = currentRemoteResult?.error;
   const decoded = remoteDecoded;
-  const existingPlan = useMemo(() => {
-    if (!decoded) return undefined;
-    // Short invites are unique per code / trip_id on the server. Prefer those
-    // keys so two different Paris trips with the same dates cannot merge.
-    if (isShortInvite && invite) {
-      const code = invite.slice(2);
-      return (
-        plans.find((plan) => plan.chatAccessCode === code) ??
-        plans.find((plan) => plan.id === travelInviteLocalId(code))
-      );
-    }
-    return findMatchingTravelPlan(plans, decoded);
-  }, [decoded, invite, isShortInvite, plans]);
   const isWeb = process.env.EXPO_OS === 'web';
   const resolving = !isWeb && Boolean(user) && isShortInvite && !decoded && !inviteError;
   const nativeError =
@@ -103,82 +89,119 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
     if (isWeb) return;
     if (!invite || !decoded) return;
     if (handledInvite.current === invite) return;
-    handledInvite.current = invite;
-    void acceptTravelInvite(invite).catch(() => undefined);
-
-    if (existingPlan) {
-      if (isShortInvite) {
-        const code = invite.slice(2);
-        const hostTripId = decoded.hostTripId?.trim();
-        // Never convert a local host plan (has open-join) into a member copy of
-        // another trip — that strips host privileges on the wrong roster.
-        const looksLikeHostPlan =
-          Boolean(existingPlan.openJoinCode) && !existingPlan.chatAccessCode;
-        const pointsAtOtherTrip =
-          Boolean(hostTripId) && hostTripId !== existingPlan.id;
-        if (looksLikeHostPlan && pointsAtOtherTrip) {
-          const now = new Date().toISOString();
-          const memberCopy = {
-            ...decoded,
-            id: travelInviteLocalId(code),
-            chatAccessCode: code,
-            createdAt: now,
-            updatedAt: now,
-          };
-          savePlan(memberCopy);
-          replaceTravelActivities(
-            memberCopy.id,
-            travelCalendarDrafts(memberCopy),
-          );
-          setAddonEnabled('travel', true);
-          router.replace(
-            hasOnboarded
-              ? (`/travel/${memberCopy.id}` as never)
-              : ({
-                  pathname: '/onboarding',
-                  params: { returnTo: '/travel' },
-                } as never),
-          );
-          return;
-        }
-        savePlan({
-          ...existingPlan,
-          chatAccessCode: code,
-          ...(hostTripId ? { hostTripId } : {}),
-          updatedAt: new Date().toISOString(),
+    let active = true;
+    void (async () => {
+      const accepted = await acceptTravelInvite(invite);
+      if (!active) return;
+      if (!accepted) {
+        setRemoteResult({
+          invite,
+          error: 'This invitation is no longer available.',
         });
+        return;
       }
+
+      const plans = useTravel.getState().plans;
+      // Read the latest store only after acceptance. This avoids canceling the
+      // one-shot import when an unrelated plan changes while the RPC is pending.
+      const existingPlan = isShortInvite
+        ? (() => {
+            const code = invite.slice(2);
+            return (
+              plans.find((plan) => plan.chatAccessCode === code) ??
+              plans.find((plan) => plan.id === travelInviteLocalId(code))
+            );
+          })()
+        : findMatchingTravelPlan(plans, decoded);
+
+      if (existingPlan) {
+        if (isShortInvite) {
+          const code = invite.slice(2);
+          const hostTripId = decoded.hostTripId?.trim();
+          // Never convert a local host plan (has open-join) into a member copy of
+          // another trip — that strips host privileges on the wrong roster.
+          const looksLikeHostPlan =
+            Boolean(existingPlan.openJoinCode) && !existingPlan.chatAccessCode;
+          const pointsAtOtherTrip =
+            Boolean(hostTripId) && hostTripId !== existingPlan.id;
+          if (looksLikeHostPlan && pointsAtOtherTrip) {
+            const now = new Date().toISOString();
+            const memberCopy = {
+              ...decoded,
+              id: travelInviteLocalId(code),
+              chatAccessCode: code,
+              createdAt: now,
+              updatedAt: now,
+            };
+            savePlan(memberCopy);
+            replaceTravelActivities(
+              memberCopy.id,
+              travelCalendarDrafts(memberCopy),
+            );
+            setAddonEnabled('travel', true);
+            handledInvite.current = invite;
+            router.replace(
+              hasOnboarded
+                ? (`/travel/${memberCopy.id}` as never)
+                : ({
+                    pathname: '/onboarding',
+                    params: { returnTo: '/travel' },
+                  } as never),
+            );
+            return;
+          }
+          savePlan({
+            ...existingPlan,
+            chatAccessCode: code,
+            ...(hostTripId ? { hostTripId } : {}),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        setAddonEnabled('travel', true);
+        handledInvite.current = invite;
+        router.replace(
+          hasOnboarded
+            ? (`/travel/${existingPlan.id}` as never)
+            : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
+        );
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const plan = {
+        ...decoded,
+        id:
+          isShortInvite && invite
+            ? travelInviteLocalId(invite.slice(2))
+            : `trip-invite-${travelPlanIdentityKey(decoded)}`,
+        chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      savePlan(plan);
+      replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
       setAddonEnabled('travel', true);
+      handledInvite.current = invite;
       router.replace(
         hasOnboarded
-          ? (`/travel/${existingPlan.id}` as never)
+          ? (`/travel/${plan.id}` as never)
           : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
       );
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const plan = {
-      ...decoded,
-      id:
-        isShortInvite && invite
-          ? travelInviteLocalId(invite.slice(2))
-          : `trip-invite-${travelPlanIdentityKey(decoded)}`,
-      chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
-      createdAt: now,
-      updatedAt: now,
+    })().catch((error: unknown) => {
+      if (!active) return;
+      setRemoteResult({
+        invite,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'This invitation could not be accepted.',
+      });
+    });
+    return () => {
+      active = false;
     };
-    savePlan(plan);
-    replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
-    setAddonEnabled('travel', true);
-    router.replace(
-      hasOnboarded
-        ? (`/travel/${plan.id}` as never)
-        : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
-    );
   }, [
     decoded,
-    existingPlan,
     hasOnboarded,
     invite,
     isWeb,

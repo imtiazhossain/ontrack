@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '@/components/primitives';
 import { borders, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export interface ChipOption<T extends string> {
@@ -15,6 +16,7 @@ interface ChipRowProps<T extends string> {
   selected: T | T[];
   onSelect: (value: T) => void;
   scrollable?: boolean;
+  testIDForOption?: (value: T) => string;
 }
 
 /** Horizontally-flowing selectable chips used in forms and onboarding. */
@@ -23,21 +25,26 @@ export function ChipRow<T extends string>({
   selected,
   onSelect,
   scrollable,
+  testIDForOption,
 }: ChipRowProps<T>) {
   const theme = useTheme();
   const isSelected = (v: T) => (Array.isArray(selected) ? selected.includes(v) : selected === v);
 
   const chips = options.map((option) => {
     const active = isSelected(option.value);
-    return (
+    const testID = testIDForOption?.(option.value);
+    const select = () => {
+      haptics.select();
+      onSelect(option.value);
+    };
+    const chip = (
       <Pressable
         key={option.value}
+        testID={testID}
         accessibilityRole="button"
+        accessibilityLabel={option.label}
         accessibilityState={{ selected: active }}
-        onPress={() => {
-          haptics.select();
-          onSelect(option.value);
-        }}
+        onPress={select}
         style={[
           styles.chip,
           {
@@ -49,6 +56,13 @@ export function ChipRow<T extends string>({
           {option.label}
         </AppText>
       </Pressable>
+    );
+    return testID ? (
+      <AgentTestId key={option.value} testID={testID} label={option.label} onPress={select}>
+        {chip}
+      </AgentTestId>
+    ) : (
+      chip
     );
   });
 

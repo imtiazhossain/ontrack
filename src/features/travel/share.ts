@@ -405,13 +405,17 @@ export async function resolveTravelInvite(
   return tripId ? { ...plan, hostTripId: tripId } : plan;
 }
 
-export async function acceptTravelInvite(value: string): Promise<void> {
-  if (!isShortTravelInvite(value)) return;
+export async function acceptTravelInvite(value: string): Promise<boolean> {
+  if (!isShortTravelInvite(value)) return false;
   const client = await requireAuthenticatedInviteClient();
-  const { error } = await client.rpc('accept_travel_invite', {
+  const { data, error } = await client.rpc('accept_travel_invite', {
     invite_code: value.slice(SHORT_INVITE_PREFIX.length),
   });
   if (error) throw new TravelInviteError('The invitation could not be accepted.');
+  if (typeof data !== 'boolean') {
+    throw new TravelInviteError('The invitation could not be accepted.');
+  }
+  return data;
 }
 
 export async function loadTravelInviteStatuses(
@@ -484,7 +488,12 @@ export async function shareTravelPlan(
 ): Promise<string | undefined> {
   const code = await publishTravelInvite(plan, invitee);
   const shared = await openTravelInviteShareSheet(plan, code, invitee);
-  return shared ? code : undefined;
+  if (shared) return code;
+
+  // The invite was already published before the native sheet opened. Revoke it
+  // when the sheet is dismissed so the host never has an untracked live invite.
+  await revokeTravelInvite(code);
+  return undefined;
 }
 
 export async function resendTravelInvite(
