@@ -13,6 +13,8 @@ interface TravelDateRangeEditorProps {
   endDate: string;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
+  startLabel?: string;
+  endLabel?: string;
   stacked?: boolean;
   startTestID?: string;
   endTestID?: string;
@@ -23,6 +25,8 @@ export function TravelDateRangeEditor({
   endDate,
   onStartDateChange,
   onEndDateChange,
+  startLabel = 'Departure',
+  endLabel = 'Return',
   stacked = false,
   startTestID,
   endTestID,
@@ -40,23 +44,23 @@ export function TravelDateRangeEditor({
       <View style={styles.flex}>
         <DateField
           testID={startTestID}
-          label={stacked ? undefined : 'Departure'}
-          stackedLabel={stacked ? 'Departure' : undefined}
+          label={stacked ? undefined : startLabel}
+          stackedLabel={stacked ? startLabel : undefined}
           value={startDate}
           onChange={changeStartDate}
-          accessibilityLabel="Departure date"
+          accessibilityLabel={`${startLabel} date`}
           {...(stacked ? itinerarySheetFieldProps(chrome, 'calendar') : {})}
         />
       </View>
       <View style={styles.flex}>
         <DateField
           testID={endTestID}
-          label={stacked ? undefined : 'Return'}
-          stackedLabel={stacked ? 'Return' : undefined}
+          label={stacked ? undefined : endLabel}
+          stackedLabel={stacked ? endLabel : undefined}
           value={endDate}
           minimumDate={startDate}
           onChange={onEndDateChange}
-          accessibilityLabel="Return date"
+          accessibilityLabel={`${endLabel} date`}
           {...(stacked ? itinerarySheetFieldProps(chrome, 'calendar') : {})}
         />
       </View>

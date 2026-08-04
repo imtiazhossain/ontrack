@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import {
-  AppText,
-  ErrorMessage,
-  Input,
-} from '@/components/primitives';
+import { AppText, ErrorMessage, Input } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { ConfirmationImportAction } from '@/features/travel/confirmation-import-action';
 import {
@@ -14,6 +10,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { FlightDetailsDraft } from './flight-details';
@@ -26,6 +23,11 @@ const AIRPORT_HELPER: Record<string, string> = {
   LGA: 'LaGuardia Airport',
   LHR: 'London Heathrow',
 };
+
+type EditableFlightTextField = Exclude<
+  keyof FlightDetailsDraft,
+  'confirmationUris'
+>;
 
 function airportHelper(value: string): string | undefined {
   return AIRPORT_HELPER[value.trim().toUpperCase()];
@@ -56,7 +58,7 @@ export function FlightDetailsEditor({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { spacing: rs } = useResponsive();
-  const update = (field: keyof FlightDetailsDraft, nextValue: string) => {
+  const update = (field: EditableFlightTextField, nextValue: string) => {
     onChange({ ...value, [field]: nextValue });
   };
 
@@ -66,7 +68,12 @@ export function FlightDetailsEditor({
         <View style={{ gap: rs.xs }}>
           {hideHeader ? null : (
             <View style={styles.header}>
-              <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+              <AppText
+                variant="overline"
+                color="accent"
+                fit
+                style={travelOverlineStyle}
+              >
                 Flight Details
               </AppText>
             </View>
@@ -148,6 +155,18 @@ export function FlightDetailsEditor({
         autoCorrect={false}
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'note')}
+      />
+      <Input
+        testID={AgentUiIds.travel.flight.layoverDuration}
+        accessibilityLabel="Layover duration"
+        icon="clock"
+        stackedLabel="Layover"
+        value={value.layoverMinutesAfter ?? ''}
+        onChangeText={(nextValue) => update('layoverMinutesAfter', nextValue)}
+        placeholder="1h 39m"
+        autoCapitalize="none"
+        autoCorrect={false}
+        {...itinerarySheetFieldProps(chrome, 'clock')}
       />
       {error ? <ErrorMessage message={error} selectable /> : null}
     </View>

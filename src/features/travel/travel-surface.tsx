@@ -9,11 +9,17 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Card, Symbol } from '@/components/primitives';
-import { type AppIconName, type Theme } from '@/design-system';
+import {
+  darkTheme,
+  darkTravelTheme,
+  lightTheme,
+  lightTravelTheme,
+  type AppIconName,
+  type Theme,
+} from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
-import { useTravelAtmosphere } from './travel-atmosphere';
 import {
   travelAtmosphereScheme,
   type TravelAtmosphere,
@@ -34,53 +40,64 @@ export function travelCardShadow(theme: Theme): string {
   return theme.name === 'dark' ? TRAVEL_CARD_SHADOW_DARK : TRAVEL_CARD_SHADOW;
 }
 
-/** Page / sheet backdrop — exact Add Stay sheet background. */
+/** Travel pages fade a single blue wash into Today's neutral paper. */
 const FALLBACK_ATMOSPHERE: TravelAtmosphere = {
   destination: 'Travel',
   timeOfDay: 'day',
 };
 
+function todayTheme(theme: Theme): Theme {
+  return theme.name === 'dark' ? darkTheme : lightTheme;
+}
+
+function todayPageBackground(theme: Theme): string {
+  return todayTheme(theme).backgroundPrimary;
+}
+
+function travelTopWash(theme: Theme): string {
+  return theme.name === 'dark'
+    ? darkTravelTheme.backgroundSecondary
+    : lightTravelTheme.backgroundPrimary;
+}
+
+export function travelSafeAreaBackground(theme: Theme): string {
+  return travelTopWash(theme);
+}
+
+function travelBluePageGradient(theme: Theme): string {
+  const wash = travelTopWash(theme);
+  const paper = todayPageBackground(theme);
+  return `linear-gradient(to bottom, ${wash} 0%, ${paper} 38%, ${paper} 100%)`;
+}
+
 export function travelPageBg(
   theme: Theme,
-  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+  _atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
 ): string {
-  return travelAtmosphereScheme(theme, atmosphere).fallback;
+  return todayPageBackground(theme);
 }
 
-/** Layered Travel atmosphere from destination, live weather, and local time. */
-export function travelPageGradient(
-  theme: Theme,
-  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
-): string {
-  const gradient = travelAtmosphereScheme(theme, atmosphere);
-  return `radial-gradient(circle at 90% 7%, ${gradient.topGlow} 0%, transparent 34%), radial-gradient(circle at 7% 43%, ${gradient.sideGlow} 0%, transparent 39%), linear-gradient(155deg, ${gradient.stops[0]} 0%, ${gradient.stops[1]} 43%, ${gradient.stops[2]} 73%, ${gradient.stops[3]} 100%)`;
-}
-
-/** Gradient page style with a solid-color fallback for unsupported renderers. */
+/** Blue-to-neutral page style shared by every Travel route. */
 export function travelPageStyle(
   theme: Theme,
   atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
 ): ViewStyle {
   return {
     backgroundColor: travelPageBg(theme, atmosphere),
-    experimental_backgroundImage: travelPageGradient(theme, atmosphere),
+    experimental_backgroundImage: travelBluePageGradient(theme),
   };
 }
 
 export function useTravelPageStyle(theme: Theme): ViewStyle {
-  return travelPageStyle(theme, useTravelAtmosphere());
+  return travelPageStyle(theme);
 }
 
-/** Status-bar-safe continuation of the page gradient. */
+/** Continue the page wash behind the status bar without changing content insets. */
 export function travelSafeAreaStyle(
   theme: Theme,
-  atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
+  _atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
 ): ViewStyle {
-  const gradient = travelAtmosphereScheme(theme, atmosphere);
-  return {
-    backgroundColor: gradient.fallback,
-    experimental_backgroundImage: `linear-gradient(to right, ${gradient.stops[0]} 0%, ${gradient.stops[1]} 52%, ${gradient.stops[3]} 100%)`,
-  };
+  return { backgroundColor: travelSafeAreaBackground(theme) };
 }
 
 /** Elevated card fill — cream sheet in light, field panel in dark. */
@@ -134,7 +151,7 @@ export function travelSkyColors(theme: Theme): [string, string, string] {
 /** @deprecated Cream-on-sky text; prefer sheet chrome title. */
 export const TRAVEL_ON_SKY = '#0B1C28';
 
-/** Paper page backdrop matching Add Stay sheet. */
+/** Blue-to-neutral page backdrop matching the Travel routes. */
 export function TravelSkyBackdrop(_props?: { variant?: 'wash' | 'sky' }) {
   const theme = useTheme();
   const pageStyle = useTravelPageStyle(theme);

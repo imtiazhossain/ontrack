@@ -132,8 +132,8 @@ describe('canonical travel sheet design', () => {
   });
 
   it('wraps trip titles to two lines before reducing their size', () => {
-    const travelTab = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+    const tripCardHeader = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-trip-card-header.tsx'),
       'utf8',
     );
     const detailHero = readFileSync(
@@ -145,10 +145,15 @@ describe('canonical travel sheet design', () => {
       'utf8',
     );
 
-    for (const source of [travelTab, detailHero]) {
+    for (const source of [tripCardHeader, detailHero]) {
       expect(source).toContain('<TravelPlanTitle');
     }
-    expect(title).toContain('lineCount <= 2');
+    expect(tripCardHeader).toContain('styles.content');
+    expect(tripCardHeader).toMatch(
+      /content:[\s\S]*?flex: 1,[\s\S]*?minWidth: 0,[\s\S]*?topRow:/,
+    );
+    expect(title).toContain('lines.length > 2');
+    expect(title).toContain('height: scaledLineHeight * renderedLines.length');
     expect(title).toContain('onTextLayout=');
     expect(title).toContain('numberOfLines={scale <= MINIMUM_SCALE ? 2 : undefined}');
     expect(title).toContain('const MINIMUM_SCALE = 0.42');

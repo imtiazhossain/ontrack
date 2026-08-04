@@ -4,18 +4,24 @@ import {
   type FlightDetailsDraft,
 } from './flight-details';
 import { flightExpenseTitleFromSegments } from './flight-expense-title';
+import { addDays } from '@/utils/date';
 
 export interface ParsedFlightSegment {
   flight: FlightDetailsDraft;
   title?: string;
   date?: string;
   startMinutes?: number;
+  arrivalDate?: string;
+  arrivalMinutes?: number;
   durationMinutes?: number;
+  layoverMinutesAfter?: number;
   detectedFieldCount: number;
 }
 
 export interface ParsedFlightConfirmation extends ParsedFlightSegment {
   segments: ParsedFlightSegment[];
+  /** All likely travel dates recognized anywhere in the confirmation text. */
+  itineraryDates?: string[];
   amount?: number;
   currency?: string;
 }
@@ -70,6 +76,17 @@ interface FlightNumberMatch {
   number: string;
 }
 
+interface TimedAirportEvent {
+  index: number;
+  minutes: number;
+  airportCode: string;
+}
+
+interface OcrToken {
+  index: number;
+  lineIndex: number;
+}
+
 function firstMatch(text: string, patterns: RegExp[]): string | undefined {
   for (const pattern of patterns) {
     const match = pattern.exec(text);
@@ -94,35 +111,82 @@ function dateKey(year: number, month: number, day: number): string | undefined {
   ].join('-');
 }
 
+interface DateCandidate {
+  value: string;
+  index: number;
+}
+
+const MONTH_NUMBER: Record<string, number> = {
+  jan: 1,
+  feb: 2,
+  mar: 3,
+  apr: 4,
+  may: 5,
+  jun: 6,
+  jul: 7,
+  aug: 8,
+  sep: 9,
+  oct: 10,
+  nov: 11,
+  dec: 12,
+};
+
+function ocrYear(value: string): number {
+  const normalized = value.toUpperCase().replaceAll('O', '0');
+  return normalized.length === 2 ? 2000 + Number(normalized) : Number(normalized);
+}
+
+function findDateCandidates(text: string): DateCandidate[] {
+  const candidates: DateCandidate[] = [];
+  const push = (value: string | undefined, index: number) => {
+    if (value) candidates.push({ value, index });
+  };
+  for (const match of text.matchAll(
+    /\b(2[0O][0-9O]{2})[-/](\d{1,2})[-/](\d{1,2})\b/gi,
+  )) {
+    push(dateKey(ocrYear(match[1]), Number(match[2]), Number(match[3])), match.index);
+  }
+  for (const match of text.matchAll(
+    /\b(\d{1,2})[/-](\d{1,2})[/-](2[0O][0-9O]{2}|\d{2})\b/gi,
+  )) {
+    push(dateKey(ocrYear(match[3]), Number(match[1]), Number(match[2])), match.index);
+  }
+  const monthNames =
+    'January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec';
+  const monthPattern = new RegExp(
+    `\\b(${monthNames})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*[,]?\\s*(2[0O][0-9O]{2}|\\d{2})\\b`,
+    'gi',
+  );
+  for (const match of text.matchAll(monthPattern)) {
+    push(
+      dateKey(
+        ocrYear(match[3]),
+        MONTH_NUMBER[match[1].slice(0, 3).toLowerCase()],
+        Number(match[2]),
+      ),
+      match.index,
+    );
+  }
+  return candidates.sort((left, right) => left.index - right.index);
+}
+
+function likelyItineraryDates(text: string): string[] {
+  const seen = new Set<string>();
+  return findDateCandidates(text).flatMap((candidate) => {
+    const context = text.slice(Math.max(0, candidate.index - 28), candidate.index);
+    if (/book(?:ed|ing)?\s*(?:on)?\s*$/i.test(context)) return [];
+    if (seen.has(candidate.value)) return [];
+    seen.add(candidate.value);
+    return [candidate.value];
+  });
+}
+
 function findDate(
   text: string,
   minimumDate?: string,
   maximumDate?: string,
 ): string | undefined {
-  const candidates: string[] = [];
-  for (const match of text.matchAll(/\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b/g)) {
-    const value = dateKey(Number(match[1]), Number(match[2]), Number(match[3]));
-    if (value) candidates.push(value);
-  }
-  for (const match of text.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/g)) {
-    const value = dateKey(Number(match[3]), Number(match[1]), Number(match[2]));
-    if (value) candidates.push(value);
-  }
-  const monthNames =
-    'January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec';
-  const monthPattern = new RegExp(
-    `\\b(${monthNames})\\s+(\\d{1,2})(?:st|nd|rd|th)?[,]?\\s+(20\\d{2})\\b`,
-    'gi',
-  );
-  for (const match of text.matchAll(monthPattern)) {
-    const parsed = new Date(`${match[1]} ${match[2]}, ${match[3]} 12:00:00 UTC`);
-    const value = dateKey(
-      parsed.getUTCFullYear(),
-      parsed.getUTCMonth() + 1,
-      parsed.getUTCDate(),
-    );
-    if (value) candidates.push(value);
-  }
+  const candidates = findDateCandidates(text).map((candidate) => candidate.value);
   const dateWithinTrip = candidates.find(
     (value) =>
       (!minimumDate || value >= minimumDate) &&
@@ -150,7 +214,11 @@ function findDate(
   return candidates[0];
 }
 
-function parseMinutes(hourText: string, minuteText: string, suffix?: string): number {
+function parseMinutes(
+  hourText: string,
+  minuteText: string,
+  suffix?: string,
+): number {
   let hour = Number(hourText);
   const minute = Number(minuteText);
   if (suffix) {
@@ -204,10 +272,15 @@ function findDurationMinutes(text: string): number | undefined {
 }
 
 function validAirportCode(value: string | undefined): value is string {
-  return Boolean(value && /^[A-Z]{3}$/.test(value) && !NON_AIRPORT_CODES.has(value));
+  return Boolean(
+    value && /^[A-Z]{3}$/.test(value) && !NON_AIRPORT_CODES.has(value),
+  );
 }
 
-function findRoute(text: string): { departureAirport: string; arrivalAirport: string } {
+function findRoute(text: string): {
+  departureAirport: string;
+  arrivalAirport: string;
+} {
   const parenthesizedRoute =
     /\(([A-Z]{3})\)\s*(?:→|->|–|—|-|\bTO\b)\s*(?:[A-Za-z .'’/&-]{0,80}\s*)?\(([A-Z]{3})\)/i.exec(
       text,
@@ -223,10 +296,7 @@ function findRoute(text: string): { departureAirport: string; arrivalAirport: st
   }
 
   const arrowRoute = /\b([A-Z]{3})\s*(?:→|->|–|—)\s*([A-Z]{3})\b/.exec(text);
-  if (
-    validAirportCode(arrowRoute?.[1]) &&
-    validAirportCode(arrowRoute?.[2])
-  ) {
+  if (validAirportCode(arrowRoute?.[1]) && validAirportCode(arrowRoute?.[2])) {
     return {
       departureAirport: arrowRoute[1],
       arrivalAirport: arrowRoute[2],
@@ -234,8 +304,7 @@ function findRoute(text: string): { departureAirport: string; arrivalAirport: st
   }
 
   for (const line of text.split('\n')) {
-    const codeRoute =
-      /\b([A-Z]{3})\s+(?:TO|-)\s+([A-Z]{3})\b/.exec(line);
+    const codeRoute = /\b([A-Z]{3})\s+(?:TO|-)\s+([A-Z]{3})\b/.exec(line);
     if (validAirportCode(codeRoute?.[1]) && validAirportCode(codeRoute?.[2])) {
       return {
         departureAirport: codeRoute[1],
@@ -255,9 +324,7 @@ function findRoute(text: string): { departureAirport: string; arrivalAirport: st
     };
   }
 
-  const standaloneCodes = Array.from(
-    text.matchAll(/^\s*([A-Z]{3})\s*$/gm),
-  )
+  const standaloneCodes = Array.from(text.matchAll(/^\s*([A-Z]{3})\s*$/gm))
     .map((match) => match[1])
     .filter(validAirportCode);
   if (standaloneCodes.length >= 2) {
@@ -281,9 +348,7 @@ function findRoute(text: string): { departureAirport: string; arrivalAirport: st
 }
 
 function findLabeledLegBlocks(text: string): string[] {
-  const markers = Array.from(
-    text.matchAll(/^\s*(?:depart|return)\s*:/gim),
-  );
+  const markers = Array.from(text.matchAll(/^\s*(?:depart|return)\s*:/gim));
   if (markers.length < 2) return [];
   return markers.map((marker, index) =>
     text.slice(marker.index, markers[index + 1]?.index ?? text.length),
@@ -313,6 +378,123 @@ function findFlightNumbers(text: string): FlightNumberMatch[] {
   return Array.from(earliestByFlight.values()).sort(
     (left, right) => left.index - right.index,
   );
+}
+
+function findTimedAirportEvents(text: string): TimedAirportEvent[] {
+  const lines = Array.from(text.matchAll(/^.*$/gm));
+  const times: (OcrToken & { minutes: number })[] = [];
+  const airports: (OcrToken & { airportCode: string })[] = [];
+
+  lines.forEach((lineMatch, lineIndex) => {
+    for (const match of lineMatch[0].matchAll(
+      /\b(\d{1,2}):(\d{2})\s*(AM|PM)\b/gi,
+    )) {
+      times.push({
+        index: lineMatch.index + match.index,
+        lineIndex,
+        minutes: parseMinutes(match[1], match[2], match[3]),
+      });
+    }
+    for (const match of lineMatch[0].matchAll(/\(([A-Z]{3})\)/gi)) {
+      const airportCode = match[1].toUpperCase();
+      if (!validAirportCode(airportCode)) continue;
+      airports.push({
+        index: lineMatch.index + match.index,
+        lineIndex,
+        airportCode,
+      });
+    }
+  });
+
+  const usedAirports = new Set<number>();
+  return times.flatMap((time) => {
+    const airport = airports
+      .map((candidate, airportIndex) => ({
+        ...candidate,
+        airportIndex,
+        lineDistance: candidate.lineIndex - time.lineIndex,
+      }))
+      .filter(
+        (candidate) =>
+          !usedAirports.has(candidate.airportIndex) &&
+          Math.abs(candidate.lineDistance) <= 2,
+      )
+      .sort((left, right) => {
+        const leftScore =
+          Math.abs(left.lineDistance) + (left.lineDistance < 0 ? 10 : 0);
+        const rightScore =
+          Math.abs(right.lineDistance) + (right.lineDistance < 0 ? 10 : 0);
+        return leftScore - rightScore || left.index - right.index;
+      })[0];
+    if (!airport) return [];
+    usedAirports.add(airport.airportIndex);
+    return [
+      {
+        index: time.index,
+        minutes: time.minutes,
+        airportCode: airport.airportCode,
+      },
+    ];
+  });
+}
+
+function findLayoverMinutes(text: string): number[] {
+  return Array.from(
+    text.matchAll(
+      /\b(?:(\d{1,2})\s*(?:h|hr|hrs|hour|hours))?\s*(?:(\d{1,2})\s*(?:m|min|mins|minute|minutes))?\s+layover\b/gi,
+    ),
+  )
+    .map((match) => Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0))
+    .filter((minutes) => minutes > 0);
+}
+
+function applyTimedAirportItinerary(
+  segments: ParsedFlightSegment[],
+  text: string,
+  tripRange?: { startDate: string; endDate: string },
+): ParsedFlightSegment[] {
+  const events = findTimedAirportEvents(text);
+  if (segments.length < 2 || events.length < segments.length * 2)
+    return segments;
+
+  const itineraryEvents = events.slice(0, segments.length * 2);
+  const layovers = findLayoverMinutes(text);
+  const firstDate =
+    segments[0]?.date ??
+    findDate(text, tripRange?.startDate, tripRange?.endDate);
+  let departureDate = firstDate;
+
+  return segments.map((segment, index) => {
+    const departure = itineraryEvents[index * 2];
+    const arrival = itineraryEvents[index * 2 + 1];
+    const nextDeparture = itineraryEvents[index * 2 + 2];
+    const directLayover = layovers[index];
+    const computedLayover =
+      nextDeparture && arrival.airportCode === nextDeparture.airportCode
+        ? (nextDeparture.minutes - arrival.minutes + 24 * 60) % (24 * 60)
+        : undefined;
+    const layoverMinutesAfter = directLayover ?? computedLayover;
+    const next = {
+      ...segment,
+      date: departureDate ?? segment.date,
+      startMinutes: departure.minutes,
+      title: `Flight ${departure.airportCode} → ${arrival.airportCode}`,
+      flight: {
+        ...segment.flight,
+        departureAirport: departure.airportCode,
+        arrivalAirport: arrival.airportCode,
+      },
+      ...(layoverMinutesAfter ? { layoverMinutesAfter } : {}),
+    };
+    if (
+      departureDate &&
+      nextDeparture &&
+      nextDeparture.minutes < arrival.minutes
+    ) {
+      departureDate = addDays(departureDate, 1);
+    }
+    return next;
+  });
 }
 
 function parseSegment(
@@ -387,7 +569,7 @@ export function parseFlightConfirmation(
       ? [parseSegment(block, tripRange, confirmationCode, blockFlight)]
       : [];
   });
-  const segments =
+  const parsedSegments =
     labeledSegments.length >= 2
       ? labeledSegments
       : flightNumbers.length > 0
@@ -403,6 +585,8 @@ export function parseFlightConfirmation(
             );
           })
         : [parseSegment(text, tripRange, confirmationCode)];
+  const segments = applyTimedAirportItinerary(parsedSegments, text, tripRange);
+  const itineraryDates = likelyItineraryDates(text);
   const first = segments[0];
   const money = findConfirmationMoney(text);
   const routeTitle = flightExpenseTitleFromSegments(segments);
@@ -410,10 +594,13 @@ export function parseFlightConfirmation(
     ...first,
     ...(routeTitle ? { title: routeTitle } : {}),
     segments,
+    ...(itineraryDates.length ? { itineraryDates } : {}),
     amount: money.amount,
     currency: money.currency,
     detectedFieldCount:
-      segments.reduce((count, segment) => count + segment.detectedFieldCount, 0) +
-      (money.amount !== undefined ? 1 : 0),
+      segments.reduce(
+        (count, segment) => count + segment.detectedFieldCount,
+        0,
+      ) + (money.amount !== undefined ? 1 : 0),
   };
 }

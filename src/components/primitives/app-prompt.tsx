@@ -11,7 +11,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { create } from 'zustand';
 
-import { appTextStyle, borders, layout, radii, spacing } from '@/design-system';
+import { appTextStyle, borders, layout, radii, spacing, type Theme } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
@@ -35,6 +35,7 @@ interface PromptRequest {
   message?: string;
   actions: PromptAction[];
   cancelable: boolean;
+  theme?: Theme;
   onDismiss?: () => void;
 }
 
@@ -49,6 +50,7 @@ interface PromptState {
 
 interface AppAlertOptions {
   cancelable?: boolean;
+  theme?: Theme;
   onDismiss?: () => void;
 }
 
@@ -103,6 +105,7 @@ export const appPrompt = {
       cancelable:
         options?.cancelable === true ||
         resolvedActions.some((action) => action.style === 'cancel'),
+      theme: options?.theme,
       onDismiss: options?.onDismiss,
     });
   },
@@ -143,8 +146,9 @@ export const appPrompt = {
 };
 
 export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
-  const theme = useTheme();
+  const hostTheme = useTheme();
   const request = useAppPrompt((state) => state.request);
+  const theme = request?.theme ?? hostTheme;
   const dismiss = useAppPrompt((state) => state.dismiss);
   const embeddedHostIds = useAppPrompt((state) => state.embeddedHostIds);
   const registerEmbeddedHost = useAppPrompt((state) => state.registerEmbeddedHost);
@@ -265,11 +269,15 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
           <Symbol name="smart" size={22} color={theme.accentPrimary} />
         </View>
         <View style={styles.copy}>
-          <AppText accessibilityRole="header" style={styles.title}>
+          <AppText
+            accessibilityRole="header"
+            style={[styles.title, { color: theme.textPrimary }]}>
             {request.title}
           </AppText>
           {request.message ? (
-            <AppText selectable color="secondary" style={styles.message}>
+            <AppText
+              selectable
+              style={[styles.message, { color: theme.textSecondary }]}>
               {request.message}
             </AppText>
           ) : null}

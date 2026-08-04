@@ -12,4 +12,9 @@ describe('travel section header typography', () => {
     expect(source).toContain('fitMinimumScale={compact && nested ? 0.9 : undefined}');
     expect(source).not.toMatch(/compactNestedTitle:\s*\{[^}]*fontSize/s);
   });
+
+  it('shows expand and collapse affordances on compact nested sections', () => {
+    expect(source).toContain("name={expanded ? 'chevron-up' : 'chevron-down'}");
+    expect(source).not.toContain('{compact && nested ? null : (');
+  });
 });

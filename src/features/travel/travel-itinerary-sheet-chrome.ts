@@ -80,7 +80,7 @@ export function itinerarySheetChrome(theme: Theme): ItinerarySheetChrome {
     title: theme.textPrimary,
     subtitle: theme.textSecondary,
     label: theme.textPrimary,
-    placeholder: theme.textTertiary,
+    placeholder: theme.name === 'light' ? '#A0AFB9' : theme.textTertiary,
     importTitle: theme.textPrimary,
     importSubtitle: theme.textSecondary,
     importActionBorder: theme.separator,

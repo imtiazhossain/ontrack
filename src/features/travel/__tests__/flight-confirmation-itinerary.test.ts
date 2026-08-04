@@ -69,7 +69,11 @@ describe('flight confirmation itinerary merge', () => {
       title: 'Flight KEF → IAD',
       date: '2026-09-13',
       durationMinutes: 375,
-      flight: { flightNumber: 'FI 623', departureAirport: 'KEF', arrivalAirport: 'IAD' },
+      flight: {
+        flightNumber: 'FI 623',
+        departureAirport: 'KEF',
+        arrivalAirport: 'IAD',
+      },
     });
   });
 
@@ -94,14 +98,52 @@ describe('flight confirmation itinerary merge', () => {
     expect(
       expandedTripRangeForFlights(
         { startDate: '2026-09-08', endDate: '2026-09-13' },
-        [
-          SEGMENTS[0],
-          { ...SEGMENTS[1], date: '2026-09-14' },
-        ],
+        [SEGMENTS[0], { ...SEGMENTS[1], date: '2026-09-14' }],
       ),
     ).toEqual({
       startDate: '2026-09-08',
       endDate: '2026-09-14',
     });
+  });
+
+  it('persists a layover on the connecting itinerary leg', () => {
+    const result = mergeImportedFlights({
+      itinerary: [],
+      segments: [{ ...SEGMENTS[0], layoverMinutesAfter: 99 }, SEGMENTS[1]],
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
+      createId: () => crypto.randomUUID(),
+    });
+
+    expect(result[0].flight?.layoverMinutesAfter).toBe(99);
+    expect(result[1].flight?.layoverMinutesAfter).toBeUndefined();
+  });
+
+  it('keeps each separately imported flight confirmation on its own item', () => {
+    const first = mergeImportedFlights({
+      itinerary: [],
+      segments: [SEGMENTS[0]],
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
+      createId: () => 'outbound',
+      confirmationUris: [
+        'file:///Documents/travel-confirmations/flight/outbound.png',
+      ],
+    });
+    const result = mergeImportedFlights({
+      itinerary: first,
+      segments: [SEGMENTS[1]],
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
+      createId: () => 'return',
+      confirmationUris: [
+        'file:///Documents/travel-confirmations/flight/return.png',
+      ],
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0].flight?.confirmationUris).toEqual([
+      'file:///Documents/travel-confirmations/flight/outbound.png',
+    ]);
+    expect(result[1].flight?.confirmationUris).toEqual([
+      'file:///Documents/travel-confirmations/flight/return.png',
+    ]);
   });
 });

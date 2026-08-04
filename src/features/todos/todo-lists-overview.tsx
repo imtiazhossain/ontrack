@@ -3,7 +3,6 @@ import { useCallback, useMemo, useState } from 'react';
 import {
     Keyboard,
     Platform,
-    Pressable,
     StyleSheet,
     TextInput,
     View,
@@ -13,7 +12,15 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { appPrompt, AppText, Screen, SegmentedControl, Symbol } from '@/components/primitives';
+import {
+  appPrompt,
+  AppText,
+  Button,
+  IconButton,
+  Screen,
+  SegmentedControl,
+  Symbol,
+} from '@/components/primitives';
 import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
@@ -171,21 +178,6 @@ export function TodoListsOverview() {
     else haptics.select();
   };
 
-  const editModeAgent = useAgentUiTarget(AgentUiIds.checklists.editMode, {
-    label: editMode ? 'Finish editing checklists' : 'Edit checklists',
-    onPress: () => {
-      if (editMode) finishEditing();
-      else beginEditing();
-    },
-  });
-  const collaboratorsAgent = useAgentUiTarget(AgentUiIds.checklists.collaborators, {
-    label: 'Add collaborators',
-    onPress: () => router.push('/todo-collaborators' as never),
-  });
-  const createListAgent = useAgentUiTarget(AgentUiIds.checklists.createList, {
-    label: 'Create list',
-    onPress: add,
-  });
   const newListNameAgent = useAgentUiTarget(AgentUiIds.checklists.newListName, {
     label: 'New list name',
   });
@@ -327,76 +319,47 @@ export function TodoListsOverview() {
                 </View>
                 <View style={styles.headingActions}>
                   {lists.length > 0 ? (
-                    <AgentTestId
-                      testID={editModeAgent.testID}
-                      label={editMode ? 'Finish editing checklists' : 'Edit checklists'}
+                    <Button
+                      testID={AgentUiIds.checklists.editMode}
+                      accessibilityLabel={
+                        editMode
+                          ? 'Finish editing checklists'
+                          : 'Edit checklists'
+                      }
+                      size="sm"
+                      variant={editMode ? 'primary' : 'secondary'}
                       onPress={() => {
                         if (editMode) finishEditing();
                         else beginEditing();
                       }}
-                      style={styles.editModeButton}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          editMode
-                            ? 'Finish editing checklists'
-                            : 'Edit checklists'
-                        }
-                        onPress={() => {
-                          if (editMode) finishEditing();
-                          else beginEditing();
-                        }}
-                        style={({ pressed }) => [
-                          {
-                            backgroundColor: editMode
-                              ? theme.accentPrimary
-                              : theme.backgroundSunken,
-                            borderColor: editMode
-                              ? theme.accentPrimary
-                              : theme.separator,
-                            opacity: pressed ? 0.72 : 1,
-                          },
-                        ]}>
-                        <AppText
-                          variant="caption"
-                          color={editMode ? 'onAccent' : 'accent'}>
-                          {editMode ? 'Done' : 'Edit'}
-                        </AppText>
-                      </Pressable>
-                    </AgentTestId>
+                      style={[
+                        styles.editModeButton,
+                        {
+                          borderColor: editMode
+                            ? theme.accentPrimary
+                            : theme.separator,
+                        },
+                      ]}
+                      textStyle={editMode ? undefined : { color: theme.accentPrimary }}>
+                      {editMode ? 'Done' : 'Edit'}
+                    </Button>
                   ) : null}
-                  <AgentTestId
-                    testID={collaboratorsAgent.testID}
-                    label={
+                  <IconButton
+                    testID={AgentUiIds.checklists.collaborators}
+                    accessibilityLabel={
                       invites.length
                         ? `Add collaborators, ${invites.length} invitations waiting`
                         : 'Add collaborators'
                     }
+                    icon="invite"
+                    iconSize={21}
+                    color={
+                      invites.length
+                        ? theme.accentPrimary
+                        : theme.textSecondary
+                    }
                     onPress={() => router.push('/todo-collaborators' as never)}
-                    style={styles.inviteButton}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        invites.length
-                          ? `Add collaborators, ${invites.length} invitations waiting`
-                          : 'Add collaborators'
-                      }
-                      onPress={() => router.push('/todo-collaborators' as never)}
-                      style={({ pressed }) => [
-                        { backgroundColor: theme.backgroundSunken },
-                        pressed && styles.pressed,
-                      ]}>
-                      <Symbol
-                        name="invite"
-                        size={21}
-                        color={
-                          invites.length
-                            ? theme.accentPrimary
-                            : theme.textSecondary
-                        }
-                      />
-                    </Pressable>
-                  </AgentTestId>
+                  />
                 </View>
               </View>
 
@@ -455,31 +418,20 @@ export function TodoListsOverview() {
                         />
                       </View>
                     </AgentTestId>
-                    <AgentTestId
-                      testID={createListAgent.testID}
-                      label="Create list"
+                    <IconButton
+                      testID={AgentUiIds.checklists.createList}
+                      accessibilityLabel="Create list"
+                      icon="arrow-up"
+                      iconSize={18}
+                      color={theme.textOnAccent}
+                      background={
+                        draft.trim()
+                          ? theme.accentPrimary
+                          : theme.separator
+                      }
+                      disabled={!draft.trim()}
                       onPress={add}
-                      style={styles.addButton}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Create list"
-                        disabled={!draft.trim()}
-                        onPress={add}
-                        style={({ pressed }) => [
-                          {
-                            backgroundColor: draft.trim()
-                              ? theme.accentPrimary
-                              : theme.separator,
-                            opacity: pressed ? 0.72 : 1,
-                          },
-                        ]}>
-                        <Symbol
-                          name="arrow-up"
-                          size={18}
-                          color={theme.textOnAccent}
-                        />
-                      </Pressable>
-                    </AgentTestId>
+                    />
                   </View>
                 </View>
               ) : null}
@@ -530,21 +482,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.7,
   },
-  inviteButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
   editModeButton: {
     minWidth: 58,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
   },
   composer: {
     minHeight: 56,
@@ -568,12 +508,4 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  pressed: { opacity: 0.62 },
 });

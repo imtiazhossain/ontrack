@@ -50,6 +50,27 @@ describe('flight arrival', () => {
     });
   });
 
+  it('matches the local arrival times on the GUA→IAH→LGA itinerary', () => {
+    expect(
+      calculateFlightArrival({
+        date: '2026-09-27',
+        startMinutes: 1 * 60 + 30,
+        durationMinutes: 2 * 60 + 51,
+        departureAirport: 'GUA',
+        arrivalAirport: 'IAH',
+      }),
+    ).toMatchObject({ date: '2026-09-27', startMinutes: 5 * 60 + 21 });
+    expect(
+      calculateFlightArrival({
+        date: '2026-09-27',
+        startMinutes: 7 * 60,
+        durationMinutes: 3 * 60 + 29,
+        departureAirport: 'IAH',
+        arrivalAirport: 'LGA',
+      }),
+    ).toMatchObject({ date: '2026-09-27', startMinutes: 11 * 60 + 29 });
+  });
+
   it('applies the timezone shift for a later EWR→KEF departure', () => {
     // 5:00 PM EDT Sep 14 + 6h 15m → 3:15 AM next day Reykjavik
     const arrival = calculateFlightArrival({

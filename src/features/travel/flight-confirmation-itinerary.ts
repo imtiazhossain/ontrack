@@ -44,12 +44,12 @@ function sameFlight(
   }
   return Boolean(
     segment.flight.departureAirport &&
-      segment.flight.arrivalAirport &&
-      item.date === date &&
-      item.flight?.departureAirport?.toUpperCase() ===
-        segment.flight.departureAirport.toUpperCase() &&
-      item.flight?.arrivalAirport?.toUpperCase() ===
-        segment.flight.arrivalAirport.toUpperCase(),
+    segment.flight.arrivalAirport &&
+    item.date === date &&
+    item.flight?.departureAirport?.toUpperCase() ===
+      segment.flight.departureAirport.toUpperCase() &&
+    item.flight?.arrivalAirport?.toUpperCase() ===
+      segment.flight.arrivalAirport.toUpperCase(),
   );
 }
 
@@ -60,8 +60,7 @@ function importedItemValues(
   confirmationUris?: string[],
 ) {
   const date =
-    segment.date ??
-    (index === 0 ? tripRange.startDate : tripRange.endDate);
+    segment.date ?? (index === 0 ? tripRange.startDate : tripRange.endDate);
   return {
     title:
       segment.title ||
@@ -79,6 +78,9 @@ function importedItemValues(
       departureAirport: segment.flight.departureAirport || undefined,
       arrivalAirport: segment.flight.arrivalAirport || undefined,
       seat: segment.flight.seat || undefined,
+      ...(segment.layoverMinutesAfter
+        ? { layoverMinutesAfter: segment.layoverMinutesAfter }
+        : {}),
       ...(confirmationUris?.length ? { confirmationUris } : {}),
     },
   };
@@ -106,7 +108,8 @@ export function mergeImportedFlights({
         ? merged.findIndex((item) => item.id === targetItemId)
         : merged.findIndex(
             (item) =>
-              item.id !== targetItemId && sameFlight(item, segment, values.date),
+              item.id !== targetItemId &&
+              sameFlight(item, segment, values.date),
           );
     if (targetIndex >= 0) {
       merged[targetIndex] = {

@@ -18,12 +18,19 @@ export function TravelPlanTitle({
   style?: StyleProp<TextStyle>;
 }) {
   const [scale, setScale] = useState(1);
+  const [renderedLines, setRenderedLines] = useState<string[]>();
 
-  useEffect(() => setScale(1), [fontSize, title]);
+  useEffect(() => {
+    setScale(1);
+    setRenderedLines(undefined);
+  }, [fontSize, title]);
 
-  const adjustForMeasuredLines = useCallback((lineCount: number) => {
-    if (lineCount <= 2) return;
-    setScale((current) => Math.max(MINIMUM_SCALE, current - SCALE_STEP));
+  const adjustForMeasuredLines = useCallback((lines: readonly { text: string }[]) => {
+    if (lines.length > 2) {
+      setScale((current) => Math.max(MINIMUM_SCALE, current - SCALE_STEP));
+      return;
+    }
+    setRenderedLines(lines.map((line) => line.text.trim()).filter(Boolean));
   }, []);
 
   const scaledFontSize = fontSize * scale;
@@ -40,12 +47,23 @@ export function TravelPlanTitle({
 
   return (
     <View style={styles.container}>
-      <AppText
-        style={textStyle}
-        numberOfLines={scale <= MINIMUM_SCALE ? 2 : undefined}
-        onTextLayout={(event) => adjustForMeasuredLines(event.nativeEvent.lines.length)}>
-        {title}
-      </AppText>
+      {renderedLines ? (
+        <AppText
+          style={[textStyle, { height: scaledLineHeight * renderedLines.length }]}
+          fit
+          fitMinimumScale={MINIMUM_SCALE}
+          numberOfLines={renderedLines.length}>
+          {title}
+        </AppText>
+      ) : (
+        <AppText
+          key={scale}
+          style={textStyle}
+          numberOfLines={scale <= MINIMUM_SCALE ? 2 : undefined}
+          onTextLayout={(event) => adjustForMeasuredLines(event.nativeEvent.lines)}>
+          {title}
+        </AppText>
+      )}
     </View>
   );
 }

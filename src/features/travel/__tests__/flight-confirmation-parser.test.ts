@@ -159,10 +159,12 @@ describe('flight confirmation parser', () => {
         arrivalAirport: 'IAD',
       },
     });
-    expect(result.segments.flatMap((segment) => [
-      segment.flight.departureAirport,
-      segment.flight.arrivalAirport,
-    ])).not.toEqual(expect.arrayContaining(['DUE', 'THE']));
+    expect(
+      result.segments.flatMap((segment) => [
+        segment.flight.departureAirport,
+        segment.flight.arrivalAirport,
+      ]),
+    ).not.toEqual(expect.arrayContaining(['DUE', 'THE']));
   });
 
   it('imports both correct legs from the provided Chase PDFKit text', () => {
@@ -234,6 +236,75 @@ describe('flight confirmation parser', () => {
       }),
     ]);
     expect(reimported).toHaveLength(2);
+  });
+
+  it('extracts every leg and the connection from a layover itinerary', () => {
+    const parsed = parseFlightConfirmation(
+      `
+        /elsecure.chase.com
+        Flight details
+        Guatemala City (GUA) → New
+        York (LGA)
+        Sun, Sep 27, 2026
+        1 Traveler
+        Sun, Sep 27, 2026
+        1:30 am
+        Guatemala City, GT (GUA)
+        La Aurora International Airport
+        United Airlines
+        UA 1907
+        Boeing 737-800 Passenger
+        2h 51m
+        Basic Economy._ Economy class (N)
+        No pre-reserved seats
+        5:21 am
+        Houston, US (IAH)
+        George Bush Intercontinental Airport
+        1h 39m layover in Houston
+        7:00 am
+        Houston, US (IAH)
+        George Bush Intercontinental Airport
+        United Airlines
+        UA 1697
+        Boeing 737 MAX 8
+        3h 29m
+        Basic Economy.. Economy class (N)
+        No pre-reserved seats
+        11:29 am
+        New York, US (LGA)
+        New York LaGuardia Airport
+        Baggage Fees
+      `,
+      { startDate: '2026-09-27', endDate: '2026-09-27' },
+    );
+
+    expect(parsed.segments).toHaveLength(2);
+    expect(parsed.title).toBe('Flight GUA → LGA');
+    expect(parsed.segments[0]).toMatchObject({
+      title: 'Flight GUA → IAH',
+      date: '2026-09-27',
+      startMinutes: 90,
+      durationMinutes: 171,
+      layoverMinutesAfter: 99,
+      flight: {
+        airline: 'United Airlines',
+        flightNumber: 'UA 1907',
+        departureAirport: 'GUA',
+        arrivalAirport: 'IAH',
+      },
+    });
+    expect(parsed.segments[1]).toMatchObject({
+      title: 'Flight IAH → LGA',
+      date: '2026-09-27',
+      startMinutes: 420,
+      durationMinutes: 209,
+      flight: {
+        airline: 'United Airlines',
+        flightNumber: 'UA 1697',
+        departureAirport: 'IAH',
+        arrivalAirport: 'LGA',
+      },
+    });
   });
 });
 

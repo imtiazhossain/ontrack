@@ -35,7 +35,7 @@ export function TravelPlanHero({
 
   return (
     <View style={[styles.hero, { gap: rs.sm }]}>
-      <View style={[styles.titleRow, { gap: rs.xs }]}>
+      <View style={[styles.titleRow, { gap: rs.lg }]}>
         <IconButton
           icon="back"
           size={Math.max(32, s(32))}

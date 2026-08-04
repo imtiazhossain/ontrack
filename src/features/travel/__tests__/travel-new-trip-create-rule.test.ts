@@ -31,4 +31,36 @@ describe('new trip creation feedback', () => {
     expect(travelTab).toContain('setPendingCreatedTripId(planId)');
     expect(travelTab).toContain('tripOffsets.current[scrollTargetTripId]');
   });
+
+  it('starts each new trip with empty departure and return dates', () => {
+    const travelTab = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      'utf8',
+    );
+
+    expect(travelTab).toContain("const [startDate, setStartDate] = useState('')");
+    expect(travelTab).toContain("const [endDate, setEndDate] = useState('')");
+    expect(travelTab).toMatch(
+      /setDestination\(''\);\s*setStartDate\(''\);\s*setEndDate\(''\);\s*setNotes\(''\);/,
+    );
+    expect(travelTab).toMatch(
+      /useEffect\(\(\) => \{\s*if \(!showForm\) return;\s*setStartDate\(''\);\s*setEndDate\(''\);\s*\}, \[showForm\]\);/,
+    );
+  });
+
+  it('labels dates as start and end only on the new-trip form', () => {
+    const newTripCard = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-new-trip-card.tsx'),
+      'utf8',
+    );
+    const dateRangeEditor = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-date-range-editor.tsx'),
+      'utf8',
+    );
+
+    expect(newTripCard).toContain('startLabel="Start"');
+    expect(newTripCard).toContain('endLabel="End"');
+    expect(dateRangeEditor).toContain("startLabel = 'Departure'");
+    expect(dateRangeEditor).toContain("endLabel = 'Return'");
+  });
 });

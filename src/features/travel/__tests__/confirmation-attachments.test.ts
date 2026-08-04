@@ -1,4 +1,5 @@
 import {
+  confirmationUrisForDisplay,
   isImageConfirmationUri,
   normalizeConfirmationUris,
   resolveConfirmationUris,
@@ -37,5 +38,10 @@ describe('confirmation attachments', () => {
     expect(typeof resolveConfirmationUris).toBe('function');
     expect(resolveConfirmationUris(undefined)).toEqual([]);
     expect(resolveConfirmationUris([])).toEqual([]);
+  });
+
+  it('does not borrow another item\'s confirmation when none is stored', () => {
+    expect(confirmationUrisForDisplay(undefined, 'flight')).toEqual([]);
+    expect(confirmationUrisForDisplay([], 'stay')).toEqual([]);
   });
 });

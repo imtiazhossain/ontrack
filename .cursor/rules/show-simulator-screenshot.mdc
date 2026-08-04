@@ -15,11 +15,25 @@ Metro / Node 24 / Fast Refresh / reconnect details live in `.cursor/rules/verify
 2. Open the changed surface with `./scripts/agent-ui-open.sh <alias>` (see `docs/agent-routes.md`). Prefer `./scripts/agent-ui-tap.sh` / dump over screenshot coordinates.
 3. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
 4. Wait until fully loaded (`./scripts/agent-ui-wait.sh` when waiting on an id/prefix/route).
-5. Capture `xcrun simctl io booted screenshot`, **read the image**, and leave the simulator on that working screen.
+5. Capture `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below, and leave the simulator on that working screen.
+
+## Screenshot evidence gate
+
+A screenshot is proof only when the pixels visibly demonstrate the result being claimed. Before handing off:
+
+1. Write down the concrete user-visible claims you intend to make (for example, “Departure shows 09/27/26” and “Arrival shows 09/27/26”).
+2. Inspect the captured screenshot itself—not the code, parser output, unit tests, accessibility dump, or expected state.
+3. For every claim, identify the visible UI text/state in the screenshot that proves it.
+4. If any claimed value is blank, off-screen, obscured, pre-action, or otherwise not visibly verifiable, the evidence check **fails**. Continue exercising/fixing the flow and capture a new screenshot.
+5. Only describe a result as verified when the final screenshot visibly contains that result. Tests and logs may support the claim, but they never substitute for UI evidence.
+
+An empty form before import does **not** prove that import populated the form. A screenshot of the import picker does **not** prove the selected itinerary was parsed. For state-changing flows, capture the post-action state with the resulting values visible.
 
 ## Do not
 
 - Skip simulator testing after UI/app changes.
 - Restart Metro with `--clear` or kill the app as the default way to see UI edits.
 - End on “reload the app” without a simulator screenshot of the change.
+- Claim a value or behavior passed when that value/result is absent from the screenshot.
+- Use a pre-action, empty, or setup screen as evidence for a completed interaction.
 - Hand off a white screen, error boundary, partial load, or unrelated screen as the final visual proof.

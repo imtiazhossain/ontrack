@@ -143,6 +143,8 @@ function TravelPlanDetailLoaded({
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const { user } = useAuthSession();
   const accountEmail = user?.email?.trim().toLowerCase() || undefined;
+  const startsWithEmptySchedule =
+    initialAddKind === 'stay' || initialAddKind === 'flight';
   const defaultStayDetails = (overrides?: Parameters<typeof emptyStayDetailsDraft>[0]) =>
     emptyStayDetailsDraft({
       reservationEmail: accountEmail ?? '',
@@ -155,16 +157,16 @@ function TravelPlanDetailLoaded({
   > | null>(null);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(() =>
-    initialAddKind === 'stay' ? '' : (plan?.startDate ?? ''),
+    startsWithEmptySchedule ? '' : (plan?.startDate ?? ''),
   );
   const [startMinutes, setStartMinutes] = useState<number | null>(() =>
-    initialAddKind === 'stay' ? null : 9 * 60,
+    startsWithEmptySchedule ? null : 9 * 60,
   );
   const [endDate, setEndDate] = useState(() =>
-    initialAddKind === 'stay' ? '' : (plan?.endDate ?? plan?.startDate ?? ''),
+    startsWithEmptySchedule ? '' : (plan?.endDate ?? plan?.startDate ?? ''),
   );
   const [endMinutes, setEndMinutes] = useState<number | null>(() =>
-    initialAddKind === 'stay' ? null : 11 * 60,
+    startsWithEmptySchedule ? null : 11 * 60,
   );
   const [duration, setDuration] = useState('60');
   const [details, setDetails] = useState('');
@@ -847,10 +849,10 @@ function TravelPlanDetailLoaded({
       setEndDate(plan.endDate);
       setEndMinutes(10 * 60);
     } else if (nextKind === 'flight') {
-      setDate(plan.startDate);
-      setStartMinutes(9 * 60);
-      setEndDate(plan.startDate);
-      setEndMinutes(12 * 60);
+      setDate('');
+      setStartMinutes(null);
+      setEndDate('');
+      setEndMinutes(null);
     } else if (nextKind === 'transport') {
       setDate(plan.startDate);
       setStartMinutes(9 * 60);

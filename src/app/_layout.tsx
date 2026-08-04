@@ -2,6 +2,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +24,7 @@ import {
 } from '@/features/travel/travel-atmosphere';
 import { selectTravelAtmospherePlan } from '@/features/travel/travel-atmosphere-model';
 import {
+    travelSafeAreaBackground,
     travelSafeAreaStyle,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
@@ -57,6 +59,11 @@ export default function RootLayout() {
     dateDisplayFormat,
     travelRoute && hydrated,
   );
+  const rootBackground = travelRoute ? travelSafeAreaBackground(theme) : theme.backgroundPrimary;
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(rootBackground).catch(() => undefined);
+  }, [rootBackground]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

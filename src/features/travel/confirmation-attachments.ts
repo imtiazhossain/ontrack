@@ -106,40 +106,20 @@ export async function persistConfirmationAssets(
   return uris;
 }
 
-/** List confirmation files currently on disk for a travel kind. */
-export function listConfirmationUris(kind: 'flight' | 'rental' | 'stay' | 'transport'): string[] {
-  if (Platform.OS === 'web') return [];
-  try {
-    const directory = new Directory(Paths.document, 'travel-confirmations', kind);
-    if (!directory.exists) return [];
-    return directory
-      .list()
-      .flatMap((entry) => {
-        try {
-          if (entry instanceof File && entry.exists) return [entry.uri];
-        } catch {
-          return [];
-        }
-        return [];
-      });
-  } catch {
-    return [];
-  }
-}
-
 /**
- * Resolve confirmation URIs for display/open: prefer stored paths (remapped to the
- * current Documents container), then fall back to files already on disk.
+ * Resolve only the confirmation URIs owned by this itinerary item.
+ * Never fall back to the kind-wide files on disk: those files can belong to a
+ * different flight, stay, rental, or transport item.
  */
 export function confirmationUrisForDisplay(
   stored: string[] | undefined,
-  kind: 'flight' | 'rental' | 'stay' | 'transport',
+  _kind: 'flight' | 'rental' | 'stay' | 'transport',
 ): string[] {
   const resolved = resolveConfirmationUris(stored);
   if (resolved.length) return resolved;
   const normalized = normalizeConfirmationUris(stored);
   if (normalized?.length) return normalized;
-  return listConfirmationUris(kind);
+  return [];
 }
 
 /** Open confirmations in the system document preview (Quick Look / viewer). */

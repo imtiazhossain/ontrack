@@ -246,6 +246,8 @@ export function TravelItineraryForm({
             importingLabel={confirmationImport.importingLabel}
             onImportScreenshots={() => confirmationImport.onImport('screenshots')}
             onImportDocument={() => confirmationImport.onImport('document')}
+            screenshotsTestID={AgentUiIds.travel.itineraryAdd.importScreenshots}
+            documentTestID={AgentUiIds.travel.itineraryAdd.importDocument}
             accessibilityLabel={confirmationImport.accessibilityLabel}
           />
           {confirmationImport.importedFileName ? (

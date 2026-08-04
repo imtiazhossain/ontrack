@@ -31,12 +31,14 @@ export const AgentUiIds = {
     addPlaybook: 'ontrack.health.mind.addPlaybook',
     editPlaybook: (id: string) => `ontrack.health.playbook.${id}.edit`,
     startPlaybook: (id: string) => `ontrack.health.playbook.${id}.start`,
-    completePlaybook: (id: string) => `ontrack.health.playbookRun.${id}.complete`,
+    completePlaybook: (id: string) =>
+      `ontrack.health.playbookRun.${id}.complete`,
     cancelPlaybook: (id: string) => `ontrack.health.playbookRun.${id}.cancel`,
     call988: 'ontrack.health.support.call988',
     text988: 'ontrack.health.support.text988',
     emotion: (id: string) => `ontrack.health.checkIn.emotion.${id}`,
-    intensity: (id: string, value: number) => `ontrack.health.checkIn.intensity.${id}.${value}`,
+    intensity: (id: string, value: number) =>
+      `ontrack.health.checkIn.intensity.${id}.${value}`,
     factor: (id: string) => `ontrack.health.checkIn.factor.${id}`,
     note: 'ontrack.health.checkIn.note',
     customEmotion: 'ontrack.health.checkIn.customEmotion',
@@ -45,18 +47,21 @@ export const AgentUiIds = {
     valence: (value: string) => `ontrack.health.checkIn.valence.${value}`,
     saveCheckIn: 'ontrack.health.checkIn.save',
     factorName: 'ontrack.health.factor.name',
-    factorCategory: (category: string) => `ontrack.health.factor.category.${category}`,
+    factorCategory: (category: string) =>
+      `ontrack.health.factor.category.${category}`,
     factorEmotion: (id: string) => `ontrack.health.factor.emotion.${id}`,
     saveFactor: 'ontrack.health.factor.save',
     deleteFactor: 'ontrack.health.factor.delete',
     playbookName: 'ontrack.health.playbook.name',
-    playbookEmotion: (group: string, id: string) => `ontrack.health.playbook.${group}.${id}`,
+    playbookEmotion: (group: string, id: string) =>
+      `ontrack.health.playbook.${group}.${id}`,
     playbookSteps: 'ontrack.health.playbook.steps',
     playbookDuration: 'ontrack.health.playbook.duration',
     savePlaybook: 'ontrack.health.playbook.save',
     deletePlaybook: 'ontrack.health.playbook.delete',
     suggestPlaybook: 'ontrack.health.playbook.suggest',
-    useSuggestion: (index: number) => `ontrack.health.playbook.suggestion.${index}.use`,
+    useSuggestion: (index: number) =>
+      `ontrack.health.playbook.suggestion.${index}.use`,
     settingsConnect: 'ontrack.health.settings.connect',
     openAppleHealthSettings: 'ontrack.health.settings.openAppleHealth',
     stateSync: (value: string) => `ontrack.health.settings.stateSync.${value}`,
@@ -64,7 +69,8 @@ export const AgentUiIds = {
   },
   vehicles: {
     add: 'ontrack.vehicles.list.add',
-    vehicle: (vehicleId: string) => `ontrack.vehicles.list.vehicle.${vehicleId}`,
+    vehicle: (vehicleId: string) =>
+      `ontrack.vehicles.list.vehicle.${vehicleId}`,
     settings: 'ontrack.vehicles.detail.settings',
     section: (section: string) => `ontrack.vehicles.detail.section.${section}`,
     saveOdometer: 'ontrack.vehicles.detail.saveOdometer',
@@ -74,10 +80,12 @@ export const AgentUiIds = {
       title: 'ontrack.vehicles.expenses.title',
       amount: 'ontrack.vehicles.expenses.amount',
       date: 'ontrack.vehicles.expenses.date',
-      category: (category: string) => `ontrack.vehicles.expenses.category.${category}`,
+      category: (category: string) =>
+        `ontrack.vehicles.expenses.category.${category}`,
       notes: 'ontrack.vehicles.expenses.notes',
       add: 'ontrack.vehicles.expenses.add',
-      delete: (expenseId: string) => `ontrack.vehicles.expenses.delete.${expenseId}`,
+      delete: (expenseId: string) =>
+        `ontrack.vehicles.expenses.delete.${expenseId}`,
       confirmDelete: 'ontrack.vehicles.expenses.confirmDelete',
     },
   },
@@ -146,14 +154,16 @@ export const AgentUiIds = {
   },
   games: {
     balloonPopPlay: 'ontrack.games.balloonPop.play',
-    balloon: (balloonId: string) => `ontrack.games.balloonPop.balloon.${balloonId}`,
+    balloon: (balloonId: string) =>
+      `ontrack.games.balloonPop.balloon.${balloonId}`,
   },
   prompt: {
     close: 'ontrack.prompt.close',
     action: (index: number) => `ontrack.prompt.action.${index}`,
   },
   activityForm: {
-    choice: (group: string, value: string) => `ontrack.activityForm.choice.${group}.${value}`,
+    choice: (group: string, value: string) =>
+      `ontrack.activityForm.choice.${group}.${value}`,
   },
   designSystem: {
     info: 'ontrack.designSystem.info',
@@ -167,6 +177,9 @@ export const AgentUiIds = {
   },
   travel: {
     tripMode: (mode: string) => `ontrack.travel.tripMode.${mode}`,
+    flight: {
+      layoverDuration: 'ontrack.travel.flight.layoverDuration',
+    },
     transport: {
       mode: (mode: string) => `ontrack.travel.transport.mode.${mode}`,
       origin: 'ontrack.travel.transport.origin',
@@ -182,12 +195,14 @@ export const AgentUiIds = {
       attachDocument: 'ontrack.travel.transport.attachDocument',
       attachScreenshots: 'ontrack.travel.transport.attachScreenshots',
       distance: 'ontrack.travel.transport.distance',
-      distanceUnit: (unit: string) => `ontrack.travel.transport.distanceUnit.${unit}`,
+      distanceUnit: (unit: string) =>
+        `ontrack.travel.transport.distanceUnit.${unit}`,
       fare: 'ontrack.travel.transport.fare',
       currency: 'ontrack.travel.transport.currency',
       addStop: 'ontrack.travel.transport.addStop',
       stopName: (id: string) => `ontrack.travel.transport.stop.${id}.name`,
-      stopAddress: (id: string) => `ontrack.travel.transport.stop.${id}.address`,
+      stopAddress: (id: string) =>
+        `ontrack.travel.transport.stop.${id}.address`,
       stopDate: (id: string) => `ontrack.travel.transport.stop.${id}.date`,
       stopTime: (id: string) => `ontrack.travel.transport.stop.${id}.time`,
       stopNotes: (id: string) => `ontrack.travel.transport.stop.${id}.notes`,
@@ -204,6 +219,9 @@ export const AgentUiIds = {
     newTrip: {
       open: 'ontrack.travel.newTrip.open',
       cancel: 'ontrack.travel.newTrip.cancel',
+      importItinerary: 'ontrack.travel.newTrip.importItinerary',
+      importScreenshots: 'ontrack.travel.newTrip.importScreenshots',
+      importFile: 'ontrack.travel.newTrip.importFile',
       title: 'ontrack.travel.newTrip.title',
       destination: 'ontrack.travel.newTrip.destination',
       origin: 'ontrack.travel.newTrip.origin',
@@ -214,17 +232,23 @@ export const AgentUiIds = {
     },
     list: {
       cover: (tripId: string) => `ontrack.travel.list.cover.${tripId}`,
+      collapse: (tripId: string) => `ontrack.travel.list.collapse.${tripId}`,
       editDates: (tripId: string) => `ontrack.travel.list.editDates.${tripId}`,
-      searchFlights: (tripId: string) => `ontrack.travel.list.searchFlights.${tripId}`,
-      addTransport: (tripId: string) => `ontrack.travel.list.addTransport.${tripId}`,
-      searchStays: (tripId: string) => `ontrack.travel.list.searchStays.${tripId}`,
+      searchFlights: (tripId: string) =>
+        `ontrack.travel.list.searchFlights.${tripId}`,
+      addTransport: (tripId: string) =>
+        `ontrack.travel.list.addTransport.${tripId}`,
+      searchStays: (tripId: string) =>
+        `ontrack.travel.list.searchStays.${tripId}`,
       itinerary: (tripId: string) => `ontrack.travel.list.itinerary.${tripId}`,
       calendar: (tripId: string) => `ontrack.travel.list.calendar.${tripId}`,
-      tripWeather: (tripId: string) => `ontrack.travel.list.tripWeather.${tripId}`,
+      tripWeather: (tripId: string) =>
+        `ontrack.travel.list.tripWeather.${tripId}`,
       currency: (tripId: string) => `ontrack.travel.list.currency.${tripId}`,
       expenses: (tripId: string) => `ontrack.travel.list.expenses.${tripId}`,
       groupChat: (tripId: string) => `ontrack.travel.list.groupChat.${tripId}`,
-      coTravelers: (tripId: string) => `ontrack.travel.list.coTravelers.${tripId}`,
+      coTravelers: (tripId: string) =>
+        `ontrack.travel.list.coTravelers.${tripId}`,
       editTrip: (tripId: string) => `ontrack.travel.list.editTrip.${tripId}`,
     },
     dates: {
@@ -235,7 +259,8 @@ export const AgentUiIds = {
       save: 'ontrack.travel.dates.save',
     },
     photoViewer: {
-      dismiss: (tripId: string) => `ontrack.travel.photoViewer.dismiss.${tripId}`,
+      dismiss: (tripId: string) =>
+        `ontrack.travel.photoViewer.dismiss.${tripId}`,
       close: (tripId: string) => `ontrack.travel.photoViewer.close.${tripId}`,
     },
     editTrip: {
@@ -251,8 +276,10 @@ export const AgentUiIds = {
     },
     detailsEditor: {
       save: (itemId: string) => `ontrack.travel.detailsEditor.save.${itemId}`,
-      cancel: (itemId: string) => `ontrack.travel.detailsEditor.cancel.${itemId}`,
-      remove: (itemId: string) => `ontrack.travel.detailsEditor.remove.${itemId}`,
+      cancel: (itemId: string) =>
+        `ontrack.travel.detailsEditor.cancel.${itemId}`,
+      remove: (itemId: string) =>
+        `ontrack.travel.detailsEditor.remove.${itemId}`,
     },
     friends: {
       openInvite: 'ontrack.travel.friends.openInvite',
@@ -298,6 +325,8 @@ export const AgentUiIds = {
     timelineItem: {
       toggle: (itemId: string, phase: string) =>
         `ontrack.travel.timelineItem.${itemId}.${phase}`,
+      editFlight: (itemId: string) =>
+        `ontrack.travel.timelineItem.${itemId}.editFlight`,
     },
     flightSearch: {
       back: 'ontrack.travel.flightSearch.back',
@@ -353,6 +382,8 @@ export const AgentUiIds = {
     },
     itineraryAdd: {
       close: 'ontrack.travel.itineraryAdd.close',
+      importScreenshots: 'ontrack.travel.itineraryAdd.importScreenshots',
+      importDocument: 'ontrack.travel.itineraryAdd.importDocument',
       title: 'ontrack.travel.itineraryAdd.title',
       date: 'ontrack.travel.itineraryAdd.date',
       time: 'ontrack.travel.itineraryAdd.time',
@@ -402,12 +433,16 @@ export const AgentUiIds = {
     inviteShare: 'ontrack.social.invite.share',
     friendEmail: 'ontrack.social.friend.email',
     friendSend: 'ontrack.social.friend.send',
-    requestAccept: (requestId: string) => `ontrack.social.request.accept.${requestId}`,
-    requestDecline: (requestId: string) => `ontrack.social.request.decline.${requestId}`,
-    requestCancel: (requestId: string) => `ontrack.social.request.cancel.${requestId}`,
+    requestAccept: (requestId: string) =>
+      `ontrack.social.request.accept.${requestId}`,
+    requestDecline: (requestId: string) =>
+      `ontrack.social.request.decline.${requestId}`,
+    requestCancel: (requestId: string) =>
+      `ontrack.social.request.cancel.${requestId}`,
     friendAddToTrip: (friendId: string) =>
       `ontrack.social.friend.addToTrip.${friendId}`,
-    friendRemove: (friendId: string) => `ontrack.social.friend.remove.${friendId}`,
+    friendRemove: (friendId: string) =>
+      `ontrack.social.friend.remove.${friendId}`,
   },
   chrome: {
     back: 'ontrack.chrome.back',

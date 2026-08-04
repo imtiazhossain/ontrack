@@ -59,9 +59,10 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YVR: 'America/Vancouver',
   YYC: 'America/Edmonton',
   YEG: 'America/Edmonton',
-  // Mexico / Caribbean
+  // Mexico / Central America / Caribbean
   MEX: 'America/Mexico_City',
   CUN: 'America/Cancun',
+  GUA: 'America/Guatemala',
   SJU: 'America/Puerto_Rico',
   // Iceland / UK / Ireland
   KEF: 'Atlantic/Reykjavik',

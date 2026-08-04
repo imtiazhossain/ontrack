@@ -3,6 +3,7 @@ import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
   formatDateKeyShort,
+  formatDuration,
   formatMinutes,
   type DateDisplayFormat,
 } from '@/utils/date';
@@ -89,6 +90,16 @@ export function FlightDetailsSummary({
     details.seat
       ? { label: 'Seat', value: details.seat, icon: 'personal' as const }
       : undefined,
+    details.layoverMinutesAfter
+      ? {
+          label: 'Layover',
+          value: formatDuration(details.layoverMinutesAfter),
+          detail: details.arrivalAirport
+            ? `Connection at ${details.arrivalAirport}`
+            : undefined,
+          icon: 'clock' as const,
+        }
+      : undefined,
   ].filter((row): row is NonNullable<typeof row> => Boolean(row));
 
   return (
@@ -102,7 +113,8 @@ export function FlightDetailsSummary({
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined
       }
-      rows={rows}>
+      rows={rows}
+    >
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="flight"

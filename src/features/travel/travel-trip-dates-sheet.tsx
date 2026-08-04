@@ -47,18 +47,24 @@ export function TravelTripDatesSheet({
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [draftStart, setDraftStart] = useState(startDate);
   const [draftEnd, setDraftEnd] = useState(endDate);
+  const [draftSource, setDraftSource] = useState(`${startDate}:${endDate}`);
   const [activeEndpoint, setActiveEndpoint] = useState<ActiveEndpoint>('start');
   const [cursor, setCursor] = useState(() => monthCursor(startDate));
   const [error, setError] = useState<string>();
+  const currentSource = `${startDate}:${endDate}`;
+  const draftIsCurrent = draftSource === currentSource;
+  const hasDateChanges =
+    draftIsCurrent && (draftStart !== startDate || draftEnd !== endDate);
 
   useEffect(() => {
     if (!visible) return;
     setDraftStart(startDate);
     setDraftEnd(endDate);
+    setDraftSource(currentSource);
     setActiveEndpoint('start');
     setCursor(monthCursor(startDate));
     setError(undefined);
-  }, [endDate, startDate, visible]);
+  }, [currentSource, endDate, startDate, visible]);
 
   const chooseEndpoint = (endpoint: ActiveEndpoint) => {
     setActiveEndpoint(endpoint);
@@ -79,6 +85,7 @@ export function TravelTripDatesSheet({
   };
 
   const save = () => {
+    if (!draftIsCurrent || !hasDateChanges) return;
     const validation = validateTravelDateRange(draftStart, draftEnd, itinerary);
     if (validation.error) {
       setError(validation.error);
@@ -119,6 +126,7 @@ export function TravelTripDatesSheet({
           shape="rounded"
           icon="check"
           onPress={save}
+          disabled={!hasDateChanges}
           accessibilityLabel="Save trip dates"
           testID={AgentUiIds.travel.dates.save}>
           Save Dates

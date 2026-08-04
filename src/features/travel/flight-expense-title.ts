@@ -79,6 +79,20 @@ export function flightExpenseTitleFromSegments(
 ): string | undefined {
   const roundTrip = roundTripRouteFromSegments(segments);
   if (roundTrip) return formatRoundTripFlightTitle(roundTrip);
+  const connected = segments.length > 1 && segments.every((segment, index) => {
+    if (index === 0) return true;
+    return (
+      airportCode(segments[index - 1]?.flight?.arrivalAirport) ===
+      airportCode(segment.flight?.departureAirport)
+    );
+  });
+  if (connected) {
+    const route = routeFromAirports(
+      segments[0]?.flight?.departureAirport,
+      segments[segments.length - 1]?.flight?.arrivalAirport,
+    );
+    if (route) return formatOneWayFlightTitle(route);
+  }
   const first = segments[0];
   const oneWay = routeFromAirports(
     first?.flight?.departureAirport,

@@ -150,6 +150,7 @@ export function IconButton({
   const theme = useTheme();
   const { layout, iconSizes } = useResponsive();
   const resolvedSize = size ?? layout.minTapTarget;
+  const resolvedHitSlop = Math.max(6, (layout.minTapTarget - resolvedSize) / 2);
   const isDisabled = disabled || loading;
   const tint = color ?? theme.textPrimary;
   const spinnerColor = color ?? theme.accentPrimary;
@@ -174,7 +175,7 @@ export function IconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      hitSlop={6}
+      hitSlop={resolvedHitSlop}
       onPress={handlePress}
       style={({ pressed }) => [
         styles.iconButton,

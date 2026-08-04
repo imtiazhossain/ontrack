@@ -162,3 +162,22 @@ Amadeus enables production access; those results are labeled **Live prices**.
 Keep both credentials server-only. For standalone and TestFlight builds,
 `EXPO_PUBLIC_API_BASE_URL` must point to the deployed Expo API-route origin. Configure the Amadeus
 secrets in the same EAS Hosting environment, never in `eas.json` or an `EXPO_PUBLIC_` variable.
+
+## Flight confirmation import
+
+Flight screenshots, PDFs, text files, and saved emails are OCRed on-device and
+parsed locally first. To enable the optional free-tier fallback for layouts the
+local parser cannot complete, set the server-only `GEMINI_API_KEY`; the model
+defaults to Google's current `gemini-flash-lite-latest` alias and can be overridden with
+`TRAVEL_GEMINI_MODEL`. Production native builds also need
+`EXPO_PUBLIC_API_BASE_URL` pointing at the deployed Expo API origin.
+
+The app sends OCR text, never the original confirmation asset, to this fallback.
+Passenger names, email addresses, phone numbers, confirmation codes, ticket and
+loyalty identifiers, and seats are redacted first. Confirmation codes and seats
+stay on-device and are merged back into the review draft locally.
+Validated fallback results are kept in a bounded, encrypted, device-only parser
+memory keyed by a one-way fingerprint of the redacted OCR text; the raw text is
+not stored. Re-importing a learned confirmation therefore stays local and does
+not spend another provider request. If the service is unavailable or its free
+quota is exhausted, local import still completes without AI enrichment.

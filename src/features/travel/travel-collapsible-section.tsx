@@ -186,7 +186,6 @@ export function TravelCollapsibleSection({
               </AppText>
             </View>
           ) : null}
-          {compact && nested ? null : (
           <View
             style={[
               styles.chevron,
@@ -206,7 +205,6 @@ export function TravelCollapsibleSection({
               color={accent}
             />
           </View>
-          )}
         </Pressable>
         </AgentTestId>
         {onAddPress ? (
@@ -277,6 +275,7 @@ const styles = StyleSheet.create({
   chevron: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   addButton: {
     alignItems: 'center',

@@ -1,4 +1,5 @@
 import {
+  Button,
   ErrorMessage,
   Input,
   ScreenHeader,
@@ -25,6 +26,7 @@ interface TravelNewTripCardProps {
   endDate: string;
   notes: string;
   error?: string;
+  importingItinerary: boolean;
   onTitleChange: (value: string) => void;
   onModeChange: (value: TravelPlanMode) => void;
   onOriginChange: (value: string) => void;
@@ -32,6 +34,7 @@ interface TravelNewTripCardProps {
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   onNotesChange: (value: string) => void;
+  onImportItinerary: () => void;
   onCreate: () => void;
   onClose?: () => void;
 }
@@ -46,6 +49,7 @@ export function TravelNewTripCard({
   endDate,
   notes,
   error,
+  importingItinerary,
   onTitleChange,
   onModeChange,
   onOriginChange,
@@ -53,6 +57,7 @@ export function TravelNewTripCard({
   onStartDateChange,
   onEndDateChange,
   onNotesChange,
+  onImportItinerary,
   onCreate,
   onClose,
 }: TravelNewTripCardProps) {
@@ -79,6 +84,16 @@ export function TravelNewTripCard({
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <TravelPlanModePicker value={mode} onChange={onModeChange} />
+      <Button
+        variant="secondary"
+        shape="rounded"
+        icon="scan-document"
+        loading={importingItinerary}
+        testID={AgentUiIds.travel.newTrip.importItinerary}
+        accessibilityLabel="Import Flight Itinerary"
+        onPress={onImportItinerary}>
+        {importingItinerary ? 'Reading Itinerary…' : 'Import Flight Itinerary'}
+      </Button>
       <Input
         testID={AgentUiIds.travel.newTrip.origin}
         icon="route"
@@ -104,6 +119,8 @@ export function TravelNewTripCard({
         endDate={endDate}
         onStartDateChange={onStartDateChange}
         onEndDateChange={onEndDateChange}
+        startLabel="Start"
+        endLabel="End"
         stacked
         startTestID={AgentUiIds.travel.newTrip.startDate}
         endTestID={AgentUiIds.travel.newTrip.endDate}

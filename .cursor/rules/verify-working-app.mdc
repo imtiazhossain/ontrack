@@ -36,7 +36,7 @@ JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killi
 2. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains. Exercise the changed surface in the simulator (navigate/deep-link, tap through the flow). Fix failures before finishing.
 3. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
 4. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`). Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
-5. **Show proof in the reply.** Capture `xcrun simctl io booted screenshot`, read the image, and confirm it depicts the change. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
+5. **Show proof in the reply.** Capture `xcrun simctl io booted screenshot`, read the image, and apply the claim-by-claim evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. The screenshot must visibly show the post-action result being claimed; tests, logs, parser output, and an empty/pre-action screen are not substitutes. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
 
 ## Do not
 

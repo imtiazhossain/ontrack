@@ -68,14 +68,17 @@ describe('canonical design-system contract', () => {
     );
   });
 
-  it('uses the shared contextual Travel gradient instead of a flat wash', () => {
+  it('uses a single blue-to-neutral background across Travel routes', () => {
     const surface = read('src/features/travel/travel-surface.tsx');
     const travelTab = read('src/app/(tabs)/travel.tsx');
     const rootLayout = read('src/app/_layout.tsx');
-    expect(surface).toContain('travelPageGradient');
     expect(surface).toContain('travelSafeAreaStyle');
-    expect(surface).toContain('radial-gradient');
-    expect(surface).toContain('linear-gradient');
+    expect(surface).toContain("theme.name === 'dark' ? darkTheme : lightTheme");
+    expect(surface).toContain('todayTheme(theme).backgroundPrimary');
+    expect(surface).toContain('lightTravelTheme.backgroundPrimary');
+    expect(surface).toContain('darkTravelTheme.backgroundSecondary');
+    expect(surface).toContain('experimental_backgroundImage');
+    expect(surface).not.toContain('radial-gradient');
     expect(travelTab).toContain('style={travelStyle}');
     expect(travelTab).toContain('useTravelPageStyle(theme)');
     expect(rootLayout).toMatch(

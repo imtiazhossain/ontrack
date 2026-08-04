@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { appPrompt, AppText, EmptyState, Screen, ScreenHeader } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
@@ -11,16 +11,13 @@ import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-ra
 import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
-import {
-    TravelCalendarUpdatedModal,
-    type TravelCalendarUpdatedPayload,
-} from '@/features/travel/travel-calendar-updated-modal';
-import { TravelCoTravelerStack } from '@/features/travel/travel-cotraveler-stack';
+import { TravelCalendarUpdatedModal, type TravelCalendarUpdatedPayload } from '@/features/travel/travel-calendar-updated-modal';
 import { TravelCurrencySheet } from '@/features/travel/travel-currency-sheet';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
+import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import {
@@ -28,9 +25,8 @@ import {
     TravelSurfaceCard,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
-import { TravelTripCover } from '@/features/travel/travel-trip-cover';
+import { TravelTripCardHeader } from '@/features/travel/travel-trip-card-header';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
-import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
 import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
@@ -42,7 +38,7 @@ import { useSchedule } from '@/store/schedule';
 import { orderTravelPlansByRecency, useTravel } from '@/store/travel';
 import { useUI } from '@/store/ui';
 import { AgentUiIds } from '@/utils/agent-ui';
-import { formatDateKey, todayKey } from '@/utils/date';
+import { formatDateKey } from '@/utils/date';
 import { newId } from '@/utils/id';
 
 /** Primary travel planning tab — Add Stay sheet chrome for light + dark. */
@@ -84,10 +80,11 @@ function TravelScreenContent() {
   const [mode, setMode] = useState<TravelPlanMode>('flight');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [startDate, setStartDate] = useState(todayKey());
-  const [endDate, setEndDate] = useState(todayKey());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string>();
+  const flightImport = useNewTripFlightImport({ setMode, setOrigin, setDestination, setStartDate, setEndDate, setError });
   const [editingDetailsPlanId, setEditingDetailsPlanId] = useState<string>();
   const [editTitle, setEditTitle] = useState('');
   const [editMode, setEditMode] = useState<TravelPlanMode>('flight');
@@ -117,13 +114,13 @@ function TravelScreenContent() {
     () => new Set(),
   );
   const scrollRef = useRef<ScrollView>(null);
+  const editScrollRef = useRef<ScrollView>(null);
   const tripOffsets = useRef<Record<string, number>>({});
   const [pendingCreatedTripId, setPendingCreatedTripId] = useState<string>();
   const [scrollTargetOffset, setScrollTargetOffset] = useState<number>();
   const focusedTripId = typeof tripId === 'string' ? tripId : undefined;
   const scrollTargetTripId = pendingCreatedTripId ?? focusedTripId;
   const toggleCollapsed = (planId: string) => {
-    recordPlanInteraction(planId);
     setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(planId)) next.delete(planId);
@@ -135,6 +132,12 @@ function TravelScreenContent() {
     () => orderTravelPlansByRecency(plans, recentPlanIds),
     [plans, recentPlanIds],
   );
+
+  useEffect(() => {
+    if (!showForm) return;
+    setStartDate('');
+    setEndDate('');
+  }, [showForm]);
 
   useEffect(() => {
     if (
@@ -260,6 +263,8 @@ function TravelScreenContent() {
     setMode('flight');
     setOrigin('');
     setDestination('');
+    setStartDate('');
+    setEndDate('');
     setNotes('');
     setPendingCreatedTripId(planId);
     setShowForm(false);
@@ -346,9 +351,19 @@ function TravelScreenContent() {
 
   const editingPlan = sortedPlans.find((plan) => plan.id === editingDetailsPlanId);
 
+  useEffect(() => {
+    if (!editingDetailsPlanId) return;
+    const timer = setTimeout(() => {
+      editScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [editingDetailsPlanId]);
+
   if (editingPlan) {
     return (
       <Screen
+        key={`edit-trip-${editingPlan.id}`}
+        scrollRef={editScrollRef}
         style={travelStyle}
         contentStyle={styles.screen}
         refresh={false}>
@@ -420,6 +435,7 @@ function TravelScreenContent() {
           endDate={endDate}
           notes={notes}
           error={error}
+          importingItinerary={flightImport.importing}
           onTitleChange={setTitle}
           onModeChange={setMode}
           onOriginChange={setOrigin}
@@ -427,6 +443,7 @@ function TravelScreenContent() {
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onNotesChange={setNotes}
+          onImportItinerary={() => void flightImport.importItinerary()}
           onCreate={createPlan}
           onClose={plans.length > 0 ? () => setShowForm(false) : undefined}
         />
@@ -450,8 +467,6 @@ function TravelScreenContent() {
       {sortedPlans.map((plan) => {
         const collapsed = collapsedIds.has(plan.id);
         const days = tripDayCount(plan.startDate, plan.endDate);
-        const showDestination =
-          plan.title.trim().toLowerCase() !== plan.destination.trim().toLowerCase();
         return (
           <TravelSurfaceCard
             key={plan.id}
@@ -459,76 +474,19 @@ function TravelScreenContent() {
             padding={0}
             onLayout={(event) => rememberTripOffset(plan.id, event.nativeEvent.layout.y)}>
             <View style={[styles.tripCardBody, { padding: rs.md, gap: rs.md }]}>
-              <View style={[styles.tripHeader, { gap: rs.md }]}>
-                <TravelTripCover
-                  plan={plan}
-                  onOpen={() => recordPlanInteraction(plan.id)}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${plan.title}`}
-                  accessibilityState={{ expanded: !collapsed }}
-                  onPress={() => toggleCollapsed(plan.id)}
-                  style={({ pressed }) => [
-                    styles.tripHeaderToggle,
-                    { gap: rs.md },
-                    pressed ? styles.pressed : undefined,
-                  ]}>
-                  <View style={styles.heading}>
-                    <TravelPlanTitle
-                      title={plan.title}
-                      fontSize={s(32)}
-                      style={{ color: theme.textPrimary }}
-                    />
-                    {showDestination ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0, flexShrink: 1 }}>
-                        <AppText
-                          variant="caption"
-                          style={{ color: chrome.subtitle, fontSize: s(14), lineHeight: s(18), flexShrink: 1, minWidth: 0 }}
-                          fit
-                          numberOfLines={1}>
-                          {plan.destination}
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                </Pressable>
-                <View style={[styles.tripHeaderActions, { gap: rs.xs }]}>
-                  <TravelCoTravelerStack
-                    people={[
-                      {
-                        id: `${plan.id}-self`,
-                        name: selfDisplayName,
-                        isSelf: true,
-                      },
-                      ...plan.participants.map((person) => ({
-                        id: person.id,
-                        name: person.name,
-                      })),
-                    ]}
-                    expanded={expandedCoTravelerPlanId === plan.id}
-                    onExpandedChange={(next) => {
-                      if (next) recordPlanInteraction(plan.id);
-                      setExpandedCoTravelerPlanId(next ? plan.id : undefined);
-                    }}
-                  />
-                  <View style={[styles.tripHeaderControls, { gap: rs.sm }]}>
-                    <TravelSheetIconControl
-                      icon="edit"
-                      size={40}
-                      testID={AgentUiIds.travel.list.editTrip(plan.id)}
-                      accessibilityLabel={`Edit Details for ${plan.title}`}
-                      onPress={() => beginEditingDetails(plan)}
-                    />
-                    <TravelSheetIconControl
-                      icon={collapsed ? 'chevron-down' : 'chevron-up'}
-                      size={40}
-                      accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${plan.title}`}
-                      onPress={() => toggleCollapsed(plan.id)}
-                    />
-                  </View>
-                </View>
-              </View>
+              <TravelTripCardHeader
+                plan={plan}
+                collapsed={collapsed}
+                selfDisplayName={selfDisplayName}
+                coTravelersExpanded={expandedCoTravelerPlanId === plan.id}
+                onOpenCover={() => recordPlanInteraction(plan.id)}
+                onEdit={() => beginEditingDetails(plan)}
+                onToggleCollapsed={() => toggleCollapsed(plan.id)}
+                onCoTravelersExpandedChange={(next) => {
+                  if (next) recordPlanInteraction(plan.id);
+                  setExpandedCoTravelerPlanId(next ? plan.id : undefined);
+                }}
+              />
               <TravelTripDatesRow
                 startLabel={formatDateKey(plan.startDate, dateDisplayFormat)}
                 endLabel={formatDateKey(plan.endDate, dateDisplayFormat)}
@@ -659,40 +617,8 @@ const styles = StyleSheet.create({
   tripCardBody: {
     width: '100%',
   },
-  heading: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xs, justifyContent: 'center' },
   serif: {
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
   },
-  tripHeader: {
-    minHeight: 96,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    overflow: 'visible',
-    zIndex: 2,
-  },
-  tripHeaderToggle: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    minHeight: 96,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 0,
-  },
-  tripHeaderActions: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    flexShrink: 0,
-    zIndex: 6,
-    elevation: 6,
-    gap: spacing.xs,
-  },
-  tripHeaderControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  pressed: { opacity: 0.6 },
 });

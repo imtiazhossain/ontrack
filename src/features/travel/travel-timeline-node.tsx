@@ -35,7 +35,10 @@ import {
   kindIcon,
   kindTint,
 } from '@/features/travel/travel-kind-chrome';
-import { TravelItemNotesButton, TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
+import {
+  TravelItemNotesButton,
+  TravelItemNotesSheet,
+} from '@/features/travel/travel-item-notes-sheet';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import {
   TRAVEL_CARD_SHADOW,
@@ -53,7 +56,11 @@ import {
   type TravelTimelinePhase,
 } from '@/features/travel/travel-timeline-entries';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import type { TravelItemNote, TravelPlan, TravelTransportDetails } from '@/features/travel/types';
+import type {
+  TravelItemNote,
+  TravelPlan,
+  TravelTransportDetails,
+} from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { DateDisplayFormat } from '@/utils/date';
@@ -207,13 +214,17 @@ export function TravelTimelineNode({
   };
   const isMoment = item.kind === 'moment';
   const isStructuredTravelKind =
-    item.kind === 'flight' || item.kind === 'transport' || item.kind === 'rental' || item.kind === 'stay';
+    item.kind === 'flight' ||
+    item.kind === 'transport' ||
+    item.kind === 'rental' ||
+    item.kind === 'stay';
   const editingFlight =
     allowStructuredEditing && editingFlightItemId === item.id;
   const editingRental =
     allowStructuredEditing && editingRentalItemId === item.id;
   const editingStay = allowStructuredEditing && editingStayItemId === item.id;
-  const editingStructured = editingFlight || editingTransport || editingRental || editingStay;
+  const editingStructured =
+    editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
   const title = displayTitle ?? item.title;
   const caption = timelineEntryCaption(
@@ -260,7 +271,8 @@ export function TravelTimelineNode({
             : TRAVEL_CARD_SHADOW,
           overflow: 'hidden',
         },
-      ]}>
+      ]}
+    >
       <View
         style={[
           styles.stripe,
@@ -281,76 +293,87 @@ export function TravelTimelineNode({
                   : undefined,
             gap: dense ? rs.xxs : compact ? rs.xs : rs.sm,
           },
-        ]}>
+        ]}
+      >
         <AgentTestId
           testID={AgentUiIds.travel.timelineItem.toggle(item.id, phase)}
           label={title}
-          onPress={onToggle}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isExpanded }}
           onPress={onToggle}
-          hitSlop={8}
-          style={[
-            styles.itemHeader,
-            {
-              gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
-              alignItems: compact ? 'center' : 'flex-start',
-            },
-          ]}>
-          {showKindBadge ? (
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isExpanded }}
+            onPress={onToggle}
+            hitSlop={8}
+            style={[
+              styles.itemHeader,
+              {
+                gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
+                alignItems: compact ? 'center' : 'flex-start',
+              },
+            ]}
+          >
+            {showKindBadge ? (
+              <View
+                style={[
+                  styles.kindPill,
+                  {
+                    backgroundColor: tint,
+                    width: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
+                    height: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
+                  },
+                ]}
+                accessibilityLabel={titleCaseTravelKind(item.kind)}
+              >
+                <Symbol name={icon} size={compact ? 10 : 12} color={accent} />
+              </View>
+            ) : null}
+            <View style={styles.flex}>
+              <TimelineItemTitle
+                title={title}
+                compact={compact}
+                dense={dense}
+              />
+              {showHeaderCaption ? (
+                <AppText variant="caption" color="secondary" fit>
+                  {caption}
+                </AppText>
+              ) : null}
+            </View>
             <View
               style={[
-                styles.kindPill,
+                styles.itemSizeAction,
                 {
-                  backgroundColor: tint,
-                  width: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
-                  height: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
+                  width: dense
+                    ? Math.max(18, s(18))
+                    : compact
+                      ? Math.max(32, s(34))
+                      : Math.max(28, s(32)),
+                  height: dense
+                    ? Math.max(18, s(18))
+                    : compact
+                      ? Math.max(32, s(34))
+                      : Math.max(28, s(32)),
+                  borderRadius: radii.pill,
+                  backgroundColor: dense
+                    ? 'transparent'
+                    : theme.backgroundSunken,
                 },
               ]}
-              accessibilityLabel={titleCaseTravelKind(item.kind)}>
-              <Symbol name={icon} size={compact ? 10 : 12} color={accent} />
+            >
+              <Symbol
+                name={
+                  isExpanded
+                    ? 'chevron-up'
+                    : collapsedChevron === 'right'
+                      ? 'chevron-right'
+                      : 'chevron-down'
+                }
+                size={dense || compact ? 10 : 12}
+                color={theme.textTertiary}
+              />
             </View>
-          ) : null}
-          <View style={styles.flex}>
-            <TimelineItemTitle title={title} compact={compact} dense={dense} />
-            {showHeaderCaption ? (
-              <AppText variant="caption" color="secondary" fit>
-                {caption}
-              </AppText>
-            ) : null}
-          </View>
-          <View
-            style={[
-              styles.itemSizeAction,
-              {
-                width: dense
-                  ? Math.max(18, s(18))
-                  : compact
-                    ? Math.max(32, s(34))
-                    : Math.max(28, s(32)),
-                height: dense
-                  ? Math.max(18, s(18))
-                  : compact
-                    ? Math.max(32, s(34))
-                    : Math.max(28, s(32)),
-                borderRadius: radii.pill,
-                backgroundColor: dense ? 'transparent' : theme.backgroundSunken,
-              },
-            ]}>
-            <Symbol
-              name={
-                isExpanded
-                  ? 'chevron-up'
-                  : collapsedChevron === 'right'
-                    ? 'chevron-right'
-                    : 'chevron-down'
-              }
-              size={dense || compact ? 10 : 12}
-              color={theme.textTertiary}
-            />
-          </View>
-        </Pressable>
+          </Pressable>
         </AgentTestId>
 
         {!isExpanded && photos.length > 0 ? (
@@ -361,7 +384,8 @@ export function TravelTimelineNode({
           <Animated.View
             entering={FadeIn.duration(150)}
             exiting={FadeOut.duration(120)}
-            style={[styles.itemDetails, { gap: rs.md }]}>
+            style={[styles.itemDetails, { gap: rs.md }]}
+          >
             {caption && !showHeaderCaption ? (
               <AppText variant="caption" color="accent">
                 {caption}
@@ -388,7 +412,8 @@ export function TravelTimelineNode({
                       backgroundColor: tint,
                     },
                     pressed && styles.pressed,
-                  ]}>
+                  ]}
+                >
                   <Symbol name="location" size="sm" color={accent} />
                   <View style={styles.addressCopy}>
                     <AppText variant="callout" color="primary" selectable>
@@ -516,10 +541,8 @@ export function TravelTimelineNode({
             {!editingStructured ? (
               <View style={styles.itineraryActionsWrap}>
                 <View
-                  style={[
-                    styles.itineraryActions,
-                    { gap: Math.max(8, rs.xs) },
-                  ]}>
+                  style={[styles.itineraryActions, { gap: Math.max(8, rs.xs) }]}
+                >
                   <TravelItemNotesButton
                     hasNotes={(item.notes?.length ?? 0) > 0}
                     size={toolbarActionSize}
@@ -553,6 +576,9 @@ export function TravelTimelineNode({
                   ) : null}
                   {allowStructuredEditing && item.kind === 'flight' ? (
                     <IconButton
+                      testID={AgentUiIds.travel.timelineItem.editFlight(
+                        item.id,
+                      )}
                       icon="edit"
                       size={toolbarActionSize}
                       iconSize="sm"

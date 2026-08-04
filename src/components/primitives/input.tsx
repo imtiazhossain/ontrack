@@ -148,7 +148,14 @@ export function Input({
             styles.iconField,
             fieldLeadingIconRowStyle({
               minHeight: stacked ? stackedMinHeight : minHeight,
-              height: multiline && hasValue ? undefined : stacked ? undefined : minHeight,
+              // Multiline inputs can be taller even while empty. Let the row
+              // grow so the persistent label remains visible and the complete
+              // label/value block stays vertically centered beside the icon.
+              height: multiline
+                ? undefined
+                : stacked
+                  ? undefined
+                  : minHeight,
               borderRadius: radii.lg,
               paddingHorizontal: spacing.md,
               paddingVertical: stacked ? spacing.sm : 0,
@@ -212,8 +219,12 @@ export function Input({
                     textAlignVertical: multiline ? 'top' : 'center',
                     textAlign: stackedCentered ? 'center' : undefined,
                   },
+                  multiline ? styles.stackedMultilineInput : null,
                   trailing ? { paddingRight: s(40) } : null,
                   style,
+                  multiline
+                    ? { paddingTop: typography.caption.lineHeight + 2 }
+                    : null,
                 ]}
                 {...rest}
                 underlineColorAndroid="transparent"
@@ -366,6 +377,7 @@ const styles = StyleSheet.create({
   stackedLabel: {
     flexShrink: 1,
     minWidth: 0,
+    zIndex: 1,
   },
   stackedLabelCentered: {
     textAlign: 'center',
@@ -383,6 +395,12 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
     backgroundColor: 'transparent',
+  },
+  stackedMultilineInput: {
+    // A growing native multiline input can paint over its preceding label.
+    // Its explicit/intrinsic height should size the stacked copy instead.
+    flexGrow: 0,
+    flexBasis: 'auto',
   },
   input: {},
   hitInput: {

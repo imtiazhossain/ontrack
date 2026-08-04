@@ -1,12 +1,5 @@
 export type TravelPlanMode =
-  | 'flight'
-  | 'road'
-  | 'train'
-  | 'bus'
-  | 'ferry'
-  | 'transit'
-  | 'mixed'
-  | 'other';
+  'flight' | 'road' | 'train' | 'bus' | 'ferry' | 'transit' | 'mixed' | 'other';
 
 export type TravelTransportMode =
   | 'driving'
@@ -21,12 +14,7 @@ export type TravelTransportMode =
   | 'other';
 
 export type TravelItemKind =
-  | 'flight'
-  | 'transport'
-  | 'stay'
-  | 'activity'
-  | 'rental'
-  | 'moment';
+  'flight' | 'transport' | 'stay' | 'activity' | 'rental' | 'moment';
 
 export interface TravelRouteStop {
   id: string;
@@ -66,6 +54,8 @@ export interface TravelFlightDetails {
   departureAirport?: string;
   arrivalAirport?: string;
   seat?: string;
+  /** Minutes spent connecting after this leg before the next flight. */
+  layoverMinutesAfter?: number;
   /** Durable file:// URIs for the uploaded confirmation document/screenshots. */
   confirmationUris?: string[];
 }
@@ -157,13 +147,7 @@ export interface TravelTripRosterPerson {
 }
 
 export type TravelExpenseCategory =
-  | 'flight'
-  | 'stay'
-  | 'food'
-  | 'transport'
-  | 'activity'
-  | 'shopping'
-  | 'other';
+  'flight' | 'stay' | 'food' | 'transport' | 'activity' | 'shopping' | 'other';
 
 /** Local trip owner in expense paid-by / split lists (not a TravelParticipant id). */
 export const TRAVEL_EXPENSE_SELF_ID = 'self';
@@ -230,11 +214,7 @@ export interface TravelPlan {
 }
 
 export type TravelOpenJoinStatus =
-  | 'none'
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'host';
+  'none' | 'pending' | 'approved' | 'rejected' | 'host';
 
 export interface TravelOpenJoinPreview {
   title: string;

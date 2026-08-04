@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -16,11 +16,11 @@ export function AppSafeArea({
   const theme = useTheme();
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
-      {children}
-    </SafeAreaView>
+    <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
+      <SafeAreaView edges={['top']} style={styles.fill}>
+        {children}
+      </SafeAreaView>
+    </View>
   );
 }
 

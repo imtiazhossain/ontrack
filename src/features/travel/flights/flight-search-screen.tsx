@@ -5,7 +5,6 @@ import {
     AccessibilityInfo,
     Pressable,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
 
@@ -405,8 +404,10 @@ export function FlightSearchScreen({
             style={[styles.eyebrow, { color: accent }]}>
             FLIGHT SEARCH
           </AppText>
-          <Text
-            allowFontScaling={false}
+          <AppText
+            fit
+            fitMinimumScale={0.55}
+            numberOfLines={2}
             style={[
               styles.title,
               {
@@ -418,7 +419,7 @@ export function FlightSearchScreen({
               },
             ]}>
             Flights for {plan.title}
-          </Text>
+          </AppText>
           <AppText
             numberOfLines={2}
             style={[

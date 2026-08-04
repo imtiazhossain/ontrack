@@ -1,10 +1,19 @@
 import {
   emptyFlightDetailsDraft,
+  flightDetailsDraft,
+  formatLayoverDuration,
   normalizeFlightDetails,
   validateFlightDetails,
 } from '../flight-details';
 
 describe('travel flight details', () => {
+  it('formats a layover as a compact hour and minute duration', () => {
+    expect(formatLayoverDuration(99)).toBe('1h 39m');
+    expect(
+      flightDetailsDraft({ layoverMinutesAfter: 99 }).layoverMinutesAfter,
+    ).toBe('1h 39m');
+  });
+
   it('normalizes codes while preserving the airline name', () => {
     expect(
       normalizeFlightDetails({
@@ -47,10 +56,36 @@ describe('travel flight details', () => {
     });
   });
 
+  it('preserves a recognized layover duration', () => {
+    expect(
+      normalizeFlightDetails({
+        departureAirport: 'gua',
+        arrivalAirport: 'iah',
+        layoverMinutesAfter: '1h 39m',
+      }),
+    ).toMatchObject({
+      departureAirport: 'GUA',
+      arrivalAirport: 'IAH',
+      layoverMinutesAfter: 99,
+    });
+  });
+
   it('accepts an empty optional flight record', () => {
     expect(validateFlightDetails(emptyFlightDetailsDraft())).toEqual({
       ok: true,
       value: undefined,
+    });
+  });
+
+  it('rejects invalid layover durations', () => {
+    expect(
+      validateFlightDetails({
+        ...emptyFlightDetailsDraft(),
+        layoverMinutesAfter: '0',
+      }),
+    ).toEqual({
+      ok: false,
+      error: 'Use a layover like 1h 39m, up to 168 hours.',
     });
   });
 

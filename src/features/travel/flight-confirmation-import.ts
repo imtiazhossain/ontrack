@@ -9,14 +9,19 @@ import {
   type ConfirmationImportOptions,
 } from './confirmation-import-options';
 import {
-  parseFlightConfirmation,
   type ParsedFlightConfirmation,
 } from './flight-confirmation-parser';
+import { parseFlightConfirmationWithFallback } from './flight-confirmation-enrichment';
 
 const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_SCREENSHOTS = 6;
 
 export type FlightConfirmationImportSource = 'document' | 'screenshots';
+
+interface FlightConfirmationImportOptions extends ConfirmationImportOptions {
+  /** Draft-only imports can skip copying the selected file into app storage. */
+  persistAttachments?: boolean;
+}
 
 interface ConfirmationAsset {
   uri: string;
@@ -29,10 +34,27 @@ export interface ImportedFlightConfirmation extends ParsedFlightConfirmation {
   confirmationUris: string[];
 }
 
+async function readFlightConfirmationUris(
+  uris: string[],
+  tripRange?: { startDate: string; endDate: string },
+): Promise<ParsedFlightConfirmation> {
+  if (!TravelDocumentReader) {
+    throw new Error('Confirmation document import is not available in this app build.');
+  }
+  const recognizedPages: string[] = [];
+  for (const uri of uris) {
+    recognizedPages.push(await TravelDocumentReader.recognizeTextAsync(uri));
+  }
+  return parseFlightConfirmationWithFallback(
+    recognizedPages.join('\n\n'),
+    tripRange,
+  );
+}
+
 export async function importFlightConfirmation(
-  tripRange: { startDate: string; endDate: string },
+  tripRange?: { startDate: string; endDate: string },
   source: FlightConfirmationImportSource = 'document',
-  options?: ConfirmationImportOptions,
+  options?: FlightConfirmationImportOptions,
 ): Promise<ImportedFlightConfirmation | undefined> {
   if (!TravelDocumentReader) {
     throw new Error(
@@ -49,18 +71,19 @@ export async function importFlightConfirmation(
     throw new Error('Each confirmation file must be smaller than 20 MB.');
   }
   options?.onPhase?.('reading');
-  const recognizedPages: string[] = [];
-  for (const asset of assets) {
-    recognizedPages.push(await TravelDocumentReader.recognizeTextAsync(asset.uri));
-  }
-  const text = recognizedPages.join('\n\n');
-  const parsed = parseFlightConfirmation(text, tripRange);
+  const parsed = await readFlightConfirmationUris(
+    assets.map((asset) => asset.uri),
+    tripRange,
+  );
   if (parsed.detectedFieldCount === 0) {
     throw new Error(
       'No flight details were recognized. Try a clearer image or enter the details manually.',
     );
   }
-  const confirmationUris = await persistConfirmationAssets(assets, 'flight');
+  const confirmationUris =
+    options?.persistAttachments === false
+      ? []
+      : await persistConfirmationAssets(assets, 'flight');
   const fileName =
     assets.length === 1
       ? assets[0].fileName

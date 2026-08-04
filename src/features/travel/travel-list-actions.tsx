@@ -144,6 +144,7 @@ export function TravelSheetIconControl({
   onPress,
   accessibilityLabel,
   size,
+  iconSize,
   tone = 'default',
   testID,
 }: {
@@ -151,6 +152,7 @@ export function TravelSheetIconControl({
   onPress: () => void;
   accessibilityLabel: string;
   size?: number;
+  iconSize?: number;
   /** `accent` = gold icon on elevated cream (page header +). */
   tone?: 'default' | 'accent';
   testID?: string;
@@ -163,6 +165,7 @@ export function TravelSheetIconControl({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       size={size}
+      iconSize={iconSize}
       color={tone === 'accent' ? theme.accentPrimary : theme.textPrimary}
       background={theme.backgroundSunken}
       borderColor={theme.separator}

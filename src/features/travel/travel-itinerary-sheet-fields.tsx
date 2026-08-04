@@ -17,6 +17,8 @@ export function ItinerarySheetImportCard({
   importingLabel,
   onImportScreenshots,
   onImportDocument,
+  screenshotsTestID,
+  documentTestID,
   accessibilityLabel,
 }: {
   title: string;
@@ -25,6 +27,8 @@ export function ItinerarySheetImportCard({
   importingLabel?: string;
   onImportScreenshots: () => void;
   onImportDocument: () => void;
+  screenshotsTestID: string;
+  documentTestID: string;
   accessibilityLabel: string;
 }) {
   const theme = useTheme();
@@ -97,6 +101,7 @@ export function ItinerarySheetImportCard({
       ) : (
         <View style={[styles.importActions, { gap: rs.xs }]}>
           <IconButton
+            testID={screenshotsTestID}
             icon="photo"
             size={actionSize}
             shape="rounded"
@@ -107,6 +112,7 @@ export function ItinerarySheetImportCard({
             accessibilityLabel="Import confirmation from photo screenshots"
           />
           <IconButton
+            testID={documentTestID}
             icon="scan-document"
             size={actionSize}
             shape="rounded"
