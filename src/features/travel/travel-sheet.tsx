@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppPromptHost, AppText, Symbol } from '@/components/primitives';
 import { appTextStyle, radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
@@ -324,6 +324,7 @@ export function TravelSheetModal({
             {footer ? <View style={{ paddingTop: rs.md }}>{footer}</View> : null}
           </View>
         </KeyboardAvoidingView>
+        <AppPromptHost embedded />
       </View>
     </Modal>
   );

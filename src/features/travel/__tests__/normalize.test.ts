@@ -506,4 +506,19 @@ describe('travel plan normalization', () => {
       hostDisplayName: 'Sam',
     });
   });
+
+  it('keeps approved open-join member copies as members without host link state', () => {
+    const normalized = normalizeTravelPlan({
+      ...legacyPlan,
+      id: 'trip-invite-member-code',
+      chatAccessCode: 'aaaaaaaaaaaaaaaaaaaa',
+      hostTripId: 'trip-host-1',
+    });
+
+    expect(normalized).toMatchObject({
+      chatAccessCode: 'aaaaaaaaaaaaaaaaaaaa',
+      hostTripId: 'trip-host-1',
+    });
+    expect(normalized).not.toHaveProperty('openJoinCode');
+  });
 });

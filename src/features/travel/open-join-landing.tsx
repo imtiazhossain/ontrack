@@ -14,6 +14,7 @@ import {
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
+import { mergeResolvedTravelOpenJoinPlan } from '@/features/travel/open-join-plan';
 import {
   createInstalledTravelOpenJoinUrl,
   isOpenTravelJoinCode,
@@ -71,13 +72,14 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         plans.find((plan) => plan.id === resolved.tripId);
 
       if (existing) {
-        savePlan({
-          ...existing,
-          ...(chatCode ? { chatAccessCode: chatCode } : {}),
-          openJoinCode: code,
-          hostTripId: resolved.tripId,
-          updatedAt: new Date().toISOString(),
-        });
+        savePlan(
+          mergeResolvedTravelOpenJoinPlan(existing, {
+            status: resolved.status === 'host' ? 'host' : 'approved',
+            tripId: resolved.tripId,
+            chatAccessCode: chatCode,
+            updatedAt: new Date().toISOString(),
+          }),
+        );
         setAddonEnabled('travel', true);
         router.replace(
           hasOnboarded
@@ -95,7 +97,6 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         ...resolved.plan,
         id: planId,
         ...(chatCode ? { chatAccessCode: chatCode } : {}),
-        openJoinCode: code,
         hostTripId: resolved.tripId,
         createdAt: now,
         updatedAt: now,

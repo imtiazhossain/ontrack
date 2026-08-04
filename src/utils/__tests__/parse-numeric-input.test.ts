@@ -1,4 +1,5 @@
 import {
+  formatNumericInput,
   numericOnChangeText,
   sanitizeNumericInput,
 } from '@/utils/parse';
@@ -19,6 +20,12 @@ describe('sanitizeNumericInput', () => {
     expect(
       sanitizeNumericInput('1,234', { decimals: false, allowComma: false }),
     ).toBe('1234');
+  });
+
+  it('adds thousands separators without losing a partial decimal value', () => {
+    expect(formatNumericInput('1065.32')).toBe('1,065.32');
+    expect(formatNumericInput('1234567.')).toBe('1,234,567.');
+    expect(formatNumericInput('001065', { decimals: false })).toBe('1,065');
   });
 
   it('wraps onChangeText', () => {

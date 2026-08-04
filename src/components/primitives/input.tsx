@@ -6,7 +6,7 @@ import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
-import { numericOnChangeText, sanitizeNumericInput } from '@/utils/parse';
+import { formatNumericInput } from '@/utils/parse';
 import { AppText } from './app-text';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 
@@ -43,7 +43,12 @@ function numericChangeForKeyboard(
 ) {
   const options = numericSanitizeOptions(keyboardType);
   if (!options) return onChangeText;
-  return numericOnChangeText(onChangeText, options);
+  if (!onChangeText) return undefined;
+
+  // Keep form state machine-friendly (no separators) while rendering the
+  // formatted value below. This avoids making every numeric consumer parse
+  // display punctuation before saving.
+  return (text: string) => onChangeText(formatNumericInput(text, options).replace(/,/g, ''));
 }
 
 function sanitizeNumericValue(
@@ -52,7 +57,7 @@ function sanitizeNumericValue(
 ) {
   const options = numericSanitizeOptions(keyboardType);
   if (!options || value == null) return value;
-  return sanitizeNumericInput(String(value), options);
+  return formatNumericInput(String(value), options);
 }
 
 export function Input({

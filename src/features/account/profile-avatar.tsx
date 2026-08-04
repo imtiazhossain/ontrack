@@ -25,6 +25,9 @@ type ProfileAvatarProps = {
   /** Treat as the signed-in user (preferences avatar). */
   isSelf?: boolean;
   accessibilityLabel?: string;
+  /** Optional border override for contexts with an explicit selection state. */
+  borderColor?: string;
+  borderWidth?: number;
 };
 
 function softFill(color: string): string {
@@ -44,6 +47,8 @@ export function ProfileAvatar({
   avatar: avatarOverride,
   isSelf,
   accessibilityLabel,
+  borderColor: borderColorOverride,
+  borderWidth: borderWidthOverride,
 }: ProfileAvatarProps) {
   const theme = useTheme();
   const selfAvatar = usePreferences((s) => s.avatar);
@@ -94,7 +99,8 @@ export function ProfileAvatar({
             meta?.kind === 'photo' && photoUrl
               ? theme.backgroundSunken
               : softFill(color),
-          borderColor: `${color}55`,
+          borderColor: borderColorOverride ?? `${color}55`,
+          borderWidth: borderWidthOverride ?? StyleSheet.hairlineWidth,
         },
       ]}>
       {meta?.kind === 'photo' && photoUrl ? (

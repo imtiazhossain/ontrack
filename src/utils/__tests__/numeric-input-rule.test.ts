@@ -13,8 +13,7 @@ describe('numeric input rule', () => {
       'utf8',
     );
     expect(source).toContain("from '@/utils/parse'");
-    expect(source).toContain('sanitizeNumericInput');
-    expect(source).toContain('numericOnChangeText');
+    expect(source).toContain('formatNumericInput');
     expect(source).toMatch(/keyboardType === ['"]number-pad['"]/);
     expect(source).toMatch(/keyboardType === ['"]decimal-pad['"]/);
   });

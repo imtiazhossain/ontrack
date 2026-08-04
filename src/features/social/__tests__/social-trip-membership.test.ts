@@ -1,4 +1,7 @@
-import { socialTripMemberships } from '@/features/social/social-trip-membership';
+import {
+  sharedUpcomingTrips,
+  socialTripMemberships,
+} from '@/features/social/social-trip-membership';
 import type { TravelPlan } from '@/features/travel/types';
 import type { FriendProfile } from '@/services/friends';
 
@@ -83,5 +86,30 @@ describe('social trip membership', () => {
     });
 
     expect(socialTripMemberships(friend, [unrelatedTrip])).toEqual([]);
+  });
+
+  it('only includes shared or member-copy trips in upcoming together', () => {
+    const solo = plan({ id: 'solo', endDate: '2026-08-30' });
+    const shared = plan({
+      id: 'shared',
+      startDate: '2026-08-21',
+      endDate: '2026-08-22',
+      participants: [{ id: 'mina', name: 'Mina', inviteCode: 'invite', invitedAt: '2026-08-01' }],
+    });
+    const memberCopy = plan({
+      id: 'member',
+      endDate: '2026-08-25',
+      chatAccessCode: 'aaaaaaaaaaaaaaaaaaaa',
+    });
+    const pastShared = plan({
+      id: 'past',
+      endDate: '2026-08-10',
+      participants: [{ id: 'mina', name: 'Mina', inviteCode: 'invite', invitedAt: '2026-08-01' }],
+    });
+
+    expect(sharedUpcomingTrips([solo, memberCopy, pastShared, shared], '2026-08-20')).toEqual([
+      memberCopy,
+      shared,
+    ]);
   });
 });

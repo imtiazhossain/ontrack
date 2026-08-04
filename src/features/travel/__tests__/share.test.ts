@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import {
     createInstalledTravelInviteUrl,
     createInstalledTravelOpenJoinUrl,
@@ -13,6 +15,11 @@ import {
     travelPlanIdentityKey,
 } from '../share';
 import type { TravelPlan } from '../types';
+
+const inviteAcceptanceMigration = fs.readFileSync(
+  'supabase/migrations/202608040001_travel_invite_acceptance_result.sql',
+  'utf8',
+);
 
 const plan: TravelPlan = {
   id: 'trip-1',
@@ -47,6 +54,11 @@ const plan: TravelPlan = {
 };
 
 describe('travel invites', () => {
+  it('makes invite acceptance report whether a valid row was accepted', () => {
+    expect(inviteAcceptanceMigration).toContain('returns boolean');
+    expect(inviteAcceptanceMigration).toContain('return coalesce(accepted, false)');
+  });
+
   it('round-trips an encoded trip without copying its local id or sensitive fields', () => {
     expect(decodeTravelInvite(encodeTravelInvite(plan))).toEqual({
       title: plan.title,

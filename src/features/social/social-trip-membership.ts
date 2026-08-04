@@ -1,6 +1,7 @@
 import type { TravelPlan } from '@/features/travel/types';
 import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import type { FriendProfile } from '@/services/friends';
+import { todayKey } from '@/utils/date';
 
 export type SocialTripMembership = {
   plan: TravelPlan;
@@ -37,4 +38,18 @@ export function socialTripMemberships(
 
     return [];
   });
+}
+
+/** Upcoming trips that actually involve another person. */
+export function sharedUpcomingTrips(
+  plans: TravelPlan[],
+  today = todayKey(),
+): TravelPlan[] {
+  return plans
+    .filter(
+      (plan) =>
+        plan.endDate >= today &&
+        (plan.participants.length > 0 || isTravelMemberPlan(plan)),
+    )
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 }

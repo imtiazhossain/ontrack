@@ -138,7 +138,6 @@ function PersonAvatarToggle({
   const { s } = useResponsive();
   const avatarSize = Math.max(36, s(38));
   const hit = Math.max(44, avatarSize + s(6));
-  const ring = active ? theme.accentPrimary : 'transparent';
   const displayName = person.isSelf
     ? selfDisplayName.trim() || person.name
     : person.name;
@@ -154,8 +153,6 @@ function PersonAvatarToggle({
             width: hit,
             height: hit,
             borderRadius: hit / 2,
-            borderWidth: active ? 2 : 0,
-            borderColor: ring,
             opacity: pressed ? 0.85 : 1,
           },
         ]}>
@@ -165,6 +162,8 @@ function PersonAvatarToggle({
           isSelf={person.isSelf}
           size={avatarSize}
           accessibilityLabel={person.name}
+          borderColor={active ? theme.accentPrimary : undefined}
+          borderWidth={active ? 2 : undefined}
         />
         {!single && active ? (
           <View
@@ -175,6 +174,7 @@ function PersonAvatarToggle({
                 width: Math.max(14, s(16)),
                 height: Math.max(14, s(16)),
                 borderRadius: Math.max(14, s(16)) / 2,
+                backgroundColor: theme.accentPrimary,
                 borderColor: theme.accentPrimary,
               },
             ]}>

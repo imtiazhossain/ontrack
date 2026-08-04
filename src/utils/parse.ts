@@ -75,6 +75,27 @@ export function sanitizeNumericInput(
   return next;
 }
 
+/**
+ * Format a numeric field value with thousands separators while preserving a
+ * partially entered decimal (for example, `1065.` becomes `1,065.`).
+ *
+ * This is deliberately string-based: text fields need to retain incomplete
+ * values such as `.` and `0.` while the user is typing.
+ */
+export function formatNumericInput(
+  value: string,
+  options: SanitizeNumericInputOptions = {},
+): string {
+  const sanitized = sanitizeNumericInput(value, options);
+  const decimals = options.decimals ?? true;
+  const [rawInteger, rawFraction] = sanitized.replace(/,/g, '').split('.', 2);
+  const integer = (rawInteger || '0').replace(/^0+(?=\d)/, '');
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  if (!decimals || !sanitized.includes('.')) return formattedInteger;
+  return `${formattedInteger}.${rawFraction ?? ''}`;
+}
+
 /** Wrap an `onChangeText` so only numeric characters reach state. */
 export function numericOnChangeText(
   onChangeText: ((text: string) => void) | undefined,
@@ -83,4 +104,3 @@ export function numericOnChangeText(
   if (!onChangeText) return undefined;
   return (text: string) => onChangeText(sanitizeNumericInput(text, options));
 }
-

@@ -32,4 +32,28 @@ describe('confirmDestructiveAction', () => {
       ],
     );
   });
+
+  it('forwards a stable selector to the destructive action', () => {
+    const onConfirm = jest.fn();
+    confirmDestructiveAction({
+      title: 'Delete expense?',
+      actionLabel: 'Delete Expense',
+      confirmTestID: 'ontrack.travel.expenses.confirmDelete',
+      onConfirm,
+    });
+
+    expect(appPrompt.alert).toHaveBeenCalledWith(
+      'Delete expense?',
+      undefined,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Expense',
+          style: 'destructive',
+          testID: 'ontrack.travel.expenses.confirmDelete',
+          onPress: onConfirm,
+        },
+      ],
+    );
+  });
 });

@@ -66,6 +66,8 @@ import {
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
+import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { formatDateLong } from '@/utils/date';
 
 const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
@@ -125,9 +127,6 @@ export function TravelExpensesSheet({
   const [form, setForm] = useState<ExpenseFormState | undefined>();
   const [formError, setFormError] = useState<string>();
   const [editingExpenseId, setEditingExpenseId] = useState<string | undefined>();
-  const [pendingDelete, setPendingDelete] = useState<
-    { id: string; title: string } | null
-  >(null);
   const hasLocalExpenseEditsRef = useRef(false);
   const formRef = useRef<ExpenseFormState | undefined>(undefined);
   const editingExpenseIdRef = useRef<string | undefined>(undefined);
@@ -216,6 +215,7 @@ export function TravelExpensesSheet({
     [plan.expenses],
   );
   const { total, convertible } = totalInBase(plan.expenses, plan.baseCurrency, rates);
+  const average = plan.expenses.length > 0 ? total / plan.expenses.length : 0;
   const balances = settleBalances(plan.expenses, plan.baseCurrency, rates);
   const transfers = balances ? settleTransfers(balances) : [];
 
@@ -236,14 +236,12 @@ export function TravelExpensesSheet({
   const beginAdd = () => {
     setFormError(undefined);
     setEditingExpenseId(undefined);
-    setPendingDelete(null);
     setForm(emptyExpenseForm(plan));
   };
 
   const beginEdit = (expense: TravelExpense) => {
     setFormError(undefined);
     setEditingExpenseId(expense.id);
-    setPendingDelete(null);
     setForm(expenseFormFromExpense(expense));
   };
 
@@ -273,21 +271,18 @@ export function TravelExpensesSheet({
     setForm(undefined);
     setFormError(undefined);
     setEditingExpenseId(undefined);
-    setPendingDelete(null);
     onSaved?.({ mode: saveMode });
   };
 
-  const confirmDelete = () => {
-    if (!pendingDelete) return;
+  const deleteExpense = (expenseId: string) => {
     const latestPlan =
       useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
-    const next = applyLocalExpenseEdit(removeTravelExpense(latestPlan, pendingDelete.id));
+    const next = applyLocalExpenseEdit(removeTravelExpense(latestPlan, expenseId));
     onSavePlan(next);
     syncSharedExpenses(next);
     setForm(undefined);
     setFormError(undefined);
     setEditingExpenseId(undefined);
-    setPendingDelete(null);
   };
 
   const requestDelete = () => {
@@ -297,14 +292,19 @@ export function TravelExpensesSheet({
       formRef.current?.existing?.title?.trim() ||
       formRef.current?.title?.trim() ||
       'this expense';
-    setPendingDelete({ id: expenseId, title });
+    confirmDestructiveAction({
+      title: 'Delete Expense?',
+      message: `This action will permanently remove “${title}”.`,
+      actionLabel: 'Delete Expense',
+      confirmTestID: AgentUiIds.travel.expenses.confirmDelete,
+      onConfirm: () => deleteExpense(expenseId),
+    });
   };
 
   const dismissForm = () => {
     setForm(undefined);
     setFormError(undefined);
     setEditingExpenseId(undefined);
-    setPendingDelete(null);
   };
 
   const closeSheet = () => {
@@ -325,7 +325,7 @@ export function TravelExpensesSheet({
           ? editingExpense
             ? 'Update what you spent and who shared it'
             : 'Add what you spent and who shared it'
-          : 'Track Spending · Settle up with co-travelers'
+          : 'Track spending · Settle up with co-travelers'
       }
       closeAccessibilityLabel={form ? 'Close expense editor' : 'Close Expenses'}
       closeTestID={AgentUiIds.travel.expenses.close}
@@ -334,34 +334,6 @@ export function TravelExpensesSheet({
       footer={
         form ? (
           <View style={styles.editorFooterActions}>
-            {editingExpense && pendingDelete ? (
-              <View style={styles.inlineConfirmCard}>
-                <AppText
-                  variant="callout"
-                  testID={AgentUiIds.travel.removeConfirm.dismiss}
-                  style={styles.inlineConfirmTitle}>
-                  Delete Expense?
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {`This action will permanently remove “${pendingDelete.title}”.`}
-                </AppText>
-                <View style={styles.inlineConfirmActions}>
-                  <Button
-                    variant="secondary"
-                    testID={AgentUiIds.travel.removeConfirm.cancel}
-                    onPress={() => setPendingDelete(null)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="danger"
-                    testID={AgentUiIds.travel.removeConfirm.confirm}
-                    icon="delete"
-                    onPress={confirmDelete}>
-                    Delete Expense
-                  </Button>
-                </View>
-              </View>
-            ) : null}
             <ItinerarySheetSubmitButton
               label={editingExpense ? 'Save Expense' : 'Add Expense'}
               icon="receipt"
@@ -372,12 +344,13 @@ export function TravelExpensesSheet({
               }
               onPress={saveForm}
             />
-            {editingExpense && !pendingDelete ? (
+            {editingExpense ? (
               <Button
                 variant="danger"
-                testID={AgentUiIds.travel.expenses.deleteExpenseFooter}
                 icon="delete"
-                onPress={requestDelete}>
+                testID={AgentUiIds.travel.expenses.deleteExpenseFooter}
+                onPress={requestDelete}
+              >
                 Delete Expense
               </Button>
             ) : null}
@@ -412,6 +385,7 @@ export function TravelExpensesSheet({
                   </AppText>
                   <AppText
                     fit
+                    selectable
                     numberOfLines={1}
                     style={[
                       styles.summaryValue,
@@ -425,6 +399,34 @@ export function TravelExpensesSheet({
                       ? formatMoney(total, plan.baseCurrency, dateLocale)
                       : '—'}
                   </AppText>
+                  <View
+                    style={[
+                      styles.summaryMetrics,
+                      {
+                        gap: rs.md,
+                        paddingTop: rs.sm,
+                        borderTopColor: theme.separator,
+                      },
+                    ]}>
+                    <View style={styles.summaryMetric}>
+                      <AppText variant="caption" color="secondary" fit>
+                        Expenses
+                      </AppText>
+                      <AppText variant="callout" fit style={styles.metricValue}>
+                        {plan.expenses.length} recorded
+                      </AppText>
+                    </View>
+                    <View style={styles.summaryMetric}>
+                      <AppText variant="caption" color="secondary" fit>
+                        Average
+                      </AppText>
+                      <AppText variant="callout" fit selectable style={styles.metricValue}>
+                        {convertible || plan.expenses.length === 0
+                          ? formatMoney(average, plan.baseCurrency, dateLocale)
+                          : 'Mixed currencies'}
+                      </AppText>
+                    </View>
+                  </View>
                 </TravelSurfaceCard>
 
                 {transfers.length > 0 ? (
@@ -432,12 +434,24 @@ export function TravelExpensesSheet({
                     <TravelSectionLabel title="Settle Up" count={transfers.length} />
                     {transfers.map((transfer) => (
                       <TravelSurfaceCard key={`${transfer.fromId}-${transfer.toId}`} bodyStyle={styles.settleCard}>
-                        <AppText variant="callout">
-                          {transfer.fromId === TRAVEL_EXPENSE_SELF_ID
-                            ? `You owe ${personName(people, transfer.toId)}`
-                            : `${personName(people, transfer.fromId)} owes ${personName(people, transfer.toId)}`}
-                        </AppText>
-                        <AppText variant="subheading" color="accent">
+                        <View
+                          style={[
+                            styles.settleIcon,
+                            { backgroundColor: theme.accentFaint },
+                          ]}>
+                          <Symbol name="wallet" size="sm" color={theme.accentPrimary} />
+                        </View>
+                        <View style={styles.settleCopy}>
+                          <AppText variant="callout" fit numberOfLines={1}>
+                            {transfer.fromId === TRAVEL_EXPENSE_SELF_ID
+                              ? `You owe ${personName(people, transfer.toId)}`
+                              : `${personName(people, transfer.fromId)} owes ${personName(people, transfer.toId)}`}
+                          </AppText>
+                          <AppText variant="caption" color="secondary" fit>
+                            One payment settles this balance
+                          </AppText>
+                        </View>
+                        <AppText variant="subheading" color="accent" fit selectable>
                           {formatMoney(transfer.amount, plan.baseCurrency, dateLocale)}
                         </AppText>
                       </TravelSurfaceCard>
@@ -518,7 +532,8 @@ export function TravelExpensesSheet({
                               <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
                             </View>
                             <AppText variant="body" color="secondary" numberOfLines={1}>
-                              {categoryLabel} · {expensePayerLabel(people, expense.paidById)} paid
+                              {categoryLabel} · {formatDateLong(expense.date)} ·{' '}
+                              {expensePayerLabel(people, expense.paidById)} paid
                             </AppText>
                           </View>
                         </TravelSurfaceCard>
@@ -529,7 +544,7 @@ export function TravelExpensesSheet({
 
               </View>
             )}
-    </TravelSheetModal>
+      </TravelSheetModal>
     </>
   );
 }
@@ -564,23 +579,8 @@ const styles = StyleSheet.create({
   editorFooterActions: {
     gap: spacing.sm,
   },
-  inlineConfirmCard: {
-    borderRadius: radii.lg,
-    backgroundColor: '#FFF4EE',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E0B3A5',
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  inlineConfirmTitle: {
-    color: '#7C2F24',
-  },
-  inlineConfirmActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   listBody: { gap: spacing.lg },
-  summaryCard: { justifyContent: 'center', gap: spacing.xxs },
+  summaryCard: { justifyContent: 'center', gap: spacing.sm },
   summaryLabel: {
     ...appTextStyle('overline'),
     letterSpacing: 2,
@@ -590,13 +590,32 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     fontVariant: ['tabular-nums'],
   },
+  summaryMetrics: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  summaryMetric: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  metricValue: { fontVariant: ['tabular-nums'] },
   block: { gap: spacing.sm },
   settleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
   },
+  settleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  settleCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
   emptyCard: {
     alignItems: 'center',
     gap: spacing.sm,
