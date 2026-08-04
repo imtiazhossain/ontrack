@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -55,6 +56,10 @@ modules/**/.gradle/
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+
+# Local agent artifacts
+.kiro/
+docs/token-usage-audit.md
 
 # Python bytecode
 __pycache__/
