@@ -2,19 +2,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppText, DateField, ErrorMessage, Input, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing } from '@/design-system';
+import { AppText, DateField, ErrorMessage, Input } from '@/components/primitives';
+import { fontFamilies, radii } from '@/design-system';
 import {
     itinerarySheetChrome,
     travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { travelDialogPalette } from '@/features/travel/travel-dialog-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
     TravelRemoveConfirmModal,
     type TravelRemoveConfirmPayload,
 } from '@/features/travel/travel-remove-confirm-modal';
 import {
-    TravelSurfaceCard,
+  TravelSurfaceCard,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -69,6 +70,7 @@ export function TravelPlanDetailsEditor({
 }: TravelPlanDetailsEditorProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
+  const dialog = travelDialogPalette(theme);
   const { s, spacing: rs, layout, typography } = useResponsive();
   const [removeConfirm, setRemoveConfirm] =
     useState<TravelRemoveConfirmPayload | null>(null);
@@ -217,91 +219,117 @@ export function TravelPlanDetailsEditor({
 
           {error ? <ErrorMessage message={error} selectable /> : null}
 
-          <View style={{ gap: rs.sm }}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Save Details"
-              onPress={() => {
-                haptics.tap();
-                onSave();
-              }}
-              style={({ pressed }) => [
-                styles.saveWrap,
-                {
-                  opacity: pressed ? 0.88 : 1,
-                  minHeight: Math.max(layout.minTapTarget, s(52)),
-                },
-              ]}>
-              <LinearGradient
-                colors={[chrome.ctaFrom, chrome.ctaTo]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[
-                  styles.saveGradient,
-                  {
-                    minHeight: Math.max(layout.minTapTarget, s(52)),
-                    paddingHorizontal: rs.lg,
-                  },
-                ]}>
-                <AppText
-                  variant="callout"
-                  fit
-                  numberOfLines={1}
-                  style={[
-                    styles.saveLabel,
-                    { color: chrome.ctaText, fontSize: typography.callout.fontSize },
+          <View style={[styles.actions, { gap: rs.sm }]}>
+            <View style={{ gap: rs.sm }}>
+              <AgentTestId
+                testID={AgentUiIds.travel.editTrip.save}
+                label="Save Details"
+                onPress={onSave}
+                style={styles.actionTarget}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Save Details"
+                  onPress={() => {
+                    haptics.tap();
+                    onSave();
+                  }}
+                  style={({ pressed }) => [
+                    styles.saveWrap,
+                    styles.compactAction,
+                    {
+                      opacity: pressed ? 0.88 : 1,
+                      minHeight: Math.max(layout.minTapTarget, s(52)),
+                    },
                   ]}>
-                  Save Details
-                </AppText>
-              </LinearGradient>
-            </Pressable>
+                  <LinearGradient
+                    colors={[chrome.ctaFrom, chrome.ctaTo]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={[
+                      styles.saveGradient,
+                      {
+                        minHeight: Math.max(layout.minTapTarget, s(52)),
+                        paddingHorizontal: rs.lg,
+                      },
+                    ]}>
+                    <AppText
+                      variant="callout"
+                      fit
+                      numberOfLines={1}
+                      style={[
+                        styles.saveLabel,
+                        { color: chrome.ctaText, fontSize: typography.callout.fontSize },
+                      ]}>
+                      Save Details
+                    </AppText>
+                  </LinearGradient>
+                </Pressable>
+              </AgentTestId>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-              onPress={onCancel}
-              style={({ pressed }) => [
-                styles.cancelBtn,
-                {
-                  minHeight: Math.max(layout.minTapTarget, s(52)),
-                  borderColor: chrome.fieldBorder,
-                  backgroundColor: travelInputFieldBackground(theme),
-                  opacity: pressed ? 0.75 : 1,
-                },
-              ]}>
-              <AppText
-                variant="callout"
-                fit
-                numberOfLines={1}
-                style={[styles.cancelLabel, { color: chrome.title }]}>
-                Cancel
-              </AppText>
-            </Pressable>
+            </View>
+
+            <View style={[styles.secondaryActions, { gap: rs.sm }]}>
+              <AgentTestId
+                testID={AgentUiIds.travel.editTrip.cancel}
+                label="Cancel edit trip"
+                onPress={onCancel}
+                style={styles.actionTarget}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                  onPress={onCancel}
+                  style={({ pressed }) => [
+                    styles.compactButton,
+                    styles.compactAction,
+                    {
+                      minHeight: Math.max(layout.minTapTarget, s(52)),
+                      borderColor: dialog.outlineBorder,
+                      backgroundColor: dialog.outlineBg,
+                      paddingHorizontal: rs.lg,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}>
+                  <AppText
+                    variant="callout"
+                    fit
+                    numberOfLines={1}
+                    style={[styles.cancelLabel, { color: dialog.cancelText }]}>
+                    Cancel
+                  </AppText>
+                </Pressable>
+              </AgentTestId>
+
+              <AgentTestId
+                testID={AgentUiIds.travel.removeConfirm.open}
+                label={`Delete ${plan.title}`}
+                onPress={openDeleteTrip}
+                style={styles.actionTarget}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${plan.title}`}
+                  onPress={openDeleteTrip}
+                  style={({ pressed }) => [
+                    styles.compactButton,
+                    styles.compactAction,
+                    {
+                      minHeight: Math.max(layout.minTapTarget, s(52)),
+                      borderColor: dialog.dangerTo,
+                      backgroundColor: dialog.dangerFrom,
+                      paddingHorizontal: rs.lg,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <AppText
+                    variant="callout"
+                    fit
+                    numberOfLines={1}
+                    style={[styles.deleteLabel, { color: dialog.dangerText }]}>
+                    Delete Trip
+                  </AppText>
+                </Pressable>
+              </AgentTestId>
+            </View>
           </View>
-
-          <AgentTestId
-            testID={AgentUiIds.travel.removeConfirm.open}
-            label={`Delete ${plan.title}`}
-            onPress={openDeleteTrip}
-            style={styles.deleteAction}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${plan.title}`}
-              hitSlop={8}
-              onPress={openDeleteTrip}
-              style={({ pressed }) => [
-                styles.deleteAction,
-                { gap: rs.xs, opacity: pressed ? 0.7 : 1 },
-              ]}>
-              <Symbol name="delete" size="sm" color={theme.danger} />
-              <AppText
-                style={[styles.deleteLabel, { color: theme.danger }]}
-                fit
-                numberOfLines={1}>
-                Delete Trip
-              </AppText>
-            </Pressable>
-          </AgentTestId>
         </View>
       </TravelSurfaceCard>
     </View>
@@ -337,6 +365,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   cardBody: {},
+  actions: {
+    width: '100%',
+  },
   divider: {
     height: StyleSheet.hairlineWidth,
     width: '100%',
@@ -349,6 +380,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   saveWrap: {
+    width: '100%',
     borderRadius: radii.pill,
     overflow: 'hidden',
   },
@@ -359,9 +391,21 @@ const styles = StyleSheet.create({
   },
   saveLabel: {
     fontFamily: fontFamilies.serif,
-    fontWeight: '600',
+    fontWeight: '400',
   },
-  cancelBtn: {
+  secondaryActions: {
+    alignItems: 'center',
+  },
+  actionTarget: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  compactAction: {
+    alignSelf: 'center',
+    width: '72%',
+    maxWidth: 260,
+  },
+  compactButton: {
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth * 2,
     alignItems: 'center',
@@ -371,15 +415,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontWeight: '600',
   },
-  deleteAction: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
   deleteLabel: {
     fontFamily: fontFamilies.serif,
-    fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '400',
   },
 });

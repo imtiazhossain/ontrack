@@ -117,7 +117,10 @@ export function TravelPlanCoverField({
             numberOfLines={1}>
             Cover Photo
           </AppText>
-          <AppText variant="caption" style={{ color: chrome.subtitle }} numberOfLines={2}>
+          <AppText
+            variant="caption"
+            style={[styles.description, { color: chrome.subtitle }]}
+            numberOfLines={2}>
             Shown on your trip card. Tap to change.
           </AppText>
         </Pressable>
@@ -169,6 +172,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 17,
     lineHeight: 22,
+    fontWeight: '600',
+  },
+  description: {
+    fontFamily: fontFamilies.serif,
     fontWeight: '600',
   },
 });

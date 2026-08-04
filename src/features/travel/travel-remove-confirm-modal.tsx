@@ -106,13 +106,20 @@ export function TravelRemoveConfirmModal({
             testID={AgentUiIds.travel.removeConfirm.close}
             label="Close"
             onPress={dismiss}
-            style={styles.close}>
+            style={[
+              styles.close,
+              {
+                top: Math.max(12, rs.sm),
+                right: Math.max(12, rs.sm),
+              },
+            ]}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close"
               hitSlop={8}
               onPress={dismiss}
               style={({ pressed }) => [
+                styles.closeButton,
                 {
                   width: closeSize,
                   height: closeSize,
@@ -121,8 +128,6 @@ export function TravelRemoveConfirmModal({
                   borderColor: palette.outlineBorder,
                   backgroundColor: palette.closeBg,
                   opacity: pressed ? 0.7 : 1,
-                  top: Math.max(12, rs.sm),
-                  right: Math.max(12, rs.sm),
                 },
               ]}>
               <Symbol name="close" size={Math.max(16, s(17))} color={palette.closeFg} />
@@ -176,6 +181,7 @@ export function TravelRemoveConfirmModal({
                   accessibilityLabel="Cancel"
                   onPress={dismiss}
                   style={({ pressed }) => [
+                    styles.modalButton,
                     {
                       minHeight: buttonMinHeight,
                       borderRadius: buttonRadius,
@@ -212,6 +218,7 @@ export function TravelRemoveConfirmModal({
                   accessibilityLabel={actionLabel}
                   onPress={confirm}
                   style={({ pressed }) => [
+                    styles.modalButton,
                     {
                       minHeight: buttonMinHeight,
                       borderRadius: buttonRadius,
@@ -261,6 +268,12 @@ const styles = StyleSheet.create({
   close: {
     position: 'absolute',
     zIndex: 2,
+  },
+  closeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButton: {
     alignItems: 'center',
     justifyContent: 'center',
   },

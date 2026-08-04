@@ -110,6 +110,10 @@ export const AgentUiIds = {
       expenses: 'ontrack.travel.list.expenses',
       editTrip: 'ontrack.travel.list.editTrip',
     },
+    editTrip: {
+      save: 'ontrack.travel.editTrip.save',
+      cancel: 'ontrack.travel.editTrip.cancel',
+    },
     planDetail: {
       weather: 'ontrack.travel.planDetail.weather',
       currency: 'ontrack.travel.planDetail.currency',

@@ -238,6 +238,8 @@ Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 | `ontrack.travel.addPhotos.takePhoto` | Take Photo |
 | `ontrack.travel.addPhotos.chooseFromPhotos` | Choose from Photos |
 | `ontrack.travel.addPhotos.removePhoto` | Remove Photo (optional) |
+| `ontrack.travel.editTrip.save` | Save edited trip details |
+| `ontrack.travel.editTrip.cancel` | Cancel editing a trip |
 | `ontrack.travel.calendarUpdated.dismiss` | Scrim dismiss |
 | `ontrack.travel.calendarUpdated.goToCalendar` | Go to Calendar |
 | `ontrack.travel.calendarUpdated.backToTravel` | Back to Travel |
