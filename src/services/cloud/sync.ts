@@ -222,7 +222,14 @@ const domains: {
       if (Array.isArray(payload.plans)) useTravel.getState().replacePlans(payload.plans);
     },
     reset: () => useTravel.getState().reset(),
-    subscribe: (onChange) => useTravel.subscribe(onChange),
+    subscribe: (onChange) => {
+      let previousPlans = useTravel.getState().plans;
+      return useTravel.subscribe((state) => {
+        if (state.plans === previousPlans) return;
+        previousPlans = state.plans;
+        onChange();
+      });
+    },
   },
   {
     name: 'todos',

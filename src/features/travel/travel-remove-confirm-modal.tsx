@@ -46,7 +46,6 @@ export function TravelRemoveConfirmModal({
       contentContainerStyle={{ paddingTop: spacing.sm }}>
       <Button
         variant="danger"
-        size="lg"
         icon="delete"
         onPress={confirm}
         testID={payload.confirmTestID ?? AgentUiIds.travel.removeConfirm.confirm}

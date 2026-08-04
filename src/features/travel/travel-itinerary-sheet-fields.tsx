@@ -143,7 +143,6 @@ export function ItinerarySheetSubmitButton({
   return (
     <Button
       variant="primary"
-      size="lg"
       icon={icon}
       onPress={onPress}
       testID={testID}

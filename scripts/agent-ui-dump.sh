@@ -10,6 +10,7 @@ set -euo pipefail
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 DUMP_NAME="${DUMP_NAME:-agent-ui-dump.json}"
 STATUS_NAME="${STATUS_NAME:-agent-ui-status.json}"
+COMMAND_NAME="${COMMAND_NAME:-agent-ui-command.json}"
 WAIT_SECS="${WAIT_SECS:-6}"
 POLL_SLEEP="${POLL_SLEEP:-0.05}"
 PREFIX="${PREFIX:-}"
@@ -39,12 +40,17 @@ fi
 
 DUMP_PATH="${DATA_DIR}/Documents/${DUMP_NAME}"
 STATUS_PATH="${DATA_DIR}/Documents/${STATUS_NAME}"
+COMMAND_PATH="${DATA_DIR}/Documents/${COMMAND_NAME}"
 
 # Invalidate prior results so we don't return a stale dump.
-rm -f "${DUMP_PATH}" "${STATUS_PATH}"
+rm -f "${DUMP_PATH}" "${STATUS_PATH}" "${COMMAND_PATH}"
 
 STARTED_MTIME="$(python3 -c 'import time; print(time.time())')"
-xcrun simctl openurl booted "ontrack:///agent/ui?op=dump"
+COMMAND_PATH="${COMMAND_PATH}" python3 - <<'PY'
+import json, os, time
+from pathlib import Path
+Path(os.environ["COMMAND_PATH"]).write_text(json.dumps({"op": "dump", "nonce": time.time_ns()}))
+PY
 
 deadline=$((SECONDS + WAIT_SECS))
 while (( SECONDS < deadline )); do

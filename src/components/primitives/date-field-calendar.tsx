@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { formatMonthTitle, monthGrid, toDateKey } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
@@ -11,9 +12,66 @@ import { IconButton } from './button';
 
 const WEEKDAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+function CalendarDay({
+  dateKey,
+  day,
+  selected,
+  inRange,
+  rangeEndpoint,
+  disabled,
+  onPress,
+  testID,
+}: {
+  dateKey: string;
+  day: number;
+  selected: boolean;
+  inRange: boolean;
+  rangeEndpoint: boolean;
+  disabled: boolean;
+  onPress: () => void;
+  testID?: string;
+}) {
+  const theme = useTheme();
+  const { s } = useResponsive();
+  const agent = useAgentUiTarget(testID, {
+    label: dateKey,
+    onPress: disabled ? undefined : onPress,
+  });
+
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={dateKey}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.cell,
+        styles.dayCell,
+        { minHeight: Math.max(44, s(46)) },
+        inRange && { backgroundColor: theme.backgroundSunken },
+        (selected || rangeEndpoint) && { backgroundColor: theme.accentFaint },
+        pressed && { opacity: 0.58 },
+      ]}>
+      <AppText
+        variant="subheading"
+        color={selected || rangeEndpoint ? 'accent' : disabled ? 'tertiary' : 'primary'}
+        align="center"
+        style={styles.dayText}>
+        {day}
+      </AppText>
+    </Pressable>
+  );
+}
+
 interface DateFieldCalendarProps {
   value: Date;
   cursor: Date;
+  rangeStart?: Date;
+  rangeEnd?: Date;
   minimumDate?: Date;
   maximumDate?: Date;
   onCursorChange: (value: Date) => void;
@@ -37,6 +95,8 @@ function monthCanContainDate(
 export function DateFieldCalendar({
   value,
   cursor,
+  rangeStart,
+  rangeEnd,
   minimumDate,
   maximumDate,
   onCursorChange,
@@ -44,10 +104,12 @@ export function DateFieldCalendar({
   testID,
 }: DateFieldCalendarProps) {
   const theme = useTheme();
-  const { spacing, s } = useResponsive();
+  const { spacing } = useResponsive();
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const selectedKey = toDateKey(value);
+  const rangeStartKey = rangeStart ? toDateKey(rangeStart) : undefined;
+  const rangeEndKey = rangeEnd ? toDateKey(rangeEnd) : undefined;
   const minimumKey = minimumDate ? toDateKey(minimumDate) : undefined;
   const maximumKey = maximumDate ? toDateKey(maximumDate) : undefined;
   const cells = monthGrid(year, month);
@@ -73,6 +135,7 @@ export function DateFieldCalendar({
         <View style={[styles.monthActions, { gap: spacing.sm }]}>
           <IconButton
             icon="chevron-left"
+            testID={testID ? `${testID}.previousMonth` : undefined}
             background={theme.backgroundElevated}
             borderColor={theme.separator}
             disabled={!previousMonthEnabled}
@@ -81,6 +144,7 @@ export function DateFieldCalendar({
           />
           <IconButton
             icon="chevron-right"
+            testID={testID ? `${testID}.nextMonth` : undefined}
             background={theme.backgroundElevated}
             borderColor={theme.separator}
             disabled={!nextMonthEnabled}
@@ -111,35 +175,31 @@ export function DateFieldCalendar({
               if (!cell.inMonth) return <View key={cell.key} style={styles.cell} />;
 
               const selected = cell.key === selectedKey;
+              const inRange = Boolean(
+                rangeStartKey &&
+                  rangeEndKey &&
+                  cell.key >= rangeStartKey &&
+                  cell.key <= rangeEndKey,
+              );
+              const rangeEndpoint = cell.key === rangeStartKey || cell.key === rangeEndKey;
               const disabled =
                 (minimumKey !== undefined && cell.key < minimumKey) ||
                 (maximumKey !== undefined && cell.key > maximumKey);
               return (
-                <Pressable
+                <CalendarDay
                   key={cell.key}
-                  accessibilityRole="button"
-                  accessibilityLabel={cell.key}
-                  accessibilityState={{ selected, disabled }}
+                  dateKey={cell.key}
+                  day={cell.day}
+                  selected={selected}
+                  inRange={inRange}
+                  rangeEndpoint={rangeEndpoint}
                   disabled={disabled}
+                  testID={testID ? `${testID}.day.${cell.key}` : undefined}
                   onPress={() => {
                     haptics.select();
                     onValueChange(new Date(year, month, cell.day, 12));
                   }}
-                  style={({ pressed }) => [
-                    styles.cell,
-                    styles.dayCell,
-                    { minHeight: Math.max(44, s(46)) },
-                    selected && { backgroundColor: theme.accentFaint },
-                    pressed && { opacity: 0.58 },
-                  ]}>
-                  <AppText
-                    variant="subheading"
-                    color={selected ? 'accent' : disabled ? 'tertiary' : 'primary'}
-                    align="center"
-                    style={styles.dayText}>
-                    {cell.day}
-                  </AppText>
-                </Pressable>
+                />
               );
             })}
           </View>

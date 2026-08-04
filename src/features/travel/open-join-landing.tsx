@@ -262,13 +262,11 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         {validCode && !previewMessage ? (
           <View style={styles.buttons}>
             <Button
-              size="lg"
               icon="open-external"
               onPress={() => void Linking.openURL(customSchemeUrl)}>
               Open in onTrack
             </Button>
             <Button
-              size="lg"
               variant="secondary"
               icon="download"
               onPress={() => void Linking.openURL(ONTRACK_APP_STORE_URL)}>

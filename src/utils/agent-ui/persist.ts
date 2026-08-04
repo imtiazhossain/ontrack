@@ -5,6 +5,7 @@ import { getAgentUiRoute } from './route';
 
 export const AGENT_UI_DUMP_FILENAME = 'agent-ui-dump.json';
 export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
+export const AGENT_UI_COMMAND_FILENAME = 'agent-ui-command.json';
 
 export type AgentUiDumpPayload = {
   generatedAt: string;

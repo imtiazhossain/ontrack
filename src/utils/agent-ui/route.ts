@@ -3,6 +3,7 @@
 type AgentUiNavigate = (href: string) => void;
 
 let currentRoute: string | null = null;
+let lastContentRoute: string | null = null;
 let navigateFn: AgentUiNavigate | null = null;
 
 /** Stable aliases agents can pass to `op=goto&to=…` or `agent-ui-open.sh`. */
@@ -24,6 +25,7 @@ export const AGENT_UI_ROUTE_ALIASES = {
   'vision-board': '/vision-board',
   games: '/games',
   vehicles: '/vehicles',
+  health: '/health',
   agents: '/agents',
   designSystem: '/design-system',
   'design-system': '/design-system',
@@ -37,10 +39,15 @@ export type AgentUiRouteAlias = keyof typeof AGENT_UI_ROUTE_ALIASES;
 
 export function setAgentUiRoute(route: string | null): void {
   currentRoute = route;
+  if (route && route !== '/agent/ui') lastContentRoute = route;
 }
 
 export function getAgentUiRoute(): string | null {
   return currentRoute;
+}
+
+export function getLastAgentUiContentRoute(): string | null {
+  return lastContentRoute;
 }
 
 export function setAgentUiNavigator(navigate: AgentUiNavigate | null): void {

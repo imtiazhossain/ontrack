@@ -1,12 +1,7 @@
-import {
-  type ImageSourcePropType,
-  Image,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, IconButton, Symbol } from '@/components/primitives';
-import { radii, type AppIconName } from '@/design-system';
+import { Button, IconButton, Symbol } from '@/components/primitives';
+import type { AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
   type SheetIconTone,
@@ -14,21 +9,20 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Soft elevated trip-card action tile matching the travel mock. */
+/** Compact trip-card action using the app-wide shared button sizing. */
 export function TravelSheetAction({
   label,
   icon,
-  iconImage,
+  badgeIcon,
   tone,
   onPress,
   accessibilityLabel,
-  wide,
+  wide = false,
   testID,
 }: {
   label: string;
   icon: AppIconName;
-  /** Optional bitmap glyph; replaces the SF Symbol when set. */
-  iconImage?: ImageSourcePropType;
+  badgeIcon?: AppIconName;
   tone: SheetIconTone;
   onPress: () => void;
   accessibilityLabel: string;
@@ -38,63 +32,56 @@ export function TravelSheetAction({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const iconTone = chrome.icons[tone];
-  const { s, spacing: rs, layout } = useResponsive();
-  const iconBox = Math.max(30, s(32));
+  const { s, spacing } = useResponsive();
+  const iconBox = Math.max(26, s(28));
+  const badgeSize = Math.max(12, s(13));
   return (
-    <Card
-      padded={false}
+    <Button
+      variant="secondary"
+      shape="rounded"
+      leading={
+        <View
+          style={[
+            styles.actionIcon,
+            {
+              width: iconBox,
+              height: iconBox,
+              borderRadius: Math.max(8, s(9)),
+              backgroundColor: iconTone.bg,
+            },
+          ]}>
+          <Symbol name={icon} size="sm" color={iconTone.fg} />
+          {badgeIcon ? (
+            <View
+              style={[
+                styles.actionIconBadge,
+                {
+                  width: badgeSize,
+                  height: badgeSize,
+                  borderRadius: badgeSize / 2,
+                  backgroundColor: theme.backgroundElevated,
+                  borderColor: iconTone.bg,
+                },
+              ]}>
+              <Symbol name={badgeIcon} size={9} color={iconTone.fg} />
+            </View>
+          ) : null}
+        </View>
+      }
       onPress={onPress}
       testID={testID}
       accessibilityLabel={accessibilityLabel}
       style={[
         styles.action,
+        wide ? styles.actionWide : undefined,
         {
-          flexGrow: wide ? 1 : undefined,
-          flexBasis: wide ? '100%' : '47%',
-          minHeight: Math.max(layout.minTapTarget, s(68)),
-          paddingHorizontal: Math.max(10, rs.sm + 2),
-          paddingVertical: Math.max(10, rs.sm),
-          gap: Math.max(8, rs.sm - 2),
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          borderColor: theme.separator,
         },
       ]}>
-      <View
-        style={{
-          width: iconBox,
-          height: iconBox,
-          borderRadius: Math.max(9, s(10)),
-          borderCurve: 'continuous',
-          backgroundColor: iconTone.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          overflow: 'hidden',
-        }}>
-        {iconImage ? (
-          <Image
-            source={iconImage}
-            style={{ width: iconBox - 2, height: iconBox - 2, borderRadius: Math.max(8, s(8)) }}
-            resizeMode="cover"
-            accessibilityIgnoresInvertColors
-          />
-        ) : (
-          <Symbol name={icon} size="sm" color={iconTone.fg} />
-        )}
-      </View>
-      <AppText
-        variant="callout"
-        numberOfLines={2}
-        style={[
-          styles.actionLabel,
-          {
-            color: chrome.label,
-            flex: 1,
-            flexShrink: 1,
-            minWidth: 0,
-          },
-        ]}>
-        {label}
-      </AppText>
-    </Card>
+      {label}
+    </Button>
   );
 }
 
@@ -118,7 +105,6 @@ export function TravelSheetPrimaryAction({
   return (
     <Button
       variant="primary"
-      size="lg"
       icon={icon}
       testID={testID}
       accessibilityLabel={label}
@@ -185,15 +171,28 @@ export function TravelSheetIconControl({
 }
 
 const styles = StyleSheet.create({
-  action: {
-    flexDirection: 'row',
+  actionIcon: {
+    position: 'relative',
     alignItems: 'center',
-    overflow: 'hidden',
+    justifyContent: 'center',
+    flexShrink: 0,
     borderCurve: 'continuous',
-    borderRadius: radii.lg,
   },
-  actionLabel: {
+  actionIconBadge: {
+    position: 'absolute',
+    right: -3,
+    bottom: -3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  action: {
+    flexGrow: 1,
+    flexBasis: '47%',
     minWidth: 0,
-    textAlignVertical: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  actionWide: {
+    flexBasis: '100%',
   },
 });

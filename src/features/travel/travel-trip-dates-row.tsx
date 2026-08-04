@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
@@ -6,6 +6,8 @@ import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-c
 import { travelCardFill, travelPillBg } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
+import { haptics } from '@/utils/haptics';
 
 const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(17, 74, 110, 0.10)';
 
@@ -14,6 +16,8 @@ interface TravelTripDatesRowProps {
   endLabel: string;
   dayCount: number;
   compact?: boolean;
+  onPress?: () => void;
+  testID?: string;
 }
 
 /** Trip-card dates strip — cream bar, gold calendar, outlined duration pill. */
@@ -22,6 +26,8 @@ export function TravelTripDatesRow({
   endLabel,
   dayCount,
   compact = false,
+  onPress,
+  testID,
 }: TravelTripDatesRowProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -29,24 +35,31 @@ export function TravelTripDatesRow({
   const calendarTone = chrome.icons.calendar;
   const iconBox = compact ? Math.max(24, s(26)) : Math.max(34, s(36));
   const daysLabel = `${dayCount} ${dayCount === 1 ? 'Day' : 'Days'}`;
+  const accessibilityLabel = `Trip dates ${startLabel} to ${endLabel}, ${daysLabel}`;
+  const handlePress = () => {
+    haptics.tap();
+    onPress?.();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress: onPress ? handlePress : undefined,
+  });
+  const rowStyle = [
+    styles.row,
+    {
+      backgroundColor: compact ? travelCardFill(theme) : travelPillBg(theme),
+      borderColor: chrome.fieldBorder,
+      boxShadow: TRAVEL_DATE_SHADOW,
+      minHeight: compact ? Math.max(40, s(40)) : Math.max(58, s(60)),
+      paddingHorizontal: compact ? rs.md : rs.lg,
+      paddingVertical: compact ? rs.xxs : rs.sm,
+      gap: rs.md,
+      borderRadius: compact ? Math.max(9, s(10)) : Math.max(16, s(18)),
+    },
+  ];
 
-  return (
-    <View
-      accessibilityRole="text"
-      accessibilityLabel={`Trip dates ${startLabel} to ${endLabel}, ${daysLabel}`}
-      style={[
-        styles.row,
-        {
-          backgroundColor: compact ? travelCardFill(theme) : travelPillBg(theme),
-          borderColor: chrome.fieldBorder,
-          boxShadow: compact ? TRAVEL_DATE_SHADOW : TRAVEL_DATE_SHADOW,
-          minHeight: compact ? Math.max(40, s(40)) : Math.max(58, s(60)),
-          paddingHorizontal: compact ? rs.md : rs.lg,
-          paddingVertical: compact ? rs.xxs : rs.sm,
-          gap: rs.md,
-          borderRadius: compact ? Math.max(9, s(10)) : Math.max(16, s(18)),
-        },
-      ]}>
+  const content = (
+    <>
       <View
         style={[
           styles.iconWell,
@@ -121,7 +134,29 @@ export function TravelTripDatesRow({
           {daysLabel}
         </AppText>
       </View>
-    </View>
+    </>
+  );
+
+  if (!onPress) {
+    return (
+      <View accessibilityRole="text" accessibilityLabel={accessibilityLabel} style={rowStyle}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Opens a calendar to change the trip dates"
+      onPress={handlePress}
+      style={({ pressed }) => [rowStyle, pressed && styles.pressed]}>
+      {content}
+    </Pressable>
   );
 }
 
@@ -167,4 +202,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontWeight: '500',
   },
+  pressed: { opacity: 0.72 },
 });

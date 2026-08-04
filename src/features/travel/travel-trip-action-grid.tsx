@@ -7,12 +7,10 @@ import { AgentUiIds } from '@/utils/agent-ui';
 import { promotesFlightSearch } from '@/features/travel/travel-mode';
 import type { TravelPlanMode } from '@/features/travel/types';
 
-import {
-  TravelSheetAction,
-  TravelSheetPrimaryAction,
-} from './travel-list-actions';
+import { TravelSheetAction } from './travel-list-actions';
 
 interface TravelTripActionGridProps {
+  tripId: string;
   tripTitle: string;
   destination: string;
   mode: TravelPlanMode;
@@ -48,6 +46,7 @@ function ActionGroup({
 
 /** Predictable trip action hierarchy: next step first, related tools grouped below. */
 export function TravelTripActionGrid({
+  tripId,
   tripTitle,
   destination,
   mode,
@@ -65,23 +64,29 @@ export function TravelTripActionGrid({
 }: TravelTripActionGridProps) {
   return (
     <View style={styles.container}>
-      <TravelSheetPrimaryAction
-        label="Open Trip Itinerary"
-        icon="list"
-        testID={AgentUiIds.travel.list.itinerary}
-        onPress={onOpenItinerary}
-      />
+      <View style={styles.itineraryAction}>
+        <TravelSheetAction
+          label="Trip Itinerary"
+          icon="list"
+          tone="flight"
+          wide
+          testID={AgentUiIds.travel.list.itinerary(tripId)}
+          onPress={onOpenItinerary}
+          accessibilityLabel="Trip Itinerary"
+        />
+      </View>
 
       <ActionGroup title="Book & organize">
         <TravelSheetAction
           label="Calendar"
           icon="calendar"
+          badgeIcon="repeat"
           tone="calendar"
-          testID={AgentUiIds.travel.list.calendar}
+          testID={AgentUiIds.travel.list.calendar(tripId)}
           onPress={onOpenCalendar}
           accessibilityLabel={
             isOnCalendar
-              ? `Open Calendar for ${tripTitle}`
+              ? `Sync changes for ${tripTitle} with Calendar`
               : `Add ${tripTitle} to Calendar`
           }
         />
@@ -90,7 +95,7 @@ export function TravelTripActionGrid({
             label="Search Flights"
             icon="flight"
             tone="flight"
-            testID={AgentUiIds.travel.list.searchFlights}
+            testID={AgentUiIds.travel.list.searchFlights(tripId)}
             onPress={onSearchFlights}
             accessibilityLabel={`Search Flights for ${tripTitle}`}
           />
@@ -99,7 +104,7 @@ export function TravelTripActionGrid({
             label="Add Transport"
             icon="route"
             tone="flight"
-            testID={AgentUiIds.travel.list.addTransport}
+            testID={AgentUiIds.travel.list.addTransport(tripId)}
             onPress={onAddTransport}
             accessibilityLabel={`Add Transport for ${tripTitle}`}
           />
@@ -108,7 +113,7 @@ export function TravelTripActionGrid({
           label="Search Stays"
           icon="lodging"
           tone="lodging"
-          testID={AgentUiIds.travel.list.searchStays}
+          testID={AgentUiIds.travel.list.searchStays(tripId)}
           onPress={onSearchStays}
           accessibilityLabel={`Search Stays for ${tripTitle}`}
         />
@@ -116,7 +121,7 @@ export function TravelTripActionGrid({
           label="Expenses"
           icon="receipt"
           tone="expense"
-          testID={AgentUiIds.travel.list.expenses}
+          testID={AgentUiIds.travel.list.expenses(tripId)}
           onPress={onOpenExpenses}
           accessibilityLabel={`Open Expenses for ${tripTitle}`}
         />
@@ -127,15 +132,15 @@ export function TravelTripActionGrid({
           label="Trip Weather"
           icon="weather"
           tone="clock"
-          testID={AgentUiIds.travel.list.tripWeather}
+          testID={AgentUiIds.travel.list.tripWeather(tripId)}
           onPress={onOpenWeather}
           accessibilityLabel={`View Weather for ${destination}`}
         />
         <TravelSheetAction
-          label="Currency Calculator"
+          label="Currency"
           icon="calculator"
           tone="currency"
-          testID={AgentUiIds.travel.list.currency}
+          testID={AgentUiIds.travel.list.currency(tripId)}
           onPress={onOpenCurrency}
           accessibilityLabel={`Convert Currency for ${destination}`}
         />
@@ -146,7 +151,7 @@ export function TravelTripActionGrid({
           label="Group Chat"
           icon="chat"
           tone="chat"
-          testID={AgentUiIds.travel.list.groupChat}
+          testID={AgentUiIds.travel.list.groupChat(tripId)}
           onPress={onOpenChat}
           accessibilityLabel={`Open Group Chat for ${tripTitle}`}
         />
@@ -154,7 +159,7 @@ export function TravelTripActionGrid({
           label="Co-Travelers"
           icon="people"
           tone="people"
-          testID={AgentUiIds.travel.list.coTravelers}
+          testID={AgentUiIds.travel.list.coTravelers(tripId)}
           onPress={onOpenCoTravelers}
           accessibilityLabel={`Open Co-Travelers for ${tripTitle}`}
         />
@@ -166,6 +171,10 @@ export function TravelTripActionGrid({
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
+  },
+  itineraryAction: {
+    width: '75%',
+    alignSelf: 'center',
   },
   group: {
     gap: spacing.sm,

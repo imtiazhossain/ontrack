@@ -63,6 +63,13 @@ export const ADDONS = [
     categoryIds: [],
     tabRoute: 'vehicles',
   },
+  {
+    id: 'health',
+    name: 'Health',
+    description: 'Private Apple Health trends, mood check-ins, and personal action plans.',
+    categoryIds: [],
+    tabRoute: 'health',
+  },
 ] as const satisfies readonly AddonDefinition[];
 
 export const DEFAULT_ADDON_STATE: AddonEnabledState = {
@@ -73,6 +80,7 @@ export const DEFAULT_ADDON_STATE: AddonEnabledState = {
   'vision-board': true,
   games: true,
   vehicles: true,
+  health: true,
 };
 
 /** Beta default. Paid access can later replace this from server-owned rows. */
@@ -84,6 +92,7 @@ export const DEFAULT_ADDON_ENTITLEMENTS: AddonEntitlementState = {
   'vision-board': { active: true, source: 'included' },
   games: { active: true, source: 'included' },
   vehicles: { active: true, source: 'included' },
+  health: { active: true, source: 'included' },
 };
 
 const ADDON_BY_ID = new Map<AddonId, AddonDefinition>(ADDONS.map((addon) => [addon.id, addon]));

@@ -46,6 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="vision-board" />
       <Tabs.Screen name="games" />
       <Tabs.Screen name="vehicles" />
+      <Tabs.Screen name="health" />
     </Tabs>
   );
 }

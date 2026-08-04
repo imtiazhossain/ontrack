@@ -45,6 +45,7 @@ import {
 } from '@/features/travel/travel-import-result-modal';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
+import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
@@ -293,6 +294,7 @@ function TravelPlanDetailLoaded({
   const itemEdit = useTravelPlanItemDetailsEdit({ plan, itinerary, updatePlan });
   const itemMedia = useTravelPlanItemMedia({ planId, plan, itinerary, updatePlan });
   const [openExpenseSheet, setOpenExpenseSheet] = useState(false);
+  const [editingTripDates, setEditingTripDates] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState | undefined>();
   const [preparedExpenseDraft, setPreparedExpenseDraft] = useState<ExpenseFormState | undefined>();
   const [importResult, setImportResult] = useState<TravelImportResult | null>(
@@ -976,6 +978,7 @@ function TravelPlanDetailLoaded({
           plan={plan}
           dateDisplayFormat={dateDisplayFormat}
           onAddPress={beginAddToTimeline}
+          onEditDates={() => setEditingTripDates(true)}
         />
 
         <TravelTransportSections
@@ -1010,6 +1013,24 @@ function TravelPlanDetailLoaded({
           />
         </TravelCollapsibleSection>
       </Screen>
+
+      <TravelTripDatesSheet
+        visible={editingTripDates}
+        tripTitle={plan.title}
+        startDate={plan.startDate}
+        endDate={plan.endDate}
+        itinerary={itinerary}
+        onClose={() => setEditingTripDates(false)}
+        onSave={(nextStartDate, nextEndDate) => {
+          updatePlan({
+            ...plan,
+            startDate: nextStartDate,
+            endDate: nextEndDate,
+            updatedAt: new Date().toISOString(),
+          });
+          setEditingTripDates(false);
+        }}
+      />
 
       <TravelTimelineAddModal
         visible={isChoosingAddKind}

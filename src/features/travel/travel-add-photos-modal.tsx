@@ -55,7 +55,6 @@ export function TravelAddPhotosModal({
       <View style={{ gap: spacing.md }}>
         <Button
           variant="primary"
-          size="lg"
           icon="camera"
           testID={AgentUiIds.travel.addPhotos.takePhoto}
           accessibilityLabel="Take Photo"
@@ -64,7 +63,6 @@ export function TravelAddPhotosModal({
         </Button>
         <Button
           variant="secondary"
-          size="lg"
           icon="photo"
           testID={AgentUiIds.travel.addPhotos.chooseFromPhotos}
           accessibilityLabel="Choose from Photos"
@@ -74,7 +72,6 @@ export function TravelAddPhotosModal({
         {onRemovePhoto ? (
           <Button
             variant="danger"
-            size="lg"
             icon="delete"
             testID={AgentUiIds.travel.addPhotos.removePhoto}
             accessibilityLabel={removeLabel}

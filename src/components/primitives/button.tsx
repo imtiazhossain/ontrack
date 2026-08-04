@@ -1,5 +1,11 @@
-import type { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
+import type { PropsWithChildren, ReactNode } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -14,12 +20,14 @@ interface ButtonProps extends PropsWithChildren {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
+  shape?: 'pill' | 'rounded';
   icon?: AppIconName;
+  leading?: ReactNode;
   /** Replaces the leading icon with a spinner while work is in flight. */
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -29,7 +37,9 @@ export function Button({
   onPress,
   variant = 'primary',
   size = 'md',
+  shape = 'pill',
   icon,
+  leading,
   loading = false,
   disabled,
   style,
@@ -80,6 +90,8 @@ export function Button({
         {
           gap: spacing.sm,
           minHeight: layout.minTapTarget,
+          borderRadius: shape === 'rounded' ? radii.md : radii.pill,
+          borderCurve: 'continuous',
           paddingHorizontal: size === 'sm' ? spacing.md : spacing.xl,
           paddingVertical: size === 'lg' ? spacing.lg : size === 'sm' ? spacing.sm : spacing.md,
           opacity: isDisabled && !loading ? 0.4 : pressed ? 0.75 : 1,
@@ -89,6 +101,8 @@ export function Button({
       ]}>
       {loading ? (
         <LoadingSpinner size={iconSizes.sm} color={iconColor} />
+      ) : leading ? (
+        leading
       ) : icon ? (
         <Symbol name={icon} size="sm" color={iconColor} />
       ) : null}
@@ -188,7 +202,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.pill,
   },
   iconButton: {
     alignItems: 'center',

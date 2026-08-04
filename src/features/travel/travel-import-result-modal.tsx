@@ -47,7 +47,6 @@ export function TravelImportResultModal({
         </AppText>
         <Button
           variant="primary"
-          size="lg"
           icon="receipt"
           testID={AgentUiIds.travel.importResult.reviewExpense}
           accessibilityLabel="Review expense"

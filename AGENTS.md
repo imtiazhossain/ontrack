@@ -85,6 +85,7 @@ Short pointers only. For domain depth, use skills under `.cursor/skills/` (**tra
 | Vision board | `features/vision-board/` → **vision-board** skill |
 | Workouts | `app/(tabs)/workouts.tsx` → **workouts** skill (+ Muscle Explorer under Shared patterns) |
 | Vehicles | `app/(tabs)/vehicles.tsx`, `features/vehicles/`, `store/vehicles.ts`, `services/vehicles/` |
+| Health / moods / Apple Health | `app/(tabs)/health.tsx`, `features/health/`, `store/health.ts` → **health** skill |
 | Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |
 | Profile avatar | `features/account/profile-avatar.tsx` |

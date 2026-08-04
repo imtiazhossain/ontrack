@@ -213,7 +213,6 @@ export function TravelPlanDetailsEditor({
           <View style={[styles.actions, { gap: rs.lg }]}>
             <Button
               variant="primary"
-              size="lg"
               testID={AgentUiIds.travel.editTrip.save}
               accessibilityLabel="Save Details"
               onPress={onSave}>

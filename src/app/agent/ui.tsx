@@ -1,9 +1,9 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { LoadingBlock } from '@/components/primitives';
-import { handleAgentUiRequest, isAgentUiEnabled } from '@/utils/agent-ui';
+import { getLastAgentUiContentRoute, handleAgentUiRequest, isAgentUiEnabled } from '@/utils/agent-ui';
 
 /**
  * Cold-start fallback for agent dump/tap/exists ops.
@@ -13,17 +13,19 @@ import { handleAgentUiRequest, isAgentUiEnabled } from '@/utils/agent-ui';
 export default function AgentUiRoute() {
   const router = useRouter();
   const params = useLocalSearchParams<{ op?: string; id?: string }>();
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     let active = true;
+    const returnTo = getLastAgentUiContentRoute() ?? '/';
     // Linking listener usually handles this first; re-run is idempotent for dump/exists.
     void handleAgentUiRequest(params).finally(() => {
       if (!active) return;
-      setDone(true);
-      if (router.canGoBack()) {
-        router.back();
-      }
+      // A pressed control may navigate. Give that navigation a frame to become
+      // the latest content route; otherwise restore the route that initiated the op.
+      setTimeout(() => {
+        if (!active) return;
+        router.replace((getLastAgentUiContentRoute() ?? returnTo) as never);
+      }, 100);
     });
     return () => {
       active = false;
@@ -31,10 +33,6 @@ export default function AgentUiRoute() {
   }, [params, router]);
 
   if (!isAgentUiEnabled()) {
-    return <Redirect href="/(tabs)" />;
-  }
-
-  if (done && !router.canGoBack()) {
     return <Redirect href="/(tabs)" />;
   }
 

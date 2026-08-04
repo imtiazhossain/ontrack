@@ -12,6 +12,14 @@ function travelSheetFiles(directory: string): string[] {
   });
 }
 
+function travelTsxFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return travelTsxFiles(path);
+    return entry.name.endsWith('.tsx') ? [path] : [];
+  });
+}
+
 describe('canonical travel sheet design', () => {
   it('keeps every rendered travel sheet on the shared scaffold or header', () => {
     const directory = join(process.cwd(), 'src/features/travel');
@@ -60,12 +68,89 @@ describe('canonical travel sheet design', () => {
     expect(detail).not.toMatch(/screen:\s*\{[^}]*paddingTop:\s*0/);
   });
 
-  it('keeps Travel action cards arrow-free', () => {
+  it('keeps Travel action buttons compact and arrow-free', () => {
     const actions = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-list-actions.tsx'),
       'utf8',
     );
 
     expect(actions).not.toContain('chevron-right');
+    expect(actions).toContain('variant="secondary"');
+    expect(actions).toContain('shape="rounded"');
+    expect(actions).toContain('borderWidth: StyleSheet.hairlineWidth');
+    expect(actions).toContain('backgroundColor: iconTone.bg');
+  });
+
+  it('marks the trip Calendar action as a sync and refreshes its schedule entries', () => {
+    const grid = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-trip-action-grid.tsx'),
+      'utf8',
+    );
+    const travelTab = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      'utf8',
+    );
+
+    expect(grid).toContain('icon="calendar"');
+    expect(grid).toContain('badgeIcon="repeat"');
+    expect(grid).toContain('Sync changes for ${tripTitle} with Calendar');
+    expect(travelTab).toMatch(
+      /onOpenCalendar=\{\(\) => \{\s*(?:recordPlanInteraction\(plan\.id\);\s*)?addTripToCalendar\(plan\);\s*\}\}/,
+    );
+  });
+
+  it('keeps Travel CTA buttons at the shared default size', () => {
+    const files = travelTsxFiles(join(process.cwd(), 'src/features/travel'));
+
+    for (const path of files) {
+      const source = readFileSync(path, 'utf8');
+      expect({ path, source }).toEqual(
+        expect.objectContaining({
+          source: expect.not.stringMatching(/<Button\b[^>]*\bsize="lg"/s),
+        }),
+      );
+    }
+  });
+
+  it('edits both trip-date endpoints in the canonical Travel sheet', () => {
+    const row = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-trip-dates-row.tsx'),
+      'utf8',
+    );
+    const sheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-trip-dates-sheet.tsx'),
+      'utf8',
+    );
+
+    expect(row).toContain('accessibilityRole="button"');
+    expect(sheet).toContain('<TravelSheetModal');
+    expect(sheet).toContain('<DateFieldCalendar');
+    expect(sheet).toContain('rangeStart={fromDateKey(draftStart)}');
+    expect(sheet).toContain('rangeEnd={fromDateKey(draftEnd)}');
+    expect(sheet).toContain('AgentUiIds.travel.dates.start');
+    expect(sheet).toContain('AgentUiIds.travel.dates.end');
+  });
+
+  it('wraps trip titles to two lines before reducing their size', () => {
+    const travelTab = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      'utf8',
+    );
+    const detailHero = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
+      'utf8',
+    );
+    const title = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-title.tsx'),
+      'utf8',
+    );
+
+    for (const source of [travelTab, detailHero]) {
+      expect(source).toContain('<TravelPlanTitle');
+    }
+    expect(title).toContain('lineCount <= 2');
+    expect(title).toContain('onTextLayout=');
+    expect(title).toContain('numberOfLines={scale <= MINIMUM_SCALE ? 2 : undefined}');
+    expect(title).toContain('const MINIMUM_SCALE = 0.42');
   });
 });

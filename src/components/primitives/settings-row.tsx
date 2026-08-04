@@ -108,6 +108,7 @@ export function SettingsToggleRow({
   value,
   disabled,
   onValueChange,
+  testID,
 }: {
   label: string;
   detail: string;
@@ -115,6 +116,7 @@ export function SettingsToggleRow({
   value: boolean;
   disabled?: boolean;
   onValueChange: (value: boolean) => void;
+  testID?: string;
 }) {
   const theme = useTheme();
   return (
@@ -124,6 +126,7 @@ export function SettingsToggleRow({
       icon={icon}
       trailing={
         <Switch
+          testID={testID}
           accessibilityLabel={label}
           disabled={disabled}
           value={value}

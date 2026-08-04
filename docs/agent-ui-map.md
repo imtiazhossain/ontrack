@@ -179,6 +179,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 |--------|---------|
 | `ontrack.auth.apple` | Continue with Apple |
 | `ontrack.auth.google` | Continue with Google |
+| `ontrack.auth.guest` | Continue as Guest |
 | `ontrack.auth.privacy` | Privacy Policy link |
 | `ontrack.auth.terms` | Terms of Use link |
 | `ontrack.prompt.close` | Prompt / alert dismiss (X) |
@@ -189,15 +190,24 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | testID | Control |
 |--------|---------|
 | `ontrack.travel.list.cover.<tripId>` | Expand a trip cover photo |
-| `ontrack.travel.list.itinerary` | Open plan itinerary |
-| `ontrack.travel.list.calendar` | Add trip to Calendar, or open Calendar when already added |
-| `ontrack.travel.list.searchFlights` | Search Flights |
-| `ontrack.travel.list.searchStays` | Search Stays |
-| `ontrack.travel.list.tripWeather` | Trip Weather |
-| `ontrack.travel.list.currency` | Open Currency Calculator |
-| `ontrack.travel.list.expenses` | Open Expenses |
-| `ontrack.travel.list.groupChat` | Open Group Chat |
-| `ontrack.travel.list.coTravelers` | Open Co-Travelers |
+| `ontrack.travel.list.editTrip.<tripId>` | Edit trip details |
+| `ontrack.travel.list.editDates.<tripId>` | Open the trip date-range calendar |
+| `ontrack.travel.list.itinerary.<tripId>` | Open plan itinerary |
+| `ontrack.travel.list.calendar.<tripId>` | Add trip to Calendar, or open Calendar when already added |
+| `ontrack.travel.list.searchFlights.<tripId>` | Search Flights |
+| `ontrack.travel.list.searchStays.<tripId>` | Search Stays |
+| `ontrack.travel.list.tripWeather.<tripId>` | Trip Weather |
+| `ontrack.travel.list.currency.<tripId>` | Open Currency Calculator |
+| `ontrack.travel.list.expenses.<tripId>` | Open Expenses |
+| `ontrack.travel.list.groupChat.<tripId>` | Open Group Chat |
+| `ontrack.travel.list.coTravelers.<tripId>` | Open Co-Travelers |
+| `ontrack.travel.dates.close` | Close the trip date-range calendar |
+| `ontrack.travel.dates.start` | Select the trip start-date endpoint |
+| `ontrack.travel.dates.end` | Select the trip end-date endpoint |
+| `ontrack.travel.dates.calendar.previousMonth` | Show the previous month in the trip calendar |
+| `ontrack.travel.dates.calendar.nextMonth` | Show the next month in the trip calendar |
+| `ontrack.travel.dates.calendar.day.<YYYY-MM-DD>` | Select a day in the trip calendar |
+| `ontrack.travel.dates.save` | Save the selected trip date range |
 | `ontrack.travel.photoViewer.dismiss.<tripId>` | Dismiss the expanded trip photo |
 | `ontrack.travel.photoViewer.close.<tripId>` | Close the expanded trip photo |
 
@@ -208,6 +218,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.newTrip.open` | Open the new-trip form |
 | `ontrack.travel.newTrip.cancel` | Close the new-trip form |
 | `ontrack.travel.newTrip.title` | New-trip title field |
+| `ontrack.travel.newTrip.origin` | New-trip starting point field |
 | `ontrack.travel.newTrip.destination` | New-trip destination field |
 | `ontrack.travel.newTrip.startDate` | New-trip departure date |
 | `ontrack.travel.newTrip.endDate` | New-trip return date |
@@ -264,6 +275,32 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 |--------|---------|
 | `ontrack.activityForm.choice.<group>.<value>` | Select a meal, workout, or priority option |
 
+## Health
+
+Deep link: `ontrack://health` / Expo route `/(tabs)/health`
+
+| testID | Control |
+|--------|---------|
+| `ontrack.tabs.health` | Open Health tab |
+| `ontrack.health.section.body` / `.mind` | Switch Health section |
+| `ontrack.health.body.connect` | Request Apple Health access |
+| `ontrack.health.body.refresh` | Refresh 90-day Health summary |
+| `ontrack.health.body.sleepHandoff` | Open Health from a sleep detail |
+| `ontrack.health.mind.checkIn` | Start a mood check-in |
+| `ontrack.health.mind.entry.<id>` | Edit a check-in; long-press deletes |
+| `ontrack.health.checkIn.emotion.<id>` | Select or remove a feeling |
+| `ontrack.health.checkIn.intensity.<id>.<1-5>` | Set feeling intensity |
+| `ontrack.health.checkIn.save` | Save the private check-in |
+| `ontrack.health.mind.addFactor` | Add something that affects a mood |
+| `ontrack.health.mind.factor.<id>.edit` | Edit or delete a mood factor |
+| `ontrack.health.mind.addPlaybook` | Create a private action playbook |
+| `ontrack.health.playbook.<id>.start` | Start a playbook |
+| `ontrack.health.playbook.<id>.edit` | Edit or delete a playbook |
+| `ontrack.health.playbookRun.<id>.complete` / `.cancel` | Finish or stop a playbook run |
+| `ontrack.health.settings` | Open Health settings |
+| `ontrack.health.settings.stateSync.<off|on>` | Configure State of Mind sync |
+| `ontrack.profile.addon.health` | Toggle the iPhone Health add-on |
+
 ## Travel plan detail
 
 | testID | Control |
@@ -283,7 +320,7 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.travel.tripMode.<mode>` | Choose the trip's primary travel mode |
 | `ontrack.travel.newTrip.origin` | Optional new-trip starting point |
 | `ontrack.travel.editTrip.origin` | Optional edited-trip starting point |
-| `ontrack.travel.list.addTransport` | Add transport from a non-flight trip card |
+| `ontrack.travel.list.addTransport.<tripId>` | Add transport from a non-flight trip card |
 | `ontrack.travel.transport.mode.<mode>` | Choose driving, rail, transit, rideshare, taxi, ferry, shuttle, or other |
 | `ontrack.travel.transport.origin` | Transport origin or pick-up |
 | `ontrack.travel.transport.destination` | Transport destination or drop-off |

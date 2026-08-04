@@ -251,6 +251,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="vehicles/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="vehicles/[id]" />
         <Stack.Screen name="vehicles/[id]/settings" />
+        <Stack.Screen name="health" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={appAccess && hasOnboarded}>
         <Stack.Screen

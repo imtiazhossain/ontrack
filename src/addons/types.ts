@@ -11,14 +11,15 @@ export type AddonId =
   | 'travel'
   | 'vision-board'
   | 'games'
-  | 'vehicles';
+  | 'vehicles'
+  | 'health';
 
 export interface AddonDefinition {
   id: AddonId;
   name: string;
   description: string;
   categoryIds: readonly string[];
-  tabRoute?: 'workouts' | 'plants' | 'travel' | 'vision-board' | 'games' | 'vehicles';
+  tabRoute?: 'workouts' | 'plants' | 'travel' | 'vision-board' | 'games' | 'vehicles' | 'health';
 }
 
 export type AddonEnabledState = Record<AddonId, boolean>;

@@ -23,6 +23,7 @@ export function TravelTripCover({
   height,
   borderRadius,
   expandable = true,
+  onOpen,
 }: {
   plan: TravelPlan;
   width?: DimensionValue;
@@ -30,6 +31,7 @@ export function TravelTripCover({
   borderRadius?: number;
   /** False when a parent card already owns the tap gesture. */
   expandable?: boolean;
+  onOpen?: () => void;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
@@ -84,6 +86,7 @@ export function TravelTripCover({
 
   const open = () => {
     if (!uri) return;
+    onOpen?.();
     haptics.tap();
     setExpanded(true);
   };

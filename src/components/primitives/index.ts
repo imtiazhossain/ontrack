@@ -5,6 +5,7 @@ export { BackButton, HeaderBackButton } from './back-button';
 export { Button, IconButton } from './button';
 export { Card } from './card';
 export { DateField } from './date-field';
+export { DateFieldCalendar } from './date-field-calendar';
 export { DestructiveSection } from './destructive-section';
 export { DragHandle } from './drag-handle';
 export { EmptyState } from './empty-state';

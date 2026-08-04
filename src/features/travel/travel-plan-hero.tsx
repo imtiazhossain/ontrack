@@ -6,6 +6,7 @@ import { fontFamilies, spacing } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
+import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import type { TravelPlan } from '@/features/travel/types';
 import { travelPlanModeLabel } from '@/features/travel/travel-mode';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -18,10 +19,12 @@ export function TravelPlanHero({
   plan,
   dateDisplayFormat,
   onAddPress,
+  onEditDates,
 }: {
   plan: TravelPlan;
   dateDisplayFormat: DateDisplayFormat;
   onAddPress?: () => void;
+  onEditDates?: () => void;
 }) {
   const theme = useTheme();
   const router = useRouter();
@@ -53,15 +56,7 @@ export function TravelPlanHero({
               {plan.origin ? `${plan.origin} → ${plan.destination}` : plan.destination}
             </AppText>
           ) : null}
-          <AppText
-            style={[
-              styles.title,
-              { fontSize: Math.max(29, s(30)), lineHeight: Math.max(34, s(35)) },
-            ]}
-            fit
-            numberOfLines={1}>
-            {plan.title}
-          </AppText>
+          <TravelPlanTitle title={plan.title} fontSize={Math.max(29, s(30))} />
         </View>
         {onAddPress ? (
           <IconButton
@@ -81,6 +76,8 @@ export function TravelPlanHero({
         endLabel={formatDateKey(plan.endDate, dateDisplayFormat)}
         dayCount={dayCount}
         compact
+        onPress={onEditDates}
+        testID={onEditDates ? AgentUiIds.travel.list.editDates(plan.id) : undefined}
       />
 
       {plan.notes ? (
@@ -107,13 +104,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: spacing.xxs,
     justifyContent: 'center',
-  },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '400',
-    letterSpacing: -0.7,
   },
   serif: {
     fontFamily: fontFamilies.serif,

@@ -12,7 +12,11 @@ import type { TravelPlan } from '@/features/travel/types';
 
 interface TravelState {
   plans: TravelPlan[];
-  savePlan: (plan: TravelPlan) => void;
+  /** Device-local MRU order; opening a trip must not mutate shared plan data. */
+  recentPlanIds: string[];
+  recordPlanInteraction: (id: string) => void;
+  /** Returns false when normalization rejects the plan and nothing is stored. */
+  savePlan: (plan: TravelPlan) => boolean;
   removePlan: (id: string) => void;
   replacePlans: (plans: TravelPlan[]) => void;
   reset: () => void;
@@ -22,17 +26,37 @@ export const useTravel = create<TravelState>()(
   persist(
     (set) => ({
       plans: withAllAccountsTestTrip([]),
-      savePlan: (plan) =>
+      recentPlanIds: [],
+      recordPlanInteraction: (id) =>
         set((state) => {
-          const normalized = normalizeTravelPlan(plan);
-          if (!normalized) return state;
+          if (!state.plans.some((plan) => plan.id === id)) return state;
+          if (state.recentPlanIds[0] === id) return state;
+          return {
+            recentPlanIds: [
+              id,
+              ...state.recentPlanIds.filter(
+                (planId) => planId !== id && state.plans.some((plan) => plan.id === planId),
+              ),
+            ],
+          };
+        }),
+      savePlan: (plan) => {
+        const normalized = normalizeTravelPlan(plan);
+        if (!normalized) return false;
+        set((state) => {
           return {
             plans: [
               ...state.plans.filter((item) => item.id !== normalized.id),
               normalized,
             ],
+            recentPlanIds: [
+              normalized.id,
+              ...state.recentPlanIds.filter((id) => id !== normalized.id),
+            ],
           };
-        }),
+        });
+        return true;
+      },
       removePlan: (id) =>
         set((state) => ({
           plans:
@@ -40,22 +64,54 @@ export const useTravel = create<TravelState>()(
             featureFlags.allAccountsTestTrip
               ? state.plans
               : state.plans.filter((item) => item.id !== id),
+          recentPlanIds: state.recentPlanIds.filter((planId) => planId !== id),
         })),
       replacePlans: (plans) =>
-        set({ plans: withAllAccountsTestTrip(normalizeTravelPlans(plans)) }),
-      reset: () => set({ plans: withAllAccountsTestTrip([]) }),
+        set((state) => {
+          const nextPlans = withAllAccountsTestTrip(normalizeTravelPlans(plans));
+          const nextIds = new Set(nextPlans.map((plan) => plan.id));
+          return {
+            plans: nextPlans,
+            recentPlanIds: state.recentPlanIds.filter((id) => nextIds.has(id)),
+          };
+        }),
+      reset: () => set({ plans: withAllAccountsTestTrip([]), recentPlanIds: [] }),
     }),
     {
       name: STORAGE_KEYS.travel,
       storage: createPersistStorage(),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<TravelState>;
+        const plans = withAllAccountsTestTrip(normalizeTravelPlans(persisted.plans));
+        const planIds = new Set(plans.map((plan) => plan.id));
         return {
           ...currentState,
           ...persisted,
-          plans: withAllAccountsTestTrip(normalizeTravelPlans(persisted.plans)),
+          plans,
+          recentPlanIds: Array.isArray(persisted.recentPlanIds)
+            ? [...new Set(persisted.recentPlanIds)].filter(
+                (id): id is string => typeof id === 'string' && planIds.has(id),
+              )
+            : [],
         };
       },
     },
   ),
 );
+
+export function orderTravelPlansByRecency(
+  plans: TravelPlan[],
+  recentPlanIds: readonly string[],
+): TravelPlan[] {
+  const rank = new Map(recentPlanIds.map((id, index) => [id, index]));
+  return [...plans].sort((a, b) => {
+    const aRank = rank.get(a.id);
+    const bRank = rank.get(b.id);
+    if (aRank !== undefined || bRank !== undefined) {
+      if (aRank === undefined) return 1;
+      if (bRank === undefined) return -1;
+      return aRank - bRank;
+    }
+    return a.startDate.localeCompare(b.startDate) || a.createdAt.localeCompare(b.createdAt);
+  });
+}
