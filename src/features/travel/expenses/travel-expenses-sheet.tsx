@@ -36,7 +36,6 @@ import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import {
     flightExpenseDisplayTitle,
-    isRoundTripFlightExpense,
     withRoundTripFlightExpenseTitles,
 } from '@/features/travel/flight-expense-title';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
@@ -79,16 +78,6 @@ const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   other: 'receipt',
 };
 
-const CATEGORY_LABELS: Record<TravelExpenseCategory, string> = {
-  flight: 'Flight',
-  stay: 'Stay',
-  food: 'Food',
-  transport: 'Transit',
-  activity: 'Activity',
-  shopping: 'Shopping',
-  other: 'Other',
-};
-
 /** Map expense categories onto itinerary kind chrome when they have a counterpart. */
 function expenseCategoryKind(category: TravelExpenseCategory): TravelItemKind | undefined {
   switch (category) {
@@ -97,7 +86,7 @@ function expenseCategoryKind(category: TravelExpenseCategory): TravelItemKind | 
     case 'stay':
       return 'stay';
     case 'transport':
-      return 'rental';
+      return 'transport';
     case 'activity':
       return 'activity';
     default:
@@ -215,7 +204,6 @@ export function TravelExpensesSheet({
     [plan.expenses],
   );
   const { total, convertible } = totalInBase(plan.expenses, plan.baseCurrency, rates);
-  const average = plan.expenses.length > 0 ? total / plan.expenses.length : 0;
   const balances = settleBalances(plan.expenses, plan.baseCurrency, rates);
   const transfers = balances ? settleTransfers(balances) : [];
 
@@ -399,34 +387,6 @@ export function TravelExpensesSheet({
                       ? formatMoney(total, plan.baseCurrency, dateLocale)
                       : '—'}
                   </AppText>
-                  <View
-                    style={[
-                      styles.summaryMetrics,
-                      {
-                        gap: rs.md,
-                        paddingTop: rs.sm,
-                        borderTopColor: theme.separator,
-                      },
-                    ]}>
-                    <View style={styles.summaryMetric}>
-                      <AppText variant="caption" color="secondary" fit>
-                        Expenses
-                      </AppText>
-                      <AppText variant="callout" fit style={styles.metricValue}>
-                        {plan.expenses.length} recorded
-                      </AppText>
-                    </View>
-                    <View style={styles.summaryMetric}>
-                      <AppText variant="caption" color="secondary" fit>
-                        Average
-                      </AppText>
-                      <AppText variant="callout" fit selectable style={styles.metricValue}>
-                        {convertible || plan.expenses.length === 0
-                          ? formatMoney(average, plan.baseCurrency, dateLocale)
-                          : 'Mixed currencies'}
-                      </AppText>
-                    </View>
-                  </View>
                 </TravelSurfaceCard>
 
                 {transfers.length > 0 ? (
@@ -446,9 +406,6 @@ export function TravelExpensesSheet({
                             {transfer.fromId === TRAVEL_EXPENSE_SELF_ID
                               ? `You owe ${personName(people, transfer.toId)}`
                               : `${personName(people, transfer.fromId)} owes ${personName(people, transfer.toId)}`}
-                          </AppText>
-                          <AppText variant="caption" color="secondary" fit>
-                            One payment settles this balance
                           </AppText>
                         </View>
                         <AppText variant="subheading" color="accent" fit selectable>
@@ -473,10 +430,6 @@ export function TravelExpensesSheet({
                   sortedExpenses.map((expense) => {
                     const converted = expenseInBase(expense, plan.baseCurrency, rates);
                     const title = flightExpenseDisplayTitle(expense, plan);
-                    const categoryLabel =
-                      expense.category === 'flight' && isRoundTripFlightExpense(expense, plan)
-                        ? 'Flights'
-                        : CATEGORY_LABELS[expense.category];
                     const kind = expenseCategoryKind(expense.category);
                     const chrome = kind
                       ? kindChrome(kind, theme)
@@ -488,13 +441,13 @@ export function TravelExpensesSheet({
                         label={`Edit ${title}`}
                         onPress={() => beginEdit(expense)}
                         style={styles.expensePress}>
-                        <TravelSurfaceCard bodyStyle={styles.expenseCard} padding={rs.md}>
+                        <TravelSurfaceCard bodyStyle={styles.expenseCard} padding={rs.sm}>
                           <View
                             style={[
                               styles.categoryBadge,
                               {
-                                width: Math.max(48, s(52)),
-                                height: Math.max(48, s(52)),
+                                width: s(44),
+                                height: s(44),
                                 backgroundColor: chrome.tint,
                               },
                             ]}>
@@ -505,37 +458,35 @@ export function TravelExpensesSheet({
                             />
                           </View>
                           <View style={styles.expenseCopy}>
-                            <View style={styles.expenseTitleRow}>
-                              <View style={styles.expenseTitle}>
-                                <AppText
-                                  variant="subheading"
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail">
-                                  {title}
-                                </AppText>
-                              </View>
-                              <View style={styles.amountCol}>
-                                <AppText variant="subheading" color="accent" numberOfLines={1}>
-                                  {formatMoney(expense.amount, expense.currency, dateLocale)}
-                                </AppText>
-                                {converted !== undefined &&
-                                expense.currency !== plan.baseCurrency ? (
-                                  <AppText
-                                    variant="callout"
-                                    color="secondary"
-                                    fit
-                                    numberOfLines={1}>
-                                    ≈ {formatMoney(converted, plan.baseCurrency, dateLocale)}
-                                  </AppText>
-                                ) : null}
-                              </View>
-                              <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-                            </View>
-                            <AppText variant="body" color="secondary" numberOfLines={1}>
-                              {categoryLabel} · {formatDateLong(expense.date)} ·{' '}
+                            <AppText variant="body" fit numberOfLines={1} ellipsizeMode="tail">
+                              {title}
+                            </AppText>
+                            <AppText variant="callout" color="secondary" fit numberOfLines={1}>
+                              {formatDateLong(expense.date)} ·{' '}
                               {expensePayerLabel(people, expense.paidById)} paid
                             </AppText>
                           </View>
+                          <View style={styles.amountCol}>
+                            <AppText
+                              variant="body"
+                              color="accent"
+                              fit
+                              numberOfLines={1}
+                              style={styles.expenseAmount}>
+                              {formatMoney(expense.amount, expense.currency, dateLocale)}
+                            </AppText>
+                            {converted !== undefined && expense.currency !== plan.baseCurrency ? (
+                              <AppText
+                                variant="caption"
+                                color="secondary"
+                                fit
+                                numberOfLines={1}
+                                style={styles.expenseAmount}>
+                                ≈ {formatMoney(converted, plan.baseCurrency, dateLocale)}
+                              </AppText>
+                            ) : null}
+                          </View>
+                          <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
                         </TravelSurfaceCard>
                       </ExpenseRowButton>
                     );
@@ -590,17 +541,6 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     fontVariant: ['tabular-nums'],
   },
-  summaryMetrics: {
-    flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  summaryMetric: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: spacing.xxs,
-  },
-  metricValue: { fontVariant: ['tabular-nums'] },
   block: { gap: spacing.sm },
   settleCard: {
     flexDirection: 'row',
@@ -627,7 +567,7 @@ const styles = StyleSheet.create({
   expenseCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   categoryBadge: {
     borderRadius: radii.pill,
@@ -636,12 +576,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   expenseCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
-  expenseTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minWidth: 0,
-  },
-  expenseTitle: { flex: 1, flexShrink: 1, minWidth: 0 },
-  amountCol: { alignItems: 'flex-end', flexShrink: 0, gap: 2 },
+  amountCol: { alignItems: 'flex-end', flexShrink: 0, gap: spacing.xxs },
+  expenseAmount: { fontVariant: ['tabular-nums'] },
 });

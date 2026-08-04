@@ -71,7 +71,7 @@ function extensionForAsset(fileName: string, uri: string): string {
  */
 export async function persistConfirmationAssets(
   assets: { uri: string; fileName: string }[],
-  kind: 'flight' | 'rental' | 'stay',
+  kind: 'flight' | 'rental' | 'stay' | 'transport',
 ): Promise<string[]> {
   if (Platform.OS === 'web') {
     return assets.map((asset) => asset.uri).filter(Boolean);
@@ -107,7 +107,7 @@ export async function persistConfirmationAssets(
 }
 
 /** List confirmation files currently on disk for a travel kind. */
-export function listConfirmationUris(kind: 'flight' | 'rental' | 'stay'): string[] {
+export function listConfirmationUris(kind: 'flight' | 'rental' | 'stay' | 'transport'): string[] {
   if (Platform.OS === 'web') return [];
   try {
     const directory = new Directory(Paths.document, 'travel-confirmations', kind);
@@ -133,7 +133,7 @@ export function listConfirmationUris(kind: 'flight' | 'rental' | 'stay'): string
  */
 export function confirmationUrisForDisplay(
   stored: string[] | undefined,
-  kind: 'flight' | 'rental' | 'stay',
+  kind: 'flight' | 'rental' | 'stay' | 'transport',
 ): string[] {
   const resolved = resolveConfirmationUris(stored);
   if (resolved.length) return resolved;

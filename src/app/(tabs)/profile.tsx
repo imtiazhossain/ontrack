@@ -8,6 +8,7 @@ import {
   AppText,
   Button,
   Screen,
+  SegmentedControl,
   SectionHeader,
   SettingsActionRow,
   SettingsToggleRow,
@@ -19,9 +20,8 @@ import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { ProfileAvatarEditorSheet } from '@/features/account/profile-avatar-editor-sheet';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
-import { radii, spacing } from '@/design-system';
+import { spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
 import { useAddons } from '@/store/addons';
@@ -46,7 +46,6 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 /** Primary carousel section for account and app preferences. */
 export default function ProfileSettingsScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const { user } = useAuthSession();
   const name = usePreferences((s) => s.name);
@@ -146,17 +145,29 @@ export default function ProfileSettingsScreen() {
       <CloudAccountCard />
 
       <SectionHeader title="Appearance" />
-      <View style={styles.segment}>
-        {THEME_OPTIONS.map((opt) => (
-          <ProfileThemeOption
-            key={opt.value}
-            value={opt.value}
-            label={opt.label}
-            selected={themePreference === opt.value}
-            onSelect={setThemePreference}
+      <SegmentedControl
+        value={themePreference}
+        options={THEME_OPTIONS.map((option) => ({
+          ...option,
+          testID: AgentUiIds.profile.theme(option.value),
+        }))}
+        onChange={setThemePreference}
+        style={styles.segment}
+      />
+
+      {__DEV__ ? (
+        <>
+          <SectionHeader title="Developer" />
+          <SettingsActionRow
+            label="Design System"
+            detail="Canonical components, actions, states, and feature accents"
+            icon="smart"
+            testID={AgentUiIds.profile.designSystem}
+            onPress={() => router.push('/design-system' as never)}
+            accessibilityLabel="Open design-system gallery"
           />
-        ))}
-      </View>
+        </>
+      ) : null}
 
       <SectionHeader title="Preferences" />
       <SettingsActionRow
@@ -270,45 +281,6 @@ export default function ProfileSettingsScreen() {
   );
 }
 
-function ProfileThemeOption({
-  value,
-  label,
-  selected,
-  onSelect,
-}: {
-  value: ThemePreference;
-  label: string;
-  selected: boolean;
-  onSelect: (value: ThemePreference) => void;
-}) {
-  const theme = useTheme();
-  const select = () => onSelect(value);
-  const agent = useAgentUiTarget(AgentUiIds.profile.theme(value), {
-    label: `Theme ${label}`,
-    onPress: select,
-  });
-  return (
-    <Pressable
-      ref={agent.ref}
-      accessibilityRole="button"
-      accessibilityLabel={`Theme ${label}`}
-      testID={agent.testID}
-      onLayout={agent.onLayout}
-      onPress={select}
-      style={[
-        styles.segmentItem,
-        {
-          backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
-          borderColor: selected ? theme.accentPrimary : theme.separator,
-        },
-      ]}>
-      <AppText variant="callout" color={selected ? 'accent' : 'primary'}>
-        {label}
-      </AppText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   hero: {
     flexDirection: 'row',
@@ -319,16 +291,7 @@ const styles = StyleSheet.create({
   },
   title: { marginBottom: 0 },
   segment: {
-    flexDirection: 'row',
-    gap: spacing.sm,
     marginBottom: spacing.lg,
-  },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 1,
   },
   attribution: { gap: spacing.sm, marginBottom: spacing.xl },
   tmdbLogo: { width: 96, height: 40 },

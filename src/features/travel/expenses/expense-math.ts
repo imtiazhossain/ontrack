@@ -302,6 +302,7 @@ export function createExpenseDraft(input: {
   paidById: string;
   splitWithIds: string[];
   existing?: TravelExpense;
+  travelItemId?: string;
 }): TravelExpense {
   const now = new Date().toISOString();
   return {
@@ -316,6 +317,7 @@ export function createExpenseDraft(input: {
     splitWithIds: input.splitWithIds.length > 0 ? input.splitWithIds : [input.paidById],
     createdAt: input.existing?.createdAt ?? now,
     updatedAt: now,
+    travelItemId: input.travelItemId?.trim() || input.existing?.travelItemId || undefined,
   };
 }
 

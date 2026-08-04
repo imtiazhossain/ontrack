@@ -21,7 +21,7 @@ import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
   TRAVEL_EDITORIAL_ACCENT,
   TravelSurfaceCard,
-  travelPageBg,
+  useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -231,6 +231,7 @@ function MountainFooter({ color }: { color: string }) {
 
 export function StayProviderScreen({ planId }: { planId: string }) {
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
@@ -246,7 +247,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
 
   if (!plan) {
     return (
-      <Screen style={{ backgroundColor: travelPageBg(theme) }} refresh={false}>
+      <Screen style={travelStyle} refresh={false}>
         <EmptyState
           icon="lodging"
           title="Trip Not Found"
@@ -265,7 +266,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
 
   return (
     <Screen
-      style={{ backgroundColor: travelPageBg(theme) }}
+      style={travelStyle}
       contentStyle={{
         ...styles.screen,
         gap: rs.lg,

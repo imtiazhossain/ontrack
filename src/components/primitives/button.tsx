@@ -13,7 +13,7 @@ import { Symbol } from './symbol';
 interface ButtonProps extends PropsWithChildren {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
   icon?: AppIconName;
   /** Replaces the leading icon with a spinner while work is in flight. */
   loading?: boolean;
@@ -80,8 +80,8 @@ export function Button({
         {
           gap: spacing.sm,
           minHeight: layout.minTapTarget,
-          paddingHorizontal: spacing.xl,
-          paddingVertical: size === 'lg' ? spacing.lg : spacing.md,
+          paddingHorizontal: size === 'sm' ? spacing.md : spacing.xl,
+          paddingVertical: size === 'lg' ? spacing.lg : size === 'sm' ? spacing.sm : spacing.md,
           opacity: isDisabled && !loading ? 0.4 : pressed ? 0.75 : 1,
           backgroundColor: background,
         },
@@ -93,7 +93,7 @@ export function Button({
         <Symbol name={icon} size="sm" color={iconColor} />
       ) : null}
       <AppText
-        variant={size === 'lg' ? 'subheading' : 'callout'}
+        variant={size === 'lg' ? 'subheading' : size === 'sm' ? 'caption' : 'callout'}
         color={textColor}
         fit
         style={[{ flexShrink: 1 }, textStyle]}>

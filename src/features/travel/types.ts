@@ -1,4 +1,63 @@
-export type TravelItemKind = 'flight' | 'stay' | 'activity' | 'rental' | 'moment';
+export type TravelPlanMode =
+  | 'flight'
+  | 'road'
+  | 'train'
+  | 'bus'
+  | 'ferry'
+  | 'transit'
+  | 'mixed'
+  | 'other';
+
+export type TravelTransportMode =
+  | 'driving'
+  | 'train'
+  | 'bus'
+  | 'subway'
+  | 'tram'
+  | 'ferry'
+  | 'rideshare'
+  | 'taxi'
+  | 'shuttle'
+  | 'other';
+
+export type TravelItemKind =
+  | 'flight'
+  | 'transport'
+  | 'stay'
+  | 'activity'
+  | 'rental'
+  | 'moment';
+
+export interface TravelRouteStop {
+  id: string;
+  name: string;
+  address?: string;
+  /** Optional local calendar day YYYY-MM-DD. Date and time are stored together. */
+  arrivalDate?: string;
+  /** Optional minutes from midnight. Date and time are stored together. */
+  arrivalMinutes?: number;
+  notes?: string;
+}
+
+export interface TravelTransportDetails {
+  mode: TravelTransportMode;
+  operator?: string;
+  serviceNumber?: string;
+  origin: string;
+  destination: string;
+  arrivalDate: string;
+  arrivalMinutes: number;
+  platform?: string;
+  seat?: string;
+  vehicle?: string;
+  confirmationCode?: string;
+  confirmationUris?: string[];
+  distance?: number;
+  distanceUnit?: 'mi' | 'km';
+  fare?: number;
+  currency?: string;
+  stops?: TravelRouteStop[];
+}
 
 export interface TravelFlightDetails {
   airline?: string;
@@ -57,6 +116,7 @@ export interface TravelItineraryItem {
   /** Collaborative notes from the host and friends. */
   notes?: TravelItemNote[];
   flight?: TravelFlightDetails;
+  transport?: TravelTransportDetails;
   rental?: TravelRentalDetails;
   stay?: TravelStayDetails;
 }
@@ -131,6 +191,8 @@ export interface TravelExpense {
   splitWithIds: string[];
   createdAt: string;
   updatedAt: string;
+  /** Itinerary leg that created this expense, when applicable. */
+  travelItemId?: string;
 }
 
 export interface TravelPlan {
@@ -148,6 +210,10 @@ export interface TravelPlan {
   /** Last shared expenses document timestamp (LWW sync). */
   sharedExpensesUpdatedAt?: string;
   title: string;
+  /** Defaults to `flight` for plans created before multi-mode trips. */
+  mode?: TravelPlanMode;
+  /** Optional starting city/place shared by flight and transport prefills. */
+  origin?: string;
   destination: string;
   startDate: string;
   endDate: string;

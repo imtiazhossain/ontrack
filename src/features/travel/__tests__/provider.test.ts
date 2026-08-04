@@ -1,39 +1,46 @@
-import { googleFlightsSearchUrl } from '../provider';
+import {
+  googleFlightsSearchUrl,
+  isValidFlightLocation,
+} from '../provider';
 
 describe('travel comparison links', () => {
-  it('carries the route, dates, and traveler count to Google Flights', () => {
-    const url = googleFlightsSearchUrl({
-      origins: ['JFK'],
-      destinations: ['KEF'],
-      departureDate: '2026-09-08',
-      returnDate: '2026-09-14',
-      adults: 2,
-    });
-
-    expect(url).toContain('https://www.google.com/travel/flights/search?tfs=');
-    expect(new URL(url).searchParams.get('hl')).toBe('en');
-    expect(new URL(url).searchParams.get('tfs')).toBe(
-      'CBwQAhoeEgoyMDI2LTA5LTA4agcIARIDSkZLcgcIARIDS0VGGh4SCjIwMjYtMDktMTRqBwgBEgNLRUZyBwgBEgNKRktAAUABSAFwAYIBCwj___________8BmAEB',
+  it('passes typed locations, dates, travelers, and currency directly to Google Flights', () => {
+    const url = new URL(
+      googleFlightsSearchUrl({
+        origin: 'Union Square, CA',
+        destination: 'Reykjavík, Iceland',
+        departureDate: '2026-09-08',
+        returnDate: '2026-09-14',
+        adults: 2,
+        currencyCode: 'usd',
+      }),
     );
+
+    expect(`${url.origin}${url.pathname}`).toBe('https://www.google.com/travel/flights');
+    expect(url.searchParams.get('q')).toBe(
+      'Flights from Union Square, CA to Reykjavík, Iceland from 2026-09-08 through 2026-09-14 for 2 adults',
+    );
+    expect(url.searchParams.get('curr')).toBe('USD');
+    expect(url.searchParams.get('hl')).toBe('en');
   });
 
-  it('carries every airport resolved for a multi-airport city', () => {
-    const url = googleFlightsSearchUrl({
-      origins: ['JFK', 'LGA', 'EWR'],
-      destinations: ['CDG', 'ORY'],
-      departureDate: '2026-09-08',
-      returnDate: '2026-09-14',
-      adults: 1,
-    });
-    const payload = Buffer.from(
-      new URL(url).searchParams.get('tfs') ?? '',
-      'base64url',
-    ).toString('latin1');
+  it('accepts city names and airport codes but rejects empty or punctuation-only locations', () => {
+    expect(isValidFlightLocation('San Francisco, CA')).toBe(true);
+    expect(isValidFlightLocation('KEF')).toBe(true);
+    expect(isValidFlightLocation('Reykjavík')).toBe(true);
+    expect(isValidFlightLocation('')).toBe(false);
+    expect(isValidFlightLocation('---')).toBe(false);
+  });
 
-    expect(payload).toContain('2026-09-08');
-    expect(payload).toContain('2026-09-14');
-    for (const code of ['JFK', 'LGA', 'EWR', 'CDG', 'ORY']) {
-      expect(payload).toContain(code);
-    }
+  it('requires 1–9 travelers', () => {
+    expect(() =>
+      googleFlightsSearchUrl({
+        origin: 'New York',
+        destination: 'Reykjavík',
+        departureDate: '2026-09-08',
+        returnDate: '2026-09-14',
+        adults: 10,
+      }),
+    ).toThrow('1–9 travelers');
   });
 });

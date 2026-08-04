@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Input } from '@/components/primitives';
+import { AppText, Input, LoadingSpinner } from '@/components/primitives';
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -174,7 +174,7 @@ export function AddressAutofindField({
         }}
         trailing={
           loading ? (
-            <ActivityIndicator size="small" color={theme.textTertiary} />
+            <LoadingSpinner size={s(18)} color={theme.textTertiary} />
           ) : undefined
         }
       />

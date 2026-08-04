@@ -42,7 +42,6 @@ import {
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
-  travelInputFieldBackground,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
@@ -86,6 +85,7 @@ export interface ExpenseFormState {
   paidById: string;
   splitWithIds: string[];
   existing?: TravelExpense;
+  travelItemId?: string;
 }
 
 export function emptyExpenseForm(
@@ -116,6 +116,7 @@ export function expenseFormFromExpense(expense: TravelExpense): ExpenseFormState
     paidById: expense.paidById,
     splitWithIds: expense.splitWithIds,
     existing: expense,
+    travelItemId: expense.travelItemId,
   };
 }
 
@@ -221,7 +222,7 @@ function PersonToggleRow({
           minHeight: Math.max(72, s(76)),
           padding: rs.md,
           gap: rs.sm,
-          backgroundColor: travelInputFieldBackground(theme),
+          backgroundColor: iconTone.field,
         },
         style,
       ]}>
@@ -403,7 +404,7 @@ export function TravelExpenseForm({
         onChange={(currency) => onChange({ ...form, currency })}
         iconBackground={chrome.icons.shield.bg}
         iconColor={chrome.icons.shield.fg}
-        fieldBackground={travelInputFieldBackground(theme)}
+        fieldBackground={chrome.icons.shield.field}
         labelColor={chrome.label}
       />
       {converted !== undefined ? (
@@ -443,7 +444,7 @@ export function TravelExpenseForm({
         }
         iconBackground={chrome.icons.lodging.bg}
         iconColor={chrome.icons.lodging.fg}
-        fieldBackground={travelInputFieldBackground(theme)}
+        fieldBackground={chrome.icons.lodging.field}
         labelColor={chrome.label}
       />
 
@@ -535,6 +536,7 @@ export function buildExpenseFromForm(
       paidById: form.paidById,
       splitWithIds: form.splitWithIds,
       existing: form.existing,
+      travelItemId: form.travelItemId,
     }),
   };
 }

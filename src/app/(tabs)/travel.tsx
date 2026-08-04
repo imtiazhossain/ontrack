@@ -5,17 +5,20 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
     appPrompt,
     AppText,
-    Button,
     EmptyState,
     ErrorMessage,
     Input,
     Screen,
+    ScreenHeader,
     Symbol,
 } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { travelCalendarDrafts } from '@/features/travel/calendar';
+import {
+    isTravelPlanOnCalendar,
+    travelCalendarDrafts,
+} from '@/features/travel/calendar';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
@@ -33,23 +36,25 @@ import {
     itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
-    TravelSheetAction,
     TravelSheetIconControl,
     TravelSheetPrimaryAction,
 } from '@/features/travel/travel-list-actions';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import {
-    travelPageBg,
     TravelSectionLabel,
     TravelSurfaceCard,
+    useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import { TravelTripCover } from '@/features/travel/travel-trip-cover';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
-import type { TravelPlan } from '@/features/travel/types';
+import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
+import { TravelPlanModePicker } from '@/features/travel/travel-mode-picker';
+import { travelPlanModeIcon, travelPlanModeLabel } from '@/features/travel/travel-mode';
+import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
 import { TravelWeatherSheet } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
+import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
@@ -59,7 +64,16 @@ import { formatDateKey, todayKey } from '@/utils/date';
 
 /** Primary travel planning tab — Add Stay sheet chrome for light + dark. */
 export default function TravelScreen() {
+  return (
+    <FeatureThemeProvider feature="travel">
+      <TravelScreenContent />
+    </FeatureThemeProvider>
+  );
+}
+
+function TravelScreenContent() {
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const chrome = itinerarySheetChrome(theme);
   const router = useRouter();
   const { editCover, tripId } = useLocalSearchParams<{
@@ -82,6 +96,8 @@ export default function TravelScreen() {
   );
   const [showForm, setShowForm] = useState(plans.length === 0);
   const [title, setTitle] = useState('');
+  const [mode, setMode] = useState<TravelPlanMode>('flight');
+  const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState(todayKey());
   const [endDate, setEndDate] = useState(todayKey());
@@ -89,6 +105,8 @@ export default function TravelScreen() {
   const [error, setError] = useState<string>();
   const [editingDetailsPlanId, setEditingDetailsPlanId] = useState<string>();
   const [editTitle, setEditTitle] = useState('');
+  const [editMode, setEditMode] = useState<TravelPlanMode>('flight');
+  const [editOrigin, setEditOrigin] = useState('');
   const [editDestination, setEditDestination] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editStartDate, setEditStartDate] = useState('');
@@ -202,6 +220,8 @@ export default function TravelScreen() {
     savePlan({
       id: newId('trip'),
       ...detailsValidation.value,
+      mode,
+      origin: origin.trim() || undefined,
       startDate,
       endDate,
       itinerary: [],
@@ -212,6 +232,8 @@ export default function TravelScreen() {
       updatedAt: now,
     });
     setTitle('');
+    setMode('flight');
+    setOrigin('');
     setDestination('');
     setNotes('');
     setShowForm(false);
@@ -220,6 +242,8 @@ export default function TravelScreen() {
   const beginEditingDetails = (plan: TravelPlan) => {
     setEditingDetailsPlanId(plan.id);
     setEditTitle(plan.title);
+    setEditMode(plan.mode ?? 'flight');
+    setEditOrigin(plan.origin ?? '');
     setEditDestination(plan.destination);
     setEditNotes(plan.notes ?? '');
     setEditStartDate(plan.startDate);
@@ -259,13 +283,15 @@ export default function TravelScreen() {
     const next: TravelPlan = {
       ...plan,
       ...validation.value,
+      mode: editMode,
+      origin: editOrigin.trim() || undefined,
       startDate: editStartDate,
       endDate: editEndDate,
       updatedAt: new Date().toISOString(),
     };
     if (coverUri) next.coverUri = coverUri;
     else delete next.coverUri;
-    const isOnCalendar = activities.some((activity) => activity.travelPlanId === plan.id);
+    const isOnCalendar = isTripOnCalendar(plan.id);
     savePlan(next);
     if (isOnCalendar) replaceTravelActivities(next.id, travelCalendarDrafts(next));
     setEditingDetailsPlanId(undefined);
@@ -280,6 +306,9 @@ export default function TravelScreen() {
     });
   };
 
+  const isTripOnCalendar = (planId: string) =>
+    isTravelPlanOnCalendar(activities, planId);
+
   const closeCalendarUpdated = () => setCalendarUpdated(null);
 
   const goToTravelCalendar = (startDate: string) => {
@@ -293,12 +322,14 @@ export default function TravelScreen() {
   if (editingPlan) {
     return (
       <Screen
-        style={{ backgroundColor: travelPageBg(theme) }}
+        style={travelStyle}
         contentStyle={styles.screen}
         refresh={false}>
         <TravelPlanDetailsEditor
           plan={editingPlan}
           title={editTitle}
+          mode={editMode}
+          origin={editOrigin}
           destination={editDestination}
           notes={editNotes}
           onNotesChange={setEditNotes}
@@ -308,6 +339,8 @@ export default function TravelScreen() {
           error={detailsError}
           initialCoverPickerOpen={openCoverPickerOnEdit}
           onTitleChange={setEditTitle}
+          onModeChange={setEditMode}
+          onOriginChange={setEditOrigin}
           onDestinationChange={setEditDestination}
           onStartDateChange={setEditStartDate}
           onEndDateChange={setEditEndDate}
@@ -326,46 +359,36 @@ export default function TravelScreen() {
   return (
     <Screen
       scrollRef={scrollRef}
-      style={{ backgroundColor: travelPageBg(theme) }}
+      style={travelStyle}
       contentStyle={{ gap: rs.sm }}>
-      <View style={[styles.header, { gap: rs.sm, paddingBottom: rs.sm }]}>
-        <View style={[styles.headerTitleRow, { gap: rs.sm }]}>
-          <AppText
-            style={[
-              styles.title,
-              { color: chrome.title, fontSize: s(54), lineHeight: s(60) },
-            ]}
-            fit
-            numberOfLines={1}>
-            Travel
-          </AppText>
-          {!showForm ? (
+      <ScreenHeader
+        title="Travel"
+        subtitle="Plan. Explore. Remember."
+        style={{ paddingBottom: rs.sm }}
+        trailing={
+          !showForm ? (
             <TravelSheetIconControl
               icon="add"
               size={Math.max(48, s(52))}
               tone="accent"
+              testID={AgentUiIds.travel.newTrip.open}
               accessibilityLabel="Plan a New Trip"
               onPress={() => setShowForm(true)}
             />
-          ) : null}
-        </View>
-        <AppText
-          style={[
-            styles.subtitle,
-            { color: chrome.subtitle, fontSize: s(16), lineHeight: s(21) },
-          ]}
-          fit
-          numberOfLines={1}>
-          Plan. Explore. Remember.
-        </AppText>
-      </View>
+          ) : null
+        }
+      />
 
       {showForm ? (
         <TravelSurfaceCard stripe>
-          <AppText style={[styles.cardHeading, { color: chrome.title }]}>
-            Start a New Trip
-          </AppText>
+          <ScreenHeader
+            title="Start a New Trip"
+            onClose={plans.length > 0 ? () => setShowForm(false) : undefined}
+            closeAccessibilityLabel="Cancel New Trip"
+            closeTestID={AgentUiIds.travel.newTrip.cancel}
+          />
           <Input
+            testID={AgentUiIds.travel.newTrip.title}
             icon="flight"
             stackedLabel="Trip Name"
             value={title}
@@ -374,7 +397,19 @@ export default function TravelScreen() {
             accessibilityLabel="Trip Name"
             {...itinerarySheetFieldProps(chrome, 'flight')}
           />
+          <TravelPlanModePicker value={mode} onChange={setMode} />
           <Input
+            testID={AgentUiIds.travel.newTrip.origin}
+            icon="route"
+            stackedLabel="Starting Point"
+            value={origin}
+            onChangeText={setOrigin}
+            placeholder="New York, NY (optional)"
+            accessibilityLabel="Starting Point, optional"
+            {...itinerarySheetFieldProps(chrome, 'location')}
+          />
+          <Input
+            testID={AgentUiIds.travel.newTrip.destination}
             icon="location"
             stackedLabel="Destination"
             value={destination}
@@ -389,8 +424,11 @@ export default function TravelScreen() {
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
             stacked
+            startTestID={AgentUiIds.travel.newTrip.startDate}
+            endTestID={AgentUiIds.travel.newTrip.endDate}
           />
           <Input
+            testID={AgentUiIds.travel.newTrip.notes}
             icon="note"
             stackedLabel="Notes"
             value={notes}
@@ -403,26 +441,12 @@ export default function TravelScreen() {
             {...itinerarySheetFieldProps(chrome, 'note')}
           />
           {error ? <ErrorMessage message={error} /> : null}
-          <View style={styles.row}>
-            <View style={styles.flex}>
-              <TravelSheetPrimaryAction
-                label="Let’s Go"
-                icon="flight"
-                flat
-                onPress={createPlan}
-              />
-            </View>
-            {plans.length > 0 ? (
-              <Button
-                variant="ghost"
-                onPress={() => setShowForm(false)}
-                style={styles.flex}
-                textStyle={{ color: chrome.subtitle }}
-                accessibilityLabel="Cancel New Trip">
-                Cancel
-              </Button>
-            ) : null}
-          </View>
+          <TravelSheetPrimaryAction
+            label="Create Trip"
+            icon="flight"
+            testID={AgentUiIds.travel.newTrip.create}
+            onPress={createPlan}
+          />
         </TravelSurfaceCard>
       ) : null}
 
@@ -451,6 +475,7 @@ export default function TravelScreen() {
             onLayout={(event) => rememberTripOffset(plan.id, event.nativeEvent.layout.y)}>
             <View style={[styles.tripCardBody, { padding: rs.md, gap: rs.md }]}>
               <View style={[styles.tripHeader, { gap: rs.md }]}>
+                <TravelTripCover plan={plan} />
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${plan.title}`}
@@ -461,13 +486,12 @@ export default function TravelScreen() {
                     { gap: rs.md },
                     pressed ? styles.pressed : undefined,
                   ]}>
-                  <TravelTripCover plan={plan} />
                   <View style={styles.heading}>
                     <AppText
                       style={[
                         styles.tripTitle,
                         {
-                          color: theme.name === 'light' ? '#1A1410' : theme.textPrimary,
+                          color: theme.textPrimary,
                           fontSize: s(32),
                           lineHeight: s(38),
                         },
@@ -478,13 +502,13 @@ export default function TravelScreen() {
                     </AppText>
                     {showDestination ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0, flexShrink: 1 }}>
-                        <Symbol name="location" size={13} color={chrome.subtitle} />
+                        <Symbol name={travelPlanModeIcon(plan.mode ?? 'flight')} size={13} color={chrome.subtitle} />
                         <AppText
                           variant="caption"
                           style={{ color: chrome.subtitle, fontSize: s(14), lineHeight: s(18), flexShrink: 1, minWidth: 0 }}
                           fit
                           numberOfLines={1}>
-                          {plan.destination}
+                          {travelPlanModeLabel(plan.mode ?? 'flight')} · {plan.destination}
                         </AppText>
                       </View>
                     ) : null}
@@ -536,99 +560,53 @@ export default function TravelScreen() {
                 </AppText>
               ) : null}
               {!collapsed ? (
-                <>
-                  <View style={[styles.actionGrid, { gap: rs.md }]}>
-                    <TravelSheetAction
-                      label="Itinerary"
-                      icon="list"
-                      tone="note"
-                      testID={AgentUiIds.travel.list.itinerary}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/travel/[id]',
-                          params: { id: plan.id },
-                        } as never)
-                      }
-                      accessibilityLabel={`Plan Itinerary for ${plan.title}`}
-                    />
-                    <TravelSheetAction
-                      label="Add to Calendar"
-                      icon="calendar-add"
-                      tone="calendar"
-                      testID={AgentUiIds.travel.list.addToCalendar}
-                      onPress={() => addTripToCalendar(plan)}
-                      accessibilityLabel={`Add ${plan.title} to Calendar`}
-                    />
-                    <TravelSheetAction
-                      label="Search Flights"
-                      icon="flight"
-                      tone="flight"
-                      testID={AgentUiIds.travel.list.searchFlights}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/travel/[id]/flights',
-                          params: { id: plan.id },
-                        } as never)
-                      }
-                      accessibilityLabel={`Search Flights for ${plan.title}`}
-                    />
-                    <TravelSheetAction
-                      label="Search Stays"
-                      icon="lodging"
-                      tone="lodging"
-                      testID={AgentUiIds.travel.list.searchStays}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/travel/[id]/stays',
-                          params: { id: plan.id },
-                        } as never)
-                      }
-                      accessibilityLabel={`Search Stays for ${plan.title}`}
-                    />
-                    <TravelSheetAction
-                      label="Trip Weather"
-                      icon="weather"
-                      tone="clock"
-                      testID={AgentUiIds.travel.list.tripWeather}
-                      onPress={() => openWeather(plan.id)}
-                      accessibilityLabel={`View weather for ${plan.destination}`}
-                    />
-                    <TravelSheetAction
-                      label="Currency Calculator"
-                      icon="calculator"
-                      tone="currency"
-                      onPress={() => openCurrency(plan.id)}
-                      accessibilityLabel={`Convert Currency for ${plan.destination}`}
-                    />
-                    <TravelSheetAction
-                      label="Expenses"
-                      icon="receipt"
-                      tone="expense"
-                      testID={AgentUiIds.travel.list.expenses}
-                      onPress={() => openExpenses(plan.id)}
-                      accessibilityLabel={`Open Expenses for ${plan.title}`}
-                    />
-                    <TravelSheetAction
-                      label="Group Chat"
-                      icon="chat"
-                      tone="chat"
-                      onPress={() =>
-                        router.push({
-                          pathname: '/travel/[id]/chat',
-                          params: { id: plan.id },
-                        } as never)
-                      }
-                      accessibilityLabel={`Open Group Chat for ${plan.title}`}
-                    />
-                  </View>
-                  <TravelSheetPrimaryAction
-                    label="Co-Travelers"
-                    icon="people"
-                    editorialGold={false}
-                    flat
-                    onPress={() => openFriends(plan.id)}
-                  />
-                </>
+                <TravelTripActionGrid
+                  tripTitle={plan.title}
+                  destination={plan.destination}
+                  mode={plan.mode ?? 'flight'}
+                  isOnCalendar={isTripOnCalendar(plan.id)}
+                  onOpenItinerary={() =>
+                    router.push({
+                      pathname: '/travel/[id]',
+                      params: { id: plan.id },
+                    } as never)
+                  }
+                  onOpenCalendar={() => {
+                    if (isTripOnCalendar(plan.id)) {
+                      goToTravelCalendar(plan.startDate);
+                      return;
+                    }
+                    addTripToCalendar(plan);
+                  }}
+                  onSearchFlights={() =>
+                    router.push({
+                      pathname: '/travel/[id]/flights',
+                      params: { id: plan.id },
+                    } as never)
+                  }
+                  onAddTransport={() =>
+                    router.push({
+                      pathname: '/travel/[id]',
+                      params: { id: plan.id, add: 'transport' },
+                    } as never)
+                  }
+                  onSearchStays={() =>
+                    router.push({
+                      pathname: '/travel/[id]/stays',
+                      params: { id: plan.id },
+                    } as never)
+                  }
+                  onOpenWeather={() => openWeather(plan.id)}
+                  onOpenCurrency={() => openCurrency(plan.id)}
+                  onOpenExpenses={() => openExpenses(plan.id)}
+                  onOpenChat={() =>
+                    router.push({
+                      pathname: '/travel/[id]/chat',
+                      params: { id: plan.id },
+                    } as never)
+                  }
+                  onOpenCoTravelers={() => openFriends(plan.id)}
+                />
               ) : null}
             </View>
           </TravelSurfaceCard>
@@ -750,6 +728,5 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   pressed: { opacity: 0.6 },
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   flex: { flex: 1 },
 });

@@ -1,5 +1,6 @@
 import { calculateFlightArrival, formatFlightItineraryCaption } from '@/features/travel/flight-arrival';
-import type { TravelItineraryItem } from '@/features/travel/types';
+import type { TravelItineraryItem, TravelRouteStop } from '@/features/travel/types';
+import { transportModeLabel } from '@/features/travel/travel-mode';
 import { formatDateKeyShort, formatDuration, formatMinutes, type DateDisplayFormat } from '@/utils/date';
 
 /** Action phase shown as a distinct timeline marker. */
@@ -10,6 +11,9 @@ export type TravelTimelinePhase =
   | 'dropoff'
   | 'checkin'
   | 'checkout'
+  | 'depart'
+  | 'arrive'
+  | 'stop'
   | 'default';
 
 export type TravelTimelineEntry = {
@@ -20,6 +24,7 @@ export type TravelTimelineEntry = {
   date: string;
   startMinutes: number;
   title: string;
+  stop?: TravelRouteStop;
 };
 
 const PHASE_TITLE: Record<Exclude<TravelTimelinePhase, 'default'>, string> = {
@@ -29,6 +34,9 @@ const PHASE_TITLE: Record<Exclude<TravelTimelinePhase, 'default'>, string> = {
   dropoff: 'Drop Off Car',
   checkin: 'Check In',
   checkout: 'Check Out',
+  depart: 'Depart',
+  arrive: 'Arrive',
+  stop: 'Route Stop',
 };
 
 function flightRoute(item: TravelItineraryItem): string | undefined {
@@ -39,6 +47,40 @@ function flightRoute(item: TravelItineraryItem): string | undefined {
 }
 
 function expandItem(item: TravelItineraryItem): TravelTimelineEntry[] {
+  if (item.kind === 'transport' && item.transport) {
+    const details = item.transport;
+    return [
+      {
+        key: `${item.id}:depart`,
+        item,
+        phase: 'depart',
+        date: item.date,
+        startMinutes: item.startMinutes,
+        title: `Depart · ${details.origin}`,
+      },
+      ...(details.stops ?? []).flatMap((stop) =>
+        stop.arrivalDate && stop.arrivalMinutes !== undefined
+          ? [{
+              key: `${item.id}:stop:${stop.id}`,
+              item,
+              phase: 'stop' as const,
+              date: stop.arrivalDate,
+              startMinutes: stop.arrivalMinutes,
+              title: stop.name,
+              stop,
+            }]
+          : [],
+      ),
+      {
+        key: `${item.id}:arrive`,
+        item,
+        phase: 'arrive',
+        date: details.arrivalDate,
+        startMinutes: details.arrivalMinutes,
+        title: `Arrive · ${details.destination}`,
+      },
+    ];
+  }
   if (item.kind === 'flight') {
     const arrival = calculateFlightArrival({
       date: item.date,
@@ -193,6 +235,23 @@ export function timelineEntryCaption(
     return [dateLabel, time, item.title].filter(Boolean).join(' · ');
   }
 
+  if (phase === 'depart') {
+    return [
+      dateLabel,
+      time,
+      item.transport?.origin,
+      item.transport ? transportModeLabel(item.transport.mode) : undefined,
+    ].filter(Boolean).join(' · ');
+  }
+
+  if (phase === 'arrive') {
+    return [dateLabel, time, item.transport?.destination].filter(Boolean).join(' · ');
+  }
+
+  if (phase === 'stop') {
+    return [dateLabel, time, entry.stop?.address].filter(Boolean).join(' · ');
+  }
+
   // Default: preserve full captions used in Flights / Rentals sections.
   if (item.kind === 'moment') {
     return `${dateLabel} · ${formatMinutes(item.startMinutes)}`;
@@ -236,6 +295,9 @@ export function timelineEntryCaption(
         : undefined;
     const checkout = [checkoutDate, checkoutTime].filter(Boolean).join(' · ');
     return checkout ? `${checkin} → ${checkout}` : checkin;
+  }
+  if (item.kind === 'transport' && item.transport) {
+    return `${dateLabel} · ${time} · ${item.transport.origin} → ${item.transport.destination}`;
   }
   return `${dateLabel} · ${formatMinutes(item.startMinutes)} · ${item.durationMinutes} min`;
 }

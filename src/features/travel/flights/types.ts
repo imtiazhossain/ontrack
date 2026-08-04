@@ -16,6 +16,16 @@ export interface FlightLeg {
   stops: number;
   carrier: string;
   flightNumber: string;
+  segments: FlightSegment[];
+}
+
+export interface FlightSegment {
+  departureCode: string;
+  departureAt: string;
+  arrivalCode: string;
+  arrivalAt: string;
+  carrier: string;
+  flightNumber: string;
 }
 
 export interface FlightOffer {

@@ -5,7 +5,6 @@ import { radii, spacing } from '@/design-system';
 import { createTravelInviteUrl } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
-  itinerarySheetChrome,
   travelInputFieldBackground,
   type ItinerarySheetChrome,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
@@ -90,29 +89,6 @@ export function TravelOpenJoinCard({
             selectable>
             {displayJoinLink(tripTitle, openJoinUrl)}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Copy open join link"
-            hitSlop={8}
-            disabled={!openJoinCode || openJoinBusy}
-            onPress={() => {
-              haptics.tap();
-              onCopy();
-            }}
-            style={({ pressed }) => [
-              styles.urlCopy,
-              {
-                width: Math.max(40, s(40)),
-                height: Math.max(40, s(40)),
-                opacity: pressed ? 0.6 : 1,
-              },
-            ]}>
-            <Symbol
-              name="copy"
-              size="sm"
-              color={copiedOpenJoin ? chrome.ctaFrom : chrome.label}
-            />
-          </Pressable>
         </View>
       ) : openJoinError ? (
         <AppText variant="caption" color="danger">
@@ -308,11 +284,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     flexShrink: 1,
-  },
-  urlCopy: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   linksSection: { gap: spacing.sm },
   linkCard: { gap: spacing.sm },

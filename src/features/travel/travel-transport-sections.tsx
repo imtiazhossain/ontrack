@@ -9,9 +9,10 @@ import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-sc
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
-import type { TravelPlan } from '@/features/travel/types';
+import type { TravelPlan, TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
@@ -68,6 +69,11 @@ type TransportHandlers = {
   onBeginStayEdit: (
     itemId: string,
     stay: TravelItineraryItemModel['stay'],
+  ) => void;
+  onSaveTransportDetails: (
+    itemId: string,
+    details: TravelTransportDetails,
+    schedule: TravelRangeScheduleDraft,
   ) => void;
   onAddPhotos: (itemId: string) => void;
   onRemovePhoto: (itemId: string, uri: string) => void;
@@ -148,6 +154,9 @@ function TransportItemList({
           }
           onCancelStayEdit={handlers.onCancelStayEdit}
           onBeginStayEdit={() => handlers.onBeginStayEdit(item.id, item.stay)}
+          onSaveTransportDetails={(details, schedule) =>
+            handlers.onSaveTransportDetails(item.id, details, schedule)
+          }
           onAddPhotos={() => handlers.onAddPhotos(item.id)}
           onRemovePhoto={(uri) => handlers.onRemovePhoto(item.id, uri)}
           onRemove={() => handlers.onRemove(item)}
@@ -162,10 +171,12 @@ export function TravelTransportSections({
   items,
   transportExpanded,
   flightsExpanded,
+  groundExpanded,
   staysExpanded,
   rentalsExpanded,
   onToggleTransport,
   onToggleFlights,
+  onToggleGround,
   onToggleStays,
   onToggleRentals,
   ...handlers
@@ -173,31 +184,36 @@ export function TravelTransportSections({
   items: TravelItineraryItemModel[];
   transportExpanded: boolean;
   flightsExpanded: boolean;
+  groundExpanded: boolean;
   staysExpanded: boolean;
   rentalsExpanded: boolean;
   onToggleTransport: () => void;
   onToggleFlights: () => void;
+  onToggleGround: () => void;
   onToggleStays: () => void;
   onToggleRentals: () => void;
 }) {
   const { spacing: rs } = useResponsive();
   const theme = useTheme();
   const flights = items.filter((item) => item.kind === 'flight');
+  const ground = items.filter((item) => item.kind === 'transport');
   const stays = items.filter((item) => item.kind === 'stay');
   const rentals = items.filter((item) => item.kind === 'rental');
   const flightAccent = kindAccent('flight', theme);
+  const groundAccent = kindAccent('transport', theme);
   const stayAccent = kindAccent('stay', theme);
   const rentalAccent = kindAccent('rental', theme);
 
   return (
     <TravelCollapsibleSection
-      title="Flights, Stays & Rentals"
+      title="Transport, Stays & Rentals"
       icon="itinerary"
       accentColor={TRANSPORT_SECTION_ACCENT}
       card
       compact
       expanded={transportExpanded}
       onToggle={onToggleTransport}
+      toggleTestID={AgentUiIds.travel.planDetail.transportSection}
       titleVariant="caption">
       <View
         style={[
@@ -212,10 +228,26 @@ export function TravelTransportSections({
           compact
           expanded={flightsExpanded}
           onToggle={onToggleFlights}
+          toggleTestID={AgentUiIds.travel.planDetail.flightsSection}
           nested>
           <TransportItemList
             items={flights}
             emptyMessage="No flights on this trip yet."
+            {...handlers}
+          />
+        </TravelCollapsibleSection>
+        <TravelCollapsibleSection
+          title="GROUND & TRANSIT"
+          icon="route"
+          accentColor={groundAccent}
+          compact
+          expanded={groundExpanded}
+          onToggle={onToggleGround}
+          toggleTestID={AgentUiIds.travel.planDetail.groundSection}
+          nested>
+          <TransportItemList
+            items={ground}
+            emptyMessage="No ground or public transport on this trip yet."
             {...handlers}
           />
         </TravelCollapsibleSection>
@@ -226,6 +258,7 @@ export function TravelTransportSections({
           compact
           expanded={staysExpanded}
           onToggle={onToggleStays}
+          toggleTestID={AgentUiIds.travel.planDetail.staysSection}
           nested>
           <TransportItemList
             items={stays}
@@ -240,6 +273,7 @@ export function TravelTransportSections({
           compact
           expanded={rentalsExpanded}
           onToggle={onToggleRentals}
+          toggleTestID={AgentUiIds.travel.planDetail.rentalsSection}
           nested>
           <TransportItemList
             items={rentals}

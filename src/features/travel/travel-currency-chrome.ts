@@ -60,7 +60,7 @@ export function currencySheetChrome(theme: Theme): CurrencySheetChrome {
 /** Map currency palette onto the shared travel sheet chrome shape. */
 export function currencyAsItineraryChrome(theme: Theme): ItinerarySheetChrome {
   const c = currencySheetChrome(theme);
-  const icon = { bg: c.softBg, fg: c.accent };
+  const icon = { bg: c.softBg, fg: c.accent, field: c.cardBg };
   return {
     sheetBg: c.sheetBg,
     fieldBg: c.softBg,
@@ -93,6 +93,7 @@ export function currencyAsItineraryChrome(theme: Theme): ItinerarySheetChrome {
       expense: icon,
       currency: icon,
       chat: icon,
+      people: icon,
     },
   };
 }

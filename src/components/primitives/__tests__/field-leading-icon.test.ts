@@ -1,4 +1,7 @@
-import { fieldLeadingIconRowStyle } from '@/components/primitives/field-leading-icon-style';
+import {
+  fieldLeadingIconRowStyle,
+  stackedFieldMinHeight,
+} from '@/components/primitives/field-leading-icon-style';
 
 describe('fieldLeadingIconRowStyle', () => {
   it('always centers icons vertically in the field row', () => {
@@ -35,5 +38,28 @@ describe('fieldLeadingIconRowStyle', () => {
 
     expect(style.alignItems).toBe('center');
     expect(style.flexDirection).toBe('row');
+  });
+});
+
+describe('stackedFieldMinHeight', () => {
+  it('grows stacked fields for accessibility text without shrinking either line', () => {
+    expect(
+      stackedFieldMinHeight({
+        baseMinHeight: 60,
+        fontScale: 1,
+        labelLineHeight: 18,
+        valueLineHeight: 24,
+        verticalPadding: 8,
+      }),
+    ).toBe(60);
+    expect(
+      stackedFieldMinHeight({
+        baseMinHeight: 60,
+        fontScale: 1.3,
+        labelLineHeight: 18,
+        valueLineHeight: 24,
+        verticalPadding: 8,
+      }),
+    ).toBeGreaterThan(60);
   });
 });

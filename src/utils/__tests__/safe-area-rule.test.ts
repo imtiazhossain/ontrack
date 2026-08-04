@@ -17,7 +17,7 @@ describe('top safe-area invariant', () => {
       'utf8',
     );
 
-    expect(rootLayout).toContain('<AppSafeArea>');
+    expect(rootLayout).toMatch(/<AppSafeArea(?:\s|>)/);
     expect(appSafeArea).toContain("edges={['top']}");
   });
 

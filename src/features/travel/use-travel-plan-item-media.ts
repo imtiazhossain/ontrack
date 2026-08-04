@@ -5,6 +5,7 @@ import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media
 import type { TravelRemoveConfirmPayload } from '@/features/travel/travel-remove-confirm-modal';
 import type { TravelPlan } from '@/features/travel/types';
 import { useTravel } from '@/store/travel';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 type ItineraryItem = TravelPlan['itinerary'][number];
 
@@ -25,15 +26,41 @@ export function useTravelPlanItemMedia({
   const [removeConfirm, setRemoveConfirm] =
     useState<TravelRemoveConfirmPayload | null>(null);
 
-  const removeItem = (itemId: string) => {
+  const removeItem = (itemId: string, removeLinkedExpense = false) => {
+    const latest = useTravel.getState().plans.find((entry) => entry.id === planId) ?? plan;
     updatePlan({
-      ...plan,
-      itinerary: itinerary.filter((item) => item.id !== itemId),
+      ...latest,
+      itinerary: latest.itinerary.filter((item) => item.id !== itemId),
+      expenses: removeLinkedExpense
+        ? latest.expenses.filter((expense) => expense.travelItemId !== itemId)
+        : latest.expenses,
       updatedAt: new Date().toISOString(),
     });
   };
 
   const confirmRemoveItem = (item: ItineraryItem) => {
+    const linkedExpense = plan.expenses.find((expense) => expense.travelItemId === item.id);
+    if (linkedExpense) {
+      appPrompt.alert(
+        'Remove Transport?',
+        `“${linkedExpense.title}” is linked to this itinerary item. Choose whether to keep it in Expenses.`,
+        [
+          {
+            text: 'Keep Expense',
+            style: 'destructive',
+            testID: AgentUiIds.travel.transport.removeKeepExpense,
+            onPress: () => removeItem(item.id),
+          },
+          {
+            text: 'Remove Both',
+            style: 'destructive',
+            testID: AgentUiIds.travel.transport.removeWithExpense,
+            onPress: () => removeItem(item.id, true),
+          },
+        ],
+      );
+      return;
+    }
     setRemoveConfirm({
       title: 'Remove Itinerary Item?',
       message: 'This action will permanently remove this itinerary item.',

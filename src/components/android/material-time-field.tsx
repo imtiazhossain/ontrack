@@ -7,6 +7,7 @@ import {
   FieldLeadingIcon,
   fieldLeadingIconRowStyle,
 } from '@/components/primitives/field-leading-icon';
+import { stackedFieldMinHeight } from '@/components/primitives/field-leading-icon-style';
 import { Symbol } from '@/components/primitives/symbol';
 import {
   clampMinutesFromMidnight,
@@ -40,7 +41,14 @@ export function MaterialTimeField({
   testID,
 }: TimeFieldProps) {
   const theme = useTheme();
-  const { s } = useResponsive();
+  const { s, typography, fontScale } = useResponsive();
+  const stackedMinHeight = stackedFieldMinHeight({
+    baseMinHeight: Math.max(56, s(60)),
+    fontScale,
+    labelLineHeight: typography.caption.lineHeight,
+    valueLineHeight: typography.body.lineHeight,
+    verticalPadding: spacing.sm,
+  });
   const [showPicker, setShowPicker] = useState(false);
   const minutes = clampMinutesFromMidnight(value ?? nowMinutes());
   const hasValue = value !== null;
@@ -64,7 +72,7 @@ export function MaterialTimeField({
         style={({ pressed }) => [
           styles.field,
           fieldLeadingIconRowStyle({
-            minHeight: stacked ? Math.max(56, s(60)) : 48,
+            minHeight: stacked ? stackedMinHeight : 48,
             borderRadius: stacked ? radii.lg : radii.md,
             paddingVertical: stacked ? spacing.sm : 0,
             backgroundColor: fieldBackground ?? theme.backgroundSunken,

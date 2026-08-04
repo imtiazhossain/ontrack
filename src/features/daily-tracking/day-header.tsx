@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, IconButton, ProgressRing, Symbol } from '@/components/primitives';
+import { AppText, Card, IconButton, ProgressRing, Symbol } from '@/components/primitives';
 import { layout, spacing, timeOfDayGradient } from '@/design-system';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import {
@@ -12,8 +12,7 @@ import {
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, formatDateLong, formatWeekday, isToday } from '@/utils/date';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
-import { haptics } from '@/utils/haptics';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 interface DayHeaderProps {
   date: string;
@@ -39,10 +38,12 @@ export function DayHeader({
   const viewingToday = isToday(date);
   const { hasLocation, weather, icon, loading, detectingLocation, error } = useHomeWeather();
   const [locationOpen, setLocationOpen] = useState(false);
-  const openWeather = () => {
-    haptics.tap();
-    setLocationOpen(true);
-  };
+  const openWeather = () => setLocationOpen(true);
+  const weatherAccessibilityLabel = weather
+    ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
+    : hasLocation
+      ? 'Edit home location for weather'
+      : 'Set location for weather';
   return (
     <LinearGradient colors={gradient} style={[styles.container, { paddingTop: topInset + spacing.md }]}>
       <View style={styles.topRow}>
@@ -71,39 +72,20 @@ export function DayHeader({
       </View>
 
       {viewingToday ? (
-        <AgentTestId
+        <Card
+          padded={false}
           testID={AgentUiIds.today.weather}
-          label={
-            weather
-              ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
-              : hasLocation
-                ? 'Edit home location for weather'
-                : 'Set location for weather'
-          }
+          accessibilityLabel={weatherAccessibilityLabel}
           onPress={openWeather}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              weather
-                ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
-                : hasLocation
-                  ? 'Edit home location for weather'
-                  : 'Set location for weather'
-            }
-            onPress={openWeather}
-            style={({ pressed }) => [
-              styles.weatherRow,
-              {
-                backgroundColor: theme.backgroundElevated,
-                borderColor: theme.separator,
-                opacity: pressed ? 0.85 : 1,
-                minHeight: Math.max(44, s(44)),
-                paddingHorizontal: rs.md,
-                paddingVertical: rs.sm,
-                gap: rs.sm,
-              },
-            ]}>
+          style={[
+            styles.weatherRow,
+            {
+              minHeight: Math.max(44, s(44)),
+              paddingHorizontal: rs.md,
+              paddingVertical: rs.sm,
+              gap: rs.sm,
+            },
+          ]}>
           <Symbol
             name={icon ?? (hasLocation ? 'weather' : 'location')}
             size="md"
@@ -134,8 +116,7 @@ export function DayHeader({
             )}
           </View>
           <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-          </Pressable>
-        </AgentTestId>
+        </Card>
       ) : null}
 
       <View style={styles.progressRow}>
@@ -181,9 +162,6 @@ const styles = StyleSheet.create({
   weatherRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    borderCurve: 'continuous',
-    borderWidth: 1,
   },
   weatherCopy: {
     flex: 1,

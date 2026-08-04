@@ -3,23 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import {
-  TRAVEL_EDITORIAL_ACCENT,
-  travelCardFill,
-  travelPillBg,
-} from '@/features/travel/travel-surface';
+import { travelCardFill, travelPillBg } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
-const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.07)';
-
-/** Gold calendar well matching the trip-dates mock (not the pink sheet calendar tone). */
-const DATE_ICON_WELL_LIGHT = '#EFE8DC';
-const DATE_ICON_WELL_DARK = 'rgba(212,165,116,0.18)';
-const DATE_BADGE_BORDER_LIGHT = 'rgba(176, 140, 80, 0.55)';
-const DATE_BADGE_BORDER_DARK = '#D4A574';
-const DATE_BADGE_FILL_LIGHT = '#FBF7F0';
-const DATE_BAR_BORDER_LIGHT = 'rgba(180,150,110,0.22)';
+const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(17, 74, 110, 0.10)';
 
 interface TravelTripDatesRowProps {
   startLabel: string;
@@ -38,9 +26,7 @@ export function TravelTripDatesRow({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
-  const light = theme.name === 'light';
-  const gold = light ? TRAVEL_EDITORIAL_ACCENT : chrome.ctaFrom;
-  const badgeBorder = light ? DATE_BADGE_BORDER_LIGHT : DATE_BADGE_BORDER_DARK;
+  const calendarTone = chrome.icons.calendar;
   const iconBox = compact ? Math.max(24, s(26)) : Math.max(34, s(36));
   const daysLabel = `${dayCount} ${dayCount === 1 ? 'Day' : 'Days'}`;
 
@@ -52,7 +38,7 @@ export function TravelTripDatesRow({
         styles.row,
         {
           backgroundColor: compact ? travelCardFill(theme) : travelPillBg(theme),
-          borderColor: light ? DATE_BAR_BORDER_LIGHT : chrome.fieldBorder,
+          borderColor: chrome.fieldBorder,
           boxShadow: compact ? TRAVEL_DATE_SHADOW : TRAVEL_DATE_SHADOW,
           minHeight: compact ? Math.max(40, s(40)) : Math.max(58, s(60)),
           paddingHorizontal: compact ? rs.md : rs.lg,
@@ -67,11 +53,11 @@ export function TravelTripDatesRow({
           {
             width: iconBox,
             height: iconBox,
-            backgroundColor: light ? DATE_ICON_WELL_LIGHT : DATE_ICON_WELL_DARK,
-            boxShadow: light ? '0 1px 3px rgba(51, 39, 28, 0.08)' : undefined,
+            backgroundColor: calendarTone.bg,
+            boxShadow: theme.name === 'light' ? TRAVEL_DATE_SHADOW : undefined,
           },
         ]}>
-        <Symbol name="calendar" size={compact ? 18 : 'sm'} color={gold} />
+        <Symbol name="calendar" size={compact ? 18 : 'sm'} color={calendarTone.fg} />
       </View>
       <View style={styles.copy}>
         {!compact ? (
@@ -112,8 +98,8 @@ export function TravelTripDatesRow({
         style={[
           styles.badge,
           {
-            backgroundColor: light ? DATE_BADGE_FILL_LIGHT : 'transparent',
-            borderColor: badgeBorder,
+            backgroundColor: theme.backgroundElevated,
+            borderColor: theme.accentSoft,
             minHeight: compact ? Math.max(18, s(18)) : Math.max(30, s(32)),
             paddingHorizontal: compact ? rs.xs : Math.max(12, rs.md),
             borderWidth: compact ? StyleSheet.hairlineWidth : 1.25,
@@ -126,7 +112,7 @@ export function TravelTripDatesRow({
           style={[
             styles.badgeLabel,
             {
-              color: gold,
+              color: theme.accentPrimary,
               fontSize: compact
                 ? Math.max(10, s(10))
                 : Math.max(14, typography.caption.fontSize + 1.5),

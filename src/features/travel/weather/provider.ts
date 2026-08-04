@@ -38,6 +38,7 @@ interface ForecastResponse {
 }
 
 interface CurrentForecastResponse {
+  timezone?: unknown;
   current?: {
     temperature_2m?: unknown;
     weather_code?: unknown;
@@ -294,6 +295,9 @@ async function requestDestinationCurrentWeather(
   }
   return {
     locationLabel: locationLabel(location, destination),
+    latitude: location.latitude as number,
+    longitude: location.longitude as number,
+    timezone: typeof forecast.timezone === 'string' ? forecast.timezone : undefined,
     temperature: Math.round(temperature),
     temperatureUnit,
     weatherCode,

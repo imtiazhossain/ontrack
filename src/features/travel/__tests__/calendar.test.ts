@@ -1,4 +1,4 @@
-import { travelCalendarDrafts } from '../calendar';
+import { isTravelPlanOnCalendar, travelCalendarDrafts } from '../calendar';
 import type { TravelPlan } from '../types';
 
 const PLAN: TravelPlan = {
@@ -34,6 +34,16 @@ const PLAN: TravelPlan = {
 };
 
 describe('travel calendar adapter', () => {
+  it('detects whether a trip has already been added to Calendar', () => {
+    const activities = [
+      { travelPlanId: 'trip-1' },
+      { travelPlanId: undefined },
+    ];
+
+    expect(isTravelPlanOnCalendar(activities, 'trip-1')).toBe(true);
+    expect(isTravelPlanOnCalendar(activities, 'trip-2')).toBe(false);
+  });
+
   it('creates a trip event for every day and every itinerary event', () => {
     const drafts = travelCalendarDrafts(PLAN);
     const tripDays = drafts.filter((draft) => !draft.travelItemId);
@@ -85,5 +95,40 @@ describe('travel calendar adapter', () => {
 
     expect(drafts.find((draft) => draft.travelItemId === 'moment-1')).toBeUndefined();
     expect(drafts).toHaveLength(5);
+  });
+
+  it('uses the trip mode and exports transport departure, stop, and arrival markers', () => {
+    const drafts = travelCalendarDrafts({
+      ...PLAN,
+      mode: 'road',
+      origin: 'New York',
+      itinerary: [{
+        id: 'road-1',
+        kind: 'transport',
+        title: 'Drive south',
+        date: '2026-09-04',
+        startMinutes: 8 * 60,
+        durationMinutes: 8 * 60,
+        transport: {
+          mode: 'driving',
+          origin: 'New York',
+          destination: 'Washington',
+          arrivalDate: '2026-09-04',
+          arrivalMinutes: 16 * 60,
+          stops: [{
+            id: 'stop-1',
+            name: 'Philadelphia',
+            arrivalDate: '2026-09-04',
+            arrivalMinutes: 11 * 60,
+          }],
+        },
+      }],
+    });
+    expect(drafts[0]?.title).toBe('🚗 Day 1 · Lisbon weekend');
+    expect(drafts.filter((draft) => draft.travelItemId === 'road-1').map((draft) => draft.title)).toEqual([
+      '🚗 Depart · Drive south',
+      '📍 Stop · Philadelphia',
+      '🚗 Arrive · Washington',
+    ]);
   });
 });

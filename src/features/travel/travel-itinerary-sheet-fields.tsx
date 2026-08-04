@@ -1,7 +1,6 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
+import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import { radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
@@ -10,8 +9,6 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentTestId } from '@/utils/agent-ui';
-import { haptics } from '@/utils/haptics';
 
 export function ItinerarySheetImportCard({
   title,
@@ -129,8 +126,9 @@ export function ItinerarySheetSubmitButton({
   label,
   onPress,
   icon,
-  editorialGold = false,
-  flat = false,
+  editorialGold: _editorialGold = false,
+  flat: _flat = false,
+  flatColor: _flatColor,
   testID,
 }: {
   label: string;
@@ -138,72 +136,20 @@ export function ItinerarySheetSubmitButton({
   icon?: AppIconName;
   editorialGold?: boolean;
   flat?: boolean;
+  /** Optional solid color for flat primary actions. */
+  flatColor?: string;
   testID?: string;
 }) {
-  const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
-  const { s, spacing: rs, layout } = useResponsive();
-  const gradientColors =
-    editorialGold && theme.name === 'light'
-      ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
-      : ([chrome.ctaFrom, chrome.ctaTo] as const);
-  const colors = flat ? ([gradientColors[0], gradientColors[0]] as const) : gradientColors;
-  const minHeight = Math.max(layout.minTapTarget, s(editorialGold ? 52 : 52));
-  const handlePress = () => {
-    haptics.tap();
-    onPress();
-  };
   return (
-    <AgentTestId testID={testID} label={label} onPress={handlePress}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={handlePress}
-        style={({ pressed }) => [
-          styles.submitWrap,
-          {
-            opacity: pressed ? 0.86 : 1,
-            minHeight,
-            borderRadius: radii.pill,
-            boxShadow:
-              !flat && editorialGold && theme.name === 'light'
-                ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
-                : undefined,
-          },
-        ]}>
-        <LinearGradient
-          colors={[...colors]}
-          locations={editorialGold && theme.name === 'light' ? [0, 0.45, 1] : undefined}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={[
-            styles.submitGradient,
-            {
-              minHeight,
-              paddingHorizontal: rs.lg,
-              gap: icon ? rs.sm : 0,
-              borderRadius: radii.pill,
-            },
-          ]}>
-          {icon ? <Symbol name={icon} size="sm" color={chrome.ctaText} /> : null}
-          <AppText
-            variant="callout"
-            fit
-            numberOfLines={1}
-            style={[
-              styles.submitLabel,
-              {
-                color: chrome.ctaText,
-                textAlign: 'center',
-                fontSize: editorialGold ? s(20) : undefined,
-                lineHeight: editorialGold ? s(25) : undefined,
-              },
-            ]}>
-            {label}
-          </AppText>
-        </LinearGradient>
-      </Pressable>
-    </AgentTestId>
+    <Button
+      variant="primary"
+      size="lg"
+      icon={icon}
+      onPress={onPress}
+      testID={testID}
+      accessibilityLabel={label}>
+      {label}
+    </Button>
   );
 }
 
@@ -215,7 +161,7 @@ export function useSheetFieldChrome(tone: SheetIconTone) {
     chrome,
     iconBackground: icon.bg,
     iconColor: icon.fg,
-    fieldBackground: travelInputFieldBackground(theme),
+    fieldBackground: icon.field,
     stackedLabelColor: chrome.label,
     placeholderColor: chrome.placeholder,
     placeholderTextColor: chrome.placeholder,
@@ -247,19 +193,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,
-  },
-  submitWrap: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  submitGradient: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitLabel: {
-    flexShrink: 1,
-    minWidth: 0,
   },
 });

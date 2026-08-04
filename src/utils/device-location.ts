@@ -9,7 +9,7 @@ export type DevicePlaceResult =
   | { status: 'denied' }
   | { status: 'unavailable' };
 
-type PlaceAddress = Pick<
+export type DevicePlaceAddress = Pick<
   Location.LocationGeocodedAddress,
   'city' | 'country' | 'district' | 'isoCountryCode' | 'region' | 'subregion'
 >;
@@ -34,7 +34,7 @@ function withTimeout<T>(promise: Promise<T>): Promise<T> {
 }
 
 /** Most specific locality + region/country label from a reverse-geocoded address. */
-export function formatPlaceAddress(address: PlaceAddress): string | undefined {
+export function formatPlaceAddress(address: DevicePlaceAddress): string | undefined {
   // iOS reports NYC as `city` for all boroughs, while preserving the borough in
   // `district` (for example, Brooklyn). Prefer that more precise locality.
   const locality = address.district ?? address.city ?? address.subregion ?? address.region;
@@ -55,7 +55,9 @@ export function formatPlaceAddress(address: PlaceAddress): string | undefined {
  * Resolves an approximate place label from the device’s current location.
  * Requests foreground permission when needed. Web always returns unavailable.
  */
-export async function getCurrentPlaceLabel(): Promise<DevicePlaceResult> {
+export async function getCurrentPlaceLabel(
+  formatAddress: (address: DevicePlaceAddress) => string | undefined = formatPlaceAddress,
+): Promise<DevicePlaceResult> {
   if (Platform.OS === 'web') return { status: 'unavailable' };
 
   try {
@@ -80,7 +82,7 @@ export async function getCurrentPlaceLabel(): Promise<DevicePlaceResult> {
         longitude: position.coords.longitude,
       }),
     );
-    const label = addresses[0] ? formatPlaceAddress(addresses[0]) : undefined;
+    const label = addresses[0] ? formatAddress(addresses[0]) : undefined;
     return label ? { status: 'suggested', label } : { status: 'unavailable' };
   } catch {
     return { status: 'unavailable' };

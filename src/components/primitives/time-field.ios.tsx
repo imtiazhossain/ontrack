@@ -11,6 +11,7 @@ import { formatMinutes, formatTimePickerTitle, nowMinutes } from '@/utils/date';
 import { AppText } from './app-text';
 import { IconButton } from './button';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
+import { stackedFieldMinHeight } from './field-leading-icon-style';
 import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
@@ -38,7 +39,14 @@ export function TimeField({
 }: TimeFieldProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { spacing: rs, layout, s } = useResponsive();
+  const { spacing: rs, layout, s, typography, fontScale } = useResponsive();
+  const stackedMinHeight = stackedFieldMinHeight({
+    baseMinHeight: Math.max(56, s(60)),
+    fontScale,
+    labelLineHeight: typography.caption.lineHeight,
+    valueLineHeight: typography.body.lineHeight,
+    verticalPadding: rs.sm,
+  });
   const [showPicker, setShowPicker] = useState(false);
   const [draftMinutes, setDraftMinutes] = useState(() =>
     clampMinutesFromMidnight(value ?? nowMinutes()),
@@ -77,7 +85,7 @@ export function TimeField({
         style={({ pressed }) => [
           styles.field,
           fieldLeadingIconRowStyle({
-            minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
+            minHeight: stacked ? stackedMinHeight : Math.max(44, s(48)),
             borderRadius: stacked ? radii.lg : radii.md,
             paddingHorizontal: rs.md,
             paddingVertical: stacked ? rs.sm : 0,

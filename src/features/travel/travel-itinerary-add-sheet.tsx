@@ -35,6 +35,8 @@ function sheetSubtitle(kind: TravelItemKind): string {
       return 'Add your flight details to keep everything organized';
     case 'rental':
       return 'Add your rental details to keep everything organized';
+    case 'transport':
+      return 'Add route, schedule, ticket, and fare details';
     case 'moment':
       return 'Capture a moment from the trip';
     default:
@@ -155,6 +157,7 @@ export function TravelItineraryAddSheet({
             <ItinerarySheetSubmitButton
               label={submitLabel}
               onPress={onAdd}
+              testID={AgentUiIds.travel.itineraryAdd.submit}
               icon={kind === 'moment' ? 'photo' : 'calendar-add'}
             />
           </View>

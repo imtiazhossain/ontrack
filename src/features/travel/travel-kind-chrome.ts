@@ -18,6 +18,7 @@ const KIND_CHROME_LIGHT: Record<TravelItemKind, KindChromeSwatch> = {
   moment: { accent: '#A85661', tint: '#F7E8EB', border: '#E8CDD3' },
   activity: { accent: '#56663A', tint: '#F2F2E9', border: '#D9DBC8' },
   flight: { accent: '#315A7C', tint: '#EDF3F8', border: '#C9D9E6' },
+  transport: { accent: '#2F6B62', tint: '#EAF4F1', border: '#C4DDD7' },
   stay: { accent: '#765432', tint: '#F7EEE4', border: '#E8D4BB' },
   rental: { accent: '#644A75', tint: '#F3EEF5', border: '#DDD0E3' },
 };
@@ -26,6 +27,7 @@ const KIND_CHROME_DARK: Record<TravelItemKind, KindChromeSwatch> = {
   moment: { accent: '#D68C96', tint: '#2A1E20', border: '#5A3E44' },
   activity: { accent: '#ADBF87', tint: '#22261D', border: '#48513A' },
   flight: { accent: '#8DB2CF', tint: '#1B252D', border: '#3D5262' },
+  transport: { accent: '#83C7BB', tint: '#192725', border: '#355850' },
   stay: { accent: '#D7AE83', tint: '#29221C', border: '#594938' },
   rental: { accent: '#BCA2CC', tint: '#26202A', border: '#51445A' },
 };
@@ -62,6 +64,8 @@ export function kindIcon(kind: TravelItemKind): AppIconName {
       return 'lodging';
     case 'rental':
       return 'vehicles';
+    case 'transport':
+      return 'route';
     case 'activity':
       return 'location';
     case 'moment':
@@ -75,6 +79,7 @@ export function kindIcon(kind: TravelItemKind): AppIconName {
 export function dayStripeColor(dayIndex: number, theme: Theme): string {
   const light = [
     KIND_CHROME_LIGHT.flight.accent,
+    KIND_CHROME_LIGHT.transport.accent,
     KIND_CHROME_LIGHT.stay.accent,
     KIND_CHROME_LIGHT.activity.accent,
     KIND_CHROME_LIGHT.rental.accent,
@@ -83,6 +88,7 @@ export function dayStripeColor(dayIndex: number, theme: Theme): string {
   ];
   const dark = [
     KIND_CHROME_DARK.flight.accent,
+    KIND_CHROME_DARK.transport.accent,
     KIND_CHROME_DARK.stay.accent,
     KIND_CHROME_DARK.activity.accent,
     KIND_CHROME_DARK.rental.accent,

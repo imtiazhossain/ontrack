@@ -1,15 +1,18 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, DateField, ErrorMessage, Input } from '@/components/primitives';
-import { fontFamilies, radii } from '@/design-system';
+import {
+  Button,
+  DateField,
+  DestructiveSection,
+  ErrorMessage,
+  HeaderBackButton,
+  Input,
+  ScreenHeader,
+} from '@/components/primitives';
 import {
     itinerarySheetChrome,
-    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { travelDialogPalette } from '@/features/travel/travel-dialog-chrome';
-import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
     TravelRemoveConfirmModal,
     type TravelRemoveConfirmPayload,
@@ -19,15 +22,17 @@ import {
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
-import { haptics } from '@/utils/haptics';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { TravelPlanCoverField } from './travel-plan-cover-field';
-import type { TravelPlan } from './types';
+import { TravelPlanModePicker } from './travel-mode-picker';
+import type { TravelPlan, TravelPlanMode } from './types';
 
 interface TravelPlanDetailsEditorProps {
   plan: TravelPlan;
   title: string;
+  mode: TravelPlanMode;
+  origin: string;
   destination: string;
   notes: string;
   startDate: string;
@@ -35,6 +40,8 @@ interface TravelPlanDetailsEditorProps {
   coverUri?: string;
   error?: string;
   onTitleChange: (value: string) => void;
+  onModeChange: (value: TravelPlanMode) => void;
+  onOriginChange: (value: string) => void;
   onDestinationChange: (value: string) => void;
   onNotesChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
@@ -51,6 +58,8 @@ interface TravelPlanDetailsEditorProps {
 export function TravelPlanDetailsEditor({
   plan,
   title,
+  mode,
+  origin,
   destination,
   notes,
   startDate,
@@ -58,6 +67,8 @@ export function TravelPlanDetailsEditor({
   coverUri,
   error,
   onTitleChange,
+  onModeChange,
+  onOriginChange,
   onDestinationChange,
   onNotesChange,
   onStartDateChange,
@@ -70,8 +81,7 @@ export function TravelPlanDetailsEditor({
 }: TravelPlanDetailsEditorProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
-  const dialog = travelDialogPalette(theme);
-  const { s, spacing: rs, layout, typography } = useResponsive();
+  const { s, spacing: rs } = useResponsive();
   const [removeConfirm, setRemoveConfirm] =
     useState<TravelRemoveConfirmPayload | null>(null);
   const openDeleteTrip = () => {
@@ -87,7 +97,7 @@ export function TravelPlanDetailsEditor({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: travelInputFieldBackground(theme),
+      fieldBackground: theme.backgroundSunken,
       stackedLabelColor: chrome.label,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,
@@ -102,52 +112,17 @@ export function TravelPlanDetailsEditor({
   return (
     <>
     <View style={[styles.page, { gap: rs.lg }]}>
-      <View style={[styles.header, { gap: rs.md }]}>
-        <View style={{ paddingTop: rs.xs }}>
-          <TravelSheetIconControl
-            icon="back"
-            size={40}
-            tone="accent"
+      <ScreenHeader
+        title="Edit Trip"
+        subtitle="Update your journey details"
+        leading={
+          <HeaderBackButton
             accessibilityLabel="Back to trips"
+            testID={AgentUiIds.travel.editTrip.cancel}
             onPress={onCancel}
           />
-        </View>
-        <View style={styles.headerCopy}>
-          {/*
-            Display serif is clipped by RN Text’s line box on iOS. Keep the
-            lineHeight at the font size and add explicit top padding so
-            ascenders sit inside the layout box (not above it).
-          */}
-          <Text
-            allowFontScaling={false}
-            style={[
-              styles.title,
-              {
-                color: chrome.title,
-                fontSize: Math.max(32, s(34)),
-                lineHeight: Math.max(32, s(34)),
-                paddingTop: Math.max(10, s(12)),
-                paddingBottom: Math.max(2, s(2)),
-              },
-            ]}>
-            Edit Trip
-          </Text>
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={1.2}
-            numberOfLines={1}
-            style={[
-              styles.subtitle,
-              {
-                color: chrome.subtitle,
-                fontSize: Math.max(15, s(16)),
-                lineHeight: Math.max(20, s(21)),
-              },
-            ]}>
-            Update your journey details
-          </Text>
-        </View>
-      </View>
+        }
+      />
 
       <TravelSurfaceCard stripe padding={0}>
         <View style={[styles.cardBody, { padding: rs.lg, gap: rs.lg }]}>
@@ -163,6 +138,7 @@ export function TravelPlanDetailsEditor({
 
           <View style={{ gap: rs.sm }}>
             <Input
+              testID={AgentUiIds.travel.editTrip.title}
               value={title}
               onChangeText={onTitleChange}
               icon="flight"
@@ -171,7 +147,19 @@ export function TravelPlanDetailsEditor({
               accessibilityLabel="Trip Name"
               {...field('flight')}
             />
+            <TravelPlanModePicker value={mode} onChange={onModeChange} />
             <Input
+              testID={AgentUiIds.travel.editTrip.origin}
+              value={origin}
+              onChangeText={onOriginChange}
+              icon="route"
+              stackedLabel="Starting Point"
+              placeholder="e.g. New York, NY (optional)"
+              accessibilityLabel="Starting Point, optional"
+              {...field('location')}
+            />
+            <Input
+              testID={AgentUiIds.travel.editTrip.destination}
               value={destination}
               onChangeText={onDestinationChange}
               icon="location"
@@ -183,6 +171,7 @@ export function TravelPlanDetailsEditor({
             <View style={[styles.dateRow, { gap: rs.sm }]}>
               <View style={styles.dateCol}>
                 <DateField
+                  testID={AgentUiIds.travel.editTrip.startDate}
                   value={startDate}
                   stackedLabel="Departure"
                   placeholder="Select date"
@@ -193,6 +182,7 @@ export function TravelPlanDetailsEditor({
               </View>
               <View style={styles.dateCol}>
                 <DateField
+                  testID={AgentUiIds.travel.editTrip.endDate}
                   value={endDate}
                   stackedLabel="Return"
                   placeholder="Select date"
@@ -204,6 +194,7 @@ export function TravelPlanDetailsEditor({
               </View>
             </View>
             <Input
+              testID={AgentUiIds.travel.editTrip.notes}
               value={notes}
               onChangeText={onNotesChange}
               icon="note"
@@ -219,116 +210,22 @@ export function TravelPlanDetailsEditor({
 
           {error ? <ErrorMessage message={error} selectable /> : null}
 
-          <View style={[styles.actions, { gap: rs.sm }]}>
-            <View style={{ gap: rs.sm }}>
-              <AgentTestId
-                testID={AgentUiIds.travel.editTrip.save}
-                label="Save Details"
-                onPress={onSave}
-                style={styles.actionTarget}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Save Details"
-                  onPress={() => {
-                    haptics.tap();
-                    onSave();
-                  }}
-                  style={({ pressed }) => [
-                    styles.saveWrap,
-                    styles.compactAction,
-                    {
-                      opacity: pressed ? 0.88 : 1,
-                      minHeight: Math.max(layout.minTapTarget, s(52)),
-                    },
-                  ]}>
-                  <LinearGradient
-                    colors={[chrome.ctaFrom, chrome.ctaTo]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={[
-                      styles.saveGradient,
-                      {
-                        minHeight: Math.max(layout.minTapTarget, s(52)),
-                        paddingHorizontal: rs.lg,
-                      },
-                    ]}>
-                    <AppText
-                      variant="callout"
-                      fit
-                      numberOfLines={1}
-                      style={[
-                        styles.saveLabel,
-                        { color: chrome.ctaText, fontSize: typography.callout.fontSize },
-                      ]}>
-                      Save Details
-                    </AppText>
-                  </LinearGradient>
-                </Pressable>
-              </AgentTestId>
-
-            </View>
-
-            <View style={[styles.secondaryActions, { gap: rs.sm }]}>
-              <AgentTestId
-                testID={AgentUiIds.travel.editTrip.cancel}
-                label="Cancel edit trip"
-                onPress={onCancel}
-                style={styles.actionTarget}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel"
-                  onPress={onCancel}
-                  style={({ pressed }) => [
-                    styles.compactButton,
-                    styles.compactAction,
-                    {
-                      minHeight: Math.max(layout.minTapTarget, s(52)),
-                      borderColor: dialog.outlineBorder,
-                      backgroundColor: dialog.outlineBg,
-                      paddingHorizontal: rs.lg,
-                      opacity: pressed ? 0.75 : 1,
-                    },
-                  ]}>
-                  <AppText
-                    variant="callout"
-                    fit
-                    numberOfLines={1}
-                    style={[styles.cancelLabel, { color: dialog.cancelText }]}>
-                    Cancel
-                  </AppText>
-                </Pressable>
-              </AgentTestId>
-
-              <AgentTestId
-                testID={AgentUiIds.travel.removeConfirm.open}
-                label={`Delete ${plan.title}`}
-                onPress={openDeleteTrip}
-                style={styles.actionTarget}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${plan.title}`}
-                  onPress={openDeleteTrip}
-                  style={({ pressed }) => [
-                    styles.compactButton,
-                    styles.compactAction,
-                    {
-                      minHeight: Math.max(layout.minTapTarget, s(52)),
-                      borderColor: dialog.dangerTo,
-                      backgroundColor: dialog.dangerFrom,
-                      paddingHorizontal: rs.lg,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <AppText
-                    variant="callout"
-                    fit
-                    numberOfLines={1}
-                    style={[styles.deleteLabel, { color: dialog.dangerText }]}>
-                    Delete Trip
-                  </AppText>
-                </Pressable>
-              </AgentTestId>
-            </View>
+          <View style={[styles.actions, { gap: rs.lg }]}>
+            <Button
+              variant="primary"
+              size="lg"
+              testID={AgentUiIds.travel.editTrip.save}
+              accessibilityLabel="Save Details"
+              onPress={onSave}>
+              Save Details
+            </Button>
+            <DestructiveSection
+              label="Delete Trip"
+              description="Permanently removes this trip and its itinerary from this device."
+              testID={AgentUiIds.travel.removeConfirm.open}
+              accessibilityLabel={`Delete ${plan.title}`}
+              onPress={openDeleteTrip}
+            />
           </View>
         </View>
       </TravelSurfaceCard>
@@ -345,25 +242,6 @@ const styles = StyleSheet.create({
   page: {
     flexGrow: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  headerCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  title: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
-    letterSpacing: -0.65,
-  },
-  subtitle: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
-  },
   cardBody: {},
   actions: {
     width: '100%',
@@ -378,45 +256,5 @@ const styles = StyleSheet.create({
   dateCol: {
     flex: 1,
     minWidth: 0,
-  },
-  saveWrap: {
-    width: '100%',
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  saveGradient: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveLabel: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
-  },
-  secondaryActions: {
-    alignItems: 'center',
-  },
-  actionTarget: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  compactAction: {
-    alignSelf: 'center',
-    width: '72%',
-    maxWidth: 260,
-  },
-  compactButton: {
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelLabel: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '600',
-  },
-  deleteLabel: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
   },
 });

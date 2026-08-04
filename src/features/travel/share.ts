@@ -13,6 +13,7 @@ import type {
     TravelOpenJoinStatus,
     TravelPlan,
     TravelRentalDetails,
+    TravelTransportDetails,
 } from './types';
 
 export const ONTRACK_APP_STORE_URL = 'https://apps.apple.com/app/id6789723522';
@@ -93,9 +94,34 @@ function compactRentalDetails(details?: TravelRentalDetails) {
   ];
 }
 
+function compactTransportDetails(details?: TravelTransportDetails) {
+  if (!details) return undefined;
+  return [
+    details.mode,
+    details.operator,
+    details.serviceNumber,
+    details.origin,
+    details.destination,
+    details.arrivalDate,
+    details.arrivalMinutes,
+    details.vehicle,
+    details.distance,
+    details.distanceUnit,
+    (details.stops ?? []).map((stop) => [
+      stop.id,
+      stop.name,
+      stop.address,
+      stop.arrivalDate,
+      stop.arrivalMinutes,
+      stop.notes,
+    ]),
+  ];
+}
+
 function compactItineraryItem(item: TravelItineraryItem) {
   const kind: Record<TravelItemKind, string> = {
     flight: 'f',
+    transport: 't',
     stay: 's',
     activity: 'a',
     rental: 'r',
@@ -113,6 +139,7 @@ function compactItineraryItem(item: TravelItineraryItem) {
     undefined,
     compactFlightDetails(item.flight),
     compactRentalDetails(item.rental),
+    compactTransportDetails(item.transport),
   ];
 }
 
@@ -124,8 +151,10 @@ export function encodeTravelInvite(plan: TravelPlan): string {
     plan.endDate,
     plan.notes,
     plan.itinerary.map(compactItineraryItem),
+    plan.mode ?? 'flight',
+    plan.origin,
   ];
-  return `2.${encodeBase64Url(JSON.stringify(compactPlan))}`;
+  return `3.${encodeBase64Url(JSON.stringify(compactPlan))}`;
 }
 
 function stringAt(value: unknown[], index: number): string | undefined {
@@ -136,6 +165,7 @@ function expandItineraryItem(value: unknown): unknown {
   if (!Array.isArray(value)) return value;
   const kind = {
     f: 'flight',
+    t: 'transport',
     s: 'stay',
     a: 'activity',
     r: 'rental',
@@ -172,6 +202,37 @@ function expandItineraryItem(value: unknown): unknown {
           typeof rentalRaw[5] === 'number' ? rentalRaw[5] : undefined,
       }
     : undefined;
+  const transportRaw = Array.isArray(value[10]) ? value[10] : undefined;
+  const transport = transportRaw
+    ? {
+        mode: stringAt(transportRaw, 0),
+        operator: stringAt(transportRaw, 1),
+        serviceNumber: stringAt(transportRaw, 2),
+        origin: stringAt(transportRaw, 3),
+        destination: stringAt(transportRaw, 4),
+        arrivalDate: stringAt(transportRaw, 5),
+        arrivalMinutes:
+          typeof transportRaw[6] === 'number' ? transportRaw[6] : undefined,
+        vehicle: stringAt(transportRaw, 7),
+        distance: typeof transportRaw[8] === 'number' ? transportRaw[8] : undefined,
+        distanceUnit: stringAt(transportRaw, 9),
+        stops: Array.isArray(transportRaw[10])
+          ? transportRaw[10].map((rawStop) =>
+              Array.isArray(rawStop)
+                ? {
+                    id: stringAt(rawStop, 0),
+                    name: stringAt(rawStop, 1),
+                    address: stringAt(rawStop, 2),
+                    arrivalDate: stringAt(rawStop, 3),
+                    arrivalMinutes:
+                      typeof rawStop[4] === 'number' ? rawStop[4] : undefined,
+                    notes: stringAt(rawStop, 5),
+                  }
+                : rawStop,
+            )
+          : undefined,
+      }
+    : undefined;
   return {
     id: stringAt(value, 0),
     kind,
@@ -183,13 +244,15 @@ function expandItineraryItem(value: unknown): unknown {
     bookingUrl: stringAt(value, 7),
     flight,
     rental,
+    transport,
   };
 }
 
 function decodeCompactTravelInvite(
   value: string,
 ): Omit<TravelPlan, 'id' | 'createdAt' | 'updatedAt'> | undefined {
-  if (!value.startsWith('2.')) return undefined;
+  const version = value.startsWith('3.') ? 3 : value.startsWith('2.') ? 2 : 0;
+  if (!version) return undefined;
   const compact = JSON.parse(decodeBase64Url(value.slice(2))) as unknown;
   if (!Array.isArray(compact)) return undefined;
 
@@ -205,6 +268,8 @@ function decodeCompactTravelInvite(
     startDate,
     endDate,
     notes: stringAt(compact, 4),
+    mode: version >= 3 ? stringAt(compact, 6) as TravelPlan['mode'] : 'flight',
+    origin: version >= 3 ? stringAt(compact, 7) : undefined,
     itinerary: normalizeTravelItinerary(
       Array.isArray(compact[5]) ? compact[5].map(expandItineraryItem) : [],
     ),

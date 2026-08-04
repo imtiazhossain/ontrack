@@ -60,8 +60,9 @@ describe('travel invites', () => {
   });
 
   it('round-trips an encoded trip without copying its local id or sensitive fields', () => {
-    expect(decodeTravelInvite(encodeTravelInvite(plan))).toEqual({
+    expect(decodeTravelInvite(encodeTravelInvite(plan))).toMatchObject({
       title: plan.title,
+      mode: 'flight',
       destination: plan.destination,
       startDate: plan.startDate,
       endDate: plan.endDate,
@@ -82,11 +83,57 @@ describe('travel invites', () => {
       baseCurrency: 'USD',
       expenses: [],
     });
+    const decoded = decodeTravelInvite(encodeTravelInvite(plan));
+    expect(decoded?.itinerary[0]?.flight?.confirmationCode).toBeUndefined();
+    expect(decoded?.itinerary[0]?.flight?.seat).toBeUndefined();
   });
 
   it('creates one compact, URL-safe payload instead of double-encoded JSON', () => {
     const payload = encodeTravelInvite(plan);
-    expect(payload).toMatch(/^2\.[A-Za-z0-9_-]+$/);
+    expect(payload).toMatch(/^3\.[A-Za-z0-9_-]+$/);
+  });
+
+  it('keeps compact v2 links working after v3 ships', () => {
+    const compatibleV2 = encodeTravelInvite(plan).replace(/^3\./, '2.');
+    expect(decodeTravelInvite(compatibleV2)?.destination).toBe(plan.destination);
+  });
+
+  it('round-trips safe transport route data while excluding private ticket and fare data', () => {
+    const encoded = encodeTravelInvite({
+      ...plan,
+      mode: 'road',
+      origin: 'New York, NY',
+      itinerary: [{
+        id: 'transport-1',
+        kind: 'transport',
+        title: 'Drive to Washington',
+        date: '2026-09-12',
+        startMinutes: 480,
+        durationMinutes: 300,
+        transport: {
+          mode: 'driving',
+          origin: 'New York, NY',
+          destination: 'Washington, DC',
+          arrivalDate: '2026-09-12',
+          arrivalMinutes: 780,
+          confirmationCode: 'PRIVATE',
+          seat: '12A',
+          fare: 75,
+          currency: 'USD',
+          stops: [{ id: 'stop-1', name: 'Philadelphia', address: 'Philadelphia, PA' }],
+        },
+      }],
+    });
+    const decoded = decodeTravelInvite(encoded);
+    expect(decoded).toMatchObject({ mode: 'road', origin: 'New York, NY' });
+    expect(decoded?.itinerary[0]?.transport).toMatchObject({
+      mode: 'driving',
+      origin: 'New York, NY',
+      destination: 'Washington, DC',
+      stops: [{ name: 'Philadelphia' }],
+    });
+    expect(decoded?.itinerary[0]?.transport?.confirmationCode).toBeUndefined();
+    expect(decoded?.itinerary[0]?.transport?.fare).toBeUndefined();
   });
 
   it('creates a genuinely short hosted link from an invite code', () => {

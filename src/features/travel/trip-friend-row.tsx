@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
+  Button,
+  IconButton,
   Input,
   Symbol,
 } from '@/components/primitives';
@@ -13,6 +15,7 @@ import type {
 } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 /** Matches the default trip-roster avatar plate used in static layout styles. */
 const AVATAR = 42;
@@ -34,39 +37,26 @@ function FriendActionChip({
   danger,
   disabled,
   onPress,
+  testID,
 }: {
   label: string;
   accessibilityLabel?: string;
   danger?: boolean;
   disabled?: boolean;
   onPress: () => void;
+  testID: string;
 }) {
-  const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+    <Button
+      size="sm"
+      variant={danger ? 'danger' : 'secondary'}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          backgroundColor: theme.backgroundElevated,
-          borderColor: theme.separator,
-          minHeight: Math.max(32, s(32)),
-          paddingHorizontal: Math.max(6, rs.xs),
-          opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
-        },
-      ]}>
-      <AppText
-        variant="callout"
-        color={danger ? 'danger' : 'primary'}
-        numberOfLines={1}
-        style={styles.chipLabel}>
-        {label}
-      </AppText>
-    </Pressable>
+      testID={testID}
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={styles.chip}>
+      {label}
+    </Button>
   );
 }
 
@@ -97,6 +87,7 @@ export function TripFriendRow({
   onRemove,
   onSaveRename,
   onCancelRename,
+  testIDBase,
 }: {
   displayName: string;
   userId?: string;
@@ -125,6 +116,7 @@ export function TripFriendRow({
   onRemove?: () => void;
   onSaveRename?: () => void;
   onCancelRename?: () => void;
+  testIDBase: string;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
@@ -149,6 +141,7 @@ export function TripFriendRow({
         <View style={styles.renameRow}>
           <View style={styles.renameField}>
             <Input
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'renameInput')}
               value={renameDraft ?? ''}
               onChangeText={onRenameDraftChange}
               placeholder="Friend’s name"
@@ -167,43 +160,24 @@ export function TripFriendRow({
               }}
             />
             <View style={styles.renameActions}>
-              <Pressable
-                accessibilityRole="button"
+              <Button
+                size="sm"
+                testID={AgentUiIds.travel.friendRow.action(testIDBase, 'saveRename')}
                 accessibilityLabel="Save name"
                 disabled={busy || !renameDraft?.trim()}
-                hitSlop={6}
                 onPress={() => onSaveRename?.()}
-                style={({ pressed }) => [
-                  styles.renameAction,
-                  {
-                    backgroundColor: theme.accentPrimary,
-                    minHeight: Math.max(36, s(36)),
-                    paddingHorizontal: rs.md,
-                    opacity: busy || !renameDraft?.trim() ? 0.45 : pressed ? 0.75 : 1,
-                  },
-                ]}>
-                <AppText variant="callout" color="onAccent" fit>
-                  Save
-                </AppText>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
+                style={styles.renameAction}>
+                Save
+              </Button>
+              <IconButton
+                icon="close"
+                testID={AgentUiIds.travel.friendRow.action(testIDBase, 'cancelRename')}
                 accessibilityLabel="Cancel rename"
                 disabled={busy}
-                hitSlop={6}
                 onPress={() => onCancelRename?.()}
-                style={({ pressed }) => [
-                  styles.renameAction,
-                  {
-                    minHeight: Math.max(36, s(36)),
-                    paddingHorizontal: rs.sm,
-                    opacity: busy ? 0.45 : pressed ? 0.7 : 1,
-                  },
-                ]}>
-                <AppText variant="callout" fit>
-                  Cancel
-                </AppText>
-              </Pressable>
+                background={theme.backgroundSunken}
+                borderColor={theme.separator}
+              />
             </View>
           </View>
         </View>
@@ -270,15 +244,20 @@ export function TripFriendRow({
           : null,
       ]}>
       {canOpenMenu && onPress && !renaming ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${displayName}, manage`}
-          accessibilityState={{ expanded: Boolean(expanded) }}
-          disabled={busy}
-          onPress={onPress}
-          style={({ pressed }) => [{ opacity: busy ? 0.5 : pressed ? 0.72 : 1 }]}>
-          {header}
-        </Pressable>
+        <AgentTestId
+          testID={AgentUiIds.travel.friendRow.action(testIDBase, 'manage')}
+          label={`${displayName}, manage`}
+          onPress={onPress}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${displayName}, manage`}
+            accessibilityState={{ expanded: Boolean(expanded) }}
+            disabled={busy}
+            onPress={onPress}
+            style={({ pressed }) => [{ opacity: busy ? 0.5 : pressed ? 0.72 : 1 }]}>
+            {header}
+          </Pressable>
+        </AgentTestId>
       ) : (
         header
       )}
@@ -289,6 +268,7 @@ export function TripFriendRow({
             label="Rename"
             accessibilityLabel="Update name"
             disabled={busy}
+            testID={AgentUiIds.travel.friendRow.action(testIDBase, 'rename')}
             onPress={() => onUpdateName?.()}
           />
           {!selfOnlyMenu && showMakeCohost ? (
@@ -296,6 +276,7 @@ export function TripFriendRow({
               label="Co-host"
               accessibilityLabel="Make co-host"
               disabled={busy}
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'makeCohost')}
               onPress={() => onMakeCohost?.()}
             />
           ) : null}
@@ -304,6 +285,7 @@ export function TripFriendRow({
               label="Demote"
               accessibilityLabel="Remove co-host"
               disabled={busy}
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'removeCohost')}
               onPress={() => onRemoveCohost?.()}
             />
           ) : null}
@@ -312,6 +294,7 @@ export function TripFriendRow({
               label="Host"
               accessibilityLabel="Make host"
               disabled={busy}
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'makeHost')}
               onPress={() => onMakeHost?.()}
             />
           ) : null}
@@ -319,6 +302,7 @@ export function TripFriendRow({
             <FriendActionChip
               label="Resend"
               disabled={busy}
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'resend')}
               onPress={() => onResend?.()}
             />
           ) : null}
@@ -327,6 +311,7 @@ export function TripFriendRow({
               label="Remove"
               danger
               disabled={busy}
+              testID={AgentUiIds.travel.friendRow.action(testIDBase, 'remove')}
               onPress={() => onRemove?.()}
             />
           ) : null}
@@ -344,11 +329,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.pill,
-  },
-  chipLabel: {
-    textAlign: 'center',
   },
   friendName: {
     width: '100%',
@@ -417,4 +397,3 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
 });
-

@@ -133,7 +133,11 @@ export function TodoRow({
   );
 
   return (
-    <AgentTestId testID={testID} label={task.title} onPress={pressRow} style={styles.taskRow}>
+    <AgentTestId
+      testID={testID}
+      label={task.title}
+      onPress={pressRow}
+      style={styles.taskRowAgent}>
       <Pressable
         accessible={false}
         accessibilityActions={
@@ -152,6 +156,7 @@ export function TodoRow({
         }}
         onPress={pressRow}
         style={[
+          styles.taskRow,
           {
             backgroundColor: theme.backgroundElevated,
             borderColor:
@@ -334,6 +339,7 @@ export function ChecklistItemSeparator({
 }
 
 const styles = StyleSheet.create({
+  taskRowAgent: { width: '100%' },
   taskRow: {
     minHeight: 68,
     flexDirection: 'row',

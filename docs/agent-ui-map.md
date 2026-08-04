@@ -146,6 +146,8 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.checklists.editMode` | Edit / Done lists |
 | `ontrack.checklists.collaborators` | Collaborators |
 | `ontrack.checklists.newListName` | New list name field |
+| `ontrack.checklists.listName.<listId>` | Editable checklist name |
+| `ontrack.checklists.newListKind.<kind>` | Select checklist or grocery-list mode |
 | `ontrack.checklists.createList` | Create list |
 | `ontrack.checklists.list.<listId>` | Open list card |
 | `ontrack.checklists.detail.back` | Back to lists |
@@ -186,12 +188,81 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
 | testID | Control |
 |--------|---------|
+| `ontrack.travel.list.cover.<tripId>` | Expand a trip cover photo |
 | `ontrack.travel.list.itinerary` | Open plan itinerary |
-| `ontrack.travel.list.addToCalendar` | Add to Calendar |
+| `ontrack.travel.list.calendar` | Add trip to Calendar, or open Calendar when already added |
 | `ontrack.travel.list.searchFlights` | Search Flights |
 | `ontrack.travel.list.searchStays` | Search Stays |
 | `ontrack.travel.list.tripWeather` | Trip Weather |
+| `ontrack.travel.list.currency` | Open Currency Calculator |
 | `ontrack.travel.list.expenses` | Open Expenses |
+| `ontrack.travel.list.groupChat` | Open Group Chat |
+| `ontrack.travel.list.coTravelers` | Open Co-Travelers |
+| `ontrack.travel.photoViewer.dismiss.<tripId>` | Dismiss the expanded trip photo |
+| `ontrack.travel.photoViewer.close.<tripId>` | Close the expanded trip photo |
+
+### Travel canonical actions
+
+| testID | Control |
+|--------|---------|
+| `ontrack.travel.newTrip.open` | Open the new-trip form |
+| `ontrack.travel.newTrip.cancel` | Close the new-trip form |
+| `ontrack.travel.newTrip.title` | New-trip title field |
+| `ontrack.travel.newTrip.destination` | New-trip destination field |
+| `ontrack.travel.newTrip.startDate` | New-trip departure date |
+| `ontrack.travel.newTrip.endDate` | New-trip return date |
+| `ontrack.travel.newTrip.notes` | New-trip notes field |
+| `ontrack.travel.newTrip.create` | Create the trip |
+| `ontrack.travel.editTrip.title` | Edit-trip title field |
+| `ontrack.travel.editTrip.cover` | Change the edit-trip cover photo |
+| `ontrack.travel.editTrip.destination` | Edit-trip destination field |
+| `ontrack.travel.editTrip.startDate` | Edit-trip departure date |
+| `ontrack.travel.editTrip.endDate` | Edit-trip return date |
+| `ontrack.travel.editTrip.notes` | Edit-trip notes field |
+| `ontrack.travel.detailsEditor.save.<itemId>` | Save itinerary details |
+| `ontrack.travel.detailsEditor.cancel.<itemId>` | Cancel itinerary detail editing |
+| `ontrack.travel.detailsEditor.remove.<itemId>` | Remove an itinerary item |
+| `ontrack.travel.addPhotos.confirmRemovePhoto` | Confirm photo removal |
+| `ontrack.travel.importResult.close` | Close an import result and return to the itinerary |
+| `ontrack.travel.importResult.reviewExpense` | Review the expense related to an import |
+| `ontrack.travel.friends.openInvite` | Open the friend invitation form |
+| `ontrack.travel.friends.cancelInvite` | Close the friend invitation form |
+| `ontrack.travel.friends.inviteName` | Friend invitation name |
+| `ontrack.travel.friends.inviteEmail` | Friend invitation account email |
+| `ontrack.travel.friends.createInvite` | Create a friend invitation |
+| `ontrack.travel.friendRow.<target>.<action>` | Manage, rename, or remove a trip friend |
+| `ontrack.travel.confirmation.open.<kind>` | Open uploaded confirmation images |
+| `ontrack.travel.confirmation.close` | Close the confirmation viewer |
+| `ontrack.travel.notes.open.<itemId>` | Open itinerary notes |
+| `ontrack.travel.notes.close` | Close itinerary notes |
+| `ontrack.travel.notes.composer` | Add or edit a note |
+| `ontrack.travel.notes.submit` | Save or post a note |
+| `ontrack.travel.notes.cancelEdit` | Cancel note editing |
+| `ontrack.travel.notes.edit.<noteId>` | Edit a note |
+| `ontrack.travel.notes.delete.<noteId>` | Request note deletion |
+| `ontrack.travel.notes.confirmDelete` | Confirm note deletion |
+
+## Design-system gallery
+
+Deep link example: `ontrack://design-system` / Expo route `/design-system`
+
+| testID | Control |
+|--------|---------|
+| `ontrack.profile.designSystem` | Open the development gallery from Profile |
+| `ontrack.designSystem.info` | Open the canonical sheet example |
+| `ontrack.designSystem.mode.<mode>` | Switch gallery section |
+| `ontrack.designSystem.primary` | Primary action example |
+| `ontrack.designSystem.secondary` | Secondary action example |
+| `ontrack.designSystem.ghost` | Ghost action example |
+| `ontrack.designSystem.delete` | Destructive action example |
+| `ontrack.designSystem.input` | Form field example |
+| `ontrack.designSystem.sheet.close` | Close the canonical sheet |
+
+## Activity form
+
+| testID | Control |
+|--------|---------|
+| `ontrack.activityForm.choice.<group>.<value>` | Select a meal, workout, or priority option |
 
 ## Travel plan detail
 
@@ -200,9 +271,30 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.planDetail.weather` | Weather |
 | `ontrack.travel.planDetail.currency` | Currency |
 | `ontrack.travel.planDetail.addToTimeline` | Add to Timeline |
-| `ontrack.travel.timelineAdd.dismiss` | Kind picker scrim |
+| `ontrack.travel.planDetail.section.transport` | Expand/collapse transport group |
+| `ontrack.travel.planDetail.section.ground` | Expand/collapse ground and transit items |
 | `ontrack.travel.timelineAdd.close` | Kind picker close |
 | `ontrack.travel.timelineAdd.kind.<kind>` | Timeline kind choice |
+| `ontrack.travel.timelineItem.<itemId>.<phase>` | Expand/collapse an itinerary marker or structured card |
+| `ontrack.travel.itineraryAdd.title` | Itinerary item name |
+| `ontrack.travel.itineraryAdd.date` | Itinerary departure/start date |
+| `ontrack.travel.itineraryAdd.time` | Itinerary departure/start time |
+| `ontrack.travel.itineraryAdd.submit` | Save the itinerary item |
+| `ontrack.travel.tripMode.<mode>` | Choose the trip's primary travel mode |
+| `ontrack.travel.newTrip.origin` | Optional new-trip starting point |
+| `ontrack.travel.editTrip.origin` | Optional edited-trip starting point |
+| `ontrack.travel.list.addTransport` | Add transport from a non-flight trip card |
+| `ontrack.travel.transport.mode.<mode>` | Choose driving, rail, transit, rideshare, taxi, ferry, shuttle, or other |
+| `ontrack.travel.transport.origin` | Transport origin or pick-up |
+| `ontrack.travel.transport.destination` | Transport destination or drop-off |
+| `ontrack.travel.transport.arrivalDate` | Transport arrival date |
+| `ontrack.travel.transport.arrivalTime` | Transport arrival time |
+| `ontrack.travel.transport.addStop` | Add a road-trip route stop |
+| `ontrack.travel.transport.stop.<id>.*` | Edit or remove a route stop |
+| `ontrack.travel.transport.attachDocument` | Attach a ticket document |
+| `ontrack.travel.transport.attachScreenshots` | Attach ticket screenshots |
+| `ontrack.travel.transport.<id>.openMaps` | Open a driving route in Maps |
+| `ontrack.travel.transport.<id>.edit` | Edit structured transport details |
 
 Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 
@@ -233,16 +325,14 @@ Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 
 | testID | Control |
 |--------|---------|
-| `ontrack.travel.addPhotos.dismiss` | Scrim dismiss |
 | `ontrack.travel.addPhotos.close` | Close X |
 | `ontrack.travel.addPhotos.takePhoto` | Take Photo |
 | `ontrack.travel.addPhotos.chooseFromPhotos` | Choose from Photos |
 | `ontrack.travel.addPhotos.removePhoto` | Remove Photo (optional) |
 | `ontrack.travel.editTrip.save` | Save edited trip details |
 | `ontrack.travel.editTrip.cancel` | Cancel editing a trip |
-| `ontrack.travel.calendarUpdated.dismiss` | Scrim dismiss |
+| `ontrack.travel.calendarUpdated.dismiss` | Close X and return to Travel |
 | `ontrack.travel.calendarUpdated.goToCalendar` | Go to Calendar |
-| `ontrack.travel.calendarUpdated.backToTravel` | Back to Travel |
 | `ontrack.travel.itineraryAdd.close` | Close add-to-timeline sheet |
 | `ontrack.travel.expenses.paidBy.<personId>` | Paid By person avatar (`self`, `host`, `member:…`, …) |
 | `ontrack.travel.expenses.splitWith.<personId>` | Split With person avatar |

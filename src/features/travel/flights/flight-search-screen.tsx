@@ -21,16 +21,18 @@ import {
 } from '@/components/primitives';
 import { featureFlags } from '@/constants/feature-flags';
 import { fontFamilies, radii, spacing } from '@/design-system';
-import { compareOnGoogleFlights } from '@/features/travel/provider';
+import {
+  compareOnGoogleFlights,
+  isValidFlightLocation,
+} from '@/features/travel/provider';
 import {
     itinerarySheetChrome,
-    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
 import {
-    TRAVEL_EDITORIAL_ACCENT,
-    TravelSurfaceCard,
-    travelPageBg,
+  TRAVEL_EDITORIAL_ACCENT,
+  TravelSurfaceCard,
+  useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -50,10 +52,9 @@ export type FlightSearchNotice = {
   detail: string;
 };
 
-export const AIRPORT_LOOKUP_NOTICE: FlightSearchNotice = {
-  title: 'Airports not found',
-  detail:
-    'Check From and To — try a city name like San Francisco, or a 3-letter code like SFO or KEF.',
+export const GOOGLE_FLIGHTS_NOTICE: FlightSearchNotice = {
+  title: 'Couldn’t open Google Flights',
+  detail: 'Check your connection and try again.',
 };
 
 const VALIDATION_NOTICE: FlightSearchNotice = {
@@ -178,6 +179,22 @@ function LegSummary({
   dateDisplayFormat: 'mdy' | 'iso';
   labelColor: string;
 }) {
+  // Keep rendering compatible while a separately deployed API rolls forward.
+  const segments = leg.segments?.length ? leg.segments : [];
+  const route = [
+    segments[0]?.departureCode ?? leg.departureCode,
+    ...(segments.length > 0
+      ? segments.map((segment) => segment.arrivalCode)
+      : [leg.arrivalCode]),
+  ];
+  const flightNumbers = segments
+    .map((segment) => segment.flightNumber)
+    .filter(Boolean)
+    .join(' · ');
+  const carriers = Array.from(
+    new Set(segments.map((segment) => segment.carrier).filter(Boolean)),
+  ).join(' · ');
+
   return (
     <View style={styles.leg}>
       <AppText variant="overline" style={{ color: labelColor, textTransform: 'none' }}>
@@ -186,11 +203,16 @@ function LegSummary({
       <View style={styles.route}>
         <View style={styles.flex}>
           <AppText variant="subheading">
-            {leg.departureCode} → {leg.arrivalCode}
+            {route.join(' → ')}
           </AppText>
           <AppText variant="caption" color="secondary">
             {formatDateTime(leg.departureAt, dateDisplayFormat)}
           </AppText>
+          {leg.stops > 0 && (carriers || flightNumbers) ? (
+            <AppText variant="caption" color="secondary">
+              {[carriers, flightNumbers].filter(Boolean).join(' · ')}
+            </AppText>
+          ) : null}
         </View>
         <AppText variant="caption" color="secondary">
           {formatDuration(leg.duration)} ·{' '}
@@ -210,6 +232,7 @@ export function FlightSearchScreen({
   initialNotice?: FlightSearchNotice;
 }) {
   const theme = useTheme();
+  const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, layout, typography } = useResponsive();
@@ -218,7 +241,7 @@ export function FlightSearchScreen({
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const mountedRef = useRef(true);
   const originEditedRef = useRef(false);
-  const [origin, setOrigin] = useState('');
+  const [origin, setOrigin] = useState(plan?.origin ?? '');
   const [destination, setDestination] = useState(plan?.destination ?? '');
   const [departureDate, setDepartureDate] = useState(plan?.startDate ?? '');
   const [returnDate, setReturnDate] = useState(plan?.endDate ?? '');
@@ -236,7 +259,7 @@ export function FlightSearchScreen({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: travelInputFieldBackground(theme),
+      fieldBackground: theme.backgroundSunken,
       stackedLabelColor: accent,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,
@@ -272,7 +295,7 @@ export function FlightSearchScreen({
 
   if (!plan) {
     return (
-      <Screen style={{ backgroundColor: travelPageBg(theme) }} refresh={false}>
+      <Screen style={travelStyle} refresh={false}>
         <EmptyState icon="flight" title="Trip Not Found" message="This trip may have been removed." />
       </Screen>
     );
@@ -341,25 +364,26 @@ export function FlightSearchScreen({
         departureDate,
         returnDate,
         adults: Math.max(1, Number(adults) || 1),
+        currencyCode,
       });
     } catch {
-      setError(AIRPORT_LOOKUP_NOTICE);
+      setError(GOOGLE_FLIGHTS_NOTICE);
     } finally {
       setComparing(false);
     }
   };
 
   const canCompare =
-    !comparing && origin.trim().length >= 3 && destination.trim().length >= 3;
+    !comparing && isValidFlightLocation(origin) && isValidFlightLocation(destination);
   const ctaMinHeight = Math.max(layout.minTapTarget, s(52));
   const ctaColors = light
-    ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
+    ? ([theme.accentSoft, theme.accentPrimary, '#175C88'] as const)
     : ([chrome.ctaFrom, chrome.ctaTo] as const);
   const headingSize = Math.max(32, s(34));
 
   return (
     <Screen
-      style={{ backgroundColor: travelPageBg(theme) }}
+      style={travelStyle}
       contentStyle={{ gap: rs.lg }}
       refresh={false}>
       <View style={[styles.header, { gap: rs.md }]}>
@@ -491,6 +515,7 @@ export function FlightSearchScreen({
                 onChangeText={(v) => setCurrencyCode(v.replace(/[^A-Za-z]/g, '').toUpperCase())}
                 icon="currency"
                 stackedLabel="CURRENCY"
+                stackedAlign="center"
                 autoCapitalize="characters"
                 autoCorrect={false}
                 maxLength={3}
@@ -515,13 +540,13 @@ export function FlightSearchScreen({
 
           <AgentTestId
             testID={AgentUiIds.travel.flightSearch.compareGoogle}
-            label={comparing ? 'Finding nearby airports' : 'Compare on Google Flights'}
+            label={comparing ? 'Opening Google Flights' : 'Compare on Google Flights'}
             onPress={canCompare ? () => { haptics.tap(); void compareFlights(); } : undefined}
             style={styles.ctaWrap}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
-                comparing ? 'Finding nearby airports' : 'Compare on Google Flights'
+                comparing ? 'Opening Google Flights' : 'Compare on Google Flights'
               }
               accessibilityState={{ disabled: !canCompare }}
               disabled={!canCompare}
@@ -536,7 +561,7 @@ export function FlightSearchScreen({
                   borderRadius: radii.pill,
                   opacity: !canCompare ? 0.45 : pressed ? 0.88 : 1,
                   boxShadow: light
-                    ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+                    ? '0 4px 14px rgba(36, 116, 168, 0.32), 0 1px 3px rgba(11, 28, 40, 0.14)'
                     : '0 8px 18px rgba(0, 0, 0, 0.35)',
                 },
               ]}>
@@ -569,7 +594,7 @@ export function FlightSearchScreen({
                     minWidth: 0,
                   },
                 ]}>
-                {comparing ? 'Finding nearby airports…' : 'Compare on Google Flights'}
+                {comparing ? 'Opening Google Flights…' : 'Compare on Google Flights'}
               </AppText>
             </LinearGradient>
             </Pressable>

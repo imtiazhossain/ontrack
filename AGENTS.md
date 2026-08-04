@@ -63,6 +63,7 @@ If the change touches `supabase/migrations/` (or other DB schema), **auto-apply*
 - **Field icons:** Leading icons in form fields must be vertically centered in the field row. Use `FieldLeadingIcon` + `fieldLeadingIconRowStyle` from `@/components/primitives/field-leading-icon` (or Input / DateField / TimeField). Never top-align or `paddingTop`-nudge the icon plate. See `.cursor/rules/field-icon-centering.mdc`.
 - **Dates:** Editable calendar dates use design-system `DateField` only. Storage keys are local `YYYY-MM-DD` via `@/utils/date` (`toDateKey`, `todayKey`, `formatDueLabel`, …).
 - **Prompts:** App alerts/sheets use `appPrompt` / `AppPromptHost`. Never RN `Alert` or `ActionSheetIOS` for app UI. Cancel/dismiss = top-right X, not a full-width cancel button.
+- **No redundant actions:** One local outcome gets one control. If a row, card, image, or editable field already performs an action, do not add a nearby icon/button that performs the same action. See `.cursor/rules/no-redundant-actions.mdc`.
 
 ## Feature entry points
 

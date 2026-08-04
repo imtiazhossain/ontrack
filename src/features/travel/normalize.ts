@@ -3,6 +3,8 @@ import { normalizeCurrencyCode } from './expenses/format-money';
 import { normalizeFlightDetails } from './flight-details';
 import { normalizeRentalDetails } from './rental-details';
 import { normalizeStayDetails } from './stay-details';
+import { normalizeTransportDetails } from './transport-details';
+import { TRAVEL_PLAN_MODE_VALUES } from './travel-mode';
 import { normalizeTravelPhotoUris } from './travel-moment-media';
 import type {
   TravelExpense,
@@ -24,7 +26,14 @@ const EXPENSE_CATEGORIES = new Set<TravelExpenseCategory>([
   'other',
 ]);
 
-const ITEM_KINDS = new Set(['flight', 'stay', 'activity', 'rental', 'moment']);
+const ITEM_KINDS = new Set([
+  'flight',
+  'transport',
+  'stay',
+  'activity',
+  'rental',
+  'moment',
+]);
 const DEFAULT_MOMENT_DURATION_MINUTES = 15;
 
 export function normalizeTravelItineraryItem(
@@ -79,6 +88,8 @@ export function normalizeTravelItineraryItem(
     ...(photoUris ? { photoUris } : {}),
     ...(notes ? { notes } : {}),
     flight: kind === 'flight' ? normalizeFlightDetails(item.flight) : undefined,
+    transport:
+      kind === 'transport' ? normalizeTransportDetails(item.transport) : undefined,
     rental: kind === 'rental' ? normalizeRentalDetails(item.rental) : undefined,
     stay: kind === 'stay' ? normalizeStayDetails(item.stay) : undefined,
   };
@@ -181,6 +192,22 @@ b: TravelItineraryItem,
   );
 }
 
+function sameTransportItems(
+  a: TravelItineraryItem,
+  b: TravelItineraryItem,
+): boolean {
+  const left = a.transport;
+  const right = b.transport;
+  if (!left || !right || left.mode !== right.mode) return false;
+  const sameRoute =
+    normalizeItineraryText(left.origin) === normalizeItineraryText(right.origin) &&
+    normalizeItineraryText(left.destination) === normalizeItineraryText(right.destination);
+  const leftCode = normalizeItineraryText(left.confirmationCode);
+  const rightCode = normalizeItineraryText(right.confirmationCode);
+  if (leftCode && rightCode && leftCode === rightCode) return true;
+  return a.date === b.date && a.startMinutes === b.startMinutes && sameRoute;
+}
+
 function sameStayItems(
 a: TravelItineraryItem,
 b: TravelItineraryItem,
@@ -224,6 +251,8 @@ b: TravelItineraryItem,
       return sameFlightItems(a, b);
     case 'rental':
       return sameRentalItems(a, b);
+    case 'transport':
+      return sameTransportItems(a, b);
     case 'stay':
       return sameStayItems(a, b);
     default:
@@ -426,6 +455,7 @@ export function normalizeTravelExpense(
     splitWithIds: resolvedSplit,
     createdAt: asString(expense.createdAt) ?? asString(expense.updatedAt) ?? fallbackTimestamp,
     updatedAt: asString(expense.updatedAt) ?? asString(expense.createdAt) ?? fallbackTimestamp,
+    travelItemId: asString(expense.travelItemId)?.trim() || undefined,
   };
 }
 
@@ -524,6 +554,12 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
       ? { sharedExpensesUpdatedAt: plan.sharedExpensesUpdatedAt.trim() }
       : {}),
     title: plan.title,
+    mode: TRAVEL_PLAN_MODE_VALUES.has(plan.mode as NonNullable<TravelPlan['mode']>)
+      ? (plan.mode as NonNullable<TravelPlan['mode']>)
+      : 'flight',
+    ...(asString(plan.origin)?.trim()
+      ? { origin: asString(plan.origin)!.trim() }
+      : {}),
     destination: plan.destination,
     startDate: plan.startDate,
     endDate:

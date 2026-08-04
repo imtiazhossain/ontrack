@@ -20,6 +20,7 @@ import { AppText } from './app-text';
 import { IconButton } from './button';
 import { DateFieldCalendar } from './date-field-calendar';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
+import { stackedFieldMinHeight } from './field-leading-icon-style';
 
 interface DateFieldProps {
   label?: string;
@@ -67,7 +68,7 @@ export function DateField({
   minimumDate,
   maximumDate,
   disabled = false,
-  placeholder = 'MM/DD/YYYY',
+  placeholder = 'MM/DD/YY',
   stackedLabel,
   iconBackground,
   iconColor,
@@ -79,7 +80,14 @@ export function DateField({
 }: DateFieldProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { spacing, layout, s } = useResponsive();
+  const { spacing, layout, s, typography, fontScale } = useResponsive();
+  const stackedMinHeight = stackedFieldMinHeight({
+    baseMinHeight: Math.max(56, s(60)),
+    fontScale,
+    labelLineHeight: typography.caption.lineHeight,
+    valueLineHeight: typography.body.lineHeight,
+    verticalPadding: spacing.sm,
+  });
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const [showPicker, setShowPicker] = useState(false);
   const [draftDate, setDraftDate] = useState(() =>
@@ -94,8 +102,8 @@ export function DateField({
   const hasValue = isDateKey(value);
   const displayValue = hasValue ? formatDateKey(value, dateDisplayFormat) : '';
   const resolvedPlaceholder =
-    placeholder === 'MM/DD/YYYY' && dateDisplayFormat === 'iso'
-      ? 'YYYY-MM-DD'
+    placeholder === 'MM/DD/YY' && dateDisplayFormat === 'iso'
+      ? 'YY-MM-DD'
       : placeholder;
   const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Date';
   const pickerTitle = formatDatePickerTitle(resolvedA11yLabel);
@@ -135,7 +143,7 @@ export function DateField({
         onPress={openPicker}
         style={({ pressed }) => [
           fieldLeadingIconRowStyle({
-            minHeight: stacked ? Math.max(56, s(60)) : Math.max(44, s(48)),
+            minHeight: stacked ? stackedMinHeight : Math.max(44, s(48)),
             borderRadius: stacked ? radii.lg : radii.md,
             paddingHorizontal: spacing.md,
             paddingVertical: stacked ? spacing.sm : 0,

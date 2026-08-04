@@ -88,6 +88,7 @@ export function StayDetailsCardEditor({
         }
       />
       <TravelDetailsCardActions
+        itemId={item.id}
         itemTitle={item.title}
         saveLabel="Save Stay Details"
         onSave={() => onSave(schedule)}

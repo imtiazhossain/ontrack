@@ -14,6 +14,7 @@ describe('travel plan normalization', () => {
   it('migrates legacy trips without an itinerary to an empty itinerary', () => {
     expect(normalizeTravelPlan(legacyPlan)).toEqual({
       ...legacyPlan,
+      mode: 'flight',
       notes: undefined,
       itinerary: [],
       participants: [],
