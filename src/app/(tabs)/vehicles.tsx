@@ -14,6 +14,7 @@ import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useVehicles } from '@/store/vehicles';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { todayKey } from '@/utils/date';
 
 function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
@@ -35,7 +36,8 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       onPress={() =>
         router.push({ pathname: '/vehicles/[id]', params: { id: vehicle.id } })
       }
-      accessibilityLabel={`${title}, ${miles}`}>
+      accessibilityLabel={`${title}, ${miles}`}
+      testID={AgentUiIds.vehicles.vehicle(vehicle.id)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: gap.md }}>
         <View
           style={{
@@ -107,7 +109,8 @@ function VehiclesScreenContent() {
             </View>
             <Button
               onPress={() => router.push('/vehicles/new')}
-              accessibilityLabel="Add a vehicle">
+              accessibilityLabel="Add a vehicle"
+              testID={AgentUiIds.vehicles.add}>
               Add
             </Button>
           </View>

@@ -11,6 +11,10 @@ const SIGNED_URL_CACHE_MS = 60 * 60 * 24 * 7 * 1000;
 const localUploadCache = new Map<string, string>();
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
+function isNativeLocalMediaUri(value: string): boolean {
+  return value.startsWith('file://') || value.startsWith('content://');
+}
+
 function stableHash(value: string) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -83,7 +87,7 @@ async function prepareValue(userId: string, domain: string, value: unknown): Pro
     if (value.startsWith(MARKER_PREFIX)) return value;
     const existingMarker = markerFromSignedUrl(value);
     if (existingMarker) return existingMarker;
-    if (value.startsWith('file://')) return uploadLocalUri(userId, domain, value);
+    if (isNativeLocalMediaUri(value)) return uploadLocalUri(userId, domain, value);
     return value;
   }
   if (Array.isArray(value)) {

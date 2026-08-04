@@ -4,7 +4,7 @@ import { AppText, Button, Symbol } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 export function TravelDetailsCardActions({
   itemTitle,
@@ -22,11 +22,6 @@ export function TravelDetailsCardActions({
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const ctaColor = theme.name === 'dark' ? '#95683F' : '#A57A4B';
-  const removeAgent = useAgentUiTarget(AgentUiIds.travel.removeConfirm.open, {
-    label: `Remove ${itemTitle}`,
-    onPress: onRemove,
-  });
-
   return (
     <View style={{ gap: rs.sm }}>
       <Button
@@ -53,23 +48,26 @@ export function TravelDetailsCardActions({
         <Button variant="ghost" style={styles.flex} onPress={onCancel}>
           Cancel
         </Button>
-        <Pressable
-          ref={removeAgent.ref}
+        <AgentTestId
           testID={AgentUiIds.travel.removeConfirm.open}
-          onLayout={removeAgent.onLayout}
-          accessibilityRole="button"
-          accessibilityLabel={`Remove ${itemTitle}`}
-          hitSlop={8}
+          label={`Remove ${itemTitle}`}
           onPress={onRemove}
-          style={({ pressed }) => [
-            styles.removeAction,
-            pressed ? styles.pressed : undefined,
-          ]}>
-          <Symbol name="delete" size="sm" color={theme.danger} />
-          <AppText variant="callout" color="danger" fit>
-            Remove
-          </AppText>
-        </Pressable>
+          style={styles.removeAction}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${itemTitle}`}
+            hitSlop={8}
+            onPress={onRemove}
+            style={({ pressed }) => [
+              styles.removeAction,
+              pressed ? styles.pressed : undefined,
+            ]}>
+            <Symbol name="delete" size="sm" color={theme.danger} />
+            <AppText variant="callout" color="danger" fit>
+              Remove
+            </AppText>
+          </Pressable>
+        </AgentTestId>
       </View>
     </View>
   );

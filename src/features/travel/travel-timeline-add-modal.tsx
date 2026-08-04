@@ -12,7 +12,7 @@ import {
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 type TimelineChoice = {
@@ -73,86 +73,81 @@ function TimelineKindChoice({
     haptics.select();
     onSelect(choice.kind);
   };
-  const agent = useAgentUiTarget(testID, {
-    label: choice.label,
-    onPress: handlePress,
-  });
 
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityHint={`Opens the add ${choice.label.toLowerCase()} form`}
-      accessibilityLabel={choice.label}
-      accessibilityRole="button"
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.choice,
-        {
-          minHeight: Math.max(72, s(76)),
-          gap: rs.md,
-          paddingHorizontal: rs.md,
-          paddingVertical: rs.sm,
-          borderColor: kindBorder(choice.kind, theme),
-          backgroundColor: pressed
-            ? colors.tint
-            : light
-              ? '#FFFEFC'
-              : '#1B1917',
-          borderRadius: Math.max(radii.lg, s(16)),
-          transform: [{ scale: pressed ? 0.99 : 1 }],
-        },
-      ]}>
-      <View
-        style={[
-          styles.choiceIcon,
+    <AgentTestId testID={testID} label={choice.label} onPress={handlePress}>
+      <Pressable
+        accessibilityHint={`Opens the add ${choice.label.toLowerCase()} form`}
+        accessibilityLabel={choice.label}
+        accessibilityRole="button"
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.choice,
           {
-            width: iconSize,
-            height: iconSize,
-            borderRadius: iconSize / 2,
-            backgroundColor: colors.tint,
+            minHeight: Math.max(72, s(76)),
+            gap: rs.md,
+            paddingHorizontal: rs.md,
+            paddingVertical: rs.sm,
+            borderColor: kindBorder(choice.kind, theme),
+            backgroundColor: pressed
+              ? colors.tint
+              : light
+                ? '#FFFEFC'
+                : '#1B1917',
+            borderRadius: Math.max(radii.lg, s(16)),
+            transform: [{ scale: pressed ? 0.99 : 1 }],
           },
         ]}>
+        <View
+          style={[
+            styles.choiceIcon,
+            {
+              width: iconSize,
+              height: iconSize,
+              borderRadius: iconSize / 2,
+              backgroundColor: colors.tint,
+            },
+          ]}>
+          <Symbol
+            name={kindIcon(choice.kind)}
+            size={Math.max(23, s(25))}
+            color={colors.accent}
+          />
+        </View>
+        <View style={[styles.choiceCopy, { gap: ms(3) }]}>
+          <AppText
+            fit
+            numberOfLines={1}
+            style={[
+              styles.choiceTitle,
+              {
+                color: light ? '#251D18' : '#F1E8DF',
+                fontSize: Math.max(18, s(20)),
+                lineHeight: Math.max(23, s(25)),
+              },
+            ]}>
+            {choice.label}
+          </AppText>
+          <AppText
+            numberOfLines={2}
+            style={[
+              styles.choiceDescription,
+              {
+                color: light ? '#6F6861' : '#AAA097',
+                fontSize: Math.max(12.5, s(13.5)),
+                lineHeight: Math.max(17, s(18)),
+              },
+            ]}>
+            {choice.description}
+          </AppText>
+        </View>
         <Symbol
-          name={kindIcon(choice.kind)}
-          size={Math.max(23, s(25))}
+          name="chevron-right"
+          size={Math.max(18, s(19))}
           color={colors.accent}
         />
-      </View>
-      <View style={[styles.choiceCopy, { gap: ms(3) }]}>
-        <AppText
-          fit
-          numberOfLines={1}
-          style={[
-            styles.choiceTitle,
-            {
-              color: light ? '#251D18' : '#F1E8DF',
-              fontSize: Math.max(18, s(20)),
-              lineHeight: Math.max(23, s(25)),
-            },
-          ]}>
-          {choice.label}
-        </AppText>
-        <AppText
-          numberOfLines={2}
-          style={[
-            styles.choiceDescription,
-            {
-              color: light ? '#6F6861' : '#AAA097',
-              fontSize: Math.max(12.5, s(13.5)),
-              lineHeight: Math.max(17, s(18)),
-            },
-          ]}>
-          {choice.description}
-        </AppText>
-      </View>
-      <Symbol
-        name="chevron-right"
-        size={Math.max(18, s(19))}
-        color={colors.accent}
-      />
-    </Pressable>
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -172,21 +167,6 @@ export function TravelTimelineAddModal({
   const closeSize = Math.max(44, s(44));
   const iconSize = Math.max(46, s(48));
   const brandSize = Math.max(44, s(46));
-  const dismissAgent = useAgentUiTarget(
-    visible ? AgentUiIds.travel.timelineAdd.dismiss : undefined,
-    { label: 'Close add to timeline', onPress: onClose },
-  );
-  const closeAgent = useAgentUiTarget(
-    visible ? AgentUiIds.travel.timelineAdd.close : undefined,
-    {
-      label: 'Close add to timeline',
-      onPress: () => {
-        haptics.tap();
-        onClose();
-      },
-    },
-  );
-
   return (
     <Modal
       animationType="slide"
@@ -207,14 +187,17 @@ export function TravelTimelineAddModal({
           pointerEvents="none"
           style={StyleSheet.absoluteFill}
         />
-        <Pressable
-          ref={dismissAgent.ref}
+        <AgentTestId
           testID={AgentUiIds.travel.timelineAdd.dismiss}
-          onLayout={dismissAgent.onLayout}
-          accessibilityLabel="Close add to timeline"
+          label="Close add to timeline"
           onPress={onClose}
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlayScrim }]}
-        />
+          style={StyleSheet.absoluteFill}>
+          <Pressable
+            accessibilityLabel="Close add to timeline"
+            onPress={onClose}
+            style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlayScrim }]}
+          />
+        </AgentTestId>
 
         <View
           accessibilityViewIsModal
@@ -293,35 +276,40 @@ export function TravelTimelineAddModal({
               </AppText>
             </View>
 
-            <Pressable
-              ref={closeAgent.ref}
+            <AgentTestId
               testID={AgentUiIds.travel.timelineAdd.close}
-              onLayout={closeAgent.onLayout}
-              accessibilityLabel="Close add to timeline"
-              accessibilityRole="button"
-              hitSlop={8}
+              label="Close add to timeline"
               onPress={() => {
                 haptics.tap();
                 onClose();
               }}
-              style={({ pressed }) => [
-                styles.close,
-                {
-                  top: rs.md,
-                  right: rs.lg,
-                  width: closeSize,
-                  height: closeSize,
-                  borderRadius: closeSize / 2,
-                  backgroundColor: light ? '#F2EDE6' : '#292520',
-                  opacity: pressed ? 0.68 : 1,
-                },
-              ]}>
-              <Symbol
-                name="close"
-                size={Math.max(19, s(20))}
-                color={light ? '#60472F' : '#D8C4AE'}
-              />
-            </Pressable>
+              style={styles.close}>
+              <Pressable
+                accessibilityLabel="Close add to timeline"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => {
+                  haptics.tap();
+                  onClose();
+                }}
+                style={({ pressed }) => [
+                  {
+                    top: rs.md,
+                    right: rs.lg,
+                    width: closeSize,
+                    height: closeSize,
+                    borderRadius: closeSize / 2,
+                    backgroundColor: light ? '#F2EDE6' : '#292520',
+                    opacity: pressed ? 0.68 : 1,
+                  },
+                ]}>
+                <Symbol
+                  name="close"
+                  size={Math.max(19, s(20))}
+                  color={light ? '#60472F' : '#D8C4AE'}
+                />
+              </Pressable>
+            </AgentTestId>
 
             <View style={{ gap: rs.xs, paddingTop: rs.sm }}>
               {TIMELINE_CHOICES.map((choice) => (

@@ -1,30 +1,30 @@
 import { useState } from 'react';
 
 import {
-  emptyFlightDetailsDraft,
-  flightDetailsDraft,
-  validateFlightDetails,
-  type FlightDetailsDraft,
+    emptyFlightDetailsDraft,
+    flightDetailsDraft,
+    validateFlightDetails,
+    type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
 import {
-  validateFlightSchedule,
-  type FlightScheduleDraft,
+    validateFlightSchedule,
+    type FlightScheduleDraft,
 } from '@/features/travel/flight-schedule';
 import {
-  emptyRentalDetailsDraft,
-  rentalDetailsDraft,
-  validateRentalDetails,
-  type RentalDetailsDraft,
+    emptyRentalDetailsDraft,
+    rentalDetailsDraft,
+    validateRentalDetails,
+    type RentalDetailsDraft,
 } from '@/features/travel/rental-details';
 import {
-  emptyStayDetailsDraft,
-  stayDetailsDraft,
-  validateStayDetails,
-  type StayDetailsDraft,
+    emptyStayDetailsDraft,
+    stayDetailsDraft,
+    validateStayDetails,
+    type StayDetailsDraft,
 } from '@/features/travel/stay-details';
 import {
-  validateTravelRangeSchedule,
-  type TravelRangeScheduleDraft,
+    validateTravelRangeSchedule,
+    type TravelRangeScheduleDraft,
 } from '@/features/travel/travel-range-schedule';
 import type { TravelPlan } from '@/features/travel/types';
 
@@ -45,7 +45,7 @@ export function useTravelPlanItemDetailsEdit({
 }) {
   const [editingFlightItemId, setEditingFlightItemId] = useState<string>();
   const [editedFlightDetails, setEditedFlightDetails] = useState<FlightDetailsDraft>(
-    emptyFlightDetailsDraft,
+    () => emptyFlightDetailsDraft(),
   );
   const [editedFlightDetailsError, setEditedFlightDetailsError] = useState<string>();
   const [editedFlightFileName, setEditedFlightFileName] = useState<string>();

@@ -13,6 +13,7 @@ export function ProviderButton({
   borderColor,
   textColor,
   accessibilityLabel,
+  testID,
 }: PropsWithChildren<{
   icon: ReactNode;
   onPress: () => void;
@@ -21,11 +22,13 @@ export function ProviderButton({
   borderColor: string;
   textColor: string;
   accessibilityLabel: string;
+  testID?: string;
 }>) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      testID={testID}
       accessibilityState={{ disabled, busy: disabled }}
       disabled={disabled}
       onPress={onPress}

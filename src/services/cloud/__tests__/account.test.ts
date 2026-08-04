@@ -44,6 +44,7 @@ describe('provider dispatch and cancellation', () => {
   it('treats browser and native provider cancellation as neutral outcomes', () => {
     expect(isProviderCancellation(new ProviderCancelledError())).toBe(true);
     expect(isProviderCancellation({ code: 'ERR_REQUEST_CANCELED' })).toBe(true);
+    expect(isProviderCancellation({ code: 'ERR_CANCELED' })).toBe(true);
     expect(isProviderCancellation(new Error('network failed'))).toBe(false);
   });
 });

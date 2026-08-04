@@ -1,43 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+    AccessibilityInfo,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 
 import {
-  AppText,
-  Card,
-  DateField,
-  EmptyState,
-  Input,
-  Screen,
-  SectionHeader,
-  Symbol,
+    AppText,
+    Card,
+    DateField,
+    EmptyState,
+    Input,
+    Screen,
+    SectionHeader,
+    Symbol,
 } from '@/components/primitives';
 import { featureFlags } from '@/constants/feature-flags';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { compareOnGoogleFlights } from '@/features/travel/provider';
 import {
-  itinerarySheetChrome,
-  travelInputFieldBackground,
+    itinerarySheetChrome,
+    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
 import {
-  TRAVEL_EDITORIAL_ACCENT,
-  TravelSurfaceCard,
-  travelPageBg,
+    TRAVEL_EDITORIAL_ACCENT,
+    TravelSurfaceCard,
+    travelPageBg,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { formatDateKey } from '@/utils/date';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { goBackOrReplace } from '@/utils/navigation';
 
@@ -244,7 +244,9 @@ export function FlightSearchScreen({
   };
 
   useEffect(() => {
-    if (initialNotice) setError(initialNotice);
+    if (initialNotice) {
+      queueMicrotask(() => setError(initialNotice));
+    }
   }, [initialNotice]);
 
   useEffect(() => {
@@ -349,15 +351,6 @@ export function FlightSearchScreen({
 
   const canCompare =
     !comparing && origin.trim().length >= 3 && destination.trim().length >= 3;
-  const compareAgent = useAgentUiTarget(AgentUiIds.travel.flightSearch.compareGoogle, {
-    label: comparing ? 'Finding nearby airports' : 'Compare on Google Flights',
-    onPress: canCompare
-      ? () => {
-          haptics.tap();
-          void compareFlights();
-        }
-      : undefined,
-  });
   const ctaMinHeight = Math.max(layout.minTapTarget, s(52));
   const ctaColors = light
     ? (['#E0B45A', '#C48A2E', '#9A6520'] as const)
@@ -495,7 +488,7 @@ export function FlightSearchScreen({
             <View style={styles.flex}>
               <Input
                 value={currencyCode}
-                onChangeText={setCurrencyCode}
+                onChangeText={(v) => setCurrencyCode(v.replace(/[^A-Za-z]/g, '').toUpperCase())}
                 icon="currency"
                 stackedLabel="CURRENCY"
                 autoCapitalize="characters"
@@ -520,32 +513,33 @@ export function FlightSearchScreen({
             />
           ) : null}
 
-          <Pressable
-            ref={compareAgent.ref}
+          <AgentTestId
             testID={AgentUiIds.travel.flightSearch.compareGoogle}
-            onLayout={compareAgent.onLayout}
-            accessibilityRole="button"
-            accessibilityLabel={
-              comparing ? 'Finding nearby airports' : 'Compare on Google Flights'
-            }
-            accessibilityState={{ disabled: !canCompare }}
-            disabled={!canCompare}
-            onPress={() => {
-              if (!canCompare) return;
-              haptics.tap();
-              void compareFlights();
-            }}
-            style={({ pressed }) => [
-              styles.ctaWrap,
-              {
-                minHeight: ctaMinHeight,
-                borderRadius: radii.pill,
-                opacity: !canCompare ? 0.45 : pressed ? 0.88 : 1,
-                boxShadow: light
-                  ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
-                  : '0 8px 18px rgba(0, 0, 0, 0.35)',
-              },
-            ]}>
+            label={comparing ? 'Finding nearby airports' : 'Compare on Google Flights'}
+            onPress={canCompare ? () => { haptics.tap(); void compareFlights(); } : undefined}
+            style={styles.ctaWrap}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                comparing ? 'Finding nearby airports' : 'Compare on Google Flights'
+              }
+              accessibilityState={{ disabled: !canCompare }}
+              disabled={!canCompare}
+              onPress={() => {
+                if (!canCompare) return;
+                haptics.tap();
+                void compareFlights();
+              }}
+              style={({ pressed }) => [
+                {
+                  minHeight: ctaMinHeight,
+                  borderRadius: radii.pill,
+                  opacity: !canCompare ? 0.45 : pressed ? 0.88 : 1,
+                  boxShadow: light
+                    ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+                    : '0 8px 18px rgba(0, 0, 0, 0.35)',
+                },
+              ]}>
             <LinearGradient
               colors={[...ctaColors]}
               locations={light ? [0, 0.45, 1] : undefined}
@@ -578,7 +572,8 @@ export function FlightSearchScreen({
                 {comparing ? 'Finding nearby airports…' : 'Compare on Google Flights'}
               </AppText>
             </LinearGradient>
-          </Pressable>
+            </Pressable>
+          </AgentTestId>
         </View>
       </TravelSurfaceCard>
 

@@ -10,7 +10,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export function ItinerarySheetImportCard({
@@ -153,60 +153,57 @@ export function ItinerarySheetSubmitButton({
     haptics.tap();
     onPress();
   };
-  const agent = useAgentUiTarget(testID, { label, onPress: handlePress });
-
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.submitWrap,
-        {
-          opacity: pressed ? 0.86 : 1,
-          minHeight,
-          borderRadius: radii.pill,
-          boxShadow:
-            !flat && editorialGold && theme.name === 'light'
-              ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
-              : undefined,
-        },
-      ]}>
-      <LinearGradient
-        colors={[...colors]}
-        locations={editorialGold && theme.name === 'light' ? [0, 0.45, 1] : undefined}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={[
-          styles.submitGradient,
+    <AgentTestId testID={testID} label={label} onPress={handlePress}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.submitWrap,
           {
+            opacity: pressed ? 0.86 : 1,
             minHeight,
-            paddingHorizontal: rs.lg,
-            gap: icon ? rs.sm : 0,
             borderRadius: radii.pill,
+            boxShadow:
+              !flat && editorialGold && theme.name === 'light'
+                ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
+                : undefined,
           },
         ]}>
-        {icon ? <Symbol name={icon} size="sm" color={chrome.ctaText} /> : null}
-        <AppText
-          variant="callout"
-          fit
-          numberOfLines={1}
+        <LinearGradient
+          colors={[...colors]}
+          locations={editorialGold && theme.name === 'light' ? [0, 0.45, 1] : undefined}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
           style={[
-            styles.submitLabel,
+            styles.submitGradient,
             {
-              color: chrome.ctaText,
-              textAlign: 'center',
-              fontSize: editorialGold ? s(20) : undefined,
-              lineHeight: editorialGold ? s(25) : undefined,
+              minHeight,
+              paddingHorizontal: rs.lg,
+              gap: icon ? rs.sm : 0,
+              borderRadius: radii.pill,
             },
           ]}>
-          {label}
-        </AppText>
-      </LinearGradient>
-    </Pressable>
+          {icon ? <Symbol name={icon} size="sm" color={chrome.ctaText} /> : null}
+          <AppText
+            variant="callout"
+            fit
+            numberOfLines={1}
+            style={[
+              styles.submitLabel,
+              {
+                color: chrome.ctaText,
+                textAlign: 'center',
+                fontSize: editorialGold ? s(20) : undefined,
+                lineHeight: editorialGold ? s(25) : undefined,
+              },
+            ]}>
+            {label}
+          </AppText>
+        </LinearGradient>
+      </Pressable>
+    </AgentTestId>
   );
 }
 

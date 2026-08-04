@@ -1,38 +1,41 @@
-import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppText, DateField, ErrorMessage, Input, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import {
-  itinerarySheetChrome,
-  travelInputFieldBackground,
+    itinerarySheetChrome,
+    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
-  TravelSurfaceCard,
-} from '@/features/travel/travel-surface';
-import {
-  TravelRemoveConfirmModal,
-  type TravelRemoveConfirmPayload,
+    TravelRemoveConfirmModal,
+    type TravelRemoveConfirmPayload,
 } from '@/features/travel/travel-remove-confirm-modal';
+import {
+    TravelSurfaceCard,
+} from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
-import type { TravelPlanDetailsDraft } from './travel-plan-details';
-import type { TravelPlan } from './types';
 import { TravelPlanCoverField } from './travel-plan-cover-field';
+import type { TravelPlan } from './types';
 
-interface TravelPlanDetailsEditorProps extends Omit<TravelPlanDetailsDraft, 'notes'> {
+interface TravelPlanDetailsEditorProps {
   plan: TravelPlan;
+  title: string;
+  destination: string;
+  notes: string;
   startDate: string;
   endDate: string;
   coverUri?: string;
   error?: string;
   onTitleChange: (value: string) => void;
   onDestinationChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   onCoverUriChange: (uri: string | undefined) => void;
@@ -48,12 +51,14 @@ export function TravelPlanDetailsEditor({
   plan,
   title,
   destination,
+  notes,
   startDate,
   endDate,
   coverUri,
   error,
   onTitleChange,
   onDestinationChange,
+  onNotesChange,
   onStartDateChange,
   onEndDateChange,
   onCoverUriChange,
@@ -75,10 +80,6 @@ export function TravelPlanDetailsEditor({
       onConfirm: onDelete,
     });
   };
-  const deleteTripAgent = useAgentUiTarget(AgentUiIds.travel.removeConfirm.open, {
-    label: `Delete ${plan.title}`,
-    onPress: openDeleteTrip,
-  });
   const field = (tone: keyof typeof chrome.icons) => {
     const icon = chrome.icons[tone];
     return {
@@ -200,6 +201,18 @@ export function TravelPlanDetailsEditor({
                 />
               </View>
             </View>
+            <Input
+              value={notes}
+              onChangeText={onNotesChange}
+              icon="note"
+              stackedLabel="Notes"
+              placeholder="Ideas, budgets, must-dos…"
+              multiline
+              textAlignVertical="top"
+              style={{ minHeight: Math.max(32, s(36)) }}
+              accessibilityLabel="Notes"
+              {...field('note')}
+            />
           </View>
 
           {error ? <ErrorMessage message={error} selectable /> : null}
@@ -266,26 +279,29 @@ export function TravelPlanDetailsEditor({
             </Pressable>
           </View>
 
-          <Pressable
-            ref={deleteTripAgent.ref}
+          <AgentTestId
             testID={AgentUiIds.travel.removeConfirm.open}
-            onLayout={deleteTripAgent.onLayout}
-            accessibilityRole="button"
-            accessibilityLabel={`Delete ${plan.title}`}
-            hitSlop={8}
+            label={`Delete ${plan.title}`}
             onPress={openDeleteTrip}
-            style={({ pressed }) => [
-              styles.deleteAction,
-              { gap: rs.xs, opacity: pressed ? 0.7 : 1 },
-            ]}>
-            <Symbol name="delete" size="sm" color={theme.danger} />
-            <AppText
-              style={[styles.deleteLabel, { color: theme.danger }]}
-              fit
-              numberOfLines={1}>
-              Delete Trip
-            </AppText>
-          </Pressable>
+            style={styles.deleteAction}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${plan.title}`}
+              hitSlop={8}
+              onPress={openDeleteTrip}
+              style={({ pressed }) => [
+                styles.deleteAction,
+                { gap: rs.xs, opacity: pressed ? 0.7 : 1 },
+              ]}>
+              <Symbol name="delete" size="sm" color={theme.danger} />
+              <AppText
+                style={[styles.deleteLabel, { color: theme.danger }]}
+                fit
+                numberOfLines={1}>
+                Delete Trip
+              </AppText>
+            </Pressable>
+          </AgentTestId>
         </View>
       </TravelSurfaceCard>
     </View>

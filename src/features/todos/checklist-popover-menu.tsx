@@ -100,6 +100,7 @@ export function ChecklistPopoverMenu({
       ? anchor.y + anchor.height + spacing.sm
       : Math.max(insets.top + spacing.lg, anchor.y - panelHeight - spacing.sm)
     : insets.top + spacing.xxxl;
+  const triggerRef = useRef<View | null>(null);
 
   const agent = useAgentUiTarget(testID, {
     label: accessibilityLabel,
@@ -108,7 +109,7 @@ export function ChecklistPopoverMenu({
 
   const open = () => {
     haptics.select();
-    agent.ref.current?.measureInWindow((x, y, width, height) => {
+    triggerRef.current?.measureInWindow((x, y, width, height) => {
       setAnchor({ x, y, width, height });
       setVisible(true);
     });
@@ -120,7 +121,7 @@ export function ChecklistPopoverMenu({
   return (
     <>
       <Pressable
-        ref={agent.ref}
+        ref={triggerRef}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ expanded: visible }}

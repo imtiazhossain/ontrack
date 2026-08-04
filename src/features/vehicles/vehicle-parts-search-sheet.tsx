@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -25,6 +24,7 @@ import {
   type PartsSearchItem,
 } from '@/services/vehicles';
 import { newUuid } from '@/utils/id';
+import { openHttpsUrl } from '@/utils/safe-url';
 
 export function VehiclePartsSearchSheet({
   vehicle,
@@ -147,7 +147,7 @@ export function VehiclePartsSearchSheet({
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Button
                     variant="secondary"
-                    onPress={() => void Linking.openURL(item.url)}
+                    onPress={() => void openHttpsUrl(item.url)}
                     accessibilityLabel={`Open ${item.vendor}`}>
                     Open
                   </Button>

@@ -1,4 +1,5 @@
 import { Share } from 'react-native';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import {
   avatarMetaFromProfileRow,
@@ -234,6 +235,19 @@ export async function removeFriend(friendUserId: string): Promise<void> {
   if (error) {
     throw new FriendsError(messageFrom(error, 'The friend could not be removed.'));
   }
+}
+
+/** Subscribes to private cache-invalidation events for one user's friend list. */
+export function subscribeToFriendChanges(
+  userId: string,
+  onChange: () => void,
+): RealtimeChannel | undefined {
+  const client = getSupabaseClient();
+  if (!client || !userId) return undefined;
+  return client
+    .channel(`friend:user:${userId}`, { config: { private: true } })
+    .on('broadcast', { event: 'changed' }, onChange)
+    .subscribe();
 }
 
 export function createFriendInviteUrl(pathToken: string, configuredBase?: string): string {

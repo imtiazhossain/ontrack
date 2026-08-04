@@ -89,7 +89,7 @@ export function HomeLocationSheet({
     }
   };
 
-  const useCurrentLocation = async () => {
+  const handleUseCurrentLocation = async () => {
     setDetecting(true);
     setError(undefined);
     try {
@@ -169,7 +169,7 @@ export function HomeLocationSheet({
           }}>
           <Button
             icon="location"
-            onPress={() => void useCurrentLocation()}
+            onPress={() => void handleUseCurrentLocation()}
             loading={detecting}
             disabled={saving}
             testID={AgentUiIds.today.location.useCurrent}

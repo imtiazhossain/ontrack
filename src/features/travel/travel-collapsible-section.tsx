@@ -13,7 +13,7 @@ import {
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId } from '@/utils/agent-ui';
 
 const TRAVEL_HEADER_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.08)';
 
@@ -73,10 +73,6 @@ export function TravelCollapsibleSection({
       ? s(16)
       : Math.max(32, s(32));
   const headerGap = nested ? spacing.xxs : spacing.sm;
-  const addAgent = useAgentUiTarget(addTestID, {
-    label: `Add to ${title}`,
-    onPress: onAddPress,
-  });
 
   return (
     <View
@@ -201,27 +197,29 @@ export function TravelCollapsibleSection({
           )}
         </Pressable>
         {onAddPress ? (
-          <Pressable
-            ref={addAgent.ref}
+          <AgentTestId
             testID={addTestID}
-            onLayout={addAgent.onLayout}
-            accessibilityRole="button"
-            accessibilityLabel={`Add to ${title}`}
+            label={`Add to ${title}`}
             onPress={onAddPress}
-            hitSlop={6}
-            style={[
-              styles.addButton,
-              {
-                minHeight: tap,
-                minWidth: tap,
-                borderRadius: radii.pill,
-                backgroundColor: nested
-                  ? 'transparent'
-                  : travelCardFill(theme),
-              },
-            ]}>
-            <Symbol name="add" size="sm" color={TRAVEL_EDITORIAL_ACCENT} />
-          </Pressable>
+            style={styles.addButton}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Add to ${title}`}
+              onPress={onAddPress}
+              hitSlop={6}
+              style={[
+                {
+                  minHeight: tap,
+                  minWidth: tap,
+                  borderRadius: radii.pill,
+                  backgroundColor: nested
+                    ? 'transparent'
+                    : travelCardFill(theme),
+                },
+              ]}>
+              <Symbol name="add" size="sm" color={TRAVEL_EDITORIAL_ACCENT} />
+            </Pressable>
+          </AgentTestId>
         ) : null}
       </View>
       {expanded ? (

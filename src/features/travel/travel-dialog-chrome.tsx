@@ -29,8 +29,8 @@ export function travelDialogPalette(theme: Theme) {
     closeFg: light ? '#8A6A45' : chrome.closeIcon,
     mountainColor: light ? '#B8956C' : chrome.subtitle,
     /** Terracotta destructive CTA — remove / delete confirms. */
-    dangerFrom: light ? '#C26D55' : '#C47868',
-    dangerTo: light ? '#A85845' : '#B06858',
+    dangerFrom: light ? '#C26D55' : '#E74C3C',
+    dangerTo: light ? '#A85845' : '#C0392B',
     dangerText: '#FFFFFF',
     cancelText: light ? '#9A5A48' : '#E0A090',
   };

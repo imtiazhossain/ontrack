@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefCallback } from 'react';
 import { type LayoutChangeEvent, type View } from 'react-native';
 
 import {
@@ -13,7 +13,7 @@ type AgentUiTargetOptions = {
 };
 
 export type AgentUiTarget = {
-  ref: RefObject<View | null>;
+  ref: RefCallback<View | null>;
   onLayout: ((event?: LayoutChangeEvent) => void) | undefined;
   testID: string | undefined;
 };
@@ -26,7 +26,7 @@ export function useAgentUiTarget(
   testID: string | undefined,
   options: AgentUiTargetOptions = {},
 ): AgentUiTarget {
-  const ref = useRef<View>(null);
+  const ref = useRef<View | null>(null);
   const label = options.label;
   const onPress = options.onPress;
   const enabled = isAgentUiEnabled() && Boolean(testID);
@@ -60,9 +60,13 @@ export function useAgentUiTarget(
     [measureAndRegister],
   );
 
+  const setRef = useCallback<RefCallback<View | null>>((node) => {
+    ref.current = node;
+  }, []);
+
   if (!enabled) {
-    return { ref, onLayout: undefined as undefined, testID };
+    return { ref: setRef, onLayout: undefined as undefined, testID };
   }
 
-  return { ref, onLayout, testID };
+  return { ref: setRef, onLayout, testID };
 }

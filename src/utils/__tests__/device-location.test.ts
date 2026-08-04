@@ -12,6 +12,17 @@ describe('device place address formatting', () => {
     })).toBe('Brooklyn, New York');
   });
 
+  it('prefers a borough or district over a broader city', () => {
+    expect(formatPlaceAddress({
+      city: 'New York',
+      district: 'Brooklyn',
+      subregion: null,
+      region: 'New York',
+      country: 'United States',
+      isoCountryCode: 'US',
+    })).toBe('Brooklyn, New York');
+  });
+
   it('uses city and country for other locations', () => {
     expect(formatPlaceAddress({
       city: 'Lisbon',

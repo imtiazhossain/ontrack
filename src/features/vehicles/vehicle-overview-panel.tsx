@@ -5,7 +5,8 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/types';
 import { vehicleFitmentLabel } from '@/features/vehicles/types';
-import { formatDueLabel } from '@/utils/date';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { formatDateLong } from '@/utils/date';
 
 export function VehicleOverviewPanel({
   vehicle,
@@ -13,6 +14,7 @@ export function VehicleOverviewPanel({
   onOdometerDraftChange,
   onSaveOdometer,
   onDecodeVin,
+  onOpenSettings,
   decoding,
   decodeError,
 }: {
@@ -21,12 +23,17 @@ export function VehicleOverviewPanel({
   onOdometerDraftChange: (value: string) => void;
   onSaveOdometer: () => void;
   onDecodeVin: () => void;
+  onOpenSettings: () => void;
   decoding: boolean;
   decodeError?: string;
 }) {
   const theme = useTheme();
   const { spacing: gap, s } = useResponsive();
   const fitment = vehicleFitmentLabel(vehicle);
+  const settingsTip = useAgentUiTarget(AgentUiIds.vehicles.overviewSettingsTip(vehicle.id), {
+    label: 'Open vehicle settings',
+    onPress: onOpenSettings,
+  });
 
   return (
     <View style={{ gap: gap.lg }}>
@@ -66,10 +73,13 @@ export function VehicleOverviewPanel({
         />
         {vehicle.odometerUpdatedAt ? (
           <AppText variant="caption" color="secondary">
-            Updated {formatDueLabel(vehicle.odometerUpdatedAt.slice(0, 10))}
+            Updated {formatDateLong(vehicle.odometerUpdatedAt.slice(0, 10))}
           </AppText>
         ) : null}
-        <Button onPress={onSaveOdometer} accessibilityLabel="Save odometer">
+        <Button
+          onPress={onSaveOdometer}
+          accessibilityLabel="Save odometer"
+          testID={AgentUiIds.vehicles.saveOdometer}>
           Save mileage
         </Button>
       </View>
@@ -94,7 +104,12 @@ export function VehicleOverviewPanel({
       </View>
 
       <Pressable
+        ref={settingsTip.ref}
+        testID={AgentUiIds.vehicles.overviewSettingsTip(vehicle.id)}
+        onLayout={settingsTip.onLayout}
+        onPress={onOpenSettings}
         accessibilityRole="button"
+        accessibilityLabel="Open vehicle settings"
         style={{
           minHeight: Math.max(44, s(48)),
           borderRadius: s(14),

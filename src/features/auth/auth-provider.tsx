@@ -283,6 +283,7 @@ export function AuthSessionProvider({
       } catch (providerError) {
         if (isProviderCancellation(providerError)) {
           useAuthAccess.getState().cancelAuthUpgrade();
+          setError(undefined);
           setPhase(useAuthAccess.getState().guestEnabled ? 'guest' : 'welcome');
         } else {
           const currentSession = await getSupabaseClient()?.auth.getSession();

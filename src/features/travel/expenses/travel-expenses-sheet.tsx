@@ -1,71 +1,71 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
+    Pressable,
+    StyleSheet,
+    View,
+    type StyleProp,
+    type ViewStyle,
 } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  Symbol,
+    AppText,
+    Button,
+    Symbol,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { appTextStyle, radii, spacing } from '@/design-system';
 import {
-  buildExpenseFromForm,
-  emptyExpenseForm,
-  expenseFormFromExpense,
-  TravelExpenseForm,
-  type ExpenseFormState,
+    buildExpenseFromForm,
+    emptyExpenseForm,
+    expenseFormFromExpense,
+    TravelExpenseForm,
+    type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
 import {
-  expenseInBase,
-  expensePayerLabel,
-  expensePeople,
-  personName,
-  removeTravelExpense,
-  settleBalances,
-  settleTransfers,
-  totalInBase,
-  upsertTravelExpense,
+    expenseInBase,
+    expensePayerLabel,
+    expensePeople,
+    personName,
+    removeTravelExpense,
+    settleBalances,
+    settleTransfers,
+    totalInBase,
+    upsertTravelExpense,
 } from '@/features/travel/expenses/expense-math';
 import { formatMoney } from '@/features/travel/expenses/format-money';
 import { loadFxRates, type FxRates } from '@/features/travel/expenses/fx-rates';
 import {
-  flightExpenseDisplayTitle,
-  isRoundTripFlightExpense,
-  withRoundTripFlightExpenseTitles,
+    flightExpenseDisplayTitle,
+    isRoundTripFlightExpense,
+    withRoundTripFlightExpenseTitles,
 } from '@/features/travel/flight-expense-title';
-import {
-  TRAVEL_EXPENSE_SELF_ID,
-  type TravelExpense,
-  type TravelExpenseCategory,
-  type TravelItemKind,
-  type TravelPlan,
-} from '@/features/travel/types';
-import { kindChrome } from '@/features/travel/travel-kind-chrome';
-import {
-  travelAccent,
-  TravelSectionLabel,
-  TravelSurfaceCard,
-} from '@/features/travel/travel-surface';
-import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
+import { kindChrome } from '@/features/travel/travel-kind-chrome';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
+import {
+    travelAccent,
+    TravelSectionLabel,
+    TravelSurfaceCard,
+} from '@/features/travel/travel-surface';
+import {
+    TRAVEL_EXPENSE_SELF_ID,
+    type TravelExpense,
+    type TravelExpenseCategory,
+    type TravelItemKind,
+    type TravelPlan,
+} from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  publishTravelTripExpenses,
-  pullTravelTripExpenses,
-  isTravelExpenseMemberPlan,
-  shouldSyncTravelExpenses,
+    isTravelExpenseMemberPlan,
+    publishTravelTripExpenses,
+    pullTravelTripExpenses,
+    shouldSyncTravelExpenses,
 } from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 const CATEGORY_ICONS: Record<TravelExpenseCategory, AppIconName> = {
   flight: 'flight',
@@ -131,6 +131,7 @@ export function TravelExpensesSheet({
   const hasLocalExpenseEditsRef = useRef(false);
   const formRef = useRef<ExpenseFormState | undefined>(undefined);
   const editingExpenseIdRef = useRef<string | undefined>(undefined);
+  const repairAppliedRef = useRef<string | null>(null);
 
   useEffect(() => {
     formRef.current = form;
@@ -159,16 +160,25 @@ export function TravelExpensesSheet({
   useEffect(() => {
     if (!visible) return;
     if (initialForm) {
-      setForm(initialForm);
-      setEditingExpenseId(initialForm.existing?.id);
+      queueMicrotask(() => {
+        setForm(initialForm);
+        setEditingExpenseId(initialForm.existing?.id);
+      });
     }
   }, [visible, initialForm]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      repairAppliedRef.current = null;
+      return;
+    }
+    if (repairAppliedRef.current === plan.id) return;
     const next = withRoundTripFlightExpenseTitles(plan);
-    if (next !== plan) onSavePlan(next);
-  }, [visible, plan, onSavePlan]);
+    if (next !== plan) {
+      repairAppliedRef.current = plan.id;
+      onSavePlan(next);
+    }
+  }, [visible, plan.id, onSavePlan]);
 
   useEffect(() => {
     if (!visible || !shouldSyncTravelExpenses(plan)) return;
@@ -537,18 +547,16 @@ function ExpenseRowButton({
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 }) {
-  const agent = useAgentUiTarget(testID, { label, onPress });
   return (
-    <Pressable
-      ref={agent.ref}
-      testID={testID}
-      onLayout={agent.onLayout}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [style, pressed ? styles.pressed : undefined]}>
-      {children}
-    </Pressable>
+    <AgentTestId testID={testID} label={label} onPress={onPress} style={style}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        style={({ pressed }) => [pressed ? styles.pressed : undefined]}>
+        {children}
+      </Pressable>
+    </AgentTestId>
   );
 }
 

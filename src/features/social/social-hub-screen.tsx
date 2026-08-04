@@ -1,78 +1,104 @@
-import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 
-import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  EmptyState,
-  ErrorMessage,
-  Input,
-  LoadingBlock,
-  Screen,
-  SectionHeader,
-} from '@/components/primitives';
+import { appPrompt, ErrorMessage, Screen } from '@/components/primitives';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { ProfileAvatar } from '@/features/account/profile-avatar';
-import { radii } from '@/design-system';
+import { SocialActionModal } from '@/features/social/social-action-modal';
+import { SocialActivityFeed } from '@/features/social/social-feed';
+import { buildSocialFeedItems } from '@/features/social/social-feed-model';
+import { socialChrome } from '@/features/social/social-chrome';
+import {
+  SocialFriendsCard,
+  SocialHeader,
+  SocialQuickActions,
+  SocialUpcomingTogether,
+} from '@/features/social/social-hub-sections';
+import {
+  SocialFriendsModal,
+  type SocialFriendsModalMode,
+} from '@/features/social/social-friends-modal';
+import { socialTripMemberships } from '@/features/social/social-trip-membership';
+import type {
+  SocialFeedItem,
+  SocialPlaceholder,
+  SocialQuickActionId,
+} from '@/features/social/social-types';
+import { shareTravelPlan } from '@/features/travel/share';
+import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useFriendsRealtime } from '@/hooks/use-friends-realtime';
 import { useTheme } from '@/hooks/use-theme';
 import {
   createFriendInviteUrl,
   getMyFriendInvite,
   setFriendInviteSlug,
   shareFriendInvite,
+  type FriendProfile,
+  type FriendRequestItem,
   type MyFriendInvite,
 } from '@/services/friends';
 import { useFriends } from '@/store/friends';
+import { usePreferences } from '@/store/preferences';
+import { useTravel } from '@/store/travel';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { newId } from '@/utils/id';
 
-/** App-level friends hub: list, requests, and invite. */
+/** Social hub backed by the existing friend, profile, and travel stores. */
 export function SocialHubScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { spacing, s, typography } = useResponsive();
+  const chrome = socialChrome(theme);
+  const { spacing } = useResponsive();
   const { user, isGuest } = useAuthSession();
+  const selfName = usePreferences((state) => state.name).trim() || 'You';
   const friends = useFriends((state) => state.friends);
   const incoming = useFriends((state) => state.incoming);
   const outgoing = useFriends((state) => state.outgoing);
   const loading = useFriends((state) => state.loading);
   const error = useFriends((state) => state.error);
+  const lastLoadedAt = useFriends((state) => state.lastLoadedAt);
   const hydrate = useFriends((state) => state.hydrate);
+  const refreshFriends = useFriends((state) => state.refresh);
   const sendRequest = useFriends((state) => state.sendRequest);
   const acceptRequest = useFriends((state) => state.acceptRequest);
   const declineRequest = useFriends((state) => state.declineRequest);
   const cancelRequest = useFriends((state) => state.cancelRequest);
-  const remove = useFriends((state) => state.remove);
+  const removeFriend = useFriends((state) => state.remove);
+  const plans = useTravel((state) => state.plans);
+  const savePlan = useTravel((state) => state.savePlan);
 
+  const [friendsModalVisible, setFriendsModalVisible] = useState(false);
+  const [friendsModalMode, setFriendsModalMode] = useState<SocialFriendsModalMode>('add');
   const [email, setEmail] = useState('');
   const [working, setWorking] = useState<string>();
   const [localError, setLocalError] = useState<string>();
   const [invite, setInvite] = useState<MyFriendInvite>();
   const [slugDraft, setSlugDraft] = useState('');
+  const [placeholder, setPlaceholder] = useState<SocialPlaceholder>();
+  const [placeholderPrimary, setPlaceholderPrimary] = useState<() => void>();
 
   const signedIn = Boolean(user) && !isGuest;
+  useFriendsRealtime(signedIn ? user?.id : undefined);
   const shareBase =
     process.env.EXPO_PUBLIC_FRIEND_SHARE_BASE_URL ??
     process.env.EXPO_PUBLIC_TODO_SHARE_BASE_URL;
   const inviteUrl = invite
     ? createFriendInviteUrl(invite.sharePath, shareBase)
     : undefined;
-
-  const loadInvite = useCallback(async () => {
-    const next = await getMyFriendInvite();
-    setInvite(next);
-    setSlugDraft(next.slug ?? '');
-  }, []);
-
-  useEffect(() => {
-    if (!signedIn) return;
-    void hydrate({ email: user?.email ?? undefined });
-    void loadInvite().catch(() => undefined);
-  }, [hydrate, loadInvite, signedIn, user?.email]);
+  const feedItems = useMemo(
+    () =>
+      buildSocialFeedItems({
+        friends,
+        plans,
+        self: {
+          userId: user?.id ?? 'self',
+          displayName: selfName,
+          email: user?.email ?? '',
+        },
+      }),
+    [friends, plans, selfName, user?.email, user?.id],
+  );
 
   const run = useCallback(async (key: string, action: () => Promise<void>) => {
     setWorking(key);
@@ -88,345 +114,450 @@ export function SocialHubScreen() {
     }
   }, []);
 
-  if (!signedIn) {
-    return (
-      <Screen refresh={false}>
-        <AppText variant="title" style={{ marginBottom: spacing.sm }}>
-          Social
-        </AppText>
-        <EmptyState
-          icon="people"
-          title="Sign in to add friends"
-          message="Friends are available across trips, checklists, vehicles, and more once you sign in with Google or Apple."
-          actionLabel="Sign In"
-          onAction={() =>
-            router.push({
-              pathname: '/account',
-              params: { returnTo: '/(tabs)/social' },
-            } as never)
-          }
-        />
-      </Screen>
+  const loadInvite = useCallback(async () => {
+    const next = await getMyFriendInvite();
+    setInvite(next);
+    setSlugDraft(next.slug ?? '');
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    if (!lastLoadedAt && !loading) {
+      void hydrate({ email: user?.email ?? undefined });
+    }
+    if (!invite) void loadInvite().catch(() => undefined);
+  }, [hydrate, invite, lastLoadedAt, loadInvite, loading, signedIn, user?.email]);
+
+  const refreshSocial = useCallback(async () => {
+    if (!signedIn) return;
+    await Promise.all([refreshFriends(), loadInvite()]);
+  }, [loadInvite, refreshFriends, signedIn]);
+
+  const openFriends = useCallback((mode: SocialFriendsModalMode) => {
+    setFriendsModalMode(mode);
+    setFriendsModalVisible(true);
+  }, []);
+
+  const showPlaceholder = useCallback(
+    (content: SocialPlaceholder, primary?: () => void) => {
+      setPlaceholder(content);
+      setPlaceholderPrimary(() => primary);
+    },
+    [],
+  );
+
+  const closePlaceholder = useCallback(() => {
+    setPlaceholder(undefined);
+    setPlaceholderPrimary(undefined);
+  }, []);
+
+  const openPlan = useCallback(
+    (plan: TravelPlan) => {
+      router.navigate({ pathname: '/(tabs)/travel', params: { tripId: plan.id } } as never);
+    },
+    [router],
+  );
+
+  const goToSignIn = useCallback(() => {
+    setFriendsModalVisible(false);
+    router.push({
+      pathname: '/account',
+      params: { returnTo: '/(tabs)/social' },
+    } as never);
+  }, [router]);
+
+  const addFriendToTrip = useCallback(
+    async (friend: FriendProfile, planIndex: number) => {
+      const plan = plans[planIndex];
+      if (!plan) return;
+      const alreadyInvited = plan.participants.some(
+        (participant) =>
+          participant.email?.toLowerCase() === friend.email.toLowerCase(),
+      );
+      if (alreadyInvited) {
+        appPrompt.alert(
+          'Already Invited',
+          `${friend.displayName} is already on the invitation list for ${plan.title}.`,
+        );
+        return;
+      }
+
+      await run(`travel-${friend.userId}-${plan.id}`, async () => {
+        const code = await shareTravelPlan(plan, {
+          name: friend.displayName,
+          email: friend.email,
+        });
+        if (!code) return;
+        const now = new Date().toISOString();
+        savePlan({
+          ...plan,
+          participants: [
+            ...plan.participants,
+            {
+              id: newId('trip-person'),
+              name: friend.displayName,
+              email: friend.email,
+              inviteCode: code,
+              invitedAt: now,
+            },
+          ],
+          updatedAt: now,
+        });
+        appPrompt.alert(
+          'Invitation Ready',
+          `${friend.displayName} was added to ${plan.title}.`,
+        );
+      });
+    },
+    [plans, run, savePlan],
+  );
+
+  const chooseTripForFriend = useCallback(
+    (friend: FriendProfile) => {
+      if (plans.length === 0) {
+        appPrompt.alert('No Trips Yet', 'Create a trip first, then invite friends from here.', [
+          {
+            text: 'Go to Travel',
+            onPress: () => {
+              setFriendsModalVisible(false);
+              closePlaceholder();
+              router.push('/(tabs)/travel' as never);
+            },
+          },
+          { text: 'Not Now', style: 'cancel' },
+        ]);
+        return;
+      }
+      const options = [...plans.map((plan) => plan.title), 'Cancel'];
+      const select = (index: number) => {
+        if (index < plans.length) void addFriendToTrip(friend, index);
+      };
+      if (Platform.OS === 'ios') {
+        appPrompt.actionSheet(
+          {
+            title: `Add ${friend.displayName} to…`,
+            options,
+            cancelButtonIndex: plans.length,
+          },
+          select,
+        );
+      } else {
+        appPrompt.alert(`Add ${friend.displayName} to…`, undefined, [
+          ...plans.map((plan, index) => ({
+            text: plan.title,
+            onPress: () => void addFriendToTrip(friend, index),
+          })),
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      }
+    },
+    [addFriendToTrip, closePlaceholder, plans, router],
+  );
+
+  const openFriendProfile = useCallback(
+    (friend: FriendProfile) => {
+      const memberships = socialTripMemberships(friend, plans);
+      const sharedTrips = memberships.filter((membership) => membership.status === 'member');
+      const pendingTrips = memberships.filter((membership) => membership.status === 'invited');
+      const firstShared = sharedTrips[0]?.plan;
+      const firstPending = pendingTrips[0]?.plan;
+      const sharedTripNames = sharedTrips.map(({ plan }) => plan.title).join(', ');
+      const pendingTripNames = pendingTrips.map(({ plan }) => plan.title).join(', ');
+
+      if (firstShared) {
+        const sharedCount = sharedTrips.length;
+        showPlaceholder(
+          {
+            id: `friend-${friend.userId}`,
+            title: friend.displayName,
+            message: `${friend.email}\nYou’re connected through onTrack and already traveling together.`,
+            icon: 'people',
+            statusTitle: `${sharedCount} shared ${sharedCount === 1 ? 'trip' : 'trips'}`,
+            statusMessage: sharedTripNames,
+            primaryLabel: sharedCount === 1 ? `Open ${firstShared.title}` : 'View Shared Trips',
+          },
+          () => {
+            closePlaceholder();
+            if (sharedCount === 1) openPlan(firstShared);
+            else router.push('/(tabs)/travel' as never);
+          },
+        );
+        return;
+      }
+
+      if (firstPending) {
+        showPlaceholder(
+          {
+            id: `friend-${friend.userId}`,
+            title: friend.displayName,
+            message: `${friend.email}\nYou’re connected through onTrack.`,
+            icon: 'people',
+            statusTitle: 'Trip invitation pending',
+            statusMessage: pendingTripNames,
+            primaryLabel: `Open ${firstPending.title}`,
+          },
+          () => {
+            closePlaceholder();
+            openPlan(firstPending);
+          },
+        );
+        return;
+      }
+
+      showPlaceholder(
+        {
+          id: `friend-${friend.userId}`,
+          title: friend.displayName,
+          message: `${friend.email}\nConnected through onTrack. Shared plans and invitations stay attached to this friendship.`,
+          icon: 'people',
+          primaryLabel: 'Invite to a Trip',
+          statusTitle: 'Connected',
+          statusMessage: 'Invite this friend into a trip or shared plan whenever you’re ready.',
+        },
+        () => {
+          closePlaceholder();
+          chooseTripForFriend(friend);
+        },
+      );
+    },
+    [chooseTripForFriend, closePlaceholder, openPlan, plans, router, showPlaceholder],
+  );
+
+  const openMessages = useCallback(() => {
+    const chatPlan = plans.find(
+      (plan) => plan.participants.length > 0 || Boolean(plan.chatAccessCode),
     );
-  }
+    if (chatPlan) {
+      router.push({ pathname: '/travel/[id]/chat', params: { id: chatPlan.id } } as never);
+      return;
+    }
+    showPlaceholder(
+      {
+        id: 'messages',
+        title: 'Messages',
+        message: 'No conversations yet. Invite friends to a trip to open your first shared group chat.',
+        icon: 'chat',
+        primaryLabel: 'Open Travel',
+      },
+      () => {
+        closePlaceholder();
+        router.push('/(tabs)/travel' as never);
+      },
+    );
+  }, [closePlaceholder, plans, router, showPlaceholder]);
+
+  const handleQuickAction = useCallback(
+    (action: SocialQuickActionId) => {
+      const routes: Partial<Record<SocialQuickActionId, string>> = {
+        challenge: '/(tabs)/games',
+        'share-calendar': '/(tabs)/calendar',
+        'share-todos': '/(tabs)/to-do',
+        'share-workout': '/(tabs)/workouts',
+      };
+      const route = routes[action];
+      if (route) {
+        router.push(route as never);
+        return;
+      }
+      if (action === 'invite-trip') {
+        openFriends('trip');
+        return;
+      }
+      if (action === 'chat') {
+        openMessages();
+        return;
+      }
+      if (action === 'share-photos') {
+        const plan = plans[0];
+        if (plan) {
+          router.push({ pathname: '/travel/[id]', params: { id: plan.id } } as never);
+        } else {
+          router.push('/(tabs)/travel' as never);
+        }
+        return;
+      }
+
+      const placeholders: Record<'share-story' | 'poll' | 'create-group', SocialPlaceholder> = {
+        'share-story': {
+          id: 'story',
+          title: 'Share a Story',
+          message: 'No story is live right now. Story creation is ready for temporary photos and moments from your circle.',
+          icon: 'plus-circle',
+        },
+        poll: {
+          id: 'poll',
+          title: 'Poll / Vote',
+          message: 'No polls are waiting for your vote. New group polls will appear here and in the activity feed.',
+          icon: 'insights',
+        },
+        'create-group': {
+          id: 'group',
+          title: 'Create a Group',
+          message: 'You have no standalone groups yet. Shared trip groups and their chats already work through Travel.',
+          icon: 'people',
+          primaryLabel: 'Open Travel',
+        },
+      };
+      const content = placeholders[action as keyof typeof placeholders];
+      showPlaceholder(
+        content,
+        action === 'create-group'
+          ? () => {
+              closePlaceholder();
+              router.push('/(tabs)/travel' as never);
+            }
+          : undefined,
+      );
+    },
+    [closePlaceholder, openFriends, openMessages, plans, router, showPlaceholder],
+  );
+
+  const openFeedItem = useCallback(
+    (item: SocialFeedItem) => {
+      if (item.kind === 'trip' || item.kind === 'photos') {
+        router.push({ pathname: '/travel/[id]', params: { id: item.tripId } } as never);
+        return;
+      }
+      if (item.kind === 'connection') {
+        const friend = friends.find((entry) => entry.userId === item.actor.userId);
+        if (friend) openFriendProfile(friend);
+        return;
+      }
+      showPlaceholder({
+        id: `feed-${item.id}`,
+        title: item.kind === 'workout' ? item.workoutTitle : item.kind === 'story' ? 'Story' : 'Poll',
+        message: 'This shared update is ready to open once its social service is connected.',
+        icon: item.kind === 'workout' ? 'gym' : item.kind === 'story' ? 'photo' : 'insights',
+      });
+    },
+    [friends, openFriendProfile, router, showPlaceholder],
+  );
+
+  const remove = useCallback(
+    (friend: FriendProfile) => {
+      void confirmDestructiveAction({
+        title: 'Remove Friend?',
+        message: `${friend.displayName} will be removed from your friends list. Shared trips and lists stay as they are.`,
+        actionLabel: 'Remove',
+        onConfirm: () =>
+          void run(`remove-${friend.userId}`, () => removeFriend(friend.userId)),
+      });
+    },
+    [removeFriend, run],
+  );
+
+  const accept = useCallback(
+    (request: FriendRequestItem) => {
+      void run(`accept-${request.id}`, () => acceptRequest(request.id));
+    },
+    [acceptRequest, run],
+  );
+  const decline = useCallback(
+    (request: FriendRequestItem) => {
+      void run(`decline-${request.id}`, () => declineRequest(request.id));
+    },
+    [declineRequest, run],
+  );
+  const cancel = useCallback(
+    (request: FriendRequestItem) => {
+      void run(`cancel-${request.id}`, () => cancelRequest(request.id));
+    },
+    [cancelRequest, run],
+  );
 
   return (
-    <Screen onRefresh={loadInvite}>
-      <View style={[styles.titleRow, { marginBottom: spacing.md }]}>
-        <View style={styles.titleCopy}>
-          <AppText variant="title" fit>
-            Social
-          </AppText>
-          <AppText variant="callout" color="secondary" numberOfLines={2}>
-            Add friends once, then invite them to trips, checklists, and more.
-          </AppText>
-        </View>
-      </View>
-
-      {(localError || error) && (
-        <ErrorMessage message={localError ?? error ?? ''} />
-      )}
-
-      <Card style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-        <AppText variant="subheading" fit>
-          Your Invite Link
-        </AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={2}>
-          Pick a short name so friends can open ontrack--links.expo.app/f/yourname
-        </AppText>
-        <View style={[styles.slugRow, { gap: spacing.sm }]}>
-          <AppText
-            variant="caption"
-            color="tertiary"
-            fit
-            style={[styles.slugPrefix, { fontSize: typography.caption.fontSize }]}>
-            /f/
-          </AppText>
-          <View style={styles.slugField}>
-            <Input
-              label="Custom link name"
-              value={slugDraft}
-              onChangeText={(value) =>
-                setSlugDraft(value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-              }
-              placeholder="yourname"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="off"
-            />
-          </View>
-        </View>
-        <Button
-          variant="secondary"
-          disabled={Boolean(working) || slugDraft === (invite?.slug ?? '')}
-          onPress={() =>
-            void run('slug', async () => {
-              const saved = await setFriendInviteSlug(slugDraft || null);
-              await loadInvite();
-              appPrompt.alert(
-                saved ? 'Link Updated' : 'Custom Link Cleared',
-                saved
-                  ? `Friends can use /f/${saved}`
-                  : 'Sharing will use a private invite code until you set a name again.',
-              );
-            })
-          }>
-          {working === 'slug' ? 'Saving…' : 'Save Link Name'}
-        </Button>
-        {inviteUrl ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Copy invite link"
-            onPress={() => {
-              void Clipboard.setStringAsync(inviteUrl);
-              appPrompt.alert('Copied', 'Invite link copied to the clipboard.');
-            }}>
-            <AppText variant="caption" color="accent" numberOfLines={2}>
-              {inviteUrl}
-            </AppText>
-          </Pressable>
-        ) : null}
-        <Button
-          icon="people"
-          disabled={Boolean(working)}
-          onPress={() =>
-            void run('link', async () => {
-              const next = await getMyFriendInvite();
-              setInvite(next);
-              setSlugDraft(next.slug ?? '');
-              await shareFriendInvite(next.sharePath);
-            })
-          }>
-          {working === 'link' ? 'Preparing…' : 'Share Invite Link'}
-        </Button>
-      </Card>
-
-      <Card style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-        <AppText variant="subheading" fit>
-          Add a Friend
-        </AppText>
-        <Input
-          label="Account email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="friend@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
+    <>
+      <Screen
+        refresh={signedIn}
+        onRefresh={refreshSocial}
+        style={{ backgroundColor: chrome.background }}
+        contentStyle={{ gap: spacing.xl }}>
+        <SocialHeader
+          pendingCount={incoming.length}
+          onAddFriend={() => openFriends('add')}
+          onMessages={openMessages}
         />
-        <Button
-          icon="invite"
-          disabled={!email.trim() || Boolean(working)}
-          onPress={() =>
-            void run('send', async () => {
-              await sendRequest(email);
-              setEmail('');
-              appPrompt.alert(
-                'Request Sent',
-                'They will see it in Social when signed in with that email.',
-              );
-            })
-          }>
-          {working === 'send' ? 'Sending…' : 'Send Request'}
-        </Button>
-      </Card>
 
-      {incoming.length > 0 ? (
-        <>
-          <SectionHeader title="Requests" detail={`${incoming.length}`} />
-          <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-            {incoming.map((request) => (
-              <Card
-                key={request.id}
-                style={{
-                  gap: spacing.sm,
-                  paddingVertical: spacing.md,
-                }}>
-                <View style={styles.rowCopy}>
-                  <AppText variant="callout" fit>
-                    {request.otherDisplayName}
-                  </AppText>
-                  <AppText variant="caption" color="secondary" fit>
-                    {request.otherEmail || 'Wants to be friends'}
-                  </AppText>
-                </View>
-                <View style={[styles.actions, { gap: spacing.sm }]}>
-                  <Button
-                    style={styles.actionBtn}
-                    disabled={Boolean(working)}
-                    onPress={() =>
-                      void run(`accept-${request.id}`, () =>
-                        acceptRequest(request.id),
-                      )
-                    }>
-                    Accept
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    style={styles.actionBtn}
-                    disabled={Boolean(working)}
-                    onPress={() =>
-                      void run(`decline-${request.id}`, () =>
-                        declineRequest(request.id),
-                      )
-                    }>
-                    Decline
-                  </Button>
-                </View>
-              </Card>
-            ))}
-          </View>
-        </>
-      ) : null}
+        {localError || error ? <ErrorMessage message={localError ?? error ?? ''} /> : null}
 
-      {outgoing.length > 0 ? (
-        <>
-          <SectionHeader title="Outgoing" detail={`${outgoing.length}`} />
-          <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-            {outgoing.map((request) => (
-              <View
-                key={request.id}
-                style={[
-                  styles.pendingRow,
-                  {
-                    minHeight: Math.max(44, s(48)),
-                    borderColor: theme.separator,
-                    backgroundColor: theme.backgroundSecondary,
-                    paddingHorizontal: spacing.md,
-                    gap: spacing.md,
-                  },
-                ]}>
-                <View style={styles.rowCopy}>
-                  <AppText variant="callout" fit>
-                    {request.otherDisplayName}
-                  </AppText>
-                  <AppText variant="caption" color="secondary" fit>
-                    {request.otherEmail}
-                  </AppText>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Cancel request to ${request.otherDisplayName}`}
-                  disabled={Boolean(working)}
-                  onPress={() =>
-                    void run(`cancel-${request.id}`, () =>
-                      cancelRequest(request.id),
-                    )
-                  }>
-                  <AppText variant="caption" color="danger" fit>
-                    Cancel
-                  </AppText>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      <SectionHeader title="Friends" detail={`${friends.length}`} />
-      {loading && friends.length === 0 ? (
-        <LoadingBlock label="Loading friends…" />
-      ) : friends.length === 0 ? (
-        <EmptyState
-          icon="people"
-          title="No friends yet"
-          message="Send a request by email or share your invite link."
+        <SocialFriendsCard
+          friends={friends}
+          loading={loading}
+          onAddFriend={() => openFriends('add')}
+          onSeeAll={() => openFriends('all')}
+          onOpenFriend={openFriendProfile}
         />
-      ) : (
-        <View style={{ gap: spacing.sm }}>
-          {friends.map((friend) => (
-            <View
-              key={friend.userId}
-              style={[
-                styles.pendingRow,
-                {
-                  minHeight: Math.max(52, s(56)),
-                  borderColor: theme.separator,
-                  backgroundColor: theme.backgroundSecondary,
-                  paddingHorizontal: spacing.md,
-                  gap: spacing.md,
-                },
-              ]}>
-              <ProfileAvatar
-                displayName={friend.displayName}
-                userId={friend.userId}
-                size={Math.max(40, s(40))}
-              />
-              <View style={styles.rowCopy}>
-                <AppText variant="callout" fit>
-                  {friend.displayName}
-                </AppText>
-                <AppText variant="caption" color="secondary" fit>
-                  {friend.email}
-                </AppText>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${friend.displayName}`}
-                disabled={Boolean(working)}
-                onPress={() => {
-                  void confirmDestructiveAction({
-                    title: 'Remove Friend?',
-                    message: `${friend.displayName} will be removed from your friends list. Shared trips and lists stay as they are.`,
-                    actionLabel: 'Remove',
-                    onConfirm: () =>
-                      void run(`remove-${friend.userId}`, () =>
-                        remove(friend.userId),
-                      ),
-                  });
-                }}>
-                <AppText variant="caption" color="danger" fit>
-                  Remove
-                </AppText>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
-    </Screen>
+
+        <SocialQuickActions onAction={handleQuickAction} />
+
+        <SocialUpcomingTogether
+          plans={plans}
+          friends={friends}
+          selfName={selfName}
+          onSeeAll={() => router.push('/(tabs)/travel' as never)}
+          onOpenPlan={openPlan}
+        />
+
+        <SocialActivityFeed items={feedItems} onOpenItem={openFeedItem} />
+      </Screen>
+
+      <SocialFriendsModal
+        visible={friendsModalVisible}
+        mode={friendsModalMode}
+        signedIn={signedIn}
+        friends={friends}
+        incoming={incoming}
+        outgoing={outgoing}
+        loading={loading}
+        working={working}
+        error={localError ?? error}
+        email={email}
+        inviteUrl={inviteUrl}
+        slugDraft={slugDraft}
+        savedSlug={invite?.slug}
+        onClose={() => setFriendsModalVisible(false)}
+        onSignIn={goToSignIn}
+        onEmailChange={setEmail}
+        onSlugChange={(value) => setSlugDraft(value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+        onSendRequest={() =>
+          void run('send', async () => {
+            await sendRequest(email);
+            setEmail('');
+            appPrompt.alert('Request Sent', 'They will see it in Social when they sign in.');
+          })
+        }
+        onSaveSlug={() =>
+          void run('slug', async () => {
+            const saved = await setFriendInviteSlug(slugDraft || null);
+            await loadInvite();
+            appPrompt.alert(
+              saved ? 'Link Updated' : 'Custom Link Cleared',
+              saved
+                ? `Friends can use /f/${saved}`
+                : 'Sharing will use a private invite code until you set a name again.',
+            );
+          })
+        }
+        onShareInvite={() =>
+          void run('link', async () => {
+            const next = await getMyFriendInvite();
+            setInvite(next);
+            setSlugDraft(next.slug ?? '');
+            await shareFriendInvite(next.sharePath);
+          })
+        }
+        onAccept={accept}
+        onDecline={decline}
+        onCancel={cancel}
+        onAddToTrip={chooseTripForFriend}
+        onRemove={remove}
+      />
+
+      <SocialActionModal
+        content={placeholder}
+        onClose={closePlaceholder}
+        onPrimary={placeholderPrimary}
+      />
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  titleCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  slugRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  slugPrefix: {
-    flexShrink: 0,
-    paddingBottom: 14,
-  },
-  slugField: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
-  },
-  rowCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-  },
-  actionBtn: {
-    flex: 1,
-  },
-});

@@ -37,6 +37,10 @@ export type PersistJpegOptions = {
   fileStem: string;
 };
 
+function shouldPersistNativeImage(uri: string): boolean {
+  return Platform.OS !== 'web' && !uri.startsWith('ontrack-media:');
+}
+
 /**
  * Re-encode a picker/camera file into durable app documents storage.
  * Temporary OS cache URIs must not be persisted in store state.
@@ -45,7 +49,7 @@ export async function persistJpegToDocuments(
   photoUri: string,
   options: PersistJpegOptions,
 ): Promise<string> {
-  if (Platform.OS === 'web' || !photoUri.startsWith('file://')) return photoUri;
+  if (!shouldPersistNativeImage(photoUri)) return photoUri;
   const result = await ImageManipulator.manipulateAsync(
     photoUri,
     [{ resize: { width: options.width } }],
@@ -67,7 +71,7 @@ export async function persistJpegToDocumentsWithSize(
   photoUri: string,
   options: PersistJpegOptions,
 ): Promise<{ uri: string; width: number; height: number }> {
-  if (Platform.OS === 'web' || !photoUri.startsWith('file://')) {
+  if (!shouldPersistNativeImage(photoUri)) {
     return { uri: photoUri, width: 1, height: 1 };
   }
   const result = await ImageManipulator.manipulateAsync(

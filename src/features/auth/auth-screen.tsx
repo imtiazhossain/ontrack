@@ -127,12 +127,14 @@ export function AuthScreen({
             <AppleProviderButton
               dark={theme.name === 'dark'}
               disabled={busy}
+              testID={AgentUiIds.auth.apple}
               onPress={() => void continueWithProvider('apple', returnTo)}
             />
             <ProviderButton
               icon={<GoogleMark />}
               onPress={() => void continueWithProvider('google', returnTo)}
               disabled={busy}
+              testID={AgentUiIds.auth.google}
               backgroundColor="#FFFFFF"
               borderColor="#DADCE0"
               textColor="#3C4043"

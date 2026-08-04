@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Keyboard,
   Pressable,
@@ -11,7 +11,7 @@ import { AppText, DragHandle, Symbol } from '@/components/primitives';
 import { layout, radii, spacing, typography } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoMember, TodoTask } from '@/store/todos';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 const TITLE_COLLAPSED_LINES = 2;
@@ -61,20 +61,20 @@ export function TodoRow({
   const [draft, setDraft] = useState(task.title);
   const [lineCount, setLineCount] = useState(0);
   const [measuredWhileExpanded, setMeasuredWhileExpanded] = useState(false);
-  const onCollapseTitleRef = useRef(onCollapseTitle);
-  onCollapseTitleRef.current = onCollapseTitle;
 
   useEffect(() => {
-    if (!editing) setDraft(task.title);
+    if (!editing) queueMicrotask(() => setDraft(task.title));
   }, [editing, task.title]);
 
   useEffect(() => {
-    setLineCount(0);
-    setMeasuredWhileExpanded(false);
+    queueMicrotask(() => {
+      setLineCount(0);
+      setMeasuredWhileExpanded(false);
+    });
   }, [task.title]);
 
   useEffect(() => {
-    if (!expanded) setMeasuredWhileExpanded(false);
+    if (!expanded) queueMicrotask(() => setMeasuredWhileExpanded(false));
   }, [expanded]);
 
   // Short titles can toggle expanded state, but snap closed once measured.
@@ -85,9 +85,9 @@ export function TodoRow({
       lineCount > 0 &&
       lineCount <= TITLE_COLLAPSED_LINES
     ) {
-      onCollapseTitleRef.current();
+      onCollapseTitle();
     }
-  }, [expanded, measuredWhileExpanded, lineCount]);
+  }, [expanded, measuredWhileExpanded, lineCount, onCollapseTitle]);
 
   const dismissChrome = () => {
     Keyboard.dismiss();
@@ -116,11 +116,6 @@ export function TodoRow({
     if (editMode) onCollapseTitle();
     else onToggleExpanded();
   };
-  const rowAgent = useAgentUiTarget(testID, {
-    label: task.title,
-    onPress: pressRow,
-  });
-
   const titleText = (
     <AppText
       variant="bodyMedium"
@@ -138,37 +133,34 @@ export function TodoRow({
   );
 
   return (
-    <Pressable
-      ref={rowAgent.ref}
-      accessible={false}
-      testID={rowAgent.testID}
-      onLayout={rowAgent.onLayout}
-      accessibilityActions={
-        listOwner && editMode
-          ? [{ name: 'delete', label: `Delete ${task.title}` }]
-          : undefined
-      }
-      onAccessibilityAction={(event) => {
-        if (
-          listOwner &&
-          editMode &&
-          event.nativeEvent.actionName === 'delete'
-        ) {
-          confirmDelete();
+    <AgentTestId testID={testID} label={task.title} onPress={pressRow} style={styles.taskRow}>
+      <Pressable
+        accessible={false}
+        accessibilityActions={
+          listOwner && editMode
+            ? [{ name: 'delete', label: `Delete ${task.title}` }]
+            : undefined
         }
-      }}
-      onPress={pressRow}
-      style={[
-        styles.taskRow,
-        {
-          backgroundColor: theme.backgroundElevated,
-          borderColor:
-            task.important && !task.completed
-              ? theme.accentSoft
-              : theme.separator,
-        },
-      ]}
-    >
+        onAccessibilityAction={(event) => {
+          if (
+            listOwner &&
+            editMode &&
+            event.nativeEvent.actionName === 'delete'
+          ) {
+            confirmDelete();
+          }
+        }}
+        onPress={pressRow}
+        style={[
+          {
+            backgroundColor: theme.backgroundElevated,
+            borderColor:
+              task.important && !task.completed
+                ? theme.accentSoft
+                : theme.separator,
+          },
+        ]}
+      >
       {editMode && listOwner ? (
         <Pressable
           accessibilityRole="button"
@@ -322,7 +314,8 @@ export function TodoRow({
           </Pressable>
         )
       ) : null}
-    </Pressable>
+      </Pressable>
+    </AgentTestId>
   );
 }
 

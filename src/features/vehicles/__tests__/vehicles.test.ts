@@ -4,6 +4,7 @@ import {
 } from '@/features/vehicles/normalize';
 import { isMaintenanceDue, nextDueMiles } from '@/features/vehicles/maintenance-due';
 import { buildPartsSearchResults, normalizeNhtsaDecode } from '@/services/vehicles/server';
+import { safeHttpsUrl } from '@/utils/safe-url';
 
 describe('vehicle normalize', () => {
   it('normalizes a minimal vehicle and strips shared from private payload', () => {
@@ -95,5 +96,13 @@ describe('parts search', () => {
     expect(results[0]?.fitmentLabel).toContain('Honda');
     expect(results.some((item) => item.vendor === 'RockAuto')).toBe(true);
     expect(results[0]?.url).toContain('http');
+  });
+});
+
+describe('vehicle vendor link safety', () => {
+  it('only retains HTTPS links for saved or synced parts', () => {
+    expect(safeHttpsUrl('https://example.com/part')).toBe('https://example.com/part');
+    expect(safeHttpsUrl('javascript:alert(1)')).toBeUndefined();
+    expect(safeHttpsUrl('ontrack://settings')).toBeUndefined();
   });
 });

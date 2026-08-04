@@ -23,7 +23,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 type TravelSheetHeaderProps = {
@@ -62,10 +62,6 @@ export function TravelSheetHeader({
     Keyboard.dismiss();
     onClose();
   };
-  const closeAgent = useAgentUiTarget(closeTestID, {
-    label: closeAccessibilityLabel,
-    onPress: handleClose,
-  });
 
   return (
     <View
@@ -122,27 +118,50 @@ export function TravelSheetHeader({
             </View>
           ) : null}
         </View>
-        <Pressable
-          ref={closeAgent.ref}
-          testID={closeTestID}
-          onLayout={closeAgent.onLayout}
-          accessibilityRole="button"
-          accessibilityLabel={closeAccessibilityLabel}
-          hitSlop={8}
-          onPress={handleClose}
-          style={({ pressed }) => [
-            styles.close,
-            {
-              width: closeSize,
-              height: closeSize,
-              borderRadius: closeSize / 2,
-              backgroundColor: chrome.closeBg,
-              borderColor: chrome.fieldBorder,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}>
-          <Symbol name="close" size="md" color={chrome.title} />
-        </Pressable>
+        {closeTestID ? (
+          <AgentTestId
+            testID={closeTestID}
+            label={closeAccessibilityLabel}
+            onPress={handleClose}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={closeAccessibilityLabel}
+              hitSlop={8}
+              onPress={handleClose}
+              style={({ pressed }) => [
+                styles.close,
+                {
+                  width: closeSize,
+                  height: closeSize,
+                  borderRadius: closeSize / 2,
+                  backgroundColor: chrome.closeBg,
+                  borderColor: chrome.fieldBorder,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <Symbol name="close" size="md" color={chrome.title} />
+            </Pressable>
+          </AgentTestId>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={closeAccessibilityLabel}
+            hitSlop={8}
+            onPress={handleClose}
+            style={({ pressed }) => [
+              styles.close,
+              {
+                width: closeSize,
+                height: closeSize,
+                borderRadius: closeSize / 2,
+                backgroundColor: chrome.closeBg,
+                borderColor: chrome.fieldBorder,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}>
+            <Symbol name="close" size="md" color={chrome.title} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -217,12 +236,13 @@ export function TravelSheetModal({
       : undefined;
 
   useEffect(() => {
-    if (!visible) {
-      setLockedHeight(undefined);
-      return;
-    }
+    if (!visible) return;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [visible, scrollKey, title]);
+
+  if (!visible) {
+    return null;
+  }
 
   const dismissKeyboardAndClose = () => {
     Keyboard.dismiss();

@@ -1,69 +1,63 @@
-import { useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  appPrompt,
-  EmptyState,
-  Screen,
+    appPrompt,
+    EmptyState,
+    Screen,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import {
-  resolveStayBookingOpen,
-  type StayBookingOpen,
+    resolveStayBookingOpen,
+    type StayBookingOpen,
 } from '@/features/travel/booking-open';
+import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
-  emptyFlightDetailsDraft,
-  validateFlightDetails,
-  type FlightDetailsDraft,
-} from '@/features/travel/flight-details';
+    expenseFormFromExpense,
+    type ExpenseFormState,
+} from '@/features/travel/expenses/expense-form';
+import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import {
-  validateFlightSchedule,
-} from '@/features/travel/flight-schedule';
+    emptyFlightDetailsDraft,
+    validateFlightDetails,
+    type FlightDetailsDraft,
+} from '@/features/travel/flight-details';
 import { isDuplicateItineraryItem, normalizeTravelPlan } from '@/features/travel/normalize';
 import {
-  emptyRentalDetailsDraft,
-  validateRentalDetails,
-  type RentalDetailsDraft,
+    emptyRentalDetailsDraft,
+    validateRentalDetails,
+    type RentalDetailsDraft,
 } from '@/features/travel/rental-details';
 import {
-  emptyStayDetailsDraft,
-  validateStayDetails,
-  type StayDetailsDraft,
+    emptyStayDetailsDraft,
+    validateStayDetails,
+    type StayDetailsDraft,
 } from '@/features/travel/stay-details';
-import {
-  expenseFormFromExpense,
-  type ExpenseFormState,
-} from '@/features/travel/expenses/expense-form';
+import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
-import { DETAILS_MAX_LENGTH, ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
+import { ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
-import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
-import {
-  validateTravelRangeSchedule,
-} from '@/features/travel/travel-range-schedule';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
+import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
-import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import { usePreferences } from '@/store/preferences';
 import { newId, useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { minutesBetween } from '@/utils/date';
+import { addDays, formatDateKey, minutesBetween } from '@/utils/date';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 import { isHttpsUrl } from '@/utils/safe-url';
-import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 
 type DetailSectionKey = 'transport' | 'flights' | 'stays' | 'rentals' | 'timeline';
 
@@ -157,7 +151,7 @@ function TravelPlanDetailLoaded({
   const [bookingUrl, setBookingUrl] = useState('');
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [flightDetails, setFlightDetails] = useState<FlightDetailsDraft>(
-    emptyFlightDetailsDraft,
+    () => emptyFlightDetailsDraft(),
   );
   const [flightDetailsError, setFlightDetailsError] = useState<string>();
   const [importedFlightFileName, setImportedFlightFileName] = useState<string>();
@@ -272,11 +266,9 @@ function TravelPlanDetailLoaded({
   const [openExpenseSheet, setOpenExpenseSheet] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState | undefined>();
   const [preparedExpenseDraft, setPreparedExpenseDraft] = useState<ExpenseFormState | undefined>();
-  const [addItemInProgress, setAddItemInProgress] = useState(false);
   const addItemInProgressRef = useRef(false);
   const setAddItemInProgressState = (value: boolean) => {
     addItemInProgressRef.current = value;
-    setAddItemInProgress(value);
   };
   const stopAddItem = () => setAddItemInProgressState(false);
   const addItemError = (message: string) => {
@@ -479,7 +471,7 @@ function TravelPlanDetailLoaded({
       return addItemError('Add a name for this itinerary item.');
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
-      return addItemError(`Choose a date between ${plan.startDate} and ${plan.endDate}.`);
+      return addItemError(`Choose a date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(plan.endDate, dateDisplayFormat)}.`);
     }
     if (startMinutes === null || startMinutes < 0 || startMinutes >= 24 * 60) {
       return addItemError(
@@ -495,12 +487,13 @@ function TravelPlanDetailLoaded({
 
     let durationMinutes = isMoment ? 15 : Number(duration);
     if (usesRange) {
+      const maxEndDate = kind === 'stay' ? addDays(plan.endDate, 1) : plan.endDate;
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(endDate) ||
         endDate < plan.startDate ||
-        endDate > plan.endDate
+        endDate > maxEndDate
       ) {
-        return addItemError(`Choose an end date between ${plan.startDate} and ${plan.endDate}.`);
+        return addItemError(`Choose an end date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(maxEndDate, dateDisplayFormat)}.`);
       }
       if (endMinutes === null || endMinutes < 0 || endMinutes >= 24 * 60) {
         return addItemError(
@@ -585,16 +578,16 @@ function TravelPlanDetailLoaded({
       stay: validatedStayDetails.value,
     };
     void (async () => {
-      const persistedPhotos = photoUris.length
-        ? await persistTravelMomentPhotos(photoUris, itemId)
-        : undefined;
-      const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
-      if (!latest) {
+      // Capture plan state before async operation to avoid race conditions
+      const planBeforeAsync = useTravel.getState().plans.find((entry) => entry.id === planId);
+      if (!planBeforeAsync) {
         stopAddItem();
         return;
       }
-      const latestItinerary = Array.isArray(latest.itinerary) ? latest.itinerary : [];
-      const duplicateExists = latestItinerary.some((existing) =>
+      const itineraryBeforeAsync = Array.isArray(planBeforeAsync.itinerary) ? planBeforeAsync.itinerary : [];
+
+      // Check for duplicates before async operation
+      const duplicateExists = itineraryBeforeAsync.some((existing) =>
         isDuplicateItineraryItem(existing, incomingItem),
       );
       if (duplicateExists) {
@@ -615,13 +608,49 @@ function TravelPlanDetailLoaded({
         setImportedStayFileName(undefined);
         setIsAddingItem(false);
         stopAddItem();
-        maybeShowImportedAddPrompt(latest, false);
+        maybeShowImportedAddPrompt(planBeforeAsync, false);
         return;
       }
+
+      const persistedPhotos = photoUris.length
+        ? await persistTravelMomentPhotos(photoUris, itemId)
+        : undefined;
+
+      // After async operation, check if plan still exists and use it or fall back to captured state
+      const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
+      const planToUpdate = latest || planBeforeAsync;
+      const itineraryToUpdate = Array.isArray(planToUpdate.itinerary) ? planToUpdate.itinerary : itineraryBeforeAsync;
+
+      // Re-check for duplicates in case something changed during async operation
+      const duplicateExistsAfterAsync = itineraryToUpdate.some((existing) =>
+        isDuplicateItineraryItem(existing, incomingItem),
+      );
+      if (duplicateExistsAfterAsync) {
+        setTitle('');
+        setDetails('');
+        setBookingUrl('');
+        setPhotoUris([]);
+        setFlightDetails(emptyFlightDetailsDraft());
+        setImportedFlightFileName(undefined);
+        setRentalDetails(emptyRentalDetailsDraft());
+        setImportedRentalFileName(undefined);
+        setStayDetails(
+          defaultStayDetails({
+            checkoutDate: plan.endDate,
+            checkoutMinutes: String(11 * 60),
+          }),
+        );
+        setImportedStayFileName(undefined);
+        setIsAddingItem(false);
+        stopAddItem();
+        maybeShowImportedAddPrompt(planToUpdate, false);
+        return;
+      }
+
       updatePlan({
-        ...latest,
+        ...planToUpdate,
         itinerary: [
-          ...latestItinerary,
+          ...itineraryToUpdate,
           {
             ...incomingItem,
             photoUris: persistedPhotos,
@@ -646,8 +675,12 @@ function TravelPlanDetailLoaded({
       setImportedStayFileName(undefined);
       setIsAddingItem(false);
       stopAddItem();
-      maybeShowImportedAddPrompt(latest, false);
-    })();
+      maybeShowImportedAddPrompt(planToUpdate, false);
+    })().catch((caught: unknown) => {
+      if (__DEV__) console.warn('[addTravelItineraryItem]', caught);
+      stopAddItem();
+      setError('Couldn’t save this itinerary item. Check its photos and try again.');
+    });
   };
 
   const sortedItinerary = [...itinerary].sort(

@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
-  AppState,
-  InputAccessoryView,
-  Keyboard,
-  Platform,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
+    AppState,
+    InputAccessoryView,
+    Keyboard,
+    Platform,
+    Pressable,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,14 +16,14 @@ import { currencyPairForTrip } from '@/features/travel/currency-for-destination'
 import { currencyDisplayLabel } from '@/features/travel/expenses/currency-dropdown';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import {
-  convertAmount,
-  currencyOptionsForTrip,
-  loadFxRates,
-  type FxRates,
+    convertAmount,
+    currencyOptionsForTrip,
+    loadFxRates,
+    type FxRates,
 } from '@/features/travel/expenses/fx-rates';
 import {
-  currencyAsItineraryChrome,
-  currencySheetChrome,
+    currencyAsItineraryChrome,
+    currencySheetChrome,
 } from '@/features/travel/travel-currency-chrome';
 import { TravelCurrencyRatePanel } from '@/features/travel/travel-currency-rate-panel';
 import { TravelCurrencySideCard } from '@/features/travel/travel-currency-side-card';
@@ -35,91 +34,39 @@ import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { haptics } from '@/utils/haptics';
 import { sanitizeNumericInput } from '@/utils/parse';
+import { travelCurrencySheetStyles as styles } from './travel-currency-sheet.styles';
+import {
+  convertWithUnitRate,
+  formatAmountInput,
+  formatFxMoney,
+  formatPlainAmount,
+  formatRateDate,
+  parseAmountText,
+} from './travel-currency-formatters';
 
 type ActiveSide = 'origin' | 'destination';
 
-function formatAmountInput(amount: number): string {
-  if (!Number.isFinite(amount)) return '';
-  const rounded = Math.round(amount * 100) / 100;
-  try {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(rounded);
-  } catch {
-    return rounded.toFixed(2);
-  }
-}
-
-function parseAmountText(text: string): number | undefined {
-  const cleaned = text.replace(/,/g, '').trim();
-  if (!cleaned) return undefined;
-  const value = Number(cleaned);
-  return Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-
-/** `unitRate` is destination units per 1 origin unit. */
-function convertWithUnitRate(
-  amountText: string,
-  from: string,
-  to: string,
-  originCurrency: string,
-  destinationCurrency: string,
-  unitRate: number,
-): string {
-  const amount = parseAmountText(amountText);
-  if (amount === undefined || !(unitRate > 0)) return '';
-  if (from === to) return formatAmountInput(amount);
-  if (from === originCurrency && to === destinationCurrency) {
-    return formatAmountInput(amount * unitRate);
-  }
-  if (from === destinationCurrency && to === originCurrency) {
-    return formatAmountInput(amount / unitRate);
-  }
-  return '';
-}
-
-function formatFxMoney(amount: number, currency: string, locale?: string): string {
-  const code = currency.trim().toUpperCase();
-  if (!Number.isFinite(amount) || !/^[A-Z]{3}$/.test(code)) {
-    return `${code || '?'} ${formatAmountInput(amount)}`;
-  }
-  try {
-    return new Intl.NumberFormat(locale === 'system' ? undefined : locale, {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${code} ${formatAmountInput(amount)}`;
-  }
-}
-
-function formatRateDate(date: string, locale?: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale === 'system' ? undefined : locale, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date(`${date}T12:00:00`));
-  } catch {
-    return date;
-  }
-}
-
-function formatPlainAmount(amount: number, locale?: string): string {
-  try {
-    return new Intl.NumberFormat(locale === 'system' ? undefined : locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return formatAmountInput(amount);
-  }
-}
-
 export function TravelCurrencySheet({
+  plan,
+  visible,
+  onClose,
+}: {
+  plan: TravelPlan;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const sheetKey = `${plan.id}-${visible ? 'open' : 'closed'}`;
+  return (
+    <TravelCurrencySheetContent
+      key={sheetKey}
+      plan={plan}
+      visible={visible}
+      onClose={onClose}
+    />
+  );
+}
+
+function TravelCurrencySheetContent({
   plan,
   visible,
   onClose,
@@ -157,6 +104,17 @@ export function TravelCurrencySheet({
   const [rateOverride, setRateOverride] = useState<number | undefined>();
   const [activeSide, setActiveSide] = useState<ActiveSide>('origin');
   const [openDropdown, setOpenDropdown] = useState<'origin' | 'destination' | null>(null);
+
+  // Refs to capture mutable values that don't drive refetch timing
+  const originTextRef = useRef(originText);
+  const destinationTextRef = useRef(destinationText);
+  const activeSideRef = useRef(activeSide);
+  const rateOverrideRef = useRef(rateOverride);
+
+  useEffect(() => { originTextRef.current = originText; }, [originText]);
+  useEffect(() => { destinationTextRef.current = destinationText; }, [destinationText]);
+  useEffect(() => { activeSideRef.current = activeSide; }, [activeSide]);
+  useEffect(() => { rateOverrideRef.current = rateOverride; }, [rateOverride]);
 
   const marketRate = rates
     ? convertAmount(1, originCurrency, destinationCurrency, rates)
@@ -236,7 +194,22 @@ export function TravelCurrencySheet({
         if (options?.signal?.aborted) return;
         setRates(result.rates);
         setStale(result.stale);
+        const nextMarketRate = result.rates
+          ? convertAmount(1, originCurrency, destinationCurrency, result.rates)
+          : undefined;
+        const shouldUseMarket = options?.clearOverride || rateOverrideRef.current === undefined;
         if (options?.clearOverride) setRateOverride(undefined);
+        if (shouldUseMarket) {
+          syncRateTextFromMarket(nextMarketRate);
+          recomputeAmounts(
+            activeSideRef.current,
+            originTextRef.current,
+            destinationTextRef.current,
+            originCurrency,
+            destinationCurrency,
+            nextMarketRate,
+          );
+        }
       } catch {
         // Keep whatever rates we already show.
       } finally {
@@ -246,62 +219,100 @@ export function TravelCurrencySheet({
         }
       }
     },
-    [],
+    [destinationCurrency, originCurrency, recomputeAmounts, syncRateTextFromMarket],
   );
 
   useEffect(() => {
     if (!visible) return;
-    const next = currencyPairForTrip(plan.destination, plan.baseCurrency);
-    setOriginCurrency(next.origin);
-    setDestinationCurrency(next.destination);
-    setOriginText('100.00');
-    setDestinationText('');
-    setRateText('');
-    setRateOverride(undefined);
-    setActiveSide('origin');
-    setOpenDropdown(null);
-  }, [visible, plan.id, plan.destination, plan.baseCurrency]);
-
-  useEffect(() => {
-    if (!visible) return;
     const controller = new AbortController();
-    void refreshRates({ force: true, signal: controller.signal });
-    return () => controller.abort();
-  }, [visible, refreshRates]);
+    let active = true;
+    void loadFxRates({ force: false, signal: controller.signal })
+      .then((cached) => {
+        if (!active || controller.signal.aborted || !cached.rates) return;
+        setRates(cached.rates);
+        setStale(true);
+        setLoading(false);
+        const nextMarketRate = convertAmount(
+          1,
+          originCurrency,
+          destinationCurrency,
+          cached.rates,
+        );
+        if (rateOverrideRef.current === undefined) {
+          syncRateTextFromMarket(nextMarketRate);
+          recomputeAmounts(
+            activeSideRef.current,
+            originTextRef.current,
+            destinationTextRef.current,
+            originCurrency,
+            destinationCurrency,
+            nextMarketRate,
+          );
+        }
+      })
+      .catch(() => undefined);
+    void loadFxRates({ force: true, signal: controller.signal })
+      .then((result) => {
+        if (!active || controller.signal.aborted) return;
+        setRates(result.rates);
+        setStale(result.stale);
+        setLoading(false);
+        const nextMarketRate = result.rates
+          ? convertAmount(1, originCurrency, destinationCurrency, result.rates)
+          : undefined;
+        if (rateOverrideRef.current === undefined) {
+          syncRateTextFromMarket(nextMarketRate);
+          recomputeAmounts(
+            activeSideRef.current,
+            originTextRef.current,
+            destinationTextRef.current,
+            originCurrency,
+            destinationCurrency,
+            nextMarketRate,
+          );
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active && !controller.signal.aborted) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [visible, originCurrency, destinationCurrency]);
 
   useEffect(() => {
     if (!visible) return;
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        void refreshRates({ force: true, soft: true });
+        void loadFxRates({ force: true })
+          .then((result) => {
+            setRates(result.rates);
+            setStale(result.stale);
+            const nextMarketRate = result.rates
+              ? convertAmount(1, originCurrency, destinationCurrency, result.rates)
+              : undefined;
+            if (rateOverrideRef.current === undefined) {
+              syncRateTextFromMarket(nextMarketRate);
+              recomputeAmounts(
+                activeSideRef.current,
+                originTextRef.current,
+                destinationTextRef.current,
+                originCurrency,
+                destinationCurrency,
+                nextMarketRate,
+              );
+            }
+          })
+          .catch(() => undefined);
       }
     });
     return () => sub.remove();
-  }, [visible, refreshRates]);
-
-  // Keep the rate field in sync with market unless the user has overridden it.
-  useEffect(() => {
-    if (rateOverride !== undefined) return;
-    syncRateTextFromMarket(marketRate);
-  }, [marketRate, rateOverride, syncRateTextFromMarket]);
-
-  useEffect(() => {
-    recomputeAmounts(
-      activeSide,
-      originText,
-      destinationText,
-      originCurrency,
-      destinationCurrency,
-      effectiveRate,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [
-    effectiveRate,
-    originCurrency,
-    destinationCurrency,
-    activeSide,
-    recomputeAmounts,
-  ]);
+  }, [visible, originCurrency, destinationCurrency]);
 
   const currencyOptions = useMemo(
     () =>
@@ -326,6 +337,9 @@ export function TravelCurrencySheet({
     const nextDestinationText = originText;
     const nextOverride =
       rateOverride !== undefined && rateOverride > 0 ? 1 / rateOverride : undefined;
+    const nextMarketRate = rates
+      ? convertAmount(1, nextOrigin, nextDestination, rates)
+      : undefined;
     setOriginCurrency(nextOrigin);
     setDestinationCurrency(nextDestination);
     setOriginText(nextOriginText);
@@ -335,6 +349,7 @@ export function TravelCurrencySheet({
       setRateText(formatAmountInput(nextOverride));
     } else {
       setRateOverride(undefined);
+      syncRateTextFromMarket(nextMarketRate);
     }
     setActiveSide(activeSide === 'origin' ? 'destination' : 'origin');
   };
@@ -377,16 +392,26 @@ export function TravelCurrencySheet({
 
   const onOriginCurrencyChange = (currency: string) => {
     const next = normalizeCurrencyCode(currency);
+    const nextMarketRate = rates
+      ? convertAmount(1, next, destinationCurrency, rates)
+      : undefined;
     setActiveSide('origin');
     setOriginCurrency(next);
     setRateOverride(undefined);
+    syncRateTextFromMarket(nextMarketRate);
+    recomputeAmounts('origin', originText, destinationText, next, destinationCurrency, nextMarketRate);
   };
 
   const onDestinationCurrencyChange = (currency: string) => {
     const next = normalizeCurrencyCode(currency);
+    const nextMarketRate = rates
+      ? convertAmount(1, originCurrency, next, rates)
+      : undefined;
     setActiveSide('origin');
     setDestinationCurrency(next);
     setRateOverride(undefined);
+    syncRateTextFromMarket(nextMarketRate);
+    recomputeAmounts('origin', originText, destinationText, originCurrency, next, nextMarketRate);
   };
 
   const onRateChange = (text: string) => {
@@ -407,6 +432,15 @@ export function TravelCurrencySheet({
     }
     if (!next.trim()) {
       setRateOverride(undefined);
+      syncRateTextFromMarket(marketRate);
+      recomputeAmounts(
+        activeSide,
+        originText,
+        destinationText,
+        originCurrency,
+        destinationCurrency,
+        marketRate,
+      );
     }
   };
 
@@ -506,10 +540,11 @@ export function TravelCurrencySheet({
       {loading && !rates && rateOverride === undefined ? (
         <LoadingBlock compact label="Loading rates…" />
       ) : (
-        <Pressable
-          accessible={false}
-          onPress={() => Keyboard.dismiss()}
-          style={{ gap: rs.lg }}>
+        <View style={{ gap: rs.lg }}>
+          <Pressable
+            accessible={false}
+            onPress={() => Keyboard.dismiss()}
+            style={{ gap: rs.lg }}>
           <View>
             <TravelCurrencySideCard
               sideLabel="From"
@@ -656,43 +691,9 @@ export function TravelCurrencySheet({
               <Symbol name="chevron-right" size="sm" color={chrome.label} />
             </Pressable>
           ) : null}
-        </Pressable>
+          </Pressable>
+        </View>
       )}
     </TravelSheetModal>
   );
 }
-
-const styles = StyleSheet.create({
-  accessory: {
-    alignItems: 'flex-end',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  swapRow: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-  },
-  swapButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderCurve: 'continuous',
-    boxShadow: '0 5px 14px rgba(51, 39, 28, 0.12)',
-  },
-  summary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderCurve: 'continuous',
-  },
-  summaryBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  doneButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderCurve: 'continuous',
-    boxShadow: '0 8px 18px rgba(80, 104, 64, 0.22)',
-  },
-});
