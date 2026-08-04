@@ -21,6 +21,7 @@ const ADDON_IDS: AddonId[] = [
   'vision-board',
   'games',
   'vehicles',
+  'health',
 ];
 const SOURCES: EntitlementSource[] = ['included', 'testing', 'purchase', 'bundle', 'admin'];
 

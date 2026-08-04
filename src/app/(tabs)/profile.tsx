@@ -33,6 +33,7 @@ import { useTodos } from '@/store/todos';
 import { deletePlant } from '@/services/plants/schedule';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import { useVisionBoard } from '@/store/vision-board';
+import { useHealth } from '@/store/health';
 import { haptics } from '@/utils/haptics';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
@@ -70,6 +71,7 @@ export default function ProfileSettingsScreen() {
   const resetTravel = useTravel((s) => s.reset);
   const resetTodos = useTodos((s) => s.reset);
   const resetVisionBoard = useVisionBoard((s) => s.reset);
+  const resetHealth = useHealth((s) => s.reset);
   const [locationOpen, setLocationOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
 
@@ -104,6 +106,7 @@ export default function ProfileSettingsScreen() {
           resetTravel();
           resetTodos();
           resetVisionBoard();
+          resetHealth();
           seedIfNeeded();
         })();
       },
@@ -195,13 +198,14 @@ export default function ProfileSettingsScreen() {
       <AppText variant="body" color="secondary" style={styles.sectionIntro}>
         Turn an add-on off to hide it on this account; its data is kept.
       </AppText>
-      {ADDONS.map((addon) => (
+      {ADDONS.filter((addon) => addon.id !== 'health' || process.env.EXPO_OS === 'ios').map((addon) => (
         <SettingsToggleRow
           key={addon.id}
           label={addon.name}
           detail={addon.description}
           value={enabledAddons[addon.id]}
           onValueChange={(value) => setAddonEnabled(addon.id as AddonId, value)}
+          testID={AgentUiIds.profile.addon(addon.id)}
         />
       ))}
 

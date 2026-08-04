@@ -13,6 +13,7 @@ Prefer these over tapping through the carousel when you already know the destina
 ./scripts/agent-ui-open.sh checklists
 ./scripts/agent-ui-open.sh travel
 ./scripts/agent-ui-open.sh profile
+./scripts/agent-ui-open.sh health
 ./scripts/agent-ui-open.sh design-system
 
 # Reset to Today (known-good state)
@@ -68,6 +69,7 @@ Dump JSON includes `"route": "<pathname>"` so hosts know where they landed.
 | `visionBoard` / `vision-board` | `/vision-board` | `ontrack:///vision-board` |
 | `games` | `/games` | `ontrack:///games` |
 | `vehicles` | `/vehicles` | `ontrack:///vehicles` |
+| `health` | `/health` | `ontrack:///health` |
 | `agents` | `/agents` | `ontrack:///agents` |
 | `designSystem` / `design-system` | `/design-system` | `ontrack:///design-system` |
 | `nutrition` | `/nutrition-profile` | `ontrack:///nutrition-profile` |

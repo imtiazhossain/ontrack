@@ -24,14 +24,14 @@ export function TravelCalendarUpdatedModal({
 }: TravelCalendarUpdatedModalProps) {
   const { spacing } = useResponsive();
   const eventLabel = payload
-    ? `${payload.eventCount} ${payload.eventCount === 1 ? 'event' : 'events'} added for “${payload.title}”.`
+    ? `${payload.eventCount} ${payload.eventCount === 1 ? 'event' : 'events'} synced for “${payload.title}”.`
     : '';
   return (
     <SheetScaffold
       visible={payload != null}
       eyebrow="Success"
       title="Calendar Updated"
-      subtitle="Your trip is now reflected in your schedule."
+      subtitle="Your latest trip changes are now reflected in your schedule."
       onClose={onBackToTravel}
       closeAccessibilityLabel="Back to Travel"
       closeTestID={AgentUiIds.travel.calendarUpdated.dismiss}>
@@ -42,7 +42,6 @@ export function TravelCalendarUpdatedModal({
           </AppText>
           <Button
             variant="primary"
-            size="lg"
             icon="calendar"
             testID={AgentUiIds.travel.calendarUpdated.goToCalendar}
             accessibilityLabel="Go to Calendar"

@@ -61,6 +61,7 @@ resolve_deep_link() {
     visionBoard|vision-board) echo "ontrack:///vision-board" ;;
     games) echo "ontrack:///games" ;;
     vehicles) echo "ontrack:///vehicles" ;;
+    health) echo "ontrack:///health" ;;
     agents) echo "ontrack:///agents" ;;
     nutrition) echo "ontrack:///nutrition-profile" ;;
     activityForm) echo "ontrack:///activity-form" ;;
@@ -76,6 +77,7 @@ default_wait_prefix() {
     checklists|todos|to-do) echo "ontrack.checklists." ;;
     profile) echo "ontrack.profile." ;;
     travel) echo "ontrack.travel." ;;
+    health) echo "ontrack.health." ;;
     *) echo "" ;;
   esac
 }

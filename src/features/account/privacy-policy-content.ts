@@ -1,7 +1,7 @@
 import type { LegalSection } from './legal-document-screen';
 
 export const PRIVACY_POLICY_INTRO =
-  'onTrack (“we”, “us”) provides a local-first daily life app for schedules, food, fitness, plants, travel, checklists, and related tools. This Privacy Policy explains what information we collect, how we use it, and the choices you have.';
+  'onTrack (“we”, “us”) provides a local-first daily life app for schedules, food, fitness, health, plants, travel, checklists, and related tools. This Privacy Policy explains what information we collect, how we use it, and the choices you have.';
 
 export const PRIVACY_POLICY_SECTIONS: readonly LegalSection[] = [
   {
@@ -30,8 +30,17 @@ export const PRIVACY_POLICY_SECTIONS: readonly LegalSection[] = [
   {
     title: 'AI features',
     paragraphs: [
-      'Optional AI features (such as meal analysis, plant identification, recipe import, or daily summaries) send only the content you explicitly submit for analysis to our processing providers.',
+      'Optional AI features (such as meal analysis, plant identification, recipe import, daily summaries, or mood action ideas) send only the content you explicitly submit for analysis to our processing providers.',
+      'Mood action ideas send only selected feeling labels, intensities, selected factor names, and desired feelings after a separate disclosure. Mood notes, Apple Health metrics, mood history, and identifiers are not included.',
       'AI results are informational estimates, not medical, nutritional, horticultural, or professional advice. You can turn AI summaries off in Profile.',
+    ],
+  },
+  {
+    title: 'Health and mood data',
+    paragraphs: [
+      'When you choose to connect Apple Health, onTrack reads only the activity, workout, heart-rate, sleep, and optional State of Mind types you authorize. Apple controls these permissions and you can change them in Apple Health.',
+      'Apple Health summaries, mood check-ins, notes, factors, and personal playbooks stay in a separate encrypted store on this device and are not uploaded through onTrack cloud sync.',
+      'If you explicitly enable State of Mind sync, onTrack can read authorized State of Mind entries and save compatible labels, associations, and an overall pleasantness value to Apple Health. Private notes, custom labels, and playbooks are never written there.',
     ],
   },
   {

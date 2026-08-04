@@ -21,7 +21,7 @@ top-right X; it is not rendered as a second full-width button.
 ## Intuitive path
 
 - Every screen has one visually dominant next step. Equal-weight action walls are grouped by user intent.
-- Primary actions use plain verbs that describe the result (`Open Trip Itinerary`, `Create Trip`, `Save`).
+- Primary actions use concise labels that describe the destination or result (`Trip Itinerary`, `Create Trip`, `Save`).
 - Tappable cards include a directional affordance; icon-only controls are reserved for familiar chrome.
 - Related actions stay together and use the same order across empty, populated, and editing states.
 - The interface responds immediately with pressed state and haptics, then shows shared loading or error UI.

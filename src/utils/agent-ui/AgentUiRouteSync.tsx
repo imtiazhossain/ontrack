@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'expo-router';
+import { File, Paths } from 'expo-file-system';
 
+import { handleAgentUiRequest } from './handle-agent-ui-url';
+import { AGENT_UI_COMMAND_FILENAME } from './persist';
 import { isAgentUiEnabled } from './registry';
 import { setAgentUiNavigator, setAgentUiRoute } from './route';
 
@@ -22,6 +25,25 @@ export function AgentUiRouteSync() {
       setAgentUiNavigator(null);
     };
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (!isAgentUiEnabled()) return;
+    let processing = false;
+    const command = new File(Paths.document, AGENT_UI_COMMAND_FILENAME);
+    const timer = setInterval(() => {
+      if (processing || !command.exists) return;
+      processing = true;
+      try {
+        const request = JSON.parse(command.textSync()) as { op?: string; id?: string; to?: string };
+        command.delete();
+        void handleAgentUiRequest(request).finally(() => { processing = false; });
+      } catch {
+        try { command.delete(); } catch { /* Ignore a concurrent host rewrite. */ }
+        processing = false;
+      }
+    }, 75);
+    return () => clearInterval(timer);
+  }, []);
 
   return null;
 }

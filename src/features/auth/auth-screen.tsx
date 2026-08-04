@@ -14,7 +14,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { AppText, ErrorMessage, Screen } from '@/components/primitives';
 import { radii, shadows, spacing, timeOfDayGradient } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { AppleProviderButton } from './apple-provider-button';
 import { useAuthSession } from './auth-provider';
@@ -42,6 +42,10 @@ export function AuthScreen({
   const [translateY] = useState(() => new Animated.Value(16));
   const reduceMotion = useReducedMotion();
   const busy = phase === 'authenticating';
+  const guestAgent = useAgentUiTarget(variant === 'welcome' ? AgentUiIds.auth.guest : undefined, {
+    label: 'Continue as Guest',
+    onPress: busy ? undefined : () => { void continueAsGuest(); },
+  });
   const gradient = timeOfDayGradient(theme, new Date().getHours());
   const router = useRouter();
 
@@ -147,6 +151,9 @@ export function AuthScreen({
             <View accessibilityLiveRegion="assertive">
               <ErrorMessage message={error} variant="caption" />
               <Pressable
+                ref={guestAgent.ref}
+                testID={AgentUiIds.auth.guest}
+                onLayout={guestAgent.onLayout}
                 accessibilityRole="button"
                 accessibilityLabel="Dismiss sign-in error"
                 onPress={clearError}

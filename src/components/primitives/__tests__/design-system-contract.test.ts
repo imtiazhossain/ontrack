@@ -50,15 +50,16 @@ describe('canonical design-system contract', () => {
     expect(importResult).toContain('SheetScaffold');
     expect(removeConfirm).toContain('SheetScaffold');
     expect(removeConfirm).not.toMatch(/\bModal\b/);
-    expect(actions).toContain('numberOfLines={2}');
-    expect(actions).not.toMatch(/variant="callout"\s+fit/);
+    expect(actions).toContain('variant="secondary"');
+    expect(actions).not.toContain('<Card');
+    expect(actions).not.toContain('numberOfLines={2}');
   });
 
   it('makes the Travel path obvious instead of presenting equal-weight actions', () => {
     const actions = read('src/features/travel/travel-list-actions.tsx');
     const grid = read('src/features/travel/travel-trip-action-grid.tsx');
-    expect(actions).toContain('<Card');
-    expect(grid).toContain('label="Open Trip Itinerary"');
+    expect(actions).toContain('variant="secondary"');
+    expect(grid).toContain('label="Trip Itinerary"');
     expect(grid).toContain('title="Book & organize"');
     expect(grid).toContain('title="At your destination"');
     expect(grid).toContain('title="Travel together"');

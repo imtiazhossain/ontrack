@@ -8,6 +8,8 @@ import { spacing } from '@/design-system';
 import { useSchedule } from '@/store/schedule';
 import { formatDuration, formatMinutes } from '@/utils/date';
 import { openSleepData } from '@/utils/open-sleep-data';
+import { useAddons } from '@/store/addons';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export default function SleepDetailScreen() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function SleepDetailScreen() {
   );
   const categories = useSchedule((state) => state.categories);
   const setStatus = useSchedule((state) => state.setStatus);
+  const healthEnabled = useAddons((state) => state.enabled.health);
 
   if (!activity) {
     return (
@@ -31,6 +34,7 @@ export default function SleepDetailScreen() {
 
   const category = findCategory(categories, activity.categoryId);
   const healthAppName = process.env.EXPO_OS === 'ios' ? 'Apple Health' : 'Health Connect';
+  const healthDashboardEnabled = healthEnabled && process.env.EXPO_OS === 'ios';
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -48,9 +52,10 @@ export default function SleepDetailScreen() {
         <Button
           size="lg"
           icon="health"
-          onPress={() => void openSleepData()}
-          accessibilityLabel={`Open sleep data in ${healthAppName}`}>
-          Open sleep data
+          testID={AgentUiIds.health.sleepHandoff}
+          onPress={() => healthDashboardEnabled ? router.push('/health' as never) : void openSleepData()}
+          accessibilityLabel={healthDashboardEnabled ? 'Open onTrack Health dashboard' : `Open sleep data in ${healthAppName}`}>
+          {healthDashboardEnabled ? 'Open Health dashboard' : 'Open sleep data'}
         </Button>
       </Card>
 

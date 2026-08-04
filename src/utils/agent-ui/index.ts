@@ -1,5 +1,6 @@
 export { AgentTestId } from './AgentTestId';
 export { AgentUiRouteSync } from './AgentUiRouteSync';
+export { getLastAgentUiContentRoute } from './route';
 export {
   AgentUiIds,
   tabTestIdForRoute,
@@ -12,6 +13,7 @@ export {
 } from './handle-agent-ui-url';
 export {
   AGENT_UI_DUMP_FILENAME,
+  AGENT_UI_COMMAND_FILENAME,
   AGENT_UI_STATUS_FILENAME,
   writeAgentUiDump,
   writeAgentUiStatus,

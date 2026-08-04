@@ -36,7 +36,6 @@ export function TravelDetailsCardActions({
       </View>
       <Button
         variant="primary"
-        size="lg"
         icon="check"
         testID={AgentUiIds.travel.detailsEditor.save(itemId)}
         accessibilityLabel={saveLabel}

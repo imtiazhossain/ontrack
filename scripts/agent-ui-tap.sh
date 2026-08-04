@@ -10,6 +10,7 @@ fi
 TEST_ID="$1"
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 STATUS_NAME="${STATUS_NAME:-agent-ui-status.json}"
+COMMAND_NAME="${COMMAND_NAME:-agent-ui-command.json}"
 WAIT_SECS="${WAIT_SECS:-6}"
 POLL_SLEEP="${POLL_SLEEP:-0.05}"
 
@@ -20,13 +21,15 @@ if [[ -z "${DATA_DIR}" ]]; then
 fi
 
 STATUS_PATH="${DATA_DIR}/Documents/${STATUS_NAME}"
-rm -f "${STATUS_PATH}"
-
-# URL-encode the id (keeps dots/underscores; encodes spaces & reserved chars).
-ENCODED_ID="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe='._-'))" "${TEST_ID}")"
+COMMAND_PATH="${DATA_DIR}/Documents/${COMMAND_NAME}"
+rm -f "${STATUS_PATH}" "${COMMAND_PATH}"
 
 STARTED_MTIME="$(python3 -c 'import time; print(time.time())')"
-xcrun simctl openurl booted "ontrack:///agent/ui?op=tap&id=${ENCODED_ID}"
+COMMAND_PATH="${COMMAND_PATH}" TEST_ID="${TEST_ID}" python3 - <<'PY'
+import json, os, time
+from pathlib import Path
+Path(os.environ["COMMAND_PATH"]).write_text(json.dumps({"op": "tap", "id": os.environ["TEST_ID"], "nonce": time.time_ns()}))
+PY
 
 deadline=$((SECONDS + WAIT_SECS))
 while (( SECONDS < deadline )); do
