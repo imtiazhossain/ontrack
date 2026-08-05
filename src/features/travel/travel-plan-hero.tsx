@@ -5,15 +5,15 @@ import { AppText, IconButton } from '@/components/primitives';
 import { fontFamilies, spacing } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { travelPlanModeLabel } from '@/features/travel/travel-mode';
+import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
-import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import type { TravelPlan } from '@/features/travel/types';
-import { travelPlanModeLabel } from '@/features/travel/travel-mode';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { formatDateKey, type DateDisplayFormat } from '@/utils/date';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { formatDateKey, type DateDisplayFormat } from '@/utils/date';
 import { goBackOrReplace } from '@/utils/navigation';
 
 export function TravelPlanHero({
@@ -81,7 +81,12 @@ export function TravelPlanHero({
         testID={onEditDates ? AgentUiIds.travel.list.editDates(plan.id) : undefined}
       />
 
-      {plan.notes ? <TravelTripNotesCard notes={plan.notes} /> : null}
+      {plan.notes ? (
+        <TravelTripNotesCard
+          notes={plan.notes}
+          toggleTestID={AgentUiIds.travel.planDetail.notesSection}
+        />
+      ) : null}
     </View>
   );
 }

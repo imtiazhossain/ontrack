@@ -1,9 +1,15 @@
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
+import {
+    AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
+    AGENT_UI_DEMO_CHASE_RETURN_ID,
+    createIdFromAgentUiItemIds,
+} from '@/utils/agent-ui/fixtures';
+
 import { applyImportedFlightsToPlan } from '../apply-imported-flights';
-import { parseFlightConfirmation } from '../flight-confirmation-parser';
-import { mergeImportedFlights } from '../flight-confirmation-itinerary';
 import { CHASE_ROUNDTRIP_CONFIRMATION } from '../fixtures/chase-roundtrip-confirmation';
+import { mergeImportedFlights } from '../flight-confirmation-itinerary';
+import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import type { TravelPlan } from '../types';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
@@ -389,6 +395,24 @@ describe('flight confirmation expense', () => {
     expect(parsed.segments.map((segment) => segment.flight.passengerCount)).toEqual(
       ['2', '2'],
     );
+    let nextId = 0;
+    const applied = applyImportedFlightsToPlan({
+      plan: basePlan(),
+      imported: parsed,
+      createId: createIdFromAgentUiItemIds(
+        [AGENT_UI_DEMO_CHASE_OUTBOUND_ID, AGENT_UI_DEMO_CHASE_RETURN_ID],
+        () => `flight-${++nextId}`,
+      ),
+    });
+    expect(applied.itinerary.map((item) => item.id)).toEqual([
+      AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
+      AGENT_UI_DEMO_CHASE_RETURN_ID,
+    ]);
+    expect(
+      applied.itinerary.map((item) =>
+        item.kind === 'flight' ? item.flight?.passengerCount : undefined,
+      ),
+    ).toEqual([2, 2]);
 
     const boardingPass = parseFlightConfirmation(`
       United Airlines
@@ -408,6 +432,18 @@ describe('flight confirmation expense', () => {
       arrivalTerminal: 'B',
       arrivalGate: '22',
       passengerName: 'Ada Lovelace',
+    });
+    const withPassenger = applyImportedFlightsToPlan({
+      plan: basePlan(),
+      imported: boardingPass,
+      createId: () => 'boarding-pass',
+    });
+    expect(withPassenger.itinerary[0]).toMatchObject({
+      flight: {
+        passengerName: 'Ada Lovelace',
+        departureGate: '5',
+        arrivalGate: '22',
+      },
     });
   });
 

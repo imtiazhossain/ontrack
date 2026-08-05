@@ -7,11 +7,31 @@ Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulat
 ## Fast path (use this)
 
 ```bash
+# Fastest when you may already be on the surface (skips flow if route matches)
+./scripts/agent-ui.sh verify --route /travel/trip-agent-ui-demo --flow travel-demo \
+  --exists travel.planDetail.transportSection \
+  --color travel.planDetail.transportSection '#2474A8'
+
+# One-process once chain (flow/open + structural asserts)
+./scripts/agent-ui.sh once --flow travel-demo \
+  --assert-exists travel.planDetail.weather \
+  --assert-route /travel/trip-agent-ui-demo
+
+./scripts/agent-ui.sh once --flow travel-demo-add-flight \
+  --assert-prefix travel.itineraryAdd.
+
 # Named flow — seed + navigate + settle in one round trip
 ./scripts/agent-ui-flow.sh travel-demo
 ./scripts/agent-ui-flow.sh travel-demo-add-flight
 ./scripts/agent-ui-flow.sh open-new-trip
 ./scripts/agent-ui-flow.sh --list
+
+# Structural asserts (Playwright-style — prefer over screenshots for route/id)
+# IDs accept wire ontrack.* or AgentUiIds key paths (travel.planDetail.transportSection)
+./scripts/agent-ui-assert.sh --exists travel.newTrip.open
+./scripts/agent-ui-assert.sh --route /travel/trip-agent-ui-demo
+./scripts/agent-ui-assert.sh --prefix travel.planDetail.
+./scripts/agent-ui-assert.sh --color travel.planDetail.transportSection '#2474A8'
 
 # Stable demo trip (id trip-agent-ui-demo) without wiping other trips
 ./scripts/agent-ui-seed.sh travel-demo
@@ -22,16 +42,16 @@ Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulat
 ./scripts/agent-ui-open.sh health/mood
 
 # Custom multi-step batch (waits settle in-app)
-./scripts/agent-ui-batch.sh --seed travel-demo --goto travel/trip-agent-ui-demo --wait-prefix ontrack.travel.planDetail.
+./scripts/agent-ui-batch.sh --seed travel-demo --goto travel/trip-agent-ui-demo --wait-prefix travel.planDetail.
 
 # Cheap probes (no dump file)
 ./scripts/agent-ui-route.sh
-./scripts/agent-ui-exists.sh ontrack.travel.newTrip.open
+./scripts/agent-ui-exists.sh travel.newTrip.open
 ```
 
-Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](./agent-ui-map.md). Screenshot only for final proof.
+Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](./agent-ui-map.md). Prefer **assert** / **`--color`** for route/id/label/accent claims; screenshot only for broader visual/layout proof.
 
-**Mandatory decision tree** (also in `.cursor/rules/agent-ui-selectors.mdc`): flow → open/batch → known tap → dump only if unknown → one final screenshot. Budget: ≤1 dump and ≤1 screenshot per verification unless the first attempt fails.
+**Mandatory decision tree** (also in `.cursor/rules/agent-ui-selectors.mdc`): `verify` (skip land if on route) → `once`/flow → open/batch → known tap (wire id or `AgentUiIds` path) → dump only if unknown → assert/`--color` or one final screenshot. Budget: ≤1 dump; ≤1 screenshot and only for visual claims. Fail-fast when the daemon is warm (~2.5s simple / ~5s flow). Never re-run a flow just to re-check a screen you’re already on; never prophylactic Metro heal.
 
 ## Named flows
 
@@ -40,12 +60,30 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo` | Seed demo trip → open plan detail |
 | `travel-demo-list` | Seed → travel list with demo itinerary button |
 | `travel-demo-add-flight` | Seed → add-flight sheet |
-| `travel-demo-add-flight-roundtrip` | Seed → add-flight sheet prefilled from Chase round-trip fixture (`?importFlight=roundtrip`) |
+| `travel-demo-add-flight-roundtrip` | Seed → Chase round-trip prefills → submit → expand outbound card (passenger ready) |
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
 | `open-new-trip` | Travel list → New Trip sheet |
-| `travel-list` / `calendar` / `today` / `checklists` / `health` / `health-mood` / `activity-form` | Goto + settle |
+| `open-new-checklist` | Checklists → new-list name field ready |
+| `travel-list` / `calendar` / `today` / `checklists` / `health` / `health-mood` / `health-settings` / `activity-form` / `profile` / `vehicles` / `vehicles-new` / `social` / `workouts` / `plants` / `plants-new` / `vision-board` / `games` | Goto + settle |
 
-Demo IDs: `trip-agent-ui-demo`, `item-agent-ui-demo-flight` (`src/utils/agent-ui/fixtures.ts`).
+Demo IDs: `trip-agent-ui-demo`, `item-agent-ui-demo-flight`, `item-agent-ui-demo-chase-outbound`, `item-agent-ui-demo-chase-return` (`src/utils/agent-ui/fixtures.ts`).
+
+Chase traveler-count proof (no dump — stable ids after submit):
+
+```bash
+./scripts/agent-ui.sh once --flow travel-demo-add-flight-roundtrip \
+  --assert-contains ontrack.travel.flight.passenger.item-agent-ui-demo-chase-outbound "2 Travelers"
+```
+
+Host bridge notes:
+
+- Persistent daemon: `scripts/lib/agent_ui_daemon.py` (auto-started) — Unix socket + HTTP `:8191` (`0.0.0.0`)
+- App long-polls `http://<packager-host>:8191/next` and POSTs `/status` (Simulator → `127.0.0.1:8191`)
+- Optional Metro `/__agent_ui` proxy when `enhanceMiddleware` is honored; not required
+- Documents file poll remains as fallback if the daemon is down
+- `agent_ui_bridge.py` prefers the daemon, caches the data container under `.cursor/agent-ui-data-dir`
+- Prefer `agent-ui.sh once` / `flow` / `batch` / `assert` / in-app `wait`; one shell chain per verification; never mid-flow dump/screenshot; never prophylactic Metro heal
+- Warm fail-fast budgets: `AGENT_UI_WARM_WAIT_SECS` (default 2.5) / `AGENT_UI_WARM_FLOW_WAIT_SECS` (default 5); in-app wait ceiling `AGENT_UI_WAIT_TIMEOUT_MS` (default 2000)
 
 ## Host commands
 
@@ -91,7 +129,8 @@ npm run packager:ensure:start
 ## In-app agent ops (dev)
 
 - `op=reset` / `op=goto&to=…` / `op=route` / `op=prefix&prefix=…` / `op=exists&id=…` / `op=tap&id=…` / `op=dump`
-- `op=wait` — settle (`ms`) and/or poll until `id` / `prefix` / route (`to`) within `timeoutMs`
+- `op=assert` — structural checks (`id` / `missing` / `prefix` / `to` route / `contains` label); prefer over screenshots for these claims
+- `op=wait` — settle (`ms`) and/or poll until `id` / `prefix` / route (`to`) within `timeoutMs` (default 2000)
 - `op=seed&to=travel-demo` — upsert stable demo trip
 - `op=flow&to=travel-demo` — expand named recipe
 - `op=batch` with `ops: […]` — run steps in one command

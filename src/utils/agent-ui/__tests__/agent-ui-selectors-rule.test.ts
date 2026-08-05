@@ -13,6 +13,8 @@ describe('agent-ui selector rule', () => {
     expect(rule).toContain('src/utils/agent-ui/ids.ts');
     expect(rule).toContain('agent-ui-open.sh');
     expect(rule).toContain('agent-ui-flow.sh');
+    expect(rule).toContain('agent-ui.sh once');
+    expect(rule).toContain('agent-ui.sh verify');
     expect(rule).toContain('ensure-packager.sh');
     expect(rule).not.toMatch(/coordinates are a \*\*last resort\*\*/i);
     expect(rule).toMatch(/Coordinates are not an alternative/i);
@@ -25,10 +27,18 @@ describe('agent-ui selector rule', () => {
     );
     expect(rule).toMatch(/Navigation decision tree/i);
     expect(rule).toMatch(/Per-verification budget/i);
+    expect(rule).toMatch(/Assert-first proof/i);
     expect(rule).toContain('≤ 1');
     expect(rule).toMatch(/mid-flow screenshots/i);
     expect(rule).toContain('agent-ui-flow.sh');
+    expect(rule).toContain('agent-ui-assert.sh');
+    expect(rule).toContain('travel.planDetail.transportSection');
+    expect(rule).toContain('--color');
     expect(rule).toMatch(/Dump “just to be sure”/i);
+    expect(rule).toMatch(/Fail-fast when warm/i);
+    expect(rule).toMatch(/verify` before `flow`/i);
+    expect(rule).toMatch(/No re-land for handoff/i);
+    expect(rule).toMatch(/Re-run `once --flow`/i);
 
     const screenshotRule = readFileSync(
       join(process.cwd(), '.cursor/rules/show-simulator-screenshot.mdc'),
@@ -36,10 +46,13 @@ describe('agent-ui selector rule', () => {
     );
     expect(screenshotRule).toMatch(/Screenshot budget/i);
     expect(screenshotRule).toMatch(/Forbidden:\*\* mid-flow screenshots/i);
+    expect(screenshotRule).toMatch(/agent-ui-assert\.sh/i);
 
     const agents = readFileSync(join(process.cwd(), 'AGENTS.md'), 'utf8');
     expect(agents).toMatch(/navigation decision tree/i);
+    expect(agents).toContain('agent-ui.sh verify');
     expect(agents).toContain('agent-ui-flow.sh');
+    expect(agents).toMatch(/Never re-run a flow just to re-check/i);
   });
 
   it('forwards testID on core primitives', () => {

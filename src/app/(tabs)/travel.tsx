@@ -503,7 +503,10 @@ function TravelScreenContent() {
                 />
               </TravelTripCardHeader>
               {!collapsed && plan.notes ? (
-                <TravelTripNotesCard notes={plan.notes} />
+                <TravelTripNotesCard
+                  notes={plan.notes}
+                  toggleTestID={AgentUiIds.travel.list.notesSection(plan.id)}
+                />
               ) : null}
               {!collapsed ? (
                 <TravelTripActionGrid

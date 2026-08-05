@@ -1,65 +1,64 @@
 import {
-  clearSharedPayloads,
-  getResolvedSharedPayloadsAsync,
-  getSharedPayloads,
-} from 'expo-sharing';
-import {
-  useLocalSearchParams,
-  useNavigation,
-  useRouter,
+    useLocalSearchParams,
+    useNavigation,
+    useRouter,
 } from 'expo-router';
 import type { NavigationAction } from 'expo-router/react-navigation';
+import {
+    clearSharedPayloads,
+    getResolvedSharedPayloadsAsync,
+    getSharedPayloads,
+} from 'expo-sharing';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Platform,
+    StyleSheet,
+    View,
 } from 'react-native';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  ErrorMessage,
-  Input,
-  Screen,
-  SectionHeader,
-  Symbol,
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    ErrorMessage,
+    Input,
+    Screen,
+    Symbol
 } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { scaleIngredients } from '@/features/todos/grocery-utils';
 import {
-  RecipeIngredientEditor,
-  type EditableRecipeIngredient,
+    RecipeIngredientEditor,
+    type EditableRecipeIngredient,
 } from '@/features/todos/recipe-ingredient-editor';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  analyzeRecipe,
-  persistRecipeImage,
-  prepareRecipeImage,
-  RecipeImportError,
-  type RecipeImportDraft,
-  type RecipeImportIngredient,
-} from '@/services/recipes';
 import { sanitizeMealUrl } from '@/services/nutrition/url-safety';
 import {
-  useTodos,
-  type TodoIngredientInput,
-  type TodoRecipeSourceKind,
+    analyzeRecipe,
+    persistRecipeImage,
+    prepareRecipeImage,
+    RecipeImportError,
+    type RecipeImportDraft,
+    type RecipeImportIngredient,
+} from '@/services/recipes';
+import {
+    useTodos,
+    type TodoIngredientInput,
+    type TodoRecipeSourceKind,
 } from '@/store/todos';
 import { haptics } from '@/utils/haptics';
-import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
+import { newId } from '@/utils/id';
 import { asPositiveNumber } from '@/utils/parse';
+import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 
 
-let ingredientId = 0;
 function withIds(ingredients: RecipeImportIngredient[]): EditableRecipeIngredient[] {
   return ingredients.map((ingredient) => ({
     ...ingredient,
-    id: `ingredient-${Date.now()}-${ingredientId++}`,
+    id: newId('ingredient'),
   }));
 }
 
@@ -322,7 +321,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
     );
     setIngredients((current) =>
       scaled.ingredients.map((ingredient, index) => ({
-        id: current[index]?.id ?? `ingredient-${Date.now()}-${ingredientId++}`,
+        id: current[index]?.id ?? newId('ingredient'),
         name: ingredient.name,
         canonicalKey: ingredient.canonicalKey ?? '',
         quantityValue: ingredient.quantityValue ?? null,
@@ -548,7 +547,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
               setIngredients((current) => [
                 ...current,
                 {
-                  id: `ingredient-${Date.now()}-${ingredientId++}`,
+                  id: newId('ingredient'),
                   name: '',
                   canonicalKey: '',
                   quantityValue: null,

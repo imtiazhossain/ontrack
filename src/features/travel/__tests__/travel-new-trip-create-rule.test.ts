@@ -12,7 +12,7 @@ describe('new trip creation feedback', () => {
       'utf8',
     );
 
-    expect(travelTab).toMatch(/const saved = savePlan\(\{/);
+    expect(travelTab).toMatch(/const saved = savePlan\(/);
     expect(travelTab).toMatch(
       /if \(!saved\) \{\s*setError\([\s\S]*?\);\s*return;\s*\}/,
     );

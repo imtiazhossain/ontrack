@@ -7,67 +7,14 @@ import {
     type ViewStyle,
 } from 'react-native';
 
-import { AppText, IconButton, LoadingSpinner, Symbol } from '@/components/primitives';
+import { AppText, LoadingSpinner, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { AgentTestId, AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { confirmationUrisForDisplay } from './confirmation-attachments';
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
-import {
-    flightStatusTone,
-    flightStatusToneColor,
-    type FlightStatusLookup,
-} from './use-flight-status';
-
-function StatusValue({ status }: { status: FlightStatusLookup }) {
-  const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
-  const dotSize = Math.max(6, s(7));
-
-  if (status.loading) {
-    return (
-      <AppText variant="callout" color="secondary" fit style={styles.statusText}>
-        Checking…
-      </AppText>
-    );
-  }
-  if (!status.summary) {
-    return (
-      <AppText variant="callout" color="secondary" fit style={styles.statusText}>
-        {status.error ?? (status.available ? 'Not checked' : 'Unavailable')}
-      </AppText>
-    );
-  }
-
-  const tone = flightStatusToneColor(flightStatusTone(status.status), theme);
-  return (
-    <View
-      style={[
-        styles.statusPill,
-        {
-          backgroundColor: theme.backgroundSunken,
-          borderRadius: radii.pill,
-          paddingHorizontal: rs.sm,
-          paddingVertical: Math.max(3, s(4)),
-          gap: rs.xxs,
-        },
-      ]}>
-      <View
-        style={{
-          width: dotSize,
-          height: dotSize,
-          borderRadius: dotSize / 2,
-          backgroundColor: tone,
-        }}
-      />
-      <AppText variant="caption" fit style={{ color: tone, flexShrink: 1, minWidth: 0 }}>
-        {status.summary}
-      </AppText>
-    </View>
-  );
-}
 
 function ConfirmationCodeTrigger({
   confirmationCode,
@@ -104,7 +51,7 @@ function ConfirmationCodeTrigger({
       onPress={open}
       style={({ pressed }) => [
         styles.codeRow,
-        { gap: rs.xxs, opacity: pressed && !loading ? 0.7 : 1 },
+        { gap: rs.md, opacity: pressed && !loading ? 0.7 : 1 },
       ]}>
       <AppText
         variant="callout"
@@ -126,15 +73,14 @@ function ConfirmationCodeTrigger({
 }
 
 /**
- * Booking facts every flight card shows above the route: confirmation number,
- * who is traveling, and the latest operational status.
+ * Booking facts above the route: confirmation number and who is traveling.
+ * Live status syncs live beside each flight leg in the itinerary.
  */
 export function FlightBookingPanel({
   itemId,
   confirmationCode,
   confirmationUris,
   passengerLabel,
-  status,
   accent,
   fill,
   style,
@@ -143,13 +89,12 @@ export function FlightBookingPanel({
   confirmationCode?: string;
   confirmationUris?: string[];
   passengerLabel: string;
-  status: FlightStatusLookup;
   accent: string;
   fill: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
-  const { s, spacing: rs, typography } = useResponsive();
+  const { s, spacing: rs } = useResponsive();
   const openableConfirmation = confirmationUrisForDisplay(
     confirmationUris,
     'flight',
@@ -233,48 +178,18 @@ export function FlightBookingPanel({
         },
         style,
       ]}>
-      {cell('Confirmation #', confirmationValue, { grow: 1.35 })}
+      {cell('Confirmation', confirmationValue, { grow: 1.35 })}
       {cell(
-        'Passenger',
-        <AppText variant="callout" fit style={{ color: theme.textPrimary }}>
-          {passengerLabel}
-        </AppText>,
+        'Passenger(s)',
+        <AgentTestId
+          testID={AgentUiIds.travel.flight.passenger(itemId)}
+          label={passengerLabel}>
+          <AppText variant="callout" fit style={{ color: theme.textPrimary }}>
+            {passengerLabel}
+          </AppText>
+        </AgentTestId>,
         { divider: true },
       )}
-      <View
-        style={[
-          styles.cell,
-          cellPad,
-          {
-            flexGrow: 1.1,
-            borderLeftWidth: StyleSheet.hairlineWidth,
-            borderLeftColor: theme.separator,
-          },
-        ]}>
-        <View style={[styles.statusHeader, { gap: rs.xxs }]}>
-          <AppText
-            variant="caption"
-            color="secondary"
-            fit
-            style={styles.statusHeaderLabel}>
-            Status
-          </AppText>
-          {status.available ? (
-            <IconButton
-              icon="sync"
-              size={typography.caption.lineHeight}
-              iconSize={12.5}
-              background="transparent"
-              color={theme.textSecondary}
-              loading={status.loading}
-              testID={AgentUiIds.travel.flight.status(itemId)}
-              accessibilityLabel="Check flight status"
-              onPress={status.check}
-            />
-          ) : null}
-        </View>
-        <StatusValue status={status} />
-      </View>
     </View>
   );
 }
@@ -290,18 +205,4 @@ const styles = StyleSheet.create({
   codeRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   code: { fontVariant: ['tabular-nums'] },
   codeText: { flexShrink: 1, minWidth: 0 },
-  statusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 0,
-  },
-  statusHeaderLabel: { flexShrink: 1, minWidth: 0 },
-  statusText: { flexShrink: 1, minWidth: 0 },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexShrink: 1,
-    minWidth: 0,
-  },
 });

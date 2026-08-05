@@ -1,4 +1,4 @@
-import { fetch } from 'expo/fetch';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 const LOOKUP_TIMEOUT_MS = 8_000;
 const MIN_QUERY_LENGTH = 3;
@@ -133,19 +133,16 @@ export async function searchAddresses(query: string): Promise<AddressSuggestion[
   url.searchParams.set('limit', String(MAX_RESULTS));
   url.searchParams.set('lang', 'en');
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
-    const response = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
+    const response = await fetchWithTimeout(
+      url.toString(),
+      { headers: { Accept: 'application/json' } },
+      LOOKUP_TIMEOUT_MS,
+    );
     if (!response.ok) return [];
     return normalizeAddressSuggestions(await response.json());
   } catch {
     return [];
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

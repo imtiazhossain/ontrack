@@ -3,6 +3,8 @@
  * Shared by the Expo API route (proper User-Agent) and the travel client.
  */
 
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
+
 export const DESTINATION_COVER_UA =
   'onTrack/1.0 (travel destination covers; https://ontrack.app)';
 
@@ -45,16 +47,12 @@ async function fetchJson(
   headers: Record<string, string>,
   timeoutMs = 8_000,
 ): Promise<unknown | undefined> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { headers, signal: controller.signal });
+    const response = await fetchWithTimeout(url, { headers }, timeoutMs);
     if (!response.ok) return undefined;
     return await response.json();
   } catch {
     return undefined;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

@@ -10,6 +10,8 @@ Convention: `ontrack.<feature>.<surface>.<control>`
 # Named flow (seed + navigate + settle — preferred)
 ./scripts/agent-ui-flow.sh travel-demo
 ./scripts/agent-ui-flow.sh travel-demo-add-flight
+./scripts/agent-ui-flow.sh open-new-checklist
+./scripts/agent-ui-flow.sh profile
 ./scripts/agent-ui-flow.sh --list
 
 # Jump to a surface
@@ -22,6 +24,8 @@ Convention: `ontrack.<feature>.<surface>.<control>`
 
 # Multi-step in one round trip (in-app waits)
 ./scripts/agent-ui-batch.sh --seed travel-demo --goto travel/trip-agent-ui-demo --wait-prefix ontrack.travel.planDetail.
+
+# Daemon (auto-started): Unix socket + http://127.0.0.1:8191 — prefer flow/batch chains
 
 # Invoke a known control by id (no dump, no coordinates)
 ./scripts/agent-ui-tap.sh ontrack.tabs.travel
@@ -262,6 +266,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.list.expenses.<tripId>`          | Open Expenses                                             |
 | `ontrack.travel.list.groupChat.<tripId>`         | Open Group Chat                                           |
 | `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers                                         |
+| `ontrack.travel.list.notesSection.<tripId>`      | Expand/collapse trip notes on the list card               |
 | `ontrack.travel.dates.close`                     | Close the trip date-range calendar                        |
 | `ontrack.travel.dates.start`                     | Select the trip start-date endpoint                       |
 | `ontrack.travel.dates.end`                       | Select the trip end-date endpoint                         |
@@ -308,7 +313,9 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.flight.arrivalTerminal`           | Set the arrival airport terminal                   |
 | `ontrack.travel.flight.departureGate`             | Set the departure airport gate                     |
 | `ontrack.travel.flight.arrivalGate`               | Set the arrival airport gate                       |
-| `ontrack.travel.flight.status.<itemId>`           | Sync / check current flight status from booking panel |
+| `ontrack.travel.flight.status.<itemId>.<i>`       | Sync / check status for a flight leg beside its carrier line |
+| `ontrack.travel.flight.legStatus.<itemId>.<i>`    | Per-leg operational status chip beside the carrier line |
+| `ontrack.travel.flight.passenger.<itemId>`        | Passenger / traveler count on the flight booking panel |
 | `ontrack.travel.flight.openConfirmation.<itemId>` | Open the uploaded flight confirmation document     |
 | `ontrack.travel.confirmation.importAction.flight` | Import flight details from a confirmation          |
 | `ontrack.travel.confirmation.importAction.rental` | Import rental details from a confirmation          |
@@ -391,6 +398,7 @@ Deep link: `ontrack://health` / Expo route `/(tabs)/health`
 | `ontrack.travel.planDetail.currency`           | Currency                                                                 |
 | `ontrack.travel.planDetail.addToTimeline`      | Add to Timeline                                                          |
 | `ontrack.travel.planDetail.section.transport`  | Expand/collapse transport group                                          |
+| `ontrack.travel.planDetail.section.notes`      | Expand/collapse trip notes                                               |
 | `ontrack.travel.planDetail.section.ground`     | Expand/collapse ground and transit items                                 |
 | `ontrack.travel.timelineAdd.close`             | Kind picker close                                                        |
 | `ontrack.travel.timelineAdd.kind.<kind>`       | Timeline kind choice                                                     |

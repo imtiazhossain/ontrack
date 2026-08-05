@@ -5,9 +5,10 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import { TRAVEL_EDITORIAL_ACCENT } from '@/features/travel/travel-surface';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
 import type { TravelPlan, TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -16,9 +17,6 @@ import { AgentUiIds } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
-
-/** Warm gold for the parent transport section chrome (not a kind accent). */
-const TRANSPORT_SECTION_ACCENT = '#A9782C';
 
 type TransportHandlers = {
   plan: TravelPlan;
@@ -208,7 +206,7 @@ export function TravelTransportSections({
     <TravelCollapsibleSection
       title="Transport, Stays & Rentals"
       icon="itinerary"
-      accentColor={TRANSPORT_SECTION_ACCENT}
+      accentColor={TRAVEL_EDITORIAL_ACCENT}
       card
       compact
       expanded={transportExpanded}

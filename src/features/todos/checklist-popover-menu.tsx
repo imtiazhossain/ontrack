@@ -17,6 +17,7 @@ import {
   spacing,
   type AppIconName,
 } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
@@ -65,6 +66,7 @@ export function ChecklistPopoverMenu({
   testID,
 }: ChecklistPopoverMenuProps) {
   const theme = useTheme();
+  const { s } = useResponsive();
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [anchor, setAnchor] = useState<Anchor>();
@@ -188,7 +190,12 @@ export function ChecklistPopoverMenu({
                 <AppText variant="overline" color="accent">
                   Checklist
                 </AppText>
-                <AppText variant="subheading" style={styles.panelTitle}>
+                <AppText
+                  variant="subheading"
+                  style={[
+                    styles.panelTitle,
+                    { fontSize: s(21), lineHeight: s(25) },
+                  ]}>
                   {title}
                 </AppText>
               </View>
@@ -326,8 +333,6 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 21,
-    lineHeight: 25,
   },
   items: {
     gap: spacing.xxs,

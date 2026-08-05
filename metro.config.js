@@ -1,3 +1,4 @@
+const http = require('http');
 const { getDefaultConfig } = require('expo/metro-config');
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -17,6 +18,56 @@ config.watcher.healthCheck = {
   filePrefix: '.metro-health-check',
   interval: 15_000,
   timeout: 5_000,
+};
+
+// Best-effort Metro proxy → agent-ui daemon. Expo Router may still claim some
+// paths; the app prefers http://<packager-host>:8191 directly (see http-bridge).
+const AGENT_UI_PORT = Number(process.env.AGENT_UI_HTTP_PORT || 8191);
+const previousEnhance = config.server?.enhanceMiddleware;
+config.server = {
+  ...(config.server ?? {}),
+  enhanceMiddleware: (middleware, server) => {
+    const base = previousEnhance
+      ? previousEnhance(middleware, server)
+      : middleware;
+    return (req, res, next) => {
+      const url = req.url || '';
+      if (!url.startsWith('/__agent_ui')) {
+        return base(req, res, next);
+      }
+      const parsed = new URL(url, 'http://127.0.0.1');
+      const suffix = parsed.pathname.replace(/^\/__agent_ui/, '') || '/';
+      const targetPath = `${suffix}${parsed.search}`;
+      const proxyReq = http.request(
+        {
+          hostname: '127.0.0.1',
+          port: AGENT_UI_PORT,
+          path: targetPath,
+          method: req.method,
+          headers: { ...req.headers, host: `127.0.0.1:${AGENT_UI_PORT}` },
+        },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+          proxyRes.pipe(res);
+        },
+      );
+      proxyReq.on('error', () => {
+        if (!res.headersSent) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              ok: false,
+              detail: 'agent-ui daemon down on :8191',
+            }),
+          );
+        } else {
+          res.end();
+        }
+      });
+      req.pipe(proxyReq);
+    };
+  },
 };
 
 module.exports = config;

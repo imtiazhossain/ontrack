@@ -1,22 +1,22 @@
 import {
-  enlargeWikimediaThumb,
-  isUsableDestinationPhotoUrl,
-  lookupDestinationCoverUrl,
+    isUsableDestinationPhotoUrl,
+    lookupDestinationCoverUrl
 } from '@/features/travel/destination-cover-lookup';
 import {
-  persistTravelMomentPhotos,
-  resolveTravelPhotoUris,
+    persistTravelMomentPhotos,
+    resolveTravelPhotoUris,
 } from '@/features/travel/travel-moment-media';
 import type { TravelPlan } from '@/features/travel/types';
 import { resolveExpoApiUrl } from '@/services/http/api-url';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 const COVER_FETCH_TIMEOUT_MS = 8_000;
 const coverCache = new Map<string, string | null>();
 const inflight = new Map<string, Promise<string | undefined>>();
 
 export {
-  enlargeWikimediaThumb,
-  isUsableDestinationPhotoUrl,
+    enlargeWikimediaThumb,
+    isUsableDestinationPhotoUrl
 } from '@/features/travel/destination-cover-lookup';
 
 /** Custom cover, else first moment photo. */
@@ -94,28 +94,16 @@ function coverApiUrl(place: string): string | undefined {
   }
 }
 
-async function fetchWithTimeout(
-  url: string,
-  init?: RequestInit,
-  timeoutMs = COVER_FETCH_TIMEOUT_MS,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 /** Prefer Expo API (server User-Agent) then direct Openverse fallback. */
 async function resolveRemoteCover(place: string): Promise<string | undefined> {
   const apiUrl = coverApiUrl(place);
   if (apiUrl) {
     try {
-      const response = await fetchWithTimeout(apiUrl, {
-        headers: { Accept: 'application/json' },
-      });
+      const response = await fetchWithTimeout(
+        apiUrl,
+        { headers: { Accept: 'application/json' } },
+        COVER_FETCH_TIMEOUT_MS,
+      );
       if (response.ok) {
         const body = (await response.json()) as { uri?: string };
         const uri = body.uri?.trim();

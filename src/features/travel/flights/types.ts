@@ -63,6 +63,25 @@ export type FlightOperationalStatus =
   | 'diverted'
   | 'unknown';
 
+/** Title-case badge copy for a normalized operational status. */
+export function flightOperationalStatusLabel(
+  status?: FlightOperationalStatus,
+): string | undefined {
+  if (!status || status === 'unknown') return undefined;
+  return {
+    scheduled: 'On Time',
+    'check-in': 'Check-In Open',
+    boarding: 'Boarding',
+    'gate-closed': 'Gate Closed',
+    departed: 'Departed',
+    delayed: 'Delayed',
+    approaching: 'Approaching',
+    landed: 'Landed',
+    cancelled: 'Cancelled',
+    diverted: 'Diverted',
+  }[status];
+}
+
 export interface FlightStatusInput {
   flightNumber: string;
   date: string;

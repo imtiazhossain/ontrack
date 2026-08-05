@@ -118,7 +118,14 @@ export function TravelPlanCoverField({
         </View>
         <View style={styles.copy}>
           <AppText
-            style={[styles.label, { color: chrome.title }]}
+            style={[
+              styles.label,
+              {
+                color: chrome.title,
+                fontSize: s(17),
+                lineHeight: s(22),
+              },
+            ]}
             fit
             numberOfLines={1}>
             Cover Photo
@@ -169,8 +176,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fontFamilies.serif,
-    fontSize: 17,
-    lineHeight: 22,
     fontWeight: '600',
   },
   description: {

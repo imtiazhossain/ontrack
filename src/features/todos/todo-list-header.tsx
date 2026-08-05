@@ -13,6 +13,7 @@ import { fontFamilies, radii, spacing, typography } from '@/design-system';
 import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import type { TodoFilter, TodoSort } from '@/features/todos/todo-sort';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoList, TodoMember, TodoTask } from '@/store/todos';
 import { haptics } from '@/utils/haptics';
@@ -77,6 +78,7 @@ export function TodoListHeader({
 }) {
   const router = useRouter();
   const theme = useTheme();
+  const { s } = useResponsive();
 
   return (
               <Pressable
@@ -100,7 +102,13 @@ export function TodoListHeader({
                     <AppText variant="overline" color="accent">
                       {dateLabel}
                     </AppText>
-                    <AppText style={styles.title}>{list.name}</AppText>
+                    <AppText
+                      style={[
+                        styles.title,
+                        { fontSize: s(34), lineHeight: s(41) },
+                      ]}>
+                      {list.name}
+                    </AppText>
                   </View>
                 </View>
 
@@ -121,16 +129,21 @@ export function TodoListHeader({
                     <AppText
                       variant="overline"
                       color="tertiary"
-                      style={styles.heroOverline}>
+                      style={[
+                        styles.heroOverline,
+                        { fontSize: s(10), lineHeight: s(12) },
+                      ]}>
                       Momentum
                     </AppText>
-                    <AppText variant="heading" style={styles.heroHeadline}>
+                    <AppText
+                      variant="heading"
+                      style={{ fontSize: s(16), lineHeight: s(21) }}>
                       {heroCopy}
                     </AppText>
                     <AppText
                       variant="caption"
                       color="secondary"
-                      style={styles.heroSupporting}>
+                      style={{ fontSize: s(11), lineHeight: s(14) }}>
                       {tasks.length === 0
                         ? 'Capture the next thing. The rest can wait.'
                         : `${completedCount} of ${tasks.length} complete`}
@@ -272,6 +285,8 @@ export function TodoListHeader({
                       style={[
                         styles.taskStatusCount,
                         {
+                          fontSize: s(17),
+                          lineHeight: s(18),
                           color:
                             filter === 'open'
                               ? theme.accentPrimary
@@ -491,18 +506,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   heroCopy: { flex: 1, gap: spacing.xs },
-  heroHeadline: {
-    fontSize: 16,
-    lineHeight: 21,
-  },
   heroOverline: {
-    fontSize: 10,
-    lineHeight: 12,
     letterSpacing: 1.1,
-  },
-  heroSupporting: {
-    fontSize: 11,
-    lineHeight: 14,
   },
   listHeader: { gap: spacing.md, paddingBottom: spacing.md },
   memberNotice: {
@@ -521,8 +526,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   taskStatusCount: {
-    fontSize: 17,
-    lineHeight: 18,
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
@@ -542,8 +545,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamilies.serif,
-    fontSize: 34,
-    lineHeight: 41,
     fontWeight: '400',
     letterSpacing: -0.65,
   },

@@ -66,4 +66,5 @@ __pycache__/
 *.py[cod]
 
 # Simulator verification scratch screenshots
+.tmp/
 .tmp-*.png

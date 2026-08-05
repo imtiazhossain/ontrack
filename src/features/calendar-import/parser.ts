@@ -2,20 +2,19 @@ import * as chrono from 'chrono-node';
 import ICAL from 'ical.js';
 
 import { toDateKey } from '@/utils/date';
+import { newId } from '@/utils/id';
 
 import type {
-  CalendarImportParsingOptions,
-  SharedEventDraft,
-  SharedEventSource,
+    CalendarImportParsingOptions,
+    SharedEventDraft,
+    SharedEventSource,
 } from './types';
 
 const DEFAULT_DURATION_MINUTES = 60;
 const MAX_NOTES_LENGTH = 4_000;
-let draftCounter = 0;
 
 function nextDraftId() {
-  draftCounter += 1;
-  return `shared-event-${Date.now().toString(36)}-${draftCounter.toString(36)}`;
+  return newId('shared-event');
 }
 
 function cleanText(value: string): string {

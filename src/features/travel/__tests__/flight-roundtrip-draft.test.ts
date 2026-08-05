@@ -1,14 +1,14 @@
+import type { ParsedFlightSegment } from '../flight-confirmation-parser';
 import {
-  emptyFlightDetailsDraft,
-  type FlightDetailsDraft,
+    emptyFlightDetailsDraft,
+    type FlightDetailsDraft,
 } from '../flight-details';
 import {
-  emptyFlightLegScheduleDraft,
-  flightDetailsFromSegment,
-  segmentsFromRoundTripForm,
-  suggestReturnDraftFromOutbound,
+    emptyFlightLegScheduleDraft,
+    flightDetailsFromSegment,
+    segmentsFromRoundTripForm,
+    suggestReturnDraftFromOutbound,
 } from '../flight-roundtrip-draft';
-import type { ParsedFlightSegment } from '../flight-confirmation-parser';
 
 const outboundDetails = (): FlightDetailsDraft => ({
   ...emptyFlightDetailsDraft(),
@@ -69,13 +69,89 @@ describe('flight round-trip draft helpers', () => {
       title: 'Flight EWR → KEF',
       date: '2026-09-08',
       startMinutes: 20 * 60 + 25,
+      durationMinutes: 5 * 60 + 50,
       flight: { flightNumber: 'FI 622', departureAirport: 'EWR' },
     });
     expect(segments?.[1]).toMatchObject({
       title: 'Flight KEF → EWR',
       date: '2026-09-14',
       startMinutes: 17 * 60,
+      durationMinutes: 6 * 60 + 15,
       flight: { flightNumber: 'FI 623', departureAirport: 'KEF' },
+    });
+  });
+
+  it('applies form edits when rebuilding imported connecting legs', () => {
+    const segments = segmentsFromRoundTripForm({
+      outboundDetails: {
+        ...outboundDetails(),
+        departureAirport: 'EWR',
+        arrivalAirport: 'KEF',
+        flightNumber: 'FI 999',
+        layoverMinutesAfter: '2h',
+        connectionAirport: 'BOS',
+        legs: [
+          {
+            airline: 'Icelandair',
+            flightNumber: 'FI 622',
+            departureAirport: 'EWR',
+            arrivalAirport: 'BOS',
+            date: '2026-09-08',
+            departureMinutes: 20 * 60 + 25,
+            arrivalDate: '2026-09-08',
+            arrivalMinutes: 22 * 60,
+            durationMinutes: 95,
+            layoverMinutesAfter: 99,
+          },
+          {
+            airline: 'Icelandair',
+            flightNumber: 'FI 700',
+            departureAirport: 'BOS',
+            arrivalAirport: 'KEF',
+            date: '2026-09-08',
+            departureMinutes: 23 * 60 + 40,
+            arrivalDate: '2026-09-09',
+            arrivalMinutes: 6 * 60 + 15,
+            durationMinutes: 275,
+          },
+        ],
+      },
+      outboundSchedule: {
+        date: '2026-09-08',
+        startMinutes: 20 * 60 + 25,
+        endDate: '2026-09-09',
+        endMinutes: 6 * 60 + 15,
+      },
+      returnDetails: {
+        ...emptyFlightDetailsDraft(),
+        airline: 'Icelandair',
+        flightNumber: 'FI 623',
+        departureAirport: 'KEF',
+        arrivalAirport: 'EWR',
+      },
+      returnSchedule: {
+        date: '2026-09-14',
+        startMinutes: 17 * 60,
+        endDate: '2026-09-14',
+        endMinutes: 19 * 60 + 15,
+      },
+      returnTitle: 'Flight home',
+    });
+
+    expect(segments?.[0]).toMatchObject({
+      layoverMinutesAfter: 120,
+      flight: {
+        flightNumber: 'FI 999',
+        departureAirport: 'EWR',
+        arrivalAirport: 'BOS',
+        connectionAirport: 'BOS',
+      },
+    });
+    expect(segments?.[1]).toMatchObject({
+      flight: {
+        departureAirport: 'BOS',
+        arrivalAirport: 'KEF',
+      },
     });
   });
 

@@ -13,6 +13,7 @@ const outbound: TravelItineraryItem = {
   title: 'Flight EWR → KEF',
   date: '2026-09-08',
   startMinutes: 20 * 60 + 25,
+  durationMinutes: 350,
   flight: { departureAirport: 'EWR', arrivalAirport: 'KEF' },
 };
 
@@ -22,6 +23,7 @@ const inbound: TravelItineraryItem = {
   title: 'Flight KEF → EWR',
   date: '2026-09-14',
   startMinutes: 17 * 60,
+  durationMinutes: 375,
   flight: { departureAirport: 'KEF', arrivalAirport: 'EWR' },
 };
 
@@ -91,6 +93,7 @@ describe('flightExpenseDisplayTitle', () => {
       title: 'Flight EWR → KEF',
       date: '2026-09-08',
       startMinutes: 20 * 60 + 25,
+      durationMinutes: 120,
       flight: {
         departureAirport: 'EWR',
         arrivalAirport: 'KEF',

@@ -2,51 +2,52 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
-  Keyboard,
-  Platform,
-  StyleSheet,
-  View,
-  type KeyboardEvent,
+    Keyboard,
+    Platform,
+    StyleSheet,
+    View,
+    type KeyboardEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AppText,
-  Button,
-  EmptyState,
-  ErrorMessage,
-  IconButton,
-  Input,
-  LoadingBlock,
+    AppText,
+    Button,
+    EmptyState,
+    ErrorMessage,
+    IconButton,
+    Input,
+    LoadingBlock,
 } from '@/components/primitives';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import { layout, radii, spacing } from '@/design-system';
 import {
-  buildTravelChatListItems,
-  chatNotificationsAreEnabled,
-  enableTravelChatNotifications,
-  getTravelChatDeviceId,
-  loadTravelChatMessages,
-  sendTravelChatMessage,
-  travelChatAccessCode,
-  type TravelChatListItem,
-  type TravelChatMessage,
+    buildTravelChatListItems,
+    chatNotificationsAreEnabled,
+    enableTravelChatNotifications,
+    getTravelChatDeviceId,
+    loadTravelChatMessages,
+    sendTravelChatMessage,
+    travelChatAccessCode,
+    type TravelChatListItem,
+    type TravelChatMessage,
 } from '@/features/travel/chat';
 import {
-  TravelChatDateSeparator,
-  TravelChatDestinationStamp,
-  TravelChatLandscape,
-  TravelChatMemberStack,
-  travelChatPalette,
-  type TravelChatMember,
+    TravelChatDateSeparator,
+    TravelChatDestinationStamp,
+    TravelChatLandscape,
+    TravelChatMemberStack,
+    travelChatPalette,
+    type TravelChatMember,
 } from '@/features/travel/travel-chat-chrome';
-import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { newId } from '@/utils/id';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
@@ -184,7 +185,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const send = async () => {
     if (!accessCode || !deviceId || !draft.trim() || sending) return;
     const body = draft.trim();
-    const optimisticId = `pending-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimisticId = newId('chat-pending');
     const optimisticMessage: OptimisticTravelChatMessage = {
       id: optimisticId,
       senderName,

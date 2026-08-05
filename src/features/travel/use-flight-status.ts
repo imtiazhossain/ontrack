@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Theme } from '@/design-system';
 
 import { lookupFlightData } from './flight-status-client';
-import type {
-  FlightOperationalStatus,
-  FlightStatusInput,
+import {
+    flightOperationalStatusLabel,
+    type FlightOperationalStatus,
+    type FlightStatusInput,
 } from './flights/types';
 
 export type FlightStatusRequest = {
@@ -17,7 +18,7 @@ export type FlightStatusRequest = {
 export type FlightLegStatus = {
   label?: string;
   status?: FlightOperationalStatus;
-  /** Provider-authored status copy, e.g. `On time` / `Delayed`. */
+  /** Provider-authored status copy, e.g. `On Time` / `Delayed`. */
   statusLabel?: string;
   departureTerminal?: string;
   departureGate?: string;
@@ -30,6 +31,10 @@ export type FlightStatusLookup = {
   available: boolean;
   loading: boolean;
   checked: boolean;
+  /** False while a prior sync for this journey is still cooling down. */
+  canCheck: boolean;
+  /** Whole minutes left before the next sync is allowed (0 when ready). */
+  cooldownMinutesRemaining: number;
   /** Results aligned with the requests passed in, so legs keep their slot. */
   legs: (FlightLegStatus | undefined)[];
   /** Card-level summary, e.g. `UA 1907: Boarding · UA 1697: Scheduled`. */
@@ -39,6 +44,9 @@ export type FlightStatusLookup = {
   error?: string;
   check: () => void;
 };
+
+/** Users may refresh live status at most once per journey in this window. */
+export const FLIGHT_STATUS_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
 
 /** Highest number wins when a journey mixes leg statuses. */
 const STATUS_URGENCY: Record<FlightOperationalStatus, number> = {
@@ -54,6 +62,11 @@ const STATUS_URGENCY: Record<FlightOperationalStatus, number> = {
   diverted: 9,
   cancelled: 10,
 };
+
+/** Survives card remounts so collapsing/expanding cannot bypass the cooldown. */
+const lastSyncAtByKey = new Map<string, number>();
+/** Last successful/attempted leg results for the same journey fingerprint. */
+const lastLegsByKey = new Map<string, (FlightLegStatus | undefined)[]>();
 
 export type FlightStatusTone = 'neutral' | 'positive' | 'caution' | 'critical';
 
@@ -78,6 +91,51 @@ export function flightStatusToneColor(
   }[tone];
 }
 
+export function flightStatusSyncRequestKey(
+  requests: (FlightStatusRequest | undefined)[],
+): string {
+  return requests
+    .map((request) =>
+      request
+        ? [
+            request.input.flightNumber.replace(/\s/g, '').toUpperCase(),
+            request.input.date,
+            request.input.departureAirport ?? '',
+            request.input.arrivalAirport ?? '',
+          ].join('|')
+        : '',
+    )
+    .join(';');
+}
+
+export function flightStatusSyncCooldownRemainingMs(
+  key: string,
+  now = Date.now(),
+): number {
+  if (!key) return 0;
+  const last = lastSyncAtByKey.get(key);
+  if (last === undefined) return 0;
+  return Math.max(0, last + FLIGHT_STATUS_SYNC_COOLDOWN_MS - now);
+}
+
+export function flightStatusSyncCooldownMinutesRemaining(
+  remainingMs: number,
+): number {
+  if (remainingMs <= 0) return 0;
+  return Math.max(1, Math.ceil(remainingMs / 60_000));
+}
+
+/** @internal — Jest only. */
+export function __resetFlightStatusSyncCooldownsForTests(): void {
+  lastSyncAtByKey.clear();
+  lastLegsByKey.clear();
+}
+
+/** @internal — Jest only. */
+export function __setFlightStatusSyncAtForTests(key: string, at: number): void {
+  lastSyncAtByKey.set(key, at);
+}
+
 function mostUrgent(
   legs: (FlightLegStatus | undefined)[],
 ): FlightOperationalStatus | undefined {
@@ -92,21 +150,65 @@ function mostUrgent(
 
 /**
  * Shared per-leg flight-status lookup. The journey card owns this state so the
- * booking panel badge / sync control and the terminal/gate chips all read the
- * same result.
+ * booking panel badge / sync control, per-leg itinerary chips, and terminal/gate
+ * chips all read the same result. Sync is limited to once per 10 minutes per
+ * journey fingerprint.
  */
 export function useFlightStatus(
   requests: (FlightStatusRequest | undefined)[],
 ): FlightStatusLookup {
+  const requestKey = useMemo(
+    () => flightStatusSyncRequestKey(requests),
+    [requests],
+  );
   const [state, setState] = useState<{
     loading: boolean;
     checked: boolean;
     legs: (FlightLegStatus | undefined)[];
     error?: string;
-  }>({ loading: false, checked: false, legs: [] });
+  }>(() => {
+    const cached = requestKey ? lastLegsByKey.get(requestKey) : undefined;
+    return {
+      loading: false,
+      checked: Boolean(cached),
+      legs: cached ? [...cached] : [],
+    };
+  });
+  const [cooldownUntil, setCooldownUntil] = useState(() => {
+    const remaining = flightStatusSyncCooldownRemainingMs(requestKey);
+    return remaining > 0 ? Date.now() + remaining : 0;
+  });
   const available = requests.some(Boolean);
+  const cooldownRemainingMs = Math.max(0, cooldownUntil - Date.now());
+  const canCheck = available && !state.loading && cooldownRemainingMs <= 0;
+  const cooldownMinutesRemaining =
+    flightStatusSyncCooldownMinutesRemaining(cooldownRemainingMs);
+
+  useEffect(() => {
+    const remaining = flightStatusSyncCooldownRemainingMs(requestKey);
+    setCooldownUntil(remaining > 0 ? Date.now() + remaining : 0);
+    const cached = requestKey ? lastLegsByKey.get(requestKey) : undefined;
+    if (cached) {
+      setState((current) =>
+        current.loading
+          ? current
+          : { ...current, checked: true, legs: [...cached] },
+      );
+    }
+  }, [requestKey]);
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return;
+    const timer = setTimeout(() => {
+      setCooldownUntil(0);
+    }, cooldownUntil - Date.now());
+    return () => clearTimeout(timer);
+  }, [cooldownUntil]);
 
   const check = useCallback(() => {
+    if (!available || !requestKey) return;
+    if (flightStatusSyncCooldownRemainingMs(requestKey) > 0) return;
+
     setState((current) => ({ ...current, loading: true, error: undefined }));
     void (async () => {
       const settled = await Promise.all(
@@ -120,7 +222,9 @@ export function useFlightStatus(
             return {
               label: request.label,
               status: result.status,
-              statusLabel: result.statusLabel,
+              statusLabel:
+                flightOperationalStatusLabel(result.status) ??
+                result.statusLabel,
               departureTerminal: result.departureTerminal,
               departureGate: result.departureGate,
               arrivalTerminal: result.arrivalTerminal,
@@ -140,6 +244,10 @@ export function useFlightStatus(
         (leg): leg is FlightLegStatus & { errorMessage: string } =>
           Boolean(leg && 'errorMessage' in leg && leg.errorMessage),
       );
+      const checkedAt = Date.now();
+      lastSyncAtByKey.set(requestKey, checkedAt);
+      lastLegsByKey.set(requestKey, settled);
+      setCooldownUntil(checkedAt + FLIGHT_STATUS_SYNC_COOLDOWN_MS);
       setState({
         loading: false,
         checked: true,
@@ -149,7 +257,7 @@ export function useFlightStatus(
           : { error: failure?.errorMessage ?? 'Status unavailable right now.' }),
       });
     })();
-  }, [requests]);
+  }, [available, requestKey, requests]);
 
   const labels = state.legs.flatMap((leg) =>
     leg?.statusLabel
@@ -161,6 +269,8 @@ export function useFlightStatus(
     available,
     loading: state.loading,
     checked: state.checked,
+    canCheck,
+    cooldownMinutesRemaining,
     legs: state.legs,
     ...(labels.length ? { summary: labels.join(' · ') } : {}),
     ...(state.error ? { error: state.error } : {}),

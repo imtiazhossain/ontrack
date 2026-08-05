@@ -1,5 +1,6 @@
 import type { ImportedFlightConfirmation } from '../flight-confirmation-import';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
+import { emptyFlightDetailsDraft } from '../flight-details';
 import { newTripDraftFromFlightConfirmation } from '../new-trip-flight-draft';
 
 function imported(
@@ -59,6 +60,7 @@ describe('new-trip flight itinerary draft', () => {
         segments: [
           {
             flight: {
+              ...emptyFlightDetailsDraft(),
               airline: 'United Airlines',
               flightNumber: 'UA 1907',
               confirmationCode: '',
@@ -103,6 +105,7 @@ describe('new-trip flight itinerary draft', () => {
         imported([
           {
             flight: {
+              ...emptyFlightDetailsDraft(),
               airline: 'Delta',
               flightNumber: 'DL 1',
               confirmationCode: '',
@@ -130,6 +133,7 @@ describe('new-trip flight itinerary draft', () => {
       date: string,
     ) => ({
       flight: {
+        ...emptyFlightDetailsDraft(),
         airline: '',
         flightNumber: '',
         confirmationCode: '',
@@ -163,6 +167,7 @@ describe('new-trip flight itinerary draft', () => {
       imported([
         {
           flight: {
+            ...emptyFlightDetailsDraft(),
             airline: 'Delta',
             flightNumber: 'DL 1',
             confirmationCode: '',

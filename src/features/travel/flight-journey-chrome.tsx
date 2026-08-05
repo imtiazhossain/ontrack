@@ -3,24 +3,26 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { AirlineLogo } from '@/features/travel/airline-logo';
 import {
-  airportCity,
-  airportCityLabel,
-  airportName,
+    airportCity,
+    airportCityLabel,
+    airportName,
 } from '@/features/travel/airport-catalog';
 import type {
-  FlightJourneyLayover,
-  FlightJourneyViewModel,
+    FlightJourneyLayover,
+    FlightJourneyViewModel,
 } from '@/features/travel/flight-journey-model';
 import { travelMainCardFill } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDuration, formatMinutes } from '@/utils/date';
 
+import { FlightStatusBadge } from './flight-status-badge';
 import { formatFlightGate, formatFlightTerminal } from './flight-terminal';
+import type { FlightOperationalStatus } from './flights/types';
 
 /** Column geometry shared by the vertical stops and the layover rule. */
 export function useJourneyMetrics() {
@@ -350,6 +352,15 @@ export function VerticalStop({
   flightNumber,
   carrier,
   aircraft,
+  statusLabel,
+  status,
+  statusTestID,
+  statusSyncAvailable,
+  statusSyncLoading,
+  statusSyncDisabled,
+  statusSyncAccessibilityLabel,
+  onStatusSync,
+  statusSyncTestID,
   durationMinutes,
   isLast,
 }: {
@@ -366,11 +377,21 @@ export function VerticalStop({
   flightNumber?: string;
   carrier?: string;
   aircraft?: string;
+  /** Live operational status for this leg (shown beside the carrier line). */
+  statusLabel?: string;
+  status?: FlightOperationalStatus;
+  statusTestID?: string;
+  statusSyncAvailable?: boolean;
+  statusSyncLoading?: boolean;
+  statusSyncDisabled?: boolean;
+  statusSyncAccessibilityLabel?: string;
+  onStatusSync?: () => void;
+  statusSyncTestID?: string;
   durationMinutes?: number;
   isLast?: boolean;
 }) {
   const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const { timeColWidth, railColWidth, railWidth, columnGap } =
     useJourneyMetrics();
   const place = airportCityLabel(airport);
@@ -379,6 +400,9 @@ export function VerticalStop({
   const plateSize = Math.max(28, s(30));
   const hasAirlineMeta = Boolean(
     showPlane && (carrier || aircraft || airline || flightNumber),
+  );
+  const showStatusControls = Boolean(
+    statusLabel || (statusSyncAvailable && onStatusSync),
   );
 
   return (
@@ -463,8 +487,53 @@ export function VerticalStop({
           </AppText>
         ) : null}
         <FlightFacilityChips terminal={terminal} gate={gate} accent={accent} />
+        {showStatusControls ? (
+          <View
+            style={[
+              styles.carrierRow,
+              { gap: rs.xs, marginTop: Math.max(1, s(1)) },
+            ]}>
+            <AppText
+              variant="caption"
+              color="secondary"
+              fit
+              style={styles.carrierText}>
+              Flight Status:
+            </AppText>
+            {statusLabel ? (
+              <FlightStatusBadge
+                label={statusLabel}
+                status={status}
+                testID={statusTestID}
+              />
+            ) : null}
+            {statusSyncAvailable && onStatusSync && statusSyncTestID ? (
+              <IconButton
+                icon="sync"
+                size={Math.max(28, typography.caption.lineHeight + s(8))}
+                iconSize={13}
+                background="transparent"
+                color={theme.textSecondary}
+                loading={statusSyncLoading}
+                disabled={statusSyncDisabled}
+                testID={statusSyncTestID}
+                accessibilityLabel={
+                  statusSyncAccessibilityLabel ??
+                  (flightNumber
+                    ? `Check status for ${flightNumber}`
+                    : 'Check flight status')
+                }
+                onPress={onStatusSync}
+              />
+            ) : null}
+          </View>
+        ) : null}
         {carrier ? (
-          <AppText variant="caption" color="secondary" fit>
+          <AppText
+            variant="caption"
+            color="secondary"
+            fit
+            style={styles.carrierText}>
             {carrier}
           </AppText>
         ) : null}
@@ -613,6 +682,13 @@ const styles = StyleSheet.create({
   },
   railCol: { alignItems: 'center', flexShrink: 0 },
   stopCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
+  carrierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    minWidth: 0,
+  },
+  carrierText: { flexShrink: 1, minWidth: 0 },
   durationChip: {
     flexDirection: 'row',
     alignItems: 'center',

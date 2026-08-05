@@ -9,7 +9,6 @@ import Animated, {
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
 import {
     resolveStayBookingOpen,
     type StayBookingOpen,
@@ -21,6 +20,7 @@ import { FlightDetailsCardEditor } from '@/features/travel/flight-details-card-e
 import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
 import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
+import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
 import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
@@ -406,12 +406,6 @@ export function TravelTimelineNode({
                     : compact
                       ? compactActionSize
                       : Math.max(28, s(32)),
-                  borderRadius: radii.pill,
-                  backgroundColor: dense
-                    ? 'transparent'
-                    : isCompactFlight
-                      ? tint
-                      : theme.backgroundSunken,
                 },
               ]}
             >

@@ -12,6 +12,8 @@ export type ApiRequestOptions<TError extends Error> = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
+  /** Abort the request after this many milliseconds. */
+  timeoutMs?: number;
   /** Extra headers merged after auth (Content-Type is set automatically for JSON bodies). */
   headers?: Record<string, string>;
   offlineMessage: string;
@@ -34,6 +36,7 @@ export async function apiRequest<T, TError extends Error>(
     method = options.body === undefined ? 'GET' : 'POST',
     body,
     signal,
+    timeoutMs,
     headers = {},
     offlineMessage,
     unavailableMessage,
@@ -41,6 +44,15 @@ export async function apiRequest<T, TError extends Error>(
     createError,
     authenticate = true,
   } = options;
+
+  const controller = timeoutMs !== undefined ? new AbortController() : undefined;
+  const timer =
+    controller && timeoutMs !== undefined
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : undefined;
+  const onExternalAbort = () => controller?.abort();
+  signal?.addEventListener('abort', onExternalAbort, { once: true });
+  const requestSignal = controller?.signal ?? signal;
 
   let response: Response;
   try {
@@ -53,7 +65,7 @@ export async function apiRequest<T, TError extends Error>(
         ...headers,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal,
+      signal: requestSignal,
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
@@ -61,6 +73,9 @@ export async function apiRequest<T, TError extends Error>(
       offlineMessage,
       defaultErrorCode === undefined ? 'OFFLINE' : defaultErrorCode,
     );
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    signal?.removeEventListener('abort', onExternalAbort);
   }
 
   if (!response.ok) {

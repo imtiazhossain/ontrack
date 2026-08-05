@@ -43,6 +43,10 @@ describe('travel document reader build invariant', () => {
       join(process.cwd(), 'src/features/travel/travel-plan-detail.tsx'),
       'utf8',
     );
+    const overlaysSource = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-detail-overlays.tsx'),
+      'utf8',
+    );
     const sheetSource = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-itinerary-add-sheet.tsx'),
       'utf8',
@@ -56,9 +60,11 @@ describe('travel document reader build invariant', () => {
     expect(optionsSource).toContain('pickerDidDismiss');
     expect(stayImportSource).toContain('runConfirmationPicker');
     expect(detailSource).not.toContain('addSheetSuspended');
-    expect(detailSource).toContain('visible={isAddingItem}');
+    expect(overlaysSource).not.toContain('addSheetSuspended');
+    expect(overlaysSource).toContain('visible={form.isAddingItem}');
     expect(sheetSource).not.toMatch(/^\s*Modal,/m);
     expect(sheetSource).not.toMatch(/<\s*Modal\b/);
     expect(sheetSource).toContain('absoluteFill');
   });
 });
+

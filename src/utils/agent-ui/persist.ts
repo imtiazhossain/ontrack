@@ -1,5 +1,7 @@
 import { File, Paths } from 'expo-file-system';
+import { Dimensions, PixelRatio } from 'react-native';
 
+import { getAgentUiActiveNonce, postAgentUiStatus } from './http-bridge';
 import { listAgentUiTargets, type AgentUiEntry } from './registry';
 import { getAgentUiRoute } from './route';
 
@@ -7,13 +9,26 @@ export const AGENT_UI_DUMP_FILENAME = 'agent-ui-dump.json';
 export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
 export const AGENT_UI_COMMAND_FILENAME = 'agent-ui-command.json';
 
+export type AgentUiScreenMetrics = {
+  width: number;
+  height: number;
+  scale: number;
+};
+
 export type AgentUiDumpPayload = {
   generatedAt: string;
   count: number;
   /** Expo Router pathname when the dump was taken (dev bridge). */
   route: string | null;
+  /** Logical window size + native scale for host screenshot sampling. */
+  screen: AgentUiScreenMetrics;
   elements: AgentUiEntry[];
 };
+
+function agentUiScreenMetrics(): AgentUiScreenMetrics {
+  const { width, height } = Dimensions.get('window');
+  return { width, height, scale: PixelRatio.get() };
+}
 
 export type AgentUiStatusResult = {
   op: string;
@@ -23,6 +38,9 @@ export type AgentUiStatusResult = {
   element?: AgentUiEntry;
   count?: number;
   route?: string | null;
+  /** Host/daemon correlation id for the active command. */
+  nonce?: number;
+  screen?: AgentUiScreenMetrics;
 };
 
 export type AgentUiStatusPayload = {
@@ -35,8 +53,12 @@ export type AgentUiStatusPayload = {
   /** Match count for prefix / ready checks (no dump file). */
   count?: number;
   route?: string | null;
+  /** Logical window size + native scale for host screenshot sampling. */
+  screen?: AgentUiScreenMetrics;
   /** Per-step outcomes for `op=batch`. */
   results?: AgentUiStatusResult[];
+  /** Host/daemon correlation id for the active command. */
+  nonce?: number;
 };
 
 function writeJson(filename: string, payload: unknown): void {
@@ -54,6 +76,7 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
     generatedAt: new Date().toISOString(),
     count: elements.length,
     route: getAgentUiRoute(),
+    screen: agentUiScreenMetrics(),
     elements,
   };
   writeJson(AGENT_UI_DUMP_FILENAME, payload);
@@ -63,11 +86,18 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
 export function writeAgentUiStatus(
   payload: Omit<AgentUiStatusPayload, 'generatedAt'>,
 ): AgentUiStatusPayload {
+  const nonce = payload.nonce ?? getAgentUiActiveNonce();
   const full: AgentUiStatusPayload = {
     generatedAt: new Date().toISOString(),
     route: getAgentUiRoute(),
     ...payload,
+    screen: payload.screen ?? agentUiScreenMetrics(),
+    ...(nonce !== undefined ? { nonce } : {}),
   };
   writeJson(AGENT_UI_STATUS_FILENAME, full);
+  // Fire-and-forget — daemon hosts wait on HTTP; file hosts ignore this.
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    void postAgentUiStatus(full);
+  }
   return full;
 }

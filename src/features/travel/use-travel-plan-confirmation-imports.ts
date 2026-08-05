@@ -1,47 +1,46 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { appPrompt } from '@/components/primitives';
-import {
-  expandedTripRangeForFlights,
-  mergeImportedFlights,
-  splitRoundTripDirections,
-} from '@/features/travel/flight-confirmation-itinerary';
+import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
 import { applyImportedRentalToPlan } from '@/features/travel/apply-imported-rental';
-import {
-  importFlightConfirmation,
-  type FlightConfirmationImportSource,
-  type ImportedFlightConfirmation,
-} from '@/features/travel/flight-confirmation-import';
-import {
-  flightConfirmationSchedule,
-  flightDirectionSchedule,
-  type ImportedFlightSchedule,
-} from '@/features/travel/flight-confirmation-schedule';
-import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
-import { enrichFlightConfirmationTerminals } from '@/features/travel/flight-status-client';
 import type { ExpenseFormState } from '@/features/travel/expenses/expense-form';
 import { defaultSplitIds } from '@/features/travel/expenses/expense-math';
+import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
+import {
+    importFlightConfirmation,
+    type FlightConfirmationImportSource,
+    type ImportedFlightConfirmation,
+} from '@/features/travel/flight-confirmation-import';
+import {
+    splitRoundTripDirections,
+} from '@/features/travel/flight-confirmation-itinerary';
+import {
+    flightConfirmationSchedule,
+    flightDirectionSchedule,
+    type ImportedFlightSchedule,
+} from '@/features/travel/flight-confirmation-schedule';
 import { emptyFlightDetailsDraft, type FlightDetailsDraft } from '@/features/travel/flight-details';
 import {
-  flightLegScheduleFromImported,
-  returnFlightTitle,
-  type FlightLegScheduleDraft,
-  type FlightTripType,
+    flightLegScheduleFromImported,
+    returnFlightTitle,
+    type FlightLegScheduleDraft,
+    type FlightTripType,
 } from '@/features/travel/flight-roundtrip-draft';
+import { enrichFlightConfirmationTerminals } from '@/features/travel/flight-status-client';
 import {
-  importRentalConfirmation,
-  type RentalConfirmationImportSource,
+    importRentalConfirmation,
+    type RentalConfirmationImportSource,
 } from '@/features/travel/rental-confirmation-import';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import {
-  importStayConfirmation,
-  type StayConfirmationImportSource,
+    importStayConfirmation,
+    type StayConfirmationImportSource,
 } from '@/features/travel/stay-confirmation-import';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
 import { TRAVEL_EXPENSE_SELF_ID } from '@/features/travel/types';
-import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import { newId } from '@/store/schedule';
 
 type SetStr = Dispatch<SetStateAction<string>>;
@@ -312,19 +311,14 @@ export function useTravelPlanConfirmationImports({
       }
 
       if (target !== 'new') {
-        updatePlan({
-          ...plan,
-          ...expandedTripRangeForFlights(plan, imported.segments),
-          itinerary: mergeImportedFlights({
-            itinerary: plan.itinerary,
-            segments: imported.segments,
-            tripRange: plan,
+        updatePlan(
+          applyImportedFlightsToPlan({
+            plan,
+            imported,
             createId: () => newId('trip-item'),
             targetItemId: target,
-            confirmationUris: imported.confirmationUris,
           }),
-          updatedAt: new Date().toISOString(),
-        });
+        );
         edit.setEditingFlightItemId(undefined);
         if (expenseAlert) {
           appPrompt.alert(

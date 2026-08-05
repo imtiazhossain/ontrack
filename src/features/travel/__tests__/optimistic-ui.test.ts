@@ -39,11 +39,12 @@ describe('optimistic network actions', () => {
 
   it('recovers from photo persistence failures while adding an itinerary item', () => {
     const source = fs.readFileSync(
-      path.join(process.cwd(), 'src/features/travel/travel-plan-detail.tsx'),
+      path.join(process.cwd(), 'src/features/travel/use-travel-plan-detail-add-item.ts'),
       'utf8',
     );
     expect(source).toContain("console.warn('[addTravelItineraryItem]', caught)");
     expect(source).toContain('Couldn’t save this itinerary item. Check its photos and try again.');
-    expect(source).toContain('stopAddItem();\n      setError(');
+    expect(source).toContain('stopAddItem();\n      form.setError(');
   });
 });
+

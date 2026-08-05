@@ -16,11 +16,11 @@ describe('createPersistStorage', () => {
 
   it('round-trips JSON through the zustand storage adapter', async () => {
     const storage = createPersistStorage<{ hello: string }>();
+    const value = { state: { hello: 'world' } };
     expect(storage).toBeTruthy();
 
-    await storage!.setItem(STORAGE_KEYS.preferences, JSON.stringify({ hello: 'world' }));
-    const raw = await storage!.getItem(STORAGE_KEYS.preferences);
-    expect(raw).toBe(JSON.stringify({ hello: 'world' }));
+    await storage!.setItem(STORAGE_KEYS.preferences, value);
+    expect(await storage!.getItem(STORAGE_KEYS.preferences)).toEqual(value);
     await storage!.removeItem(STORAGE_KEYS.preferences);
     expect(await storage!.getItem(STORAGE_KEYS.preferences)).toBeNull();
   });

@@ -1,18 +1,18 @@
-import type { AgentDefinition } from '../types';
-import {
-  AGENTS,
-  agentAvailability,
-  createAgentRegistry,
-  getAgentCapability,
-} from '../registry';
 import { DEFAULT_ADDON_STATE } from '@/addons/registry';
+import {
+    AGENTS,
+    agentAvailability,
+    createAgentRegistry,
+    getAgentCapability,
+} from '../registry';
+import type { AgentDefinition } from '../types';
 
 const TEST_AGENT: AgentDefinition = {
   id: 'test-companion',
   version: 1,
   name: 'Test companion',
   description: 'Used only to validate the agent extension contract.',
-  icon: 'person.crop.circle',
+  icon: 'agents',
   providerId: 'test-provider',
   access: 'included',
   requiredAddonId: 'travel',

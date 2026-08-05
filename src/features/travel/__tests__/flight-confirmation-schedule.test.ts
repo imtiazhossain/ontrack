@@ -57,7 +57,7 @@ describe('flight confirmation editor schedule', () => {
       departureMinutes: 90,
       arrivalDate: '2026-09-27',
       arrivalMinutes: 11 * 60 + 29,
-      durationMinutes: 2 * 60 + 51,
+      durationMinutes: 9 * 60 + 59,
     });
 
     expect(

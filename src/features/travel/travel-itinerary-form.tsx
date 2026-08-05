@@ -3,17 +3,13 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
   Button,
-  DateField,
   ErrorMessage,
   Input,
   SegmentedControl,
   Symbol,
-  TimeField,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
-import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
@@ -25,8 +21,13 @@ import type {
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
+import { TravelItineraryFormScheduleFields } from '@/features/travel/travel-itinerary-form-schedule-fields';
+import {
+  TravelItineraryStayAddressField,
+  TravelItineraryStayFields,
+  TravelItineraryStayNotesField,
+} from '@/features/travel/travel-itinerary-stay-fields';
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
@@ -176,30 +177,11 @@ export function TravelItineraryForm({
   const { s, spacing: rs, typography } = useResponsive();
   const [photosModalVisible, setPhotosModalVisible] = useState(false);
   const isMoment = kind === 'moment';
-  const usesRange = kind === 'stay' || kind === 'flight' || kind === 'rental';
-  const showDuration = kind === 'activity';
   const thumb = Math.max(64, s(72));
   // Grow the TextInput value area only — outer stacked chrome already sizes the row.
   const detailsMinHeight = Math.max(22, Math.ceil(typography.body.lineHeight));
   const detailsNote = useAutoGrowingNote(details, detailsMinHeight);
   const stayNote = useAutoGrowingNote(stayDetails.notes, detailsMinHeight);
-
-  const rangeStartLabel =
-    kind === 'stay'
-      ? 'Check-in'
-      : kind === 'rental'
-        ? 'Pick-up'
-        : kind === 'flight'
-          ? 'Departure'
-          : undefined;
-  const rangeEndLabel =
-    kind === 'stay'
-      ? 'Check-out'
-      : kind === 'rental'
-        ? 'Drop-off'
-        : kind === 'flight'
-          ? 'Arrival'
-          : undefined;
 
   const confirmationImport =
     kind === 'stay'
@@ -354,118 +336,28 @@ export function TravelItineraryForm({
       />
 
       {kind === 'stay' ? (
-        <AddressAutofindField
+        <TravelItineraryStayAddressField
           value={details}
           onChange={onDetailsChange}
-          stackedLabel="Address"
-          placeholder="Enter the full address"
-          accessibilityLabel="Address, optional"
-          {...itinerarySheetFieldProps(chrome, 'location')}
         />
       ) : null}
 
-      <View style={[styles.schedule, { gap: rs.sm }]}>
-        {kind === 'flight' && flightTripType === 'round-trip' ? (
-          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
-            Departing
-          </AppText>
-        ) : null}
-        {usesRange && rangeStartLabel && rangeEndLabel ? (
-          <>
-            <View style={[styles.twoColumns, { gap: rs.sm }]}>
-              <View style={styles.flex}>
-                <DateField
-                  testID={AgentUiIds.travel.itineraryAdd.date}
-                  value={date}
-                  stackedLabel={`${rangeStartLabel} *`}
-                  placeholder="Select date"
-                  minimumDate={kind === 'flight' ? undefined : planStartDate}
-                  maximumDate={kind === 'flight' ? undefined : planEndDate}
-                  onChange={onDateChange}
-                  accessibilityLabel={`${rangeStartLabel} date, required`}
-                  {...itinerarySheetFieldProps(chrome, 'calendar')}
-                />
-              </View>
-              <View style={styles.flex}>
-                <TimeField
-                  testID={AgentUiIds.travel.itineraryAdd.time}
-                  value={startMinutes}
-                  stackedLabel="Time"
-                  placeholder="Select time"
-                  showChevron
-                  onChange={onStartMinutesChange}
-                  accessibilityLabel={`${rangeStartLabel} time, required`}
-                  {...itinerarySheetFieldProps(chrome, 'clock')}
-                />
-              </View>
-            </View>
-            <View style={[styles.twoColumns, { gap: rs.sm }]}>
-              <View style={styles.flex}>
-                <DateField
-                  testID={AgentUiIds.travel.itineraryAdd.endDate}
-                  value={endDate}
-                  stackedLabel={`${rangeEndLabel} *`}
-                  placeholder="Select date"
-                  minimumDate={date || (kind === 'flight' ? undefined : planStartDate)}
-                  maximumDate={kind === 'flight' ? undefined : planEndDate}
-                  onChange={onEndDateChange}
-                  accessibilityLabel={`${rangeEndLabel} date, required`}
-                  {...itinerarySheetFieldProps(chrome, 'calendar')}
-                />
-              </View>
-              <View style={styles.flex}>
-                <TimeField
-                  testID={AgentUiIds.travel.itineraryAdd.endTime}
-                  value={endMinutes}
-                  stackedLabel="Time"
-                  placeholder="Select time"
-                  showChevron
-                  onChange={onEndMinutesChange}
-                  accessibilityLabel={`${rangeEndLabel} time, required`}
-                  {...itinerarySheetFieldProps(chrome, 'clock')}
-                />
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={[styles.twoColumns, { gap: rs.sm }]}>
-            <View style={styles.flex}>
-              <DateField
-                testID={AgentUiIds.travel.itineraryAdd.date}
-                value={date}
-                stackedLabel="Date *"
-                placeholder="Select date"
-                minimumDate={planStartDate}
-                maximumDate={planEndDate}
-                onChange={onDateChange}
-                {...itinerarySheetFieldProps(chrome, 'calendar')}
-              />
-            </View>
-            <View style={styles.flex}>
-              <TimeField
-                testID={AgentUiIds.travel.itineraryAdd.time}
-                value={startMinutes}
-                stackedLabel="Time *"
-                placeholder="Select time"
-                showChevron
-                onChange={onStartMinutesChange}
-                {...itinerarySheetFieldProps(chrome, 'clock')}
-              />
-            </View>
-          </View>
-        )}
-        {showDuration ? (
-          <Input
-            value={duration}
-            onChangeText={onDurationChange}
-            icon="clock"
-            stackedLabel="Duration (minutes) *"
-            placeholder="e.g. 60"
-            keyboardType="number-pad"
-            {...itinerarySheetFieldProps(chrome, 'clock')}
-          />
-        ) : null}
-      </View>
+      <TravelItineraryFormScheduleFields
+        kind={kind}
+        flightTripType={flightTripType}
+        date={date}
+        startMinutes={startMinutes}
+        endDate={endDate}
+        endMinutes={endMinutes}
+        duration={duration}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
+        onDateChange={onDateChange}
+        onStartMinutesChange={onStartMinutesChange}
+        onEndDateChange={onEndDateChange}
+        onEndMinutesChange={onEndMinutesChange}
+        onDurationChange={onDurationChange}
+      />
 
       {kind === 'flight' ? (
         <FlightDetailsEditor
@@ -546,80 +438,11 @@ export function TravelItineraryForm({
       )}
 
       {kind === 'stay' ? (
-        <>
-          <Input
-            value={stayDetails.confirmationCode}
-            onChangeText={(nextValue) =>
-              onStayDetailsChange({ ...stayDetails, confirmationCode: nextValue })
-            }
-            icon="shield"
-            stackedLabel="Confirmation Code"
-            placeholder="Enter confirmation or reservation code"
-            accessibilityLabel="Confirmation Code"
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={24}
-            {...itinerarySheetFieldProps(chrome, 'shield')}
-          />
-          <View style={[styles.twoColumns, { gap: rs.sm }]}>
-            <View style={styles.flex}>
-              <Input
-                value={stayDetails.price}
-                onChangeText={(nextValue) =>
-                  onStayDetailsChange({ ...stayDetails, price: nextValue })
-                }
-                icon="currency"
-                stackedLabel="Price"
-                placeholder="0.00"
-                accessibilityLabel="Price"
-                keyboardType="decimal-pad"
-                {...itinerarySheetFieldProps(chrome, 'import')}
-              />
-            </View>
-            <View style={styles.flex}>
-              <Input
-                value={stayDetails.currency}
-                onChangeText={(nextValue) =>
-                  onStayDetailsChange({
-                    ...stayDetails,
-                    currency: nextValue.toUpperCase(),
-                  })
-                }
-                icon="wallet"
-                stackedLabel="Currency"
-                placeholder="USD"
-                accessibilityLabel="Currency"
-                autoCapitalize="characters"
-                maxLength={3}
-                autoCorrect={false}
-                {...itinerarySheetFieldProps(chrome, 'shield')}
-              />
-            </View>
-          </View>
-          <Input
-            value={stayDetails.reservationEmail}
-            onChangeText={(nextValue) =>
-              onStayDetailsChange({
-                ...stayDetails,
-                reservationEmail: nextValue,
-              })
-            }
-            icon="personal"
-            stackedLabel="Reservation Email"
-            placeholder="Email used when booking"
-            accessibilityLabel="Reservation Email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
-            maxLength={120}
-            {...itinerarySheetFieldProps(chrome, 'note')}
-          />
-          {stayDetailsError ? (
-            <ErrorMessage message={stayDetailsError} selectable />
-          ) : null}
-        </>
+        <TravelItineraryStayFields
+          value={stayDetails}
+          error={stayDetailsError}
+          onChange={onStayDetailsChange}
+        />
       ) : null}
 
       {isMoment || photoUris.length > 0 ? (
@@ -679,27 +502,11 @@ export function TravelItineraryForm({
       ) : null}
 
       {kind === 'stay' ? (
-        <Input
-          value={stayDetails.notes}
-          onChangeText={(nextValue) => {
-            const clipped = nextValue.slice(0, DETAILS_MAX_LENGTH);
-            stayNote.collapseWhenEmpty(clipped);
-            onStayDetailsChange({
-              ...stayDetails,
-              notes: clipped,
-            });
-          }}
-          icon="note"
-          stackedLabel="Notes"
-          placeholder="Wifi, door codes, parking, or anything helpful…"
-          accessibilityLabel="Notes"
-          multiline
-          scrollEnabled={false}
+        <TravelItineraryStayNotesField
+          value={stayDetails}
           maxLength={DETAILS_MAX_LENGTH}
-          textAlignVertical="top"
-          onContentSizeChange={stayNote.onContentSizeChange}
-          style={stayNote.style}
-          {...itinerarySheetFieldProps(chrome, 'note')}
+          note={stayNote}
+          onChange={onStayDetailsChange}
         />
       ) : null}
 
@@ -743,9 +550,6 @@ export function TravelItineraryForm({
 
 const styles = StyleSheet.create({
   formBody: {},
-  schedule: {},
-  twoColumns: { flexDirection: 'row' },
-  flex: { flex: 1, minWidth: 0 },
   photoSection: {},
   photoStrip: {},
   photoWrap: {

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing, layout } from '@/design-system';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoFilter } from './todo-sort';
 
@@ -25,6 +26,7 @@ export function TodoEmptyState({
   onShowCompleted: () => void;
 }) {
   const theme = useTheme();
+  const { s } = useResponsive();
 
   if (filter === 'completed') {
     return (
@@ -41,14 +43,19 @@ export function TodoEmptyState({
             color={theme.textTertiary}
           />
         </View>
-        <AppText variant="heading" style={styles.emptyTitle}>
+        <AppText
+          variant="heading"
+          style={{ fontSize: s(21), lineHeight: s(26) }}>
           A clean slate
         </AppText>
         <AppText
           variant="body"
           color="secondary"
           align="center"
-          style={styles.emptyBody}>
+          style={[
+            styles.emptyBody,
+            { fontSize: s(14), lineHeight: s(20) },
+          ]}>
           Completed tasks will collect here when you’re ready to look back.
         </AppText>
       </View>
@@ -63,14 +70,19 @@ export function TodoEmptyState({
         >
           <Symbol name="status-completed" size={24} color={theme.success} />
         </View>
-        <AppText variant="heading" style={styles.emptyTitle}>
+        <AppText
+          variant="heading"
+          style={{ fontSize: s(21), lineHeight: s(26) }}>
           All caught up
         </AppText>
         <AppText
           variant="body"
           color="secondary"
           align="center"
-          style={styles.emptyBody}>
+          style={[
+            styles.emptyBody,
+            { fontSize: s(14), lineHeight: s(20) },
+          ]}>
           Enjoy the space you made—or add the next small thing.
         </AppText>
         <View style={styles.emptyActions}>
@@ -110,14 +122,19 @@ export function TodoEmptyState({
       <View style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}>
         <Symbol name="tasks" size={24} color={theme.accentPrimary} />
       </View>
-      <AppText variant="heading" style={styles.emptyTitle}>
+      <AppText
+        variant="heading"
+        style={{ fontSize: s(21), lineHeight: s(26) }}>
         Your list is wide open
       </AppText>
       <AppText
         variant="body"
         color="secondary"
         align="center"
-        style={styles.emptyBody}>
+        style={[
+          styles.emptyBody,
+          { fontSize: s(14), lineHeight: s(20) },
+        ]}>
         Start with one clear, kind commitment to yourself.
       </AppText>
       <View style={styles.suggestions}>
@@ -163,14 +180,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderCurve: 'continuous',
   },
-  emptyTitle: {
-    fontSize: 21,
-    lineHeight: 26,
-  },
   emptyBody: {
     maxWidth: 340,
-    fontSize: 14,
-    lineHeight: 20,
   },
   emptyActions: {
     flexDirection: 'row',

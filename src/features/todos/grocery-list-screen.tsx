@@ -32,6 +32,7 @@ import {
 } from '@/features/todos/grocery-rows';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
@@ -60,6 +61,7 @@ type GroceryListRow =
 export function GroceryListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
+  const { s } = useResponsive();
   const insets = useSafeAreaInsets();
   const { refreshControl } = usePullToRefresh();
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
@@ -401,7 +403,13 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 <AppText variant="overline" color="accent">
                   Grocery list
                 </AppText>
-                <AppText style={styles.title}>{list.name}</AppText>
+                <AppText
+                  style={[
+                    styles.title,
+                    { fontSize: s(35), lineHeight: s(42) },
+                  ]}>
+                  {list.name}
+                </AppText>
                 <AppText variant="body" color="secondary">
                   {tasks.length
                     ? `${completedCount} of ${tasks.length} ingredients and items checked`
@@ -529,8 +537,6 @@ const styles = StyleSheet.create({
   headingCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
   title: {
     fontFamily: fontFamilies.serif,
-    fontSize: 35,
-    lineHeight: 42,
     fontWeight: '400',
     letterSpacing: -0.7,
   },

@@ -4,12 +4,18 @@ import {
 } from '../confirmation-uri-attach';
 import type { TravelPlan } from '../types';
 
-const mockNewestStoredConfirmationUris = jest.fn(() => [
-  'file:///Documents/travel-confirmations/flight/latest.jpg',
-]);
+type NewestStoredConfirmationUrisArgs = Parameters<
+  typeof import('../confirmation-attachments').newestStoredConfirmationUris
+>;
+
+const mockNewestStoredConfirmationUris = jest.fn(
+  (..._args: NewestStoredConfirmationUrisArgs) => [
+    'file:///Documents/travel-confirmations/flight/latest.jpg',
+  ],
+);
 
 jest.mock('../confirmation-attachments', () => ({
-  newestStoredConfirmationUris: (...args: unknown[]) =>
+  newestStoredConfirmationUris: (...args: NewestStoredConfirmationUrisArgs) =>
     mockNewestStoredConfirmationUris(...args),
 }));
 

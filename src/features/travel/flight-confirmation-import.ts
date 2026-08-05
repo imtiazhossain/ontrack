@@ -32,6 +32,11 @@ interface ConfirmationAsset {
 export interface ImportedFlightConfirmation extends ParsedFlightConfirmation {
   fileName: string;
   confirmationUris: string[];
+  /**
+   * __DEV__ / agent-ui only: ordered itinerary item ids to use on submit instead
+   * of random `trip-item-*` ids so flows can assert without dumping.
+   */
+  agentUiItemIds?: string[];
 }
 
 async function readFlightConfirmationUris(

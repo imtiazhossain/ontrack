@@ -1,13 +1,12 @@
-import { fetch } from 'expo/fetch';
-
 import type { AppIconName } from '@/design-system';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 import { addDays, todayKey } from '@/utils/date';
 
 import type {
-  DestinationCurrentWeather,
-  TemperatureUnit,
-  TravelWeather,
-  TravelWeatherDay,
+    DestinationCurrentWeather,
+    TemperatureUnit,
+    TravelWeather,
+    TravelWeatherDay,
 } from './types';
 
 const FORECAST_DAYS = 16;
@@ -74,21 +73,15 @@ function isNumberArray(value: unknown): value is number[] {
 }
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  const abort = () => controller.abort();
-  signal?.addEventListener('abort', abort, { once: true });
-
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchWithTimeout(url, { signal }, REQUEST_TIMEOUT_MS);
     if (!response.ok) throw new Error(`Weather service returned ${response.status}.`);
     return (await response.json()) as T;
   } catch (error) {
-    if (controller.signal.aborted) throw new Error('Weather request timed out.');
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Weather request timed out.');
+    }
     throw error instanceof Error ? error : new Error('Weather is temporarily unavailable.');
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', abort);
   }
 }
 

@@ -204,7 +204,12 @@ export const AgentUiIds = {
       arrivalTerminal: 'ontrack.travel.flight.arrivalTerminal',
       departureGate: 'ontrack.travel.flight.departureGate',
       arrivalGate: 'ontrack.travel.flight.arrivalGate',
-      status: (itemId: string) => `ontrack.travel.flight.status.${itemId}`,
+      status: (itemId: string, legIndex: number) =>
+        `ontrack.travel.flight.status.${itemId}.${legIndex}`,
+      legStatus: (itemId: string, legIndex: number) =>
+        `ontrack.travel.flight.legStatus.${itemId}.${legIndex}`,
+      passenger: (itemId: string) =>
+        `ontrack.travel.flight.passenger.${itemId}`,
       openConfirmation: (itemId: string) =>
         `ontrack.travel.flight.openConfirmation.${itemId}`,
     },
@@ -280,6 +285,8 @@ export const AgentUiIds = {
       coTravelers: (tripId: string) =>
         `ontrack.travel.list.coTravelers.${tripId}`,
       editTrip: (tripId: string) => `ontrack.travel.list.editTrip.${tripId}`,
+      notesSection: (tripId: string) =>
+        `ontrack.travel.list.notesSection.${tripId}`,
     },
     dates: {
       close: 'ontrack.travel.dates.close',
@@ -347,6 +354,7 @@ export const AgentUiIds = {
       groundSection: 'ontrack.travel.planDetail.section.ground',
       staysSection: 'ontrack.travel.planDetail.section.stays',
       rentalsSection: 'ontrack.travel.planDetail.section.rentals',
+      notesSection: 'ontrack.travel.planDetail.section.notes',
       weatherCard: 'ontrack.travel.planDetail.weatherCard',
     },
     timelineAdd: {

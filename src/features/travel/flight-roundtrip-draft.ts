@@ -1,14 +1,14 @@
-import type { ImportedFlightSchedule } from './flight-confirmation-schedule';
+import { calculateFlightDuration } from './flight-arrival';
 import type { ParsedFlightSegment } from './flight-confirmation-parser';
+import type { ImportedFlightSchedule } from './flight-confirmation-schedule';
 import {
-  emptyFlightDetailsDraft,
-  formatLayoverDuration,
-  normalizeFlightDetails,
-  type FlightDetailsDraft,
+    emptyFlightDetailsDraft,
+    formatLayoverDuration,
+    normalizeFlightDetails,
+    type FlightDetailsDraft,
 } from './flight-details';
 import { formatFlightRouteLabel } from './flight-route-label';
 import type { TravelFlightLeg } from './types';
-import { minutesBetween } from '@/utils/date';
 
 export type FlightTripType = 'one-way' | 'round-trip';
 
@@ -113,11 +113,11 @@ function titleForLeg(details: FlightDetailsDraft, fallback: string): string {
   return route ? `Flight ${route}` : fallback;
 }
 
-function segmentFromLegDraft(
-  details: FlightDetailsDraft,
+function durationForLegSchedule(
   schedule: FlightLegScheduleDraft,
-  titles: { preferred?: string; fallback: string },
-): ParsedFlightSegment | undefined {
+  departureAirport?: string,
+  arrivalAirport?: string,
+): number | undefined {
   if (
     !schedule.date ||
     schedule.startMinutes === null ||
@@ -126,15 +126,31 @@ function segmentFromLegDraft(
   ) {
     return undefined;
   }
-  const durationMinutes = minutesBetween(
-    schedule.date,
-    schedule.startMinutes,
-    schedule.endDate,
-    schedule.endMinutes,
-  );
+  const durationMinutes = calculateFlightDuration({
+    departureDate: schedule.date,
+    departureMinutes: schedule.startMinutes,
+    arrivalDate: schedule.endDate,
+    arrivalMinutes: schedule.endMinutes,
+    departureAirport,
+    arrivalAirport,
+  });
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
     return undefined;
   }
+  return Math.round(durationMinutes);
+}
+
+function segmentFromLegDraft(
+  details: FlightDetailsDraft,
+  schedule: FlightLegScheduleDraft,
+  titles: { preferred?: string; fallback: string },
+): ParsedFlightSegment | undefined {
+  const durationMinutes = durationForLegSchedule(
+    schedule,
+    details.departureAirport,
+    details.arrivalAirport,
+  );
+  if (durationMinutes === undefined) return undefined;
   const normalized = normalizeFlightDetails(details);
   const layoverMinutesAfter = normalized?.layoverMinutesAfter;
   const connectionAirport = normalized?.connectionAirport;
@@ -145,13 +161,73 @@ function segmentFromLegDraft(
     },
     title: titles.preferred?.trim() || titleForLeg(details, titles.fallback),
     date: schedule.date,
-    startMinutes: schedule.startMinutes,
+    startMinutes: schedule.startMinutes!,
     arrivalDate: schedule.endDate,
-    arrivalMinutes: schedule.endMinutes,
-    durationMinutes: Math.round(durationMinutes),
+    arrivalMinutes: schedule.endMinutes!,
+    durationMinutes,
     ...(layoverMinutesAfter ? { layoverMinutesAfter } : {}),
     detectedFieldCount: 1,
   };
+}
+
+/** Apply collapsed direction-form edits onto stored connecting legs. */
+function applyDirectionDraftToLegs(
+  legs: TravelFlightLeg[],
+  details: FlightDetailsDraft,
+): TravelFlightLeg[] {
+  if (legs.length < 2) return legs;
+  const normalized = normalizeFlightDetails(details);
+  const next = legs.map((leg) => ({ ...leg }));
+  const first = { ...next[0]! };
+  const lastIndex = next.length - 1;
+  const last = { ...next[lastIndex]! };
+
+  if (details.departureAirport.trim()) {
+    first.departureAirport = details.departureAirport.trim().toUpperCase();
+  }
+  if (details.airline.trim()) {
+    first.airline = details.airline.trim();
+  }
+  if (details.flightNumber.trim()) {
+    first.flightNumber = details.flightNumber.trim();
+  }
+  if (details.departureTerminal.trim()) {
+    first.departureTerminal = details.departureTerminal.trim();
+  }
+  if (details.departureGate.trim()) {
+    first.departureGate = details.departureGate.trim();
+  }
+  if (details.arrivalAirport.trim()) {
+    last.arrivalAirport = details.arrivalAirport.trim().toUpperCase();
+  }
+  if (details.arrivalTerminal.trim()) {
+    last.arrivalTerminal = details.arrivalTerminal.trim();
+  }
+  if (details.arrivalGate.trim()) {
+    last.arrivalGate = details.arrivalGate.trim();
+  }
+
+  const connection = (
+    normalized?.connectionAirport ||
+    details.connectionAirport ||
+    ''
+  )
+    .trim()
+    .toUpperCase();
+  if (connection) {
+    first.arrivalAirport = connection;
+    if (next[1]) {
+      next[1] = { ...next[1], departureAirport: connection };
+    }
+  }
+
+  if (normalized?.layoverMinutesAfter) {
+    first.layoverMinutesAfter = normalized.layoverMinutesAfter;
+  }
+
+  next[0] = first;
+  next[lastIndex] = last;
+  return next;
 }
 
 function segmentsFromStoredLegs(
@@ -170,10 +246,12 @@ function segmentsFromStoredLegs(
     return undefined;
   }
 
+  const patchedLegs = applyDirectionDraftToLegs(legs, details);
   const confirmationCode = details.confirmationCode;
-  const segments: ParsedFlightSegment[] = legs.map((leg, index) => {
+  const normalized = normalizeFlightDetails(details);
+  const segments: ParsedFlightSegment[] = patchedLegs.map((leg, index) => {
     const isFirst = index === 0;
-    const isLast = index === legs.length - 1;
+    const isLast = index === patchedLegs.length - 1;
     const date = isFirst ? schedule.date : (leg.date ?? schedule.date);
     const startMinutes = isFirst
       ? schedule.startMinutes!
@@ -186,7 +264,19 @@ function segmentsFromStoredLegs(
       : (leg.arrivalMinutes ?? schedule.endMinutes!);
     const durationMinutes =
       leg.durationMinutes ??
-      minutesBetween(date, startMinutes, arrivalDate, arrivalMinutes);
+      durationForLegSchedule(
+        {
+          date,
+          startMinutes,
+          endDate: arrivalDate,
+          endMinutes: arrivalMinutes,
+        },
+        leg.departureAirport,
+        leg.arrivalAirport,
+      );
+    const layoverMinutesAfter = isFirst
+      ? (normalized?.layoverMinutesAfter ?? leg.layoverMinutesAfter)
+      : leg.layoverMinutesAfter;
     return {
       flight: {
         ...emptyFlightDetailsDraft(),
@@ -200,6 +290,9 @@ function segmentsFromStoredLegs(
         arrivalTerminal: leg.arrivalTerminal || '',
         arrivalGate: leg.arrivalGate || '',
         seat: isFirst ? details.seat : '',
+        ...(isFirst && normalized?.connectionAirport
+          ? { connectionAirport: normalized.connectionAirport }
+          : {}),
         ...(details.passengerName
           ? { passengerName: details.passengerName }
           : {}),
@@ -214,39 +307,18 @@ function segmentsFromStoredLegs(
       startMinutes,
       arrivalDate,
       arrivalMinutes,
-      ...(Number.isFinite(durationMinutes) && durationMinutes > 0
-        ? { durationMinutes: Math.round(durationMinutes) }
-        : {}),
-      ...(leg.layoverMinutesAfter
-        ? { layoverMinutesAfter: leg.layoverMinutesAfter }
-        : {}),
+      ...(durationMinutes !== undefined ? { durationMinutes } : {}),
+      ...(layoverMinutesAfter ? { layoverMinutesAfter } : {}),
       ...(leg.aircraft ? { aircraft: leg.aircraft } : {}),
       detectedFieldCount: 1,
     };
   });
 
-  // Keep form layover edits on the first leg when legs omitted a duration.
-  const normalized = normalizeFlightDetails(details);
-  if (
-    normalized?.layoverMinutesAfter &&
-    !segments[0]?.layoverMinutesAfter
-  ) {
-    segments[0] = {
-      ...segments[0]!,
-      layoverMinutesAfter: normalized.layoverMinutesAfter,
-      flight: {
-        ...segments[0]!.flight,
-        ...(normalized.connectionAirport
-          ? { connectionAirport: normalized.connectionAirport }
-          : {}),
-      },
-    };
-  }
-
   return segments;
 }
 
-function segmentsFromDirectionDraft(
+/** Build segments for one direction (one-way, outbound, or return), honoring form edits. */
+export function segmentsFromDirectionForm(
   details: FlightDetailsDraft,
   schedule: FlightLegScheduleDraft,
   titles: { preferred?: string; fallback: string },
@@ -273,12 +345,12 @@ export function segmentsFromRoundTripForm(input: {
   returnSchedule: FlightLegScheduleDraft;
   returnTitle?: string;
 }): ParsedFlightSegment[] | undefined {
-  const outbound = segmentsFromDirectionDraft(
+  const outbound = segmentsFromDirectionForm(
     input.outboundDetails,
     input.outboundSchedule,
     { preferred: input.outboundTitle, fallback: 'Departure flight' },
   );
-  const returnLegs = segmentsFromDirectionDraft(
+  const returnLegs = segmentsFromDirectionForm(
     input.returnDetails,
     input.returnSchedule,
     { preferred: input.returnTitle, fallback: 'Returning flight' },

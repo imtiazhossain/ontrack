@@ -2,11 +2,11 @@ import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 
 import { FlightJourneyCard } from './flight-journey-card';
-import { legFlightStatusInput } from './flight-status-client';
 import {
-  buildFlightJourneyViewModel,
-  resolveFlightLegs,
+    buildFlightJourneyViewModel,
+    resolveFlightLegs,
 } from './flight-journey-model';
+import { legFlightStatusInput } from './flight-status-client';
 import type { TravelFlightDetails } from './types';
 
 export function FlightDetailsSummary({

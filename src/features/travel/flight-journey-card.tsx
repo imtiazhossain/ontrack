@@ -13,6 +13,7 @@ import {
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { formatDuration } from '@/utils/date';
 
 import { formatFlightJourneyDate } from './flight-arrival';
@@ -81,8 +82,8 @@ function JourneyHero({
 
 /**
  * Expanded flight card shared by non-stop and connecting itineraries: booking
- * facts, the at-a-glance route strip, the vertical leg itinerary, and the
- * confirmation / status actions.
+ * confirmation + travelers, the at-a-glance route strip, and the vertical leg
+ * itinerary with per-flight status + sync.
  */
 export function FlightJourneyCard({
   itemId,
@@ -146,7 +147,6 @@ export function FlightJourneyCard({
         confirmationCode={confirmationCode}
         confirmationUris={confirmationUris}
         passengerLabel={passengerLabel}
-        status={status}
         accent={accentColor}
         fill={fill}
       />
@@ -160,7 +160,15 @@ export function FlightJourneyCard({
             .filter(Boolean)
             .join(' · ');
           const live = status.legs[index];
+          const canSyncLeg = Boolean(statusRequests[index]);
           const isLastLeg = index === journey.legs.length - 1;
+          const syncLabel = !status.canCheck && status.cooldownMinutesRemaining > 0
+            ? `Status checked recently. Try again in ${status.cooldownMinutesRemaining} minute${
+                status.cooldownMinutesRemaining === 1 ? '' : 's'
+              }`
+            : flightNumber
+              ? `Check status for ${flightNumber}`
+              : 'Check flight status';
           return (
             <View key={`leg-${index}`}>
               <VerticalStop
@@ -176,6 +184,15 @@ export function FlightJourneyCard({
                 flightNumber={flightNumber}
                 carrier={carrier || undefined}
                 aircraft={leg.departure.aircraft}
+                statusLabel={live?.statusLabel}
+                status={live?.status}
+                statusTestID={AgentUiIds.travel.flight.legStatus(itemId, index)}
+                statusSyncAvailable={canSyncLeg}
+                statusSyncLoading={status.loading}
+                statusSyncDisabled={!status.canCheck}
+                statusSyncAccessibilityLabel={syncLabel}
+                onStatusSync={canSyncLeg ? status.check : undefined}
+                statusSyncTestID={AgentUiIds.travel.flight.status(itemId, index)}
                 durationMinutes={leg.durationMinutes}
               />
               <VerticalStop

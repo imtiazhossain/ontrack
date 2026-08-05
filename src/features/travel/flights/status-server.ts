@@ -1,15 +1,17 @@
 import { guardedFetch } from '@/services/http/dependency-guard';
 import { isDateKey } from '@/utils/date';
 
-import type {
-  FlightOperationalStatus,
-  FlightStatusInput,
-  FlightStatusResponse,
+import {
+    flightOperationalStatusLabel,
+    type FlightOperationalStatus,
+    type FlightStatusInput,
+    type FlightStatusResponse,
 } from './types';
 
 const RAPID_API_HOST = 'aerodatabox.p.rapidapi.com';
 const TERMINAL_CACHE_MS = 24 * 60 * 60 * 1_000;
-const STATUS_CACHE_MS = 5 * 60 * 1_000;
+/** Match the client sync cooldown so repeat taps within 10 minutes stay free. */
+const STATUS_CACHE_MS = 10 * 60 * 1_000;
 
 type CacheEntry = { value: FlightStatusResponse; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
@@ -71,22 +73,6 @@ function normalizedStatus(value: unknown): FlightOperationalStatus | undefined {
   return 'unknown';
 }
 
-function statusLabel(status?: FlightOperationalStatus): string | undefined {
-  if (!status || status === 'unknown') return undefined;
-  return {
-    scheduled: 'On time',
-    'check-in': 'Check-in open',
-    boarding: 'Boarding',
-    'gate-closed': 'Gate closed',
-    departed: 'Departed',
-    delayed: 'Delayed',
-    approaching: 'Approaching',
-    landed: 'Landed',
-    cancelled: 'Cancelled',
-    diverted: 'Diverted',
-  }[status];
-}
-
 type ProviderAirport = {
   iata?: string;
   iataCode?: string;
@@ -134,7 +120,9 @@ function normalizedResponse(
     departureGate: cleanText(row.departure?.gate, 12),
     arrivalTerminal: cleanText(row.arrival?.terminal, 24),
     arrivalGate: cleanText(row.arrival?.gate, 12),
-    ...(status ? { status, statusLabel: statusLabel(status) } : {}),
+    ...(status
+      ? { status, statusLabel: flightOperationalStatusLabel(status) }
+      : {}),
     checkedAt: new Date().toISOString(),
   };
 }

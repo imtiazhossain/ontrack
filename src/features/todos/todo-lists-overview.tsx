@@ -26,6 +26,7 @@ import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
 import { TodoListCard } from '@/features/todos/todo-list-card';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
@@ -45,6 +46,7 @@ import { listReferenceEquality } from '@/utils/list-equality';
 export function TodoListsOverview() {
   const router = useRouter();
   const theme = useTheme();
+  const { s } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
   const { refreshControl } = usePullToRefresh();
@@ -310,7 +312,13 @@ export function TodoListsOverview() {
               <View style={styles.heading}>
                 <View style={styles.headingCopy}>
                   <AppText variant="overline" color="accent">Your checklists</AppText>
-                  <AppText style={styles.title}>Checklists</AppText>
+                  <AppText
+                    style={[
+                      styles.title,
+                      { fontSize: s(35), lineHeight: s(42) },
+                    ]}>
+                    Checklists
+                  </AppText>
                   <AppText variant="body" color="secondary">
                     {totalOpen
                       ? `${totalOpen} open ${totalOpen === 1 ? 'item' : 'items'} across ${lists.length} ${lists.length === 1 ? 'list' : 'lists'}.`
@@ -477,8 +485,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamilies.serif,
-    fontSize: 35,
-    lineHeight: 42,
     fontWeight: '400',
     letterSpacing: -0.7,
   },

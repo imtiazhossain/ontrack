@@ -3,6 +3,8 @@
  * (and homepage discovery), falling back to Google’s high-res favicon feed.
  */
 
+import { fetchWithTimeout as timedFetch } from '@/services/http/fetch-with-timeout';
+
 const LOGO_UA = 'onTrack/1.0 (stay provider logos; https://ontrack.app)';
 const LOOKUP_TIMEOUT_MS = 8_000;
 
@@ -115,21 +117,18 @@ async function fetchWithTimeout(
   init?: RequestInit,
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
+  return timedFetch(
+    url,
+    {
       ...init,
-      signal: controller.signal,
       headers: {
         Accept: '*/*',
         'User-Agent': LOGO_UA,
         ...(init?.headers ?? {}),
       },
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+    },
+    timeoutMs,
+  );
 }
 
 async function urlLooksLikeImage(url: string): Promise<boolean> {

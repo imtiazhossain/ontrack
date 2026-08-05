@@ -1,21 +1,21 @@
-import {
-  getAgentUiTarget,
-  isAgentUiEnabled,
-  listAgentUiTargets,
-  tapAgentUiTarget,
-} from './registry';
-import {
-  writeAgentUiDump,
-  writeAgentUiStatus,
-  type AgentUiStatusResult,
-} from './persist';
-import {
-  agentUiNavigate,
-  getAgentUiRoute,
-  resolveAgentUiDestination,
-} from './route';
 import { seedAgentUiFixture } from './fixtures';
 import { resolveAgentUiFlow } from './flows';
+import {
+    writeAgentUiDump,
+    writeAgentUiStatus,
+    type AgentUiStatusResult,
+} from './persist';
+import {
+    getAgentUiTarget,
+    isAgentUiEnabled,
+    listAgentUiTargets,
+    tapAgentUiTarget,
+} from './registry';
+import {
+    agentUiNavigate,
+    getAgentUiRoute,
+    resolveAgentUiDestination,
+} from './route';
 
 export type AgentUiOp =
   | 'dump'
@@ -28,7 +28,8 @@ export type AgentUiOp =
   | 'batch'
   | 'wait'
   | 'seed'
-  | 'flow';
+  | 'flow'
+  | 'assert';
 
 export type AgentUiRequest = {
   op?: string | string[];
@@ -38,12 +39,18 @@ export type AgentUiRequest = {
   prefix?: string | string[];
   /** Pure settle delay (ms) before wait polling / as standalone delay. */
   ms?: number | string | string[];
-  /** Max poll window for wait (ms). Default 3000. */
+  /** Max poll window for wait (ms). Default 2000. */
   timeoutMs?: number | string | string[];
+  /** Assert: label must contain this substring (case-insensitive). */
+  contains?: string | string[];
+  /** Assert: id must be absent when true. */
+  missing?: boolean | string | string[];
   /** Batch / flow steps. */
   ops?: AgentUiRequest[];
   /** When true on tap/goto, also rewrite the dump file (default false). */
   refreshDump?: boolean | string | string[];
+  /** Host/daemon correlation id (echoed on status). */
+  nonce?: number | string | string[];
 };
 
 export type ParsedAgentUiUrl = {
@@ -66,6 +73,7 @@ const OPS = new Set<AgentUiOp>([
   'wait',
   'seed',
   'flow',
+  'assert',
 ]);
 
 function parseOp(raw: string): AgentUiOp {
@@ -265,11 +273,15 @@ export async function handleAgentUiRequest(
     return Boolean(seeded);
   }
 
+  if (op === 'assert') {
+    return runAssert(request, { id, prefix, to, emitStatus });
+  }
+
   if (op === 'wait') {
     const settleMs = Math.max(0, asNumber(request.ms) ?? 0);
     const timeoutMs = Math.max(
       settleMs,
-      asNumber(request.timeoutMs) ?? (hasWaitTarget(id, prefix, to) ? 3000 : settleMs || 0),
+      asNumber(request.timeoutMs) ?? (hasWaitTarget(id, prefix, to) ? 2000 : settleMs || 0),
     );
     if (settleMs > 0) await sleep(settleMs);
 
@@ -303,7 +315,7 @@ export async function handleAgentUiRequest(
 
     let ok = poll();
     while (!ok && Date.now() - started < timeoutMs) {
-      await sleep(40);
+      await sleep(16);
       ok = poll();
     }
     const count = prefix
@@ -455,6 +467,136 @@ function hasWaitTarget(
   routeTarget: string | undefined,
 ): boolean {
   return Boolean(id || prefix || routeTarget);
+}
+
+function asTruthyFlag(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    return v === '1' || v === 'true' || v === 'yes';
+  }
+  if (Array.isArray(value)) return asTruthyFlag(value[0]);
+  return false;
+}
+
+function runAssert(
+  request: AgentUiRequest,
+  opts: {
+    id?: string;
+    prefix?: string;
+    to?: string;
+    emitStatus: boolean;
+  },
+): boolean {
+  const { id, prefix, to, emitStatus } = opts;
+  const contains = asSingle(request.contains);
+  const wantMissing = asTruthyFlag(request.missing);
+  const checks: AgentUiStatusResult[] = [];
+  const route = getAgentUiRoute();
+
+  if (id) {
+    const element = getAgentUiTarget(id);
+    const found = Boolean(element);
+    if (wantMissing) {
+      checks.push({
+        op: 'missing',
+        id,
+        ok: !found,
+        detail: found ? 'still registered' : 'absent',
+        element,
+        route,
+      });
+    } else {
+      checks.push({
+        op: 'exists',
+        id,
+        ok: found,
+        detail: found ? 'found' : 'not found',
+        element,
+        route,
+      });
+      if (contains) {
+        const label = element?.label ?? '';
+        const ok = label.toLowerCase().includes(contains.toLowerCase());
+        checks.push({
+          op: 'label',
+          id,
+          ok: found && ok,
+          detail: found
+            ? ok
+              ? `label contains "${contains}"`
+              : `label "${label}" missing "${contains}"`
+            : 'missing element for label check',
+          element,
+          route,
+        });
+      }
+    }
+  } else if (wantMissing) {
+    checks.push({
+      op: 'missing',
+      ok: false,
+      detail: 'Missing id for missing assert.',
+      route,
+    });
+  } else if (contains) {
+    checks.push({
+      op: 'label',
+      ok: false,
+      detail: 'Missing id for label contains assert.',
+      route,
+    });
+  }
+
+  if (prefix) {
+    const count = listAgentUiTargets().filter((e) =>
+      e.testID.startsWith(prefix),
+    ).length;
+    checks.push({
+      op: 'prefix',
+      id: prefix,
+      ok: count > 0,
+      detail: count > 0 ? `matches=${count}` : 'no matches',
+      count,
+      route,
+    });
+  }
+
+  if (to) {
+    const ok = routeMatches(route, to);
+    checks.push({
+      op: 'route',
+      id: to,
+      ok,
+      detail: ok ? `route=${route}` : `route=${route ?? 'unknown'} want=${to}`,
+      route,
+    });
+  }
+
+  const ok = checks.length > 0 && checks.every((c) => c.ok);
+  if (emitStatus) {
+    writeAgentUiStatus({
+      op: 'assert',
+      id: id ?? prefix ?? to,
+      ok,
+      detail:
+        checks.length === 0
+          ? 'assert requires --exists/--missing/--prefix/--route/--contains'
+          : ok
+            ? `${checks.length} check(s) passed`
+            : checks
+                .filter((c) => !c.ok)
+                .map((c) => c.detail || c.op)
+                .join('; '),
+      results: checks,
+      route,
+      element: id ? getAgentUiTarget(id) : undefined,
+      count: prefix
+        ? listAgentUiTargets().filter((e) => e.testID.startsWith(prefix)).length
+        : undefined,
+    });
+  }
+  return ok;
 }
 
 function routeMatches(current: string | null, target: string): boolean {

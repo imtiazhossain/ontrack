@@ -1,4 +1,5 @@
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 /**
  * Flip {@link ACTIVE_FX_PROVIDER} to switch the live FX feed.
@@ -76,7 +77,7 @@ export function parseCurrencyApiUsdLatest(payload: unknown): FxProviderRates | u
 }
 
 async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { signal });
+  const response = await fetchWithTimeout(url, { signal });
   if (!response.ok) return undefined;
   return response.json();
 }

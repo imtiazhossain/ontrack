@@ -9,6 +9,30 @@ export const AGENT_UI_DEMO_CONNECTING_FLIGHT_ID =
   'item-agent-ui-demo-connecting-flight';
 /** Stable stay with an address so agents can exercise Open with… maps. */
 export const AGENT_UI_DEMO_STAY_ID = 'item-agent-ui-demo-stay';
+/** Chase round-trip fixture outbound (EWR → KEF) after importFlight=roundtrip submit. */
+export const AGENT_UI_DEMO_CHASE_OUTBOUND_ID =
+  'item-agent-ui-demo-chase-outbound';
+/** Chase round-trip fixture return (KEF → EWR) after importFlight=roundtrip submit. */
+export const AGENT_UI_DEMO_CHASE_RETURN_ID = 'item-agent-ui-demo-chase-return';
+
+/**
+ * Prefer ordered __DEV__ fixture ids, then fall back (e.g. `newId('trip-item')`).
+ * Used when a pending import carries `agentUiItemIds`.
+ */
+export function createIdFromAgentUiItemIds(
+  agentUiItemIds: string[] | undefined,
+  fallback: () => string,
+): () => string {
+  let index = 0;
+  return () => {
+    const next = agentUiItemIds?.[index];
+    if (typeof next === 'string' && next.trim()) {
+      index += 1;
+      return next.trim();
+    }
+    return fallback();
+  };
+}
 
 export type AgentUiFixtureName = 'travel-demo';
 

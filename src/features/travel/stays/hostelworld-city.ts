@@ -1,4 +1,4 @@
-import { fetch } from 'expo/fetch';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 /**
  * Hostelworld’s public autocomplete (same endpoint + api-key their web app embeds).
@@ -127,13 +127,17 @@ async function fetchAutocomplete(
   signal: AbortSignal,
 ): Promise<AutocompleteItem[]> {
   const url = `${AUTOCOMPLETE_URL}?${new URLSearchParams({ text }).toString()}`;
-  const response = await fetch(url, {
-    signal,
-    headers: {
-      Accept: 'application/json',
-      'api-key': AUTOCOMPLETE_API_KEY,
+  const response = await fetchWithTimeout(
+    url,
+    {
+      signal,
+      headers: {
+        Accept: 'application/json',
+        'api-key': AUTOCOMPLETE_API_KEY,
+      },
     },
-  });
+    LOOKUP_TIMEOUT_MS,
+  );
   if (!response.ok) {
     throw new Error(`Hostelworld city lookup failed (${response.status}).`);
   }
@@ -150,7 +154,6 @@ export async function resolveHostelworldCity(
   if (cached) return cached;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
     for (const term of queryCandidates(destination)) {
       const results = await fetchAutocomplete(term, controller.signal);
@@ -164,6 +167,6 @@ export async function resolveHostelworldCity(
     if (error instanceof Error && error.name === 'AbortError') return null;
     return null;
   } finally {
-    clearTimeout(timeout);
+    controller.abort();
   }
 }

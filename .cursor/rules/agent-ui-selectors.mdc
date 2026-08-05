@@ -27,35 +27,80 @@ Do not merge UI that agents must exercise without an id. Do not leave “add tes
 
 When exercising the simulator, pick **exactly one** path in order. Do not “explore” first.
 
-1. **Named flow exists?** → `./scripts/agent-ui-flow.sh <name>` only  
+1. **Already on the surface?** → `./scripts/agent-ui.sh verify --route <path> [--flow <name>] --exists …` (skips flow/open when route matches)
+2. **Else named flow / once chain?** → `./scripts/agent-ui.sh once --flow <name> --assert-…` or `./scripts/agent-ui-flow.sh <name>`  
    (`travel-demo`, `travel-demo-add-flight`, `open-new-trip`, … — `./scripts/agent-ui-flow.sh --list`)
-2. **Else known surface / nested shortcut?** → `./scripts/agent-ui-open.sh <alias|path>` or one `./scripts/agent-ui-batch.sh …`
-3. **Else known `testID` in the map / `AgentUiIds`?** → `./scripts/agent-ui-tap.sh <id>` (no dump)
-4. **Else id truly unknown?** → **one** `./scripts/agent-ui-dump.sh --prefix ontrack.<feature>` then tap; if still missing, **add** the testID + map entry in the same change
-5. **Proof** → **one** post-action screenshot + read (evidence gate). Never screenshot to decide the next tap.
+3. **Else known surface / nested shortcut?** → `./scripts/agent-ui-open.sh <alias|path>` or one `./scripts/agent-ui-batch.sh …`
+4. **Else known `testID` in the map / `AgentUiIds`?** → `./scripts/agent-ui-tap.sh <id>` (no dump). JS key paths work: `travel.planDetail.transportSection`, and parameterized factories too: `travel.timelineItem.<itemId>.default`, `travel.flight.openConfirmation.<itemId>`
+5. **Else id truly unknown?** → **one** `./scripts/agent-ui-dump.sh --prefix ontrack.<feature>` then tap; if still missing, **add** the testID + map entry in the same change
+6. **Proof** → structural **assert** for route/id/label; `--color <id> <hex>` for accent chrome; **one** screenshot only for broader visual/layout claims. Never screenshot to decide the next tap.
 
 Demo fixture: `trip-agent-ui-demo` / `item-agent-ui-demo-flight` via `./scripts/agent-ui-seed.sh travel-demo` or flows — do not recreate trip data.
 
 Routes/flows: [`docs/agent-routes.md`](../../docs/agent-routes.md). IDs: [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md).
+
+## Assert-first proof (mandatory)
+
+Prefer Playwright-style asserts over screenshots when the claim is structural:
+
+```bash
+# Prefer verify when a prior step may already be on the surface
+./scripts/agent-ui.sh verify --route /travel/trip-agent-ui-demo --flow travel-demo \
+  --exists travel.planDetail.transportSection \
+  --color travel.planDetail.transportSection '#2474A8'
+
+./scripts/agent-ui.sh once --flow travel-demo \
+  --assert-exists travel.planDetail.weather \
+  --assert-route /travel/trip-agent-ui-demo
+
+./scripts/agent-ui-assert.sh --exists travel.newTrip.open
+./scripts/agent-ui-assert.sh --prefix travel.itineraryAdd.
+./scripts/agent-ui-assert.sh --contains travel.newTrip.open "New"
+./scripts/agent-ui-assert.sh --color travel.planDetail.transportSection '#2474A8'
+```
+
+- **Assert proves:** route, testID presence/absence, prefix match, accessibility label contains text.
+- **`--color` proves:** accent/chrome hue inside a testID frame (host samples screenshot; no vision read).
+- **Screenshot proves:** broader layout / visual design that color/assert cannot see.
+- IDs accept wire (`ontrack.…`) **or** `AgentUiIds` key paths (`travel.planDetail.transportSection`).
+- Do **not** screenshot mid-flow. Do **not** use a screenshot as a substitute for `assert` when an id/route/color claim would suffice.
 
 ## Per-verification budget (mandatory)
 
 Unless the first attempt **fails** (timeout, missing id, wrong screen):
 
 - **≤ 1** `agent-ui-dump.sh`
-- **≤ 1** screenshot (`simctl io … screenshot` + Read)
+- **≤ 1** screenshot — and **only** when the claim is visual/layout (assert covers route/id)
 - **0** mid-flow screenshots
-- **0** tab-hops when a flow/open/batch can land on the surface
+- **0** tab-hops when a flow/open/batch/`once` can land on the surface
 - **0** prophylactic `ensure-packager` when Metro `/status` is already 200 and the bridge responds
 
-Batch shell steps in **one** tool call when chaining (flow/open + taps + final screenshot).
+Batch shell steps in **one** tool call when chaining (`once` / flow + assert + optional final screenshot).
+
+Run `npm run typecheck` and focused `npm test` **in parallel** with the UI once-chain — do not wait for typecheck before navigating.
+
+## Wall-clock habits (mandatory — biggest speed win)
+
+These habits dominate host/bridge micro-opts. Follow them every verification:
+
+1. **`verify` before `flow` when you may already be on the surface** — `verify --route … --flow …` skips land (~200–300ms warm). Do not re-run `travel-demo` / `once --flow` just to re-assert.
+2. **One shell chain / `verify` / `once`** — do not spend agent turns between hops. Chain `--tap` + `--assert-*` (+ optional `--screenshot`) in one `once`.
+3. **Assert-first** — use `--color` for accent claims; screenshot only for broader visual/layout. Do not vision-read a screenshot for route/id/label claims.
+4. **Never mid-flow dump or screenshot** — dumps/screenshots are for unknown ids / final visual proof only.
+5. **Never prophylactic Metro heal** — skip `ensure-packager` / reconnect when `/status` is 200 and a recent `route`/`flow`/`open`/`once`/`verify` succeeded. Heal only after a failed bridge probe (scripts heal only on failure paths).
+6. **Prefer `verify` / `once` / `flow` / `batch` / in-app `wait`** — do not host-poll `exists`/`prefix` in a shell loop.
+7. **Reuse fixtures** — `travel-demo` / named seeds; do not rebuild trip/list data by hand.
+8. **Fail-fast when warm** — host budgets drop to ~2.5s simple / ~5s flow when the daemon is warm; do not raise `WAIT_SECS` unless a step legitimately needs it.
+9. **Use JS key paths** — `travel.planDetail.transportSection` and parameterized forms like `travel.timelineItem.<id>.default` resolve to `ontrack.…` wire ids; do not invent camelCase wire ids.
+10. **Expand/collapse is a toggle** — before re-tapping `timelineItem.<id>.default` (or similar), `--exists` the expanded control (e.g. `travel.flight.passenger.<id>`). A second tap collapses the card.
+11. **No re-land for handoff** — if the changed surface is already showing, assert (and optional one screenshot). Do not navigate away and back to “prove” it again.
 
 ## Required close-out shape
 
-1. Land with `flow` / `open` / `batch` (not tabs).
+1. Land with `once` / `flow` / `open` / `batch` (not tabs).
 2. Tap known ids from the map.
-3. Wait with in-app wait / `agent-ui-wait.sh` / `exists` / `route` — not dump loops.
-4. **One** screenshot after the claim is visible; apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`.
+3. Wait with in-app wait / `agent-ui-wait.sh` / assert — not dump loops.
+4. **Assert** structural claims; **one** screenshot only if the claim is visual — apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`.
 5. `ensure-packager.sh` only if the packager/bridge is actually down.
 
 ## Rules
@@ -63,13 +108,16 @@ Batch shell steps in **one** tool call when chaining (flow/open + taps + final s
 - **Never** use screenshot / vision coordinates to tap when a registry id exists or can be added.
 - If dump has no matching id: **stop**, add `testID` + map entry + ids constant, then tap by id. Coordinates are not an alternative.
 - Keep `accessibilityLabel` for VoiceOver; labels alone are not unique selectors (`Close`, `Done` collide).
-- Bridge is `__DEV__` only (`dump|tap|exists|prefix|route|goto|reset|wait|seed|flow|batch`).
+- Bridge is `__DEV__` only (`dump|tap|exists|prefix|route|goto|reset|wait|seed|flow|batch|assert`).
 
 ## Do not (failure modes)
 
 - Dump “just to be sure” before a known id.
+- Re-run `once --flow` / `agent-ui-flow.sh` when `verify --route` would skip land (already on the surface).
+- Navigate away and back (or re-seed) only to capture a handoff screenshot of a screen already showing.
 - Screenshot between hops, or read images to choose the next control.
-- Tab-hop when `agent-ui-flow.sh` / `agent-ui-open.sh` / batch goto fits.
+- Screenshot / vision-read for a claim that `assert --exists` / `--route` / `--prefix` / `--contains` / `--color` can prove.
+- Tab-hop when `agent-ui.sh verify` / `once` / `agent-ui-flow.sh` / `agent-ui-open.sh` / batch goto fits.
 - Recreate trip data when `seed` / `travel-demo*` flows fit.
 - Call `ensure-packager` prophylactically.
 - Invent HTML `data-*` attributes — use RN `testID`.

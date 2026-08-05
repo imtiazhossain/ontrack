@@ -25,7 +25,8 @@ DEST="$1"
 shift
 WAIT_PREFIX=""
 NO_WAIT=0
-WAIT_SECS="${WAIT_SECS:-6}"
+# Optional explicit wait — leave WAIT_SECS unset so budget applies.
+EXPLICIT_WAIT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,7 +35,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --wait-secs)
-      WAIT_SECS="${2:-6}"
+      EXPLICIT_WAIT="${2:-6}"
       shift 2
       ;;
     --no-wait)
@@ -62,11 +63,16 @@ default_wait_prefix() {
     today|home|reset) echo "ontrack.today." ;;
     calendar) echo "ontrack.calendar." ;;
     checklists|todos|to-do) echo "ontrack.checklists." ;;
+    checklists/*|todos/*|to-do/*) echo "ontrack.checklists." ;;
     profile) echo "ontrack.profile." ;;
     travel) echo "ontrack.travel." ;;
     travel/*) echo "ontrack.travel." ;;
     health|health/*) echo "ontrack.health." ;;
     activity|activityForm|activity-form) echo "ontrack.activityForm." ;;
+    vehicles|vehicles/*) echo "ontrack.vehicles." ;;
+    social|social/*) echo "ontrack.social." ;;
+    games|games/*) echo "ontrack.games." ;;
+    # workouts / plants / vision-board: sparse feature ids — open uses route wait via flows
     *) echo "" ;;
   esac
 }
@@ -78,13 +84,14 @@ fi
 
 echo "Opening ${DEST}"
 
-# Soft heal if the bridge looks dead (Metro up but app disconnected).
-if ! WAIT_SECS=1 agent_ui_send_op route >/dev/null 2>&1; then
-  agent_ui_heal_packager || true
+if [[ -n "${EXPLICIT_WAIT}" ]]; then
+  WAIT_SECS="${EXPLICIT_WAIT}"
+else
+  agent_ui_apply_wait_budget simple
 fi
 
-if (( NO_WAIT )) || [[ -z "$WAIT_PREFIX" ]]; then
-  if STATUS_JSON="$(WAIT_SECS=3 agent_ui_send_op goto "${DEST}" 2>/dev/null)"; then
+if (( NO_WAIT )); then
+  if STATUS_JSON="$(WAIT_SECS="${WAIT_SECS}" agent_ui_send_op goto "${DEST}" 2>/dev/null)"; then
     echo "${STATUS_JSON}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("detail") or "goto ok")' 2>/dev/null || echo "goto ok"
     exit 0
   fi
@@ -93,35 +100,57 @@ if (( NO_WAIT )) || [[ -z "$WAIT_PREFIX" ]]; then
   exit 0
 fi
 
-TIMEOUT_MS=$((WAIT_SECS * 1000))
+TIMEOUT_MS="${AGENT_UI_WAIT_TIMEOUT_MS}"
+# Prefer feature-prefix settle; fall back to route wait for sparse surfaces.
 OPS_JSON="$(DEST="${DEST}" WAIT_PREFIX="${WAIT_PREFIX}" TIMEOUT_MS="${TIMEOUT_MS}" python3 - <<'PY'
 import json, os
-print(json.dumps([
-  {"op": "goto", "to": os.environ["DEST"]},
-  {"op": "wait", "prefix": os.environ["WAIT_PREFIX"], "timeoutMs": int(os.environ["TIMEOUT_MS"]), "ms": 80},
-], separators=(",", ":")))
+dest = os.environ["DEST"]
+prefix = os.environ["WAIT_PREFIX"]
+timeout = int(os.environ["TIMEOUT_MS"])
+ops = [{"op": "goto", "to": dest}]
+if prefix:
+    ops.append({"op": "wait", "prefix": prefix, "timeoutMs": timeout})
+else:
+    ops.append({"op": "wait", "to": dest, "timeoutMs": timeout})
+print(json.dumps(ops, separators=(",", ":")))
 PY
 )"
 
 if STATUS_JSON="$(agent_ui_send_op batch "${OPS_JSON}" 2>/dev/null)"; then
-  echo "${STATUS_JSON}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("detail") or "ok"); print("ready route=%s prefix=%s" % (d.get("route") or "?", "'"${WAIT_PREFIX}"'"))'
+  if [[ -n "${WAIT_PREFIX}" ]]; then
+    SETTLE="prefix=${WAIT_PREFIX}"
+  else
+    SETTLE="route=${DEST}"
+  fi
+  echo "${STATUS_JSON}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("detail") or "ok"); print("ready route=%s %s" % (d.get("route") or "?", "'"${SETTLE}"'"))'
   exit 0
 fi
 
+# Heal only after a real bridge/batch failure — never on the happy path.
 echo "batch open failed; healing + openurl ${URL}" >&2
 agent_ui_heal_packager || true
 xcrun simctl openurl booted "$URL"
-deadline=$((SECONDS + WAIT_SECS))
+deadline=$((SECONDS + ${WAIT_SECS%.*}))
 while (( SECONDS < deadline )); do
-  if STATUS_JSON="$(agent_ui_send_op prefix "${WAIT_PREFIX}" 2>/dev/null)"; then
-    ok="$(echo "${STATUS_JSON}" | python3 -c 'import json,sys; print("1" if json.load(sys.stdin).get("ok") else "0")')"
-    if [[ "${ok}" == "1" ]]; then
-      echo "ready (openurl fallback) prefix=${WAIT_PREFIX}"
-      exit 0
+  if [[ -n "${WAIT_PREFIX}" ]]; then
+    if STATUS_JSON="$(agent_ui_send_op prefix "${WAIT_PREFIX}" 2>/dev/null)"; then
+      ok="$(echo "${STATUS_JSON}" | python3 -c 'import json,sys; print("1" if json.load(sys.stdin).get("ok") else "0")')"
+      if [[ "${ok}" == "1" ]]; then
+        echo "ready (openurl fallback) prefix=${WAIT_PREFIX}"
+        exit 0
+      fi
+    fi
+  else
+    if STATUS_JSON="$(WAIT_SECS=1 agent_ui_send_op wait --route "${DEST}" --timeout 500 2>/dev/null)"; then
+      ok="$(echo "${STATUS_JSON}" | python3 -c 'import json,sys; print("1" if json.load(sys.stdin).get("ok") else "0")')"
+      if [[ "${ok}" == "1" ]]; then
+        echo "ready (openurl fallback) route=${DEST}"
+        exit 0
+      fi
     fi
   fi
-  sleep 0.08
+  sleep "${POLL_SLEEP}"
 done
 
-echo "error: timed out waiting for prefix ${WAIT_PREFIX} after opening ${DEST}" >&2
+echo "error: timed out waiting after opening ${DEST}" >&2
 exit 1

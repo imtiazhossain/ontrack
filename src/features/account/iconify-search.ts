@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 import { asNonEmptyString } from '@/utils/parse';
 
 import { CURATED_ICONIFY_IDS, normalizeIconifyId } from './profile-avatar-model';
@@ -14,7 +15,7 @@ export async function searchIconifyIcons(query: string): Promise<string[]> {
   }
   try {
     const url = `https://api.iconify.design/search?query=${encodeURIComponent(trimmed)}&limit=64`;
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url);
     if (!response.ok) return [...CURATED_ICONIFY_IDS];
     const payload = (await response.json()) as IconifySearchResponse;
     if (!Array.isArray(payload.icons)) return [...CURATED_ICONIFY_IDS];

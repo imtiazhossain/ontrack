@@ -1,8 +1,6 @@
-import { fetch } from 'expo/fetch';
-
-import { authHeader } from '@/services/cloud/access-token';
+import { apiRequest } from '@/services/http/api-client';
 import { resolveExpoApiUrl } from '@/services/http/api-url';
-import type { FlightApiError, FlightSearchInput, FlightSearchResponse } from './types';
+import type { FlightSearchInput, FlightSearchResponse } from './types';
 
 const FLIGHT_SEARCH_TIMEOUT_MS = 25_000;
 
@@ -36,25 +34,25 @@ export async function searchFlights(
   signal?: AbortSignal,
 ): Promise<FlightSearchResponse> {
   const url = apiUrl('/travel/flights/search');
-  const requestController = new AbortController();
-  const cancelRequest = () => requestController.abort();
-  signal?.addEventListener('abort', cancelRequest, { once: true });
-  const timeout = setTimeout(cancelRequest, FLIGHT_SEARCH_TIMEOUT_MS);
-  let response: Response;
   try {
-    response = await fetch(url, {
+    return await apiRequest<FlightSearchResponse, FlightSearchError>({
+      url,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-      body: JSON.stringify(input),
-      signal: requestController.signal,
+      body: input,
+      signal,
+      timeoutMs: FLIGHT_SEARCH_TIMEOUT_MS,
+      offlineMessage: 'Unable to connect. Check your internet connection.',
+      unavailableMessage: 'Flight search is temporarily unavailable.',
+      createError: (message, code, status) =>
+        new FlightSearchError(message, code, status),
     });
   } catch (error) {
-    if (signal?.aborted) {
-      const abortError = new Error('Flight search cancelled.');
-      abortError.name = 'AbortError';
-      throw abortError;
-    }
-    if (requestController.signal.aborted) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      if (signal?.aborted) {
+        const abortError = new Error('Flight search cancelled.');
+        abortError.name = 'AbortError';
+        throw abortError;
+      }
       throw new FlightSearchError(
         'The flight service did not respond. Try again or compare on Google Flights.',
         'TIMEOUT',
@@ -62,17 +60,5 @@ export async function searchFlights(
     }
     if (error instanceof FlightSearchError) throw error;
     throw new FlightSearchError('Unable to connect. Check your internet connection.', 'OFFLINE');
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', cancelRequest);
   }
-  if (!response.ok) {
-    const body = await response.json().catch(() => undefined) as FlightApiError | undefined;
-    throw new FlightSearchError(
-      body?.error ?? 'Flight search is temporarily unavailable.',
-      body?.code,
-      response.status,
-    );
-  }
-  return response.json() as Promise<FlightSearchResponse>;
 }

@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useNutrition } from '@/store/nutrition';
 import type { ActivityLevel, EquationSex, NutritionGoal, NutritionProfile, NutritionTargets } from '@/types/models';
 import { todayKey } from '@/utils/date';
+import { newId } from '@/utils/id';
 import { ageInYears, calculateNutritionTargets, createTargetVersion, NutritionTargetError } from '@/utils/nutrition';
 
 const ACTIVITIES: ActivityLevel[] = ['inactive', 'low-active', 'active', 'very-active'];
@@ -40,7 +41,7 @@ export default function NutritionProfileScreen() {
   const latest = versions.filter((item) => item.profileId === activeProfileId).sort((a, b) => b.version - a.version)[0];
 
   const profileFromForm = (): NutritionProfile => ({
-    id: active?.id ?? `profile-${Date.now().toString(36)}`,
+    id: active?.id ?? newId('profile'),
     displayName: displayName.trim() || 'Profile',
     dateOfBirth,
     equationSex,
@@ -77,7 +78,7 @@ export default function NutritionProfileScreen() {
 
   const addDependent = () => {
     const profile: NutritionProfile = {
-      id: `profile-${Date.now().toString(36)}`, displayName: 'Dependent', dateOfBirth: '2015-01-01',
+      id: newId('profile'), displayName: 'Dependent', dateOfBirth: '2015-01-01',
       equationSex: 'female', activityLevel: 'low-active', goal: 'maintain', unitSystem: 'metric',
       dietaryPreferences: [], allergies: [],
     };

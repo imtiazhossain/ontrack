@@ -1,4 +1,4 @@
-import { fetch } from 'expo/fetch';
+import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 const LOCATION_LOOKUP_TIMEOUT_MS = 8_000;
 const MAX_AIRPORTS_PER_CITY = 7;
@@ -96,9 +96,10 @@ async function fetchLocationResults(
   const params = new URLSearchParams({ term, locale: 'en' });
   params.append('types[]', 'city');
   params.append('types[]', 'airport');
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://autocomplete.travelpayouts.com/places2?${params.toString()}`,
     { signal },
+    LOCATION_LOOKUP_TIMEOUT_MS,
   );
   if (!response.ok) throw new Error(`Location lookup failed (${response.status}).`);
   const body = await response.json();
@@ -111,7 +112,6 @@ export async function resolveFlightLocation(query: string): Promise<string[]> {
   if (cached) return cached;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), LOCATION_LOOKUP_TIMEOUT_MS);
   try {
     for (const term of locationQueryCandidates(query)) {
       const results = await fetchLocationResults(term, controller.signal);
@@ -123,6 +123,6 @@ export async function resolveFlightLocation(query: string): Promise<string[]> {
     }
     throw new Error(`No airports found for ${query.trim()}.`);
   } finally {
-    clearTimeout(timeout);
+    controller.abort();
   }
 }

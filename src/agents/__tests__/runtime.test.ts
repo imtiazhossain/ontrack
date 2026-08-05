@@ -2,10 +2,11 @@ import { DEFAULT_ADDON_STATE } from '@/addons/registry';
 
 import { AgentRuntimeError, createAgentRuntime } from '../runtime';
 import type {
-  AgentDefinition,
-  AgentProvider,
-  AgentRuntimeState,
-  AgentTool,
+    AgentCapabilityId,
+    AgentDefinition,
+    AgentProvider,
+    AgentRuntimeState,
+    AgentTool,
 } from '../types';
 
 const TEST_AGENT: AgentDefinition = {
@@ -13,7 +14,7 @@ const TEST_AGENT: AgentDefinition = {
   version: 1,
   name: 'Test companion',
   description: 'Used only by runtime contract tests.',
-  icon: 'person.crop.circle',
+  icon: 'agents',
   providerId: 'test-provider',
   access: 'included',
   requiredAddonId: 'travel',
@@ -21,7 +22,9 @@ const TEST_AGENT: AgentDefinition = {
   optionalCapabilities: ['calendar.write'],
 };
 
-function runtimeState(grantedCapabilities = ['travel.read'] as const): AgentRuntimeState {
+function runtimeState(
+  grantedCapabilities: readonly AgentCapabilityId[] = ['travel.read'],
+): AgentRuntimeState {
   return {
     installations: {
       [TEST_AGENT.id]: {

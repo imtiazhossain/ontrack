@@ -2,8 +2,8 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText, DateField, Input, TimeField } from '@/components/primitives';
 import {
-  itinerarySheetChrome,
-  itinerarySheetFieldProps,
+    itinerarySheetChrome,
+    itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -51,7 +51,7 @@ export function FlightReturnLegFields({
         stackedLabel="Returning Name *"
         value={title}
         onChangeText={onTitleChange}
-        placeholder="e.g. Flight home"
+        placeholder="Returning Name"
         accessibilityLabel="Returning Name, required"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
@@ -61,7 +61,7 @@ export function FlightReturnLegFields({
         stackedLabel="Airline"
         value={details.airline}
         onChangeText={(airline) => updateDetails({ airline })}
-        placeholder="Icelandair"
+        placeholder="Airline"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <Input
@@ -70,7 +70,7 @@ export function FlightReturnLegFields({
         stackedLabel="Flight Number"
         value={details.flightNumber}
         onChangeText={(flightNumber) => updateDetails({ flightNumber })}
-        placeholder="FI 623"
+        placeholder="Flight Number"
         autoCapitalize="characters"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
@@ -131,7 +131,7 @@ export function FlightReturnLegFields({
         stackedLabel="From"
         value={details.departureAirport}
         onChangeText={(departureAirport) => updateDetails({ departureAirport })}
-        placeholder="KEF"
+        placeholder="From"
         autoCapitalize="characters"
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -142,7 +142,7 @@ export function FlightReturnLegFields({
         stackedLabel="To"
         value={details.arrivalAirport}
         onChangeText={(arrivalAirport) => updateDetails({ arrivalAirport })}
-        placeholder="EWR"
+        placeholder="To"
         autoCapitalize="characters"
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -156,7 +156,7 @@ export function FlightReturnLegFields({
         onChangeText={(layoverMinutesAfter) =>
           updateDetails({ layoverMinutesAfter })
         }
-        placeholder="HH MM"
+        placeholder="Layover"
         autoCapitalize="none"
         autoCorrect={false}
         {...itinerarySheetFieldProps(chrome, 'clock')}
@@ -170,7 +170,7 @@ export function FlightReturnLegFields({
         onChangeText={(connectionAirport) =>
           updateDetails({ connectionAirport })
         }
-        placeholder="Airport Code"
+        placeholder="Connection Airport"
         autoCapitalize="characters"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />

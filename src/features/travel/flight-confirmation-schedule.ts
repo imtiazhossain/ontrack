@@ -1,11 +1,12 @@
 import { calculateFlightArrival } from './flight-arrival';
 import {
-  isConnectingSegmentGroup,
-  splitRoundTripDirections,
+    doorToDoorDuration,
+    isConnectingSegmentGroup,
+    splitRoundTripDirections,
 } from './flight-confirmation-itinerary';
 import type {
-  ParsedFlightConfirmation,
-  ParsedFlightSegment,
+    ParsedFlightConfirmation,
+    ParsedFlightSegment,
 } from './flight-confirmation-parser';
 
 export interface ImportedFlightSchedule {
@@ -91,13 +92,15 @@ export function flightDirectionSchedule(
   const departureMinutes =
     first.startMinutes ?? imported.startMinutes ?? fallback?.startMinutes;
 
+  const doorToDoor = doorToDoorDuration(direction);
+
   if (last.arrivalDate && last.arrivalMinutes !== undefined) {
     return {
       departureDate,
       departureMinutes,
       arrivalDate: last.arrivalDate,
       arrivalMinutes: last.arrivalMinutes,
-      durationMinutes: first.durationMinutes,
+      durationMinutes: doorToDoor ?? first.durationMinutes,
     };
   }
 
@@ -118,11 +121,15 @@ export function flightDirectionSchedule(
       departureMinutes,
       arrivalDate: arrival.date,
       arrivalMinutes: arrival.startMinutes,
-      durationMinutes: first.durationMinutes,
+      durationMinutes: doorToDoor ?? first.durationMinutes,
     };
   }
 
-  return flightSegmentSchedule(first, imported, fallback);
+  const fallbackSchedule = flightSegmentSchedule(first, imported, fallback);
+  return {
+    ...fallbackSchedule,
+    ...(doorToDoor !== undefined ? { durationMinutes: doorToDoor } : {}),
+  };
 }
 
 /** Dates/times for confirmation-driven editors, including connecting itineraries. */
@@ -151,13 +158,18 @@ export function flightConfirmationSchedule(
   const finalLegStart = lastSegment?.startMinutes;
   const finalLegDuration = lastSegment?.durationMinutes;
 
+  const connectingDoorToDoor =
+    segments.length > 1 ? doorToDoorDuration(segments) : undefined;
+  const durationMinutes =
+    connectingDoorToDoor ?? imported.durationMinutes;
+
   if (lastSegment?.arrivalDate && lastSegment.arrivalMinutes !== undefined) {
     return {
       departureDate,
       departureMinutes,
       arrivalDate: lastSegment.arrivalDate,
       arrivalMinutes: lastSegment.arrivalMinutes,
-      durationMinutes: imported.durationMinutes,
+      durationMinutes,
     };
   }
 
@@ -179,19 +191,19 @@ export function flightConfirmationSchedule(
       departureMinutes,
       arrivalDate: arrival.date,
       arrivalMinutes: arrival.startMinutes,
-      durationMinutes: imported.durationMinutes,
+      durationMinutes,
     };
   }
 
   if (
     departureDate &&
     departureMinutes !== undefined &&
-    imported.durationMinutes !== undefined
+    durationMinutes !== undefined
   ) {
     const arrival = calculateFlightArrival({
       date: departureDate,
       startMinutes: departureMinutes,
-      durationMinutes: imported.durationMinutes,
+      durationMinutes,
       departureAirport: imported.flight.departureAirport,
       arrivalAirport: imported.flight.arrivalAirport,
     });
@@ -200,7 +212,7 @@ export function flightConfirmationSchedule(
       departureMinutes,
       arrivalDate: arrival.date,
       arrivalMinutes: arrival.startMinutes,
-      durationMinutes: imported.durationMinutes,
+      durationMinutes,
     };
   }
 
@@ -208,6 +220,6 @@ export function flightConfirmationSchedule(
     departureDate,
     departureMinutes,
     arrivalDate: finalLegDate,
-    durationMinutes: imported.durationMinutes,
+    durationMinutes,
   };
 }

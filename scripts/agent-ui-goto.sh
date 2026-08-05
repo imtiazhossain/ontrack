@@ -36,4 +36,16 @@ resolve_deep_link() {
 URL="$(resolve_deep_link "$DEST")"
 echo "goto file-command failed; opening ${URL}"
 xcrun simctl openurl booted "$URL"
-sleep 0.4
+
+# Poll route instead of a fixed sleep.
+deadline=$((SECONDS + 2))
+while (( SECONDS < deadline )); do
+  if STATUS_JSON="$(WAIT_SECS=1 agent_ui_send_op route 2>/dev/null)"; then
+    if echo "${STATUS_JSON}" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("route") else 1)'; then
+      echo "${STATUS_JSON}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("detail") or d.get("route") or "ok")'
+      exit 0
+    fi
+  fi
+  sleep "${POLL_SLEEP}"
+done
+echo "opened ${URL}"

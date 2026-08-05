@@ -20,12 +20,23 @@ KNOWN_FLOWS=(
   travel-demo-add-flight-roundtrip
   travel-demo-edit-flight
   open-new-trip
+  open-new-checklist
   calendar
   today
   checklists
   health
   health-mood
+  health-settings
   activity-form
+  profile
+  vehicles
+  vehicles-new
+  social
+  workouts
+  plants
+  plants-new
+  vision-board
+  games
 )
 
 if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
@@ -40,7 +51,6 @@ if [[ "$1" == "--list" ]]; then
 fi
 
 FLOW="$1"
-# Longer timeout — flows include in-app waits.
-WAIT_SECS="${WAIT_SECS:-12}"
+agent_ui_apply_wait_budget flow
 STATUS_JSON="$(agent_ui_send_op flow "${FLOW}")"
 echo "${STATUS_JSON}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), indent=2))'

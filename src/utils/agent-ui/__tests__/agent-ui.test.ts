@@ -1,21 +1,21 @@
 import {
-  handleAgentUiRequest,
-  isAgentUiUrl,
-  parseAgentUiUrl,
+    handleAgentUiRequest,
+    isAgentUiUrl,
+    parseAgentUiUrl,
 } from '../handle-agent-ui-url';
 import {
-  listAgentUiTargets,
-  registerAgentUiTarget,
-  resetAgentUiRegistry,
-  tapAgentUiTarget,
-  unregisterAgentUiTarget,
+    listAgentUiTargets,
+    registerAgentUiTarget,
+    resetAgentUiRegistry,
+    tapAgentUiTarget,
+    unregisterAgentUiTarget,
 } from '../registry';
 import {
-  agentUiDeepLinkForDestination,
-  expandAgentUiShortcuts,
-  resolveAgentUiDestination,
-  setAgentUiNavigator,
-  setAgentUiRoute,
+    agentUiDeepLinkForDestination,
+    expandAgentUiShortcuts,
+    resolveAgentUiDestination,
+    setAgentUiNavigator,
+    setAgentUiRoute,
 } from '../route';
 
 const mockWrite = jest.fn();
@@ -28,6 +28,21 @@ jest.mock('expo-file-system', () => ({
     create: mockCreate,
     write: mockWrite,
   })),
+}));
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { hostUri: '127.0.0.1:8081' } },
+}));
+
+jest.mock('../http-bridge', () => ({
+  getAgentUiActiveNonce: jest.fn(() => undefined),
+  postAgentUiStatus: jest.fn(async () => undefined),
+  setAgentUiActiveNonce: jest.fn(),
+  fetchAgentUiCommand: jest.fn(async () => null),
+  probeAgentUiHttp: jest.fn(async () => false),
+  resolveAgentUiHttpBase: jest.fn(() => 'http://127.0.0.1:8191'),
+  resetAgentUiHttpBaseCache: jest.fn(),
 }));
 
 describe('agent-ui registry', () => {
@@ -171,6 +186,13 @@ describe('agent-ui request handler', () => {
     expect(mockWrite).toHaveBeenCalled();
     const dumpPayload = JSON.parse(mockWrite.mock.calls[0][0] as string);
     expect(dumpPayload.route).toBe('/travel');
+    expect(dumpPayload.screen).toEqual(
+      expect.objectContaining({
+        width: expect.any(Number),
+        height: expect.any(Number),
+        scale: expect.any(Number),
+      }),
+    );
     const writesAfterDump = mockWrite.mock.calls.length;
 
     await expect(
@@ -312,5 +334,41 @@ describe('agent-ui request handler', () => {
     expect(flowStatus.op).toBe('flow');
     expect(flowStatus.ok).toBe(true);
     expect(flowStatus.results?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('asserts exists, route, label contains, and missing', async () => {
+    setAgentUiRoute('/travel/trip-agent-ui-demo');
+    registerAgentUiTarget('ontrack.travel.planDetail.weather', {
+      label: 'Weather clear',
+    });
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'assert',
+        id: 'ontrack.travel.planDetail.weather',
+        to: '/travel/trip-agent-ui-demo',
+        contains: 'Weather',
+      }),
+    ).resolves.toBe(true);
+    const okStatus = JSON.parse(mockWrite.mock.calls.at(-1)?.[0] as string);
+    expect(okStatus.op).toBe('assert');
+    expect(okStatus.ok).toBe(true);
+    expect(okStatus.results?.length).toBeGreaterThanOrEqual(2);
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'assert',
+        id: 'ontrack.travel.ghost',
+        missing: true,
+      }),
+    ).resolves.toBe(true);
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'assert',
+        id: 'ontrack.travel.planDetail.weather',
+        contains: 'MissingText',
+      }),
+    ).resolves.toBe(false);
   });
 });

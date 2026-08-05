@@ -109,7 +109,7 @@ export function FlightDetailsEditor({
         stackedLabel="Airline"
         value={value.airline}
         onChangeText={(nextValue) => update('airline', nextValue)}
-        placeholder="Icelandair"
+        placeholder="Airline"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <Input
@@ -117,7 +117,7 @@ export function FlightDetailsEditor({
         stackedLabel="Flight Number"
         value={value.flightNumber}
         onChangeText={(nextValue) => update('flightNumber', nextValue)}
-        placeholder="FI 614"
+        placeholder="Flight Number"
         autoCapitalize="characters"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
@@ -127,7 +127,7 @@ export function FlightDetailsEditor({
         helperText={airportHelper(value.departureAirport)}
         value={value.departureAirport}
         onChangeText={(nextValue) => update('departureAirport', nextValue)}
-        placeholder="JFK"
+        placeholder="From"
         autoCapitalize="characters"
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -139,7 +139,7 @@ export function FlightDetailsEditor({
         stackedLabel={DEPARTURE_TERMINAL_LABEL}
         value={value.departureTerminal}
         onChangeText={(nextValue) => update('departureTerminal', nextValue)}
-        placeholder="Terminal"
+        placeholder={DEPARTURE_TERMINAL_LABEL}
         autoCapitalize="characters"
         maxLength={24}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -151,7 +151,7 @@ export function FlightDetailsEditor({
         stackedLabel={DEPARTURE_GATE_LABEL}
         value={value.departureGate}
         onChangeText={(nextValue) => update('departureGate', nextValue)}
-        placeholder="Gate"
+        placeholder={DEPARTURE_GATE_LABEL}
         autoCapitalize="characters"
         maxLength={12}
         {...itinerarySheetFieldProps(chrome, 'flight')}
@@ -162,7 +162,7 @@ export function FlightDetailsEditor({
         helperText={airportHelper(value.arrivalAirport)}
         value={value.arrivalAirport}
         onChangeText={(nextValue) => update('arrivalAirport', nextValue)}
-        placeholder="KEF"
+        placeholder="To"
         autoCapitalize="characters"
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -174,7 +174,7 @@ export function FlightDetailsEditor({
         stackedLabel="Arrival Terminal"
         value={value.arrivalTerminal}
         onChangeText={(nextValue) => update('arrivalTerminal', nextValue)}
-        placeholder="Terminal"
+        placeholder="Arrival Terminal"
         autoCapitalize="characters"
         maxLength={24}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -186,7 +186,7 @@ export function FlightDetailsEditor({
         stackedLabel="Arrival Gate"
         value={value.arrivalGate}
         onChangeText={(nextValue) => update('arrivalGate', nextValue)}
-        placeholder="Gate"
+        placeholder="Arrival Gate"
         autoCapitalize="characters"
         maxLength={12}
         {...itinerarySheetFieldProps(chrome, 'flight')}
@@ -196,7 +196,7 @@ export function FlightDetailsEditor({
         stackedLabel="Confirmation Code"
         value={value.confirmationCode}
         onChangeText={(nextValue) => update('confirmationCode', nextValue)}
-        placeholder="ABC123"
+        placeholder="Confirmation Code"
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={12}
@@ -207,7 +207,7 @@ export function FlightDetailsEditor({
         stackedLabel="Seat"
         value={value.seat}
         onChangeText={(nextValue) => update('seat', nextValue)}
-        placeholder="Seat Number"
+        placeholder="Seat"
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={8}
@@ -220,7 +220,7 @@ export function FlightDetailsEditor({
         stackedLabel="Layover"
         value={value.layoverMinutesAfter ?? ''}
         onChangeText={(nextValue) => update('layoverMinutesAfter', nextValue)}
-        placeholder="HH MM"
+        placeholder="Layover"
         autoCapitalize="none"
         autoCorrect={false}
         {...itinerarySheetFieldProps(chrome, 'clock')}
@@ -233,7 +233,7 @@ export function FlightDetailsEditor({
         helperText={airportHelper(value.connectionAirport ?? '')}
         value={value.connectionAirport ?? ''}
         onChangeText={(nextValue) => update('connectionAirport', nextValue)}
-        placeholder="Airport Code"
+        placeholder="Connection Airport"
         autoCapitalize="characters"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
