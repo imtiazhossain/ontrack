@@ -30,13 +30,19 @@ if [[ $# -lt 1 ]]; then
   usage
 fi
 
+agent_ui_ensure_app_up
 agent_ui_apply_wait_budget flow
+# Bridge exits 1 on failed asserts — still capture JSON for the formatter.
 STATUS_JSON="$(
   AGENT_UI_ROOT="${ROOT}" \
   WAIT_SECS="${WAIT_SECS}" \
   AGENT_UI_WAIT_TIMEOUT_MS="${AGENT_UI_WAIT_TIMEOUT_MS}" \
-    python3 "${ROOT}/scripts/lib/agent_ui_bridge.py" verify -- "$@"
+    python3 "${ROOT}/scripts/lib/agent_ui_bridge.py" verify -- "$@" || true
 )"
+if [[ -z "${STATUS_JSON}" ]]; then
+  echo "error: verify produced no status JSON" >&2
+  exit 1
+fi
 
 python3 - "${STATUS_JSON}" <<'PY'
 import json, sys

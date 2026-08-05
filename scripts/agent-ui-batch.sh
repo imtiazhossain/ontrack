@@ -37,6 +37,7 @@ fi
 
 python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert isinstance(d, list) and d, "ops must be a non-empty JSON array"' "${OPS_JSON}"
 
+agent_ui_ensure_app_up
 agent_ui_apply_wait_budget flow
 STATUS_JSON="$(agent_ui_send_op batch "${OPS_JSON}")"
 echo "${STATUS_JSON}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), indent=2))'

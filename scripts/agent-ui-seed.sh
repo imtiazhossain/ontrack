@@ -11,5 +11,6 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 FIXTURE="${1:-travel-demo}"
+agent_ui_ensure_app_up
 STATUS_JSON="$(agent_ui_send_op seed "${FIXTURE}")"
 echo "${STATUS_JSON}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("detail") or json.dumps(d))'

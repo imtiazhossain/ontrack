@@ -1,28 +1,20 @@
 import {
-  DEFAULT_ADDON_ENTITLEMENTS,
+    ADDONS,
+    DEFAULT_ADDON_ENTITLEMENTS,
 } from '@/addons/registry';
+import type {
+    AddonEntitlementState,
+    AddonId,
+} from '@/addons/types';
 import { AGENTS, defaultAgentEntitlements } from '@/agents/registry';
 import type { AgentEntitlementState } from '@/agents/types';
-import type {
-  AddonEntitlementState,
-  AddonId,
-} from '@/addons/types';
 import type { Entitlement, EntitlementSource } from '@/entitlements/types';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 
 import { getSupabaseClient } from './supabase';
 
-const ADDON_IDS: AddonId[] = [
-  'food',
-  'fitness',
-  'plants',
-  'travel',
-  'vision-board',
-  'games',
-  'vehicles',
-  'health',
-];
+const ADDON_IDS = ADDONS.map((addon) => addon.id) as AddonId[];
 const SOURCES: EntitlementSource[] = ['included', 'testing', 'purchase', 'bundle', 'admin'];
 
 interface EntitlementRow {

@@ -14,14 +14,15 @@ Navigation speed rules live in `.cursor/rules/agent-ui-selectors.mdc` — follow
 ## Required close-out
 
 1. Confirm Metro `/status` is 200 (reuse running bundler; `./scripts/ensure-packager.sh --start` only if down).
-2. Exercise the changed surface with `./scripts/agent-ui.sh verify …` (when already on `--route`) or `once` / `flow` / `open` ([`docs/agent-routes.md`](../../docs/agent-routes.md)) — not tab-hopping and not re-flowing a screen you’re already on. Tap known ids; dump only if an id is unknown.
-3. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
-4. Wait until fully loaded (in-app wait / `./scripts/agent-ui-wait.sh` / assert — not dump loops).
-5. **Prove the claim:**
+2. Confirm the app is up on the simulator before verification (`once` / `verify` / `flow` / `assert` / `open` gate via `agent_ui_ensure_app_up`; use `ensure-packager.sh --start` if you already know the app is dead).
+3. Exercise the changed surface with `./scripts/agent-ui.sh verify …` (when already on `--route`) or `once` / `flow` / `open` ([`docs/agent-routes.md`](../../docs/agent-routes.md)) — not tab-hopping and not re-flowing a screen you’re already on. Tap known ids; dump only if an id is unknown.
+4. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
+5. Wait until fully loaded (in-app wait / `./scripts/agent-ui-wait.sh` / assert — not dump loops).
+6. **Prove the claim:**
  - **Structural** (route, testID present/absent, prefix, label contains) → `./scripts/agent-ui-assert.sh` / `once --assert-*` is sufficient proof. Include the assert output in the reply.
  - **Accent / chrome color** on a known testID → `--color <id> <hex>` (or `verify … --color`) is sufficient; no vision read.
  - **Visual / layout / pixel copy** → capture **one** final `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below. Prefer `agent-ui.sh verify` when already on the surface.
-6. Leave the simulator on that working screen.
+7. Leave the simulator on that working screen.
 
 Run typecheck/tests **in parallel** with the UI once-chain.
 

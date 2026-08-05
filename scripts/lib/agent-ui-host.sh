@@ -69,6 +69,28 @@ agent_ui_apply_wait_budget() {
   export WAIT_SECS
 }
 
+agent_ui_simulator_booted() {
+  xcrun simctl list devices booted 2>/dev/null | grep -q Booted
+}
+
+agent_ui_app_installed() {
+  xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+}
+
+# True when the app process has a PID in the simulator (not merely installed).
+agent_ui_app_process_running() {
+  xcrun simctl spawn booted launchctl list 2>/dev/null \
+    | grep -E "^[0-9]+[[:space:]]+.*UIKitApplication:${BUNDLE_ID}" >/dev/null
+}
+
+# Cheap bridge liveness (route status). Skips nested app-up / heal recursion.
+agent_ui_bridge_answers() {
+  local root
+  root="$(agent_ui_repo_root)" || return 1
+  AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 WAIT_SECS=1.5 \
+    "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1
+}
+
 # Start/reconnect Metro only after a real bridge timeout — never on the happy path.
 # Skips when AGENT_UI_SKIP_HEAL=1 (ensure-packager probes must not recurse).
 agent_ui_heal_packager() {
@@ -87,15 +109,68 @@ agent_ui_heal_packager() {
     "http://127.0.0.1:${METRO_PORT}/status" 2>/dev/null || true)"
   if [[ "$code" == "200" ]]; then
     # Metro is up — cheap route probe (not a full dump).
-    if AGENT_UI_SKIP_HEAL=1 WAIT_SECS=1.5 "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1; then
+    if AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 WAIT_SECS=1.5 \
+      "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1; then
       return 0
     fi
   fi
 
   echo "agent-ui: healing packager (Metro status=${code:-down})…" >&2
-  if AGENT_UI_SKIP_HEAL=1 bash "$ensure" --start; then
+  if AGENT_UI_SKIP_HEAL=1 AGENT_UI_SKIP_APP_UP=1 bash "$ensure" --start; then
     return 0
   fi
+  return 1
+}
+
+# Gate verification: app must be up on the simulator (bridge answering).
+# Happy path = one cheap route probe. Soft-launch / heal only when down.
+# Skip with AGENT_UI_SKIP_APP_UP=1 (nested probes / ensure-packager recursion).
+agent_ui_ensure_app_up() {
+  if [[ "${AGENT_UI_SKIP_APP_UP:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  # Definitive liveness: JS bridge answered a route probe.
+  if agent_ui_bridge_answers; then
+    return 0
+  fi
+
+  if ! agent_ui_simulator_booted; then
+    echo "agent-ui: simulator not booted — ensuring packager/app…" >&2
+    if agent_ui_heal_packager && agent_ui_bridge_answers; then
+      return 0
+    fi
+    echo "error: simulator is not booted (and heal failed)" >&2
+    return 1
+  fi
+
+  if ! agent_ui_app_installed; then
+    echo "error: ${BUNDLE_ID} is not installed on the booted simulator" >&2
+    return 1
+  fi
+
+  if ! agent_ui_app_process_running; then
+    echo "agent-ui: app not running — launching ${BUNDLE_ID}…" >&2
+    xcrun simctl launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+  else
+    echo "agent-ui: app process up but bridge quiet — waiting…" >&2
+  fi
+
+  # Cold launch / reconnect needs a few seconds before the JS bridge mounts.
+  local deadline=$((SECONDS + 8))
+  while (( SECONDS < deadline )); do
+    if agent_ui_bridge_answers; then
+      return 0
+    fi
+    sleep 0.4
+  done
+
+  echo "agent-ui: app bridge not answering — healing packager…" >&2
+  if agent_ui_heal_packager && agent_ui_bridge_answers; then
+    return 0
+  fi
+
+  echo "error: ${BUNDLE_ID} is not up on the simulator (bridge not answering)" >&2
   return 1
 }
 

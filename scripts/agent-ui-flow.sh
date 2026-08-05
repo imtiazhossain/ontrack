@@ -51,6 +51,7 @@ if [[ "$1" == "--list" ]]; then
 fi
 
 FLOW="$1"
+agent_ui_ensure_app_up
 agent_ui_apply_wait_budget flow
 STATUS_JSON="$(agent_ui_send_op flow "${FLOW}")"
 echo "${STATUS_JSON}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), indent=2))'

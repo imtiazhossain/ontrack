@@ -28,6 +28,8 @@ if [[ $# -lt 1 ]]; then
   usage
 fi
 
+agent_ui_ensure_app_up
+
 # Normalize --route → --assert-route (bare --route is a probe in batch-args).
 NORMALIZED=()
 HOST_OPS=0
@@ -52,11 +54,12 @@ done
 # Host-side color/screenshot needs the once path (not in-app batch alone).
 if (( HOST_OPS )); then
   agent_ui_apply_wait_budget simple
+  # Bridge exits 1 on failed asserts — still capture JSON for the formatter.
   STATUS_JSON="$(
     AGENT_UI_ROOT="${ROOT}" \
     WAIT_SECS="${WAIT_SECS}" \
     AGENT_UI_WAIT_TIMEOUT_MS="${AGENT_UI_WAIT_TIMEOUT_MS}" \
-      python3 "${ROOT}/scripts/lib/agent_ui_bridge.py" once -- "${NORMALIZED[@]}"
+      python3 "${ROOT}/scripts/lib/agent_ui_bridge.py" once -- "${NORMALIZED[@]}" || true
   )"
 else
   OPS_JSON="$(AGENT_UI_ROOT="${ROOT}" AGENT_UI_WAIT_TIMEOUT_MS="${AGENT_UI_WAIT_TIMEOUT_MS}" \

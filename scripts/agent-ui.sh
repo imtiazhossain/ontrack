@@ -41,6 +41,7 @@ shift || true
 
 case "${CMD}" in
   once)
+    agent_ui_ensure_app_up
     agent_ui_apply_wait_budget flow
     AGENT_UI_ROOT="${ROOT}" \
     WAIT_SECS="${WAIT_SECS}" \

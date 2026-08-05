@@ -124,6 +124,9 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('agent_ui_apply_wait_budget');
     expect(host).toContain('AGENT_UI_WARM_WAIT_SECS');
     expect(host).toContain('agent_ui_heal_packager');
+    expect(host).toContain('agent_ui_ensure_app_up');
+    expect(host).toContain('agent_ui_app_process_running');
+    expect(host).toContain('agent_ui_bridge_answers');
     expect(host).toContain('ensure-packager.sh');
     expect(host).toContain('agent-ui-route.sh');
     expect(bridge).toContain('agent-ui-data-dir');
@@ -135,6 +138,31 @@ describe('agent-ui host scripts contract', () => {
     expect(daemon).toContain('/next');
     expect(metro).toContain('/__agent_ui');
     expect(metro).toContain('8191');
+  });
+
+  it('verification entry points gate on app-up before bridge work', () => {
+    for (const script of [
+      'scripts/agent-ui.sh',
+      'scripts/agent-ui-verify.sh',
+      'scripts/agent-ui-assert.sh',
+      'scripts/agent-ui-flow.sh',
+      'scripts/agent-ui-open.sh',
+      'scripts/agent-ui-batch.sh',
+      'scripts/agent-ui-seed.sh',
+    ]) {
+      expect(read(script)).toContain('agent_ui_ensure_app_up');
+    }
+    // Low-level probes must not recurse through app-up (heal/preflight uses them).
+    for (const script of [
+      'scripts/agent-ui-route.sh',
+      'scripts/agent-ui-tap.sh',
+      'scripts/agent-ui-exists.sh',
+      'scripts/agent-ui-dump.sh',
+      'scripts/agent-ui-wait.sh',
+      'scripts/agent-ui-goto.sh',
+    ]) {
+      expect(read(script)).not.toContain('agent_ui_ensure_app_up');
+    }
   });
 
   it('batch/flow/seed/assert/once scripts support fixtures and asserts', () => {

@@ -43,10 +43,11 @@ JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killi
 ## Required close-out
 
 1. **Metro must be up** (prefer reuse over restart).
-2. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise the changed surface via the agent-ui **decision tree** (`verify` if already on route → else `once`/flow → open → known tap → dump only if unknown → assert). Fix failures before finishing. Do not re-flow a screen you are already on.
-3. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
-4. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`). Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
-5. **Show proof in the reply.** Prefer `agent-ui-assert.sh` / `once --assert-*` for route/id/label claims. Capture **one** final screenshot only for visual/layout claims; read it and apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. Mid-flow screenshots are not allowed. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
+2. **App must be up on the simulator before verification.** Prefer verification entry points (`once` / `verify` / `flow` / `assert` / `open`) — they call `agent_ui_ensure_app_up` (booted sim, app process, bridge). If you already know the app is dead/crashed/on the Expo launcher, run `./scripts/ensure-packager.sh --start` first; do not burn a full verify timeout guessing.
+3. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise the changed surface via the agent-ui **decision tree** (`verify` if already on route → else `once`/flow → open → known tap → dump only if unknown → assert). Fix failures before finishing. Do not re-flow a screen you are already on.
+4. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
+5. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`). Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
+6. **Show proof in the reply.** Prefer `agent-ui-assert.sh` / `once --assert-*` for route/id/label claims. Capture **one** final screenshot only for visual/layout claims; read it and apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. Mid-flow screenshots are not allowed. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
 
 ## Do not
 

@@ -6,12 +6,12 @@ import { DEFAULT_ADDON_STATE } from '@/addons/registry';
 import type { AddonEnabledState } from '@/addons/types';
 import type { AgentConversations, AgentInstallations } from '@/agents/types';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
+import { ensurePlantSample } from '@/features/plants/sample';
 import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
 import {
     hasCustomizedVisionBoardCategories,
     hasCustomizedVisionBoardItems,
 } from '@/features/vision-board/selectors';
-import { ensurePlantSample } from '@/features/plants/sample';
 import type { VisionBoardCategory, VisionBoardItem } from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
 import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
@@ -83,7 +83,7 @@ const domains: {
       const enabled = objectValue(payload.enabled);
       if (!enabled) return;
       useAddons.getState().replaceEnabled(
-        { ...DEFAULT_ADDON_STATE, ...enabled } as AddonEnabledState,
+        enabled as AddonEnabledState,
         typeof payload.updatedAt === 'string' ? payload.updatedAt : undefined,
       );
     },

@@ -84,6 +84,8 @@ fi
 
 echo "Opening ${DEST}"
 
+agent_ui_ensure_app_up
+
 if [[ -n "${EXPLICIT_WAIT}" ]]; then
   WAIT_SECS="${EXPLICIT_WAIT}"
 else

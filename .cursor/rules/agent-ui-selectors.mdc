@@ -27,6 +27,7 @@ Do not merge UI that agents must exercise without an id. Do not leave “add tes
 
 When exercising the simulator, pick **exactly one** path in order. Do not “explore” first.
 
+0. **App up first** — `once` / `verify` / `flow` / `assert` / `open` / `batch` / `seed` call `agent_ui_ensure_app_up` (simulator booted, app process running, bridge answers). Do not start verification when you already know the app is dead — run `./scripts/ensure-packager.sh --start` first. Do not add a separate manual preflight when using those entry points.
 1. **Already on the surface?** → `./scripts/agent-ui.sh verify --route <path> [--flow <name>] --exists …` (skips flow/open when route matches)
 2. **Else named flow / once chain?** → `./scripts/agent-ui.sh once --flow <name> --assert-…` or `./scripts/agent-ui-flow.sh <name>`  
    (`travel-demo`, `travel-demo-add-flight`, `open-new-trip`, … — `./scripts/agent-ui-flow.sh --list`)
@@ -87,7 +88,7 @@ These habits dominate host/bridge micro-opts. Follow them every verification:
 2. **One shell chain / `verify` / `once`** — do not spend agent turns between hops. Chain `--tap` + `--assert-*` (+ optional `--screenshot`) in one `once`.
 3. **Assert-first** — use `--color` for accent claims; screenshot only for broader visual/layout. Do not vision-read a screenshot for route/id/label claims.
 4. **Never mid-flow dump or screenshot** — dumps/screenshots are for unknown ids / final visual proof only.
-5. **Never prophylactic Metro heal** — skip `ensure-packager` / reconnect when `/status` is 200 and a recent `route`/`flow`/`open`/`once`/`verify` succeeded. Heal only after a failed bridge probe (scripts heal only on failure paths).
+5. **Never prophylactic Metro heal** — skip a standalone `ensure-packager` when `/status` is 200 and a recent `route`/`flow`/`open`/`once`/`verify` succeeded. Verification entry points already gate on `agent_ui_ensure_app_up` (launch/heal only when the app or bridge is down).
 6. **Prefer `verify` / `once` / `flow` / `batch` / in-app `wait`** — do not host-poll `exists`/`prefix` in a shell loop.
 7. **Reuse fixtures** — `travel-demo` / named seeds; do not rebuild trip/list data by hand.
 8. **Fail-fast when warm** — host budgets drop to ~2.5s simple / ~5s flow when the daemon is warm; do not raise `WAIT_SECS` unless a step legitimately needs it.
