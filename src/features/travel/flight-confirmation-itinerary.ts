@@ -1,5 +1,11 @@
+import {
+  calculateFlightArrival,
+  calculateFlightDuration,
+} from './flight-arrival';
 import type { ParsedFlightSegment } from './flight-confirmation-parser';
-import type { TravelItineraryItem, TravelPlan } from './types';
+import { flightLegsFromSegments } from './flight-journey-model';
+import { formatFlightRouteLabel } from './flight-route-label';
+import type { TravelFlightDetails, TravelItineraryItem, TravelPlan } from './types';
 
 interface MergeImportedFlightsOptions {
   itinerary: TravelItineraryItem[];
@@ -53,14 +59,135 @@ function sameFlight(
   );
 }
 
+function connectionArrivalMinutesForSegment(
+  segment: ParsedFlightSegment,
+): number | undefined {
+  if (segment.arrivalMinutes !== undefined) return segment.arrivalMinutes;
+  if (
+    segment.date &&
+    segment.startMinutes !== undefined &&
+    segment.durationMinutes !== undefined
+  ) {
+    return calculateFlightArrival({
+      date: segment.date,
+      startMinutes: segment.startMinutes,
+      durationMinutes: segment.durationMinutes,
+      departureAirport: segment.flight.departureAirport,
+      arrivalAirport: segment.flight.arrivalAirport,
+    }).startMinutes;
+  }
+  return undefined;
+}
+
+function doorToDoorDuration(segments: ParsedFlightSegment[]): number | undefined {
+  const first = segments[0];
+  const last = segments.at(-1);
+  if (
+    !first?.date ||
+    first.startMinutes === undefined ||
+    !last?.date ||
+    last.startMinutes === undefined
+  ) {
+    return undefined;
+  }
+  let lastArrivalDate = last.arrivalDate ?? last.date;
+  let lastArrivalMinutes = last.arrivalMinutes;
+  if (lastArrivalMinutes === undefined && last.durationMinutes !== undefined) {
+    const landed = calculateFlightArrival({
+      date: last.date,
+      startMinutes: last.startMinutes,
+      durationMinutes: last.durationMinutes,
+      departureAirport: last.flight.departureAirport,
+      arrivalAirport: last.flight.arrivalAirport,
+    });
+    lastArrivalDate = landed.date;
+    lastArrivalMinutes = landed.startMinutes;
+  }
+  if (lastArrivalMinutes === undefined) {
+    const sum = segments.reduce((total, segment) => {
+      return (
+        total +
+        (segment.durationMinutes ?? 0) +
+        (segment.layoverMinutesAfter ?? 0)
+      );
+    }, 0);
+    return sum > 0 ? sum : undefined;
+  }
+  // Confirmations often print total as first-dep → final-arr wall clocks.
+  if (first.date === lastArrivalDate) {
+    const printed = lastArrivalMinutes - first.startMinutes;
+    if (printed > 0) return printed;
+  }
+  // Prefer block time across airport zones when the printed span is overnight.
+  return calculateFlightDuration({
+    departureDate: first.date,
+    departureMinutes: first.startMinutes,
+    arrivalDate: lastArrivalDate,
+    arrivalMinutes: lastArrivalMinutes,
+    departureAirport: first.flight.departureAirport,
+    arrivalAirport: last.flight.arrivalAirport,
+  });
+}
+
+function connectingJourneyValues(
+  segments: ParsedFlightSegment[],
+  tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
+  confirmationUris?: string[],
+) {
+  const first = segments[0]!;
+  const second = segments[1];
+  const last = segments.at(-1)!;
+  const legs = flightLegsFromSegments(segments);
+  const connectionArrivalMinutes = connectionArrivalMinutesForSegment(first);
+  const date = first.date ?? tripRange.startDate;
+  const startMinutes = first.startMinutes ?? 12 * 60;
+  const durationMinutes = doorToDoorDuration(segments);
+  const connectionAirport =
+    first.flight.arrivalAirport || first.flight.connectionAirport || undefined;
+  const flight: TravelFlightDetails = {
+    airline: first.flight.airline || undefined,
+    flightNumber: first.flight.flightNumber || undefined,
+    confirmationCode: first.flight.confirmationCode || undefined,
+    departureAirport: first.flight.departureAirport || undefined,
+    departureTerminal: first.flight.departureTerminal || undefined,
+    arrivalAirport: last.flight.arrivalAirport || undefined,
+    arrivalTerminal: last.flight.arrivalTerminal || undefined,
+    seat: first.flight.seat || undefined,
+    ...(first.layoverMinutesAfter
+      ? { layoverMinutesAfter: first.layoverMinutesAfter }
+      : {}),
+    ...(connectionAirport ? { connectionAirport } : {}),
+    ...(connectionArrivalMinutes !== undefined
+      ? { connectionArrivalMinutes }
+      : {}),
+    ...(second?.startMinutes !== undefined
+      ? { connectionDepartureMinutes: second.startMinutes }
+      : {}),
+    ...(legs?.length ? { legs } : {}),
+    ...(confirmationUris?.length ? { confirmationUris } : {}),
+  };
+  const route = formatFlightRouteLabel(flight);
+  return {
+    title: route ? `Flight ${route}` : first.title || first.flight.flightNumber || 'Flight',
+    date,
+    startMinutes,
+    ...(durationMinutes !== undefined ? { durationMinutes } : {}),
+    flight,
+  };
+}
+
 function importedItemValues(
   segment: ParsedFlightSegment,
   index: number,
   tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
   confirmationUris?: string[],
+  nextSegment?: ParsedFlightSegment,
 ) {
   const date =
     segment.date ?? (index === 0 ? tripRange.startDate : tripRange.endDate);
+  const connectionArrivalMinutes = segment.layoverMinutesAfter
+    ? connectionArrivalMinutesForSegment(segment)
+    : undefined;
   return {
     title:
       segment.title ||
@@ -76,16 +203,63 @@ function importedItemValues(
       flightNumber: segment.flight.flightNumber || undefined,
       confirmationCode: segment.flight.confirmationCode || undefined,
       departureAirport: segment.flight.departureAirport || undefined,
+      departureTerminal: segment.flight.departureTerminal || undefined,
       arrivalAirport: segment.flight.arrivalAirport || undefined,
+      arrivalTerminal: segment.flight.arrivalTerminal || undefined,
       seat: segment.flight.seat || undefined,
       ...(segment.layoverMinutesAfter
-        ? { layoverMinutesAfter: segment.layoverMinutesAfter }
+        ? {
+            layoverMinutesAfter: segment.layoverMinutesAfter,
+            connectionAirport:
+              segment.flight.connectionAirport ||
+              segment.flight.arrivalAirport ||
+              undefined,
+            ...(connectionArrivalMinutes !== undefined
+              ? { connectionArrivalMinutes }
+              : {}),
+            ...(nextSegment?.startMinutes !== undefined
+              ? { connectionDepartureMinutes: nextSegment.startMinutes }
+              : {}),
+          }
         : {}),
       ...(confirmationUris?.length ? { confirmationUris } : {}),
     },
   };
 }
 
+function isConnectingSegmentGroup(segments: ParsedFlightSegment[]): boolean {
+  if (segments.length < 2) return false;
+  if (
+    segments.some(
+      (segment, index) =>
+        index < segments.length - 1 && Boolean(segment.layoverMinutesAfter),
+    )
+  ) {
+    return true;
+  }
+  for (let index = 0; index < segments.length - 1; index++) {
+    const current = segments[index]!;
+    const next = segments[index + 1]!;
+    const arrival = current.flight.arrivalAirport?.trim().toUpperCase();
+    const departure = next.flight.departureAirport?.trim().toUpperCase();
+    if (!arrival || !departure || arrival !== departure) return false;
+    if (current.date && next.date) {
+      const gapMs =
+        new Date(`${next.date}T12:00:00`).getTime() -
+        new Date(`${current.date}T12:00:00`).getTime();
+      const gapDays = Math.round(gapMs / (24 * 60 * 60 * 1000));
+      // Round-trips often leave days later; connections are same/next day.
+      if (gapDays > 1) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Merge parsed flights into the itinerary.
+ * True connecting confirmations collapse to one journey item with `legs`.
+ * Outbound + return (multi-day) stay as separate items.
+ */
 export function mergeImportedFlights({
   itinerary,
   segments,
@@ -94,6 +268,57 @@ export function mergeImportedFlights({
   targetItemId,
   confirmationUris,
 }: MergeImportedFlightsOptions): TravelItineraryItem[] {
+  if (isConnectingSegmentGroup(segments)) {
+    const values = connectingJourneyValues(
+      segments,
+      tripRange,
+      confirmationUris,
+    );
+    const merged = [...itinerary];
+    const segmentFlightNumbers = new Set(
+      segments
+        .map((segment) => segment.flight.flightNumber.trim().toUpperCase())
+        .filter(Boolean),
+    );
+    // Drop prior legs from the same connecting confirmation when re-importing.
+    const withoutPriorLegs = merged.filter((item) => {
+      if (item.id === targetItemId) return true;
+      if (item.kind !== 'flight') return true;
+      const number = item.flight?.flightNumber?.trim().toUpperCase();
+      return !number || !segmentFlightNumbers.has(number);
+    });
+
+    const targetIndex = targetItemId
+      ? withoutPriorLegs.findIndex((item) => item.id === targetItemId)
+      : withoutPriorLegs.findIndex((item) =>
+          sameFlight(item, segments[0]!, values.date),
+        );
+
+    if (targetIndex >= 0) {
+      const next = [...withoutPriorLegs];
+      next[targetIndex] = {
+        ...next[targetIndex],
+        kind: 'flight',
+        ...values,
+        flight: {
+          ...next[targetIndex].flight,
+          ...values.flight,
+        },
+      };
+      return next;
+    }
+
+    return [
+      ...withoutPriorLegs,
+      {
+        id: createId(),
+        kind: 'flight',
+        durationMinutes: 60,
+        ...values,
+      },
+    ];
+  }
+
   const merged = [...itinerary];
 
   segments.forEach((segment, index) => {
@@ -102,6 +327,7 @@ export function mergeImportedFlights({
       index,
       tripRange,
       confirmationUris,
+      segments[index + 1],
     );
     const targetIndex =
       index === 0 && targetItemId

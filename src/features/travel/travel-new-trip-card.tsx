@@ -119,11 +119,10 @@ export function TravelNewTripCard({
         endDate={endDate}
         onStartDateChange={onStartDateChange}
         onEndDateChange={onEndDateChange}
-        startLabel="Start"
-        endLabel="End"
-        stacked
-        startTestID={AgentUiIds.travel.newTrip.startDate}
-        endTestID={AgentUiIds.travel.newTrip.endDate}
+        testID={AgentUiIds.travel.newTrip.dates}
+        calendarTestID={AgentUiIds.travel.newTrip.calendar}
+        closeTestID={AgentUiIds.travel.newTrip.datesClose}
+        saveTestID={AgentUiIds.travel.newTrip.datesSave}
       />
       <Input
         testID={AgentUiIds.travel.newTrip.notes}

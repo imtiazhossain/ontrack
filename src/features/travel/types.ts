@@ -47,15 +47,70 @@ export interface TravelTransportDetails {
   stops?: TravelRouteStop[];
 }
 
+export interface TravelFlightLeg {
+  airline?: string;
+  flightNumber?: string;
+  departureAirport?: string;
+  /** Flight-specific terminal at the departure airport. */
+  departureTerminal?: string;
+  /** Flight-specific gate at the departure airport. */
+  departureGate?: string;
+  arrivalAirport?: string;
+  /** Flight-specific terminal at the arrival airport. */
+  arrivalTerminal?: string;
+  /** Flight-specific gate at the arrival airport. */
+  arrivalGate?: string;
+  /** Local calendar day YYYY-MM-DD for this leg’s departure. */
+  date?: string;
+  /** Minutes from midnight for departure local time. */
+  departureMinutes?: number;
+  /** Local calendar day YYYY-MM-DD for this leg’s arrival. */
+  arrivalDate?: string;
+  /** Minutes from midnight for arrival local time. */
+  arrivalMinutes?: number;
+  durationMinutes?: number;
+  /** Optional aircraft type from the confirmation (e.g. Boeing 737-800). */
+  aircraft?: string;
+  /** Minutes spent connecting after this leg before the next flight. */
+  layoverMinutesAfter?: number;
+}
+
 export interface TravelFlightDetails {
   airline?: string;
   flightNumber?: string;
   confirmationCode?: string;
   departureAirport?: string;
+  /** Flight-specific terminal at the departure airport. */
+  departureTerminal?: string;
+  /** Flight-specific gate at the departure airport. */
+  departureGate?: string;
   arrivalAirport?: string;
+  /** Flight-specific terminal at the arrival airport. */
+  arrivalTerminal?: string;
+  /** Flight-specific gate at the arrival airport. */
+  arrivalGate?: string;
   seat?: string;
+  /** Lead traveler on the booking, when the confirmation names one. */
+  passengerName?: string;
+  /** Travelers covered by this booking; defaults to a single traveler in UI. */
+  passengerCount?: number;
   /** Minutes spent connecting after this leg before the next flight. */
   layoverMinutesAfter?: number;
+  /**
+   * Airport where the connection happens (e.g. IAH). Distinct from
+   * `arrivalAirport` when a review draft collapses a multi-leg trip to the
+   * final destination while still showing layover details.
+   */
+  connectionAirport?: string;
+  /** Local minutes from midnight when the connecting arrival lands. */
+  connectionArrivalMinutes?: number;
+  /** Local minutes from midnight when the onward flight departs. */
+  connectionDepartureMinutes?: number;
+  /**
+   * Per-leg itinerary for connecting trips. When present (length > 1), the
+   * expanded flight card renders the multi-leg journey view.
+   */
+  legs?: TravelFlightLeg[];
   /** Durable file:// URIs for the uploaded confirmation document/screenshots. */
   confirmationUris?: string[];
 }

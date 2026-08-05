@@ -1,5 +1,6 @@
 export { appPrompt, AppPromptHost } from './app-prompt';
 export { AppSafeArea } from './app-safe-area';
+export { SafeAreaChrome, useSafeAreaChrome } from './safe-area-chrome';
 export { AppText } from './app-text';
 export { BackButton, HeaderBackButton } from './back-button';
 export { Button, IconButton } from './button';
@@ -27,5 +28,6 @@ export { SectionHeader } from './section-header';
 export { SheetHeader, SheetScaffold } from './sheet-scaffold';
 export { SettingsActionRow, SettingsRow, SettingsToggleRow } from './settings-row';
 export { Symbol } from './symbol';
+export type { SymbolSize } from './symbol';
 export { TimeField } from './time-field';
 export type { TimeFieldProps } from './time-field.types';

@@ -161,9 +161,29 @@ export const AgentUiIds = {
     close: 'ontrack.prompt.close',
     action: (index: number) => `ontrack.prompt.action.${index}`,
   },
+  eventDetail: {
+    edit: 'ontrack.eventDetail.edit',
+    toggleComplete: 'ontrack.eventDetail.toggleComplete',
+    close: 'ontrack.eventDetail.close',
+    goBack: 'ontrack.eventDetail.goBack',
+  },
   activityForm: {
     choice: (group: string, value: string) =>
       `ontrack.activityForm.choice.${group}.${value}`,
+    category: (categoryId: string) =>
+      `ontrack.activityForm.category.${categoryId}`,
+    guidedTitle: 'ontrack.activityForm.guidedTitle',
+    title: 'ontrack.activityForm.title',
+    date: 'ontrack.activityForm.date',
+    duration: 'ontrack.activityForm.duration',
+    startTime: 'ontrack.activityForm.startTime',
+    notes: 'ontrack.activityForm.notes',
+    pickPhoto: 'ontrack.activityForm.pickPhoto',
+    analyzePhoto: 'ontrack.activityForm.analyzePhoto',
+    removePhoto: 'ontrack.activityForm.removePhoto',
+    save: 'ontrack.activityForm.save',
+    cancel: 'ontrack.activityForm.cancel',
+    delete: 'ontrack.activityForm.delete',
   },
   designSystem: {
     info: 'ontrack.designSystem.info',
@@ -179,6 +199,14 @@ export const AgentUiIds = {
     tripMode: (mode: string) => `ontrack.travel.tripMode.${mode}`,
     flight: {
       layoverDuration: 'ontrack.travel.flight.layoverDuration',
+      connectionAirport: 'ontrack.travel.flight.connectionAirport',
+      departureTerminal: 'ontrack.travel.flight.departureTerminal',
+      arrivalTerminal: 'ontrack.travel.flight.arrivalTerminal',
+      departureGate: 'ontrack.travel.flight.departureGate',
+      arrivalGate: 'ontrack.travel.flight.arrivalGate',
+      status: (itemId: string) => `ontrack.travel.flight.status.${itemId}`,
+      copyConfirmation: (itemId: string) =>
+        `ontrack.travel.flight.copyConfirmation.${itemId}`,
     },
     transport: {
       mode: (mode: string) => `ontrack.travel.transport.mode.${mode}`,
@@ -225,8 +253,10 @@ export const AgentUiIds = {
       title: 'ontrack.travel.newTrip.title',
       destination: 'ontrack.travel.newTrip.destination',
       origin: 'ontrack.travel.newTrip.origin',
-      startDate: 'ontrack.travel.newTrip.startDate',
-      endDate: 'ontrack.travel.newTrip.endDate',
+      dates: 'ontrack.travel.newTrip.dates',
+      datesClose: 'ontrack.travel.newTrip.datesClose',
+      datesSave: 'ontrack.travel.newTrip.datesSave',
+      calendar: 'ontrack.travel.newTrip.calendar',
       notes: 'ontrack.travel.newTrip.notes',
       create: 'ontrack.travel.newTrip.create',
     },
@@ -295,6 +325,8 @@ export const AgentUiIds = {
     confirmation: {
       open: (kind: string) => `ontrack.travel.confirmation.open.${kind}`,
       close: 'ontrack.travel.confirmation.close',
+      importAction: (kind: string) =>
+        `ontrack.travel.confirmation.importAction.${kind}`,
     },
     notes: {
       open: (itemId: string) => `ontrack.travel.notes.open.${itemId}`,

@@ -12,6 +12,7 @@ import {
 } from '../registry';
 import {
   agentUiDeepLinkForDestination,
+  expandAgentUiShortcuts,
   resolveAgentUiDestination,
   setAgentUiNavigator,
   setAgentUiRoute,
@@ -63,7 +64,7 @@ describe('agent-ui registry', () => {
 });
 
 describe('agent-ui url parsing', () => {
-  it('detects and parses dump/tap/exists/goto/reset urls', () => {
+  it('detects and parses dump/tap/exists/goto/reset/route/prefix urls', () => {
     expect(isAgentUiUrl('ontrack://agent/ui?op=dump')).toBe(true);
     expect(parseAgentUiUrl('ontrack://agent/ui?op=dump')).toEqual({
       op: 'dump',
@@ -87,6 +88,17 @@ describe('agent-ui url parsing', () => {
     expect(parseAgentUiUrl('ontrack://agent/ui?op=reset')).toEqual({
       op: 'reset',
     });
+    expect(parseAgentUiUrl('ontrack://agent/ui?op=route')).toEqual({
+      op: 'route',
+    });
+    expect(
+      parseAgentUiUrl(
+        'ontrack://agent/ui?op=prefix&prefix=ontrack.travel.',
+      ),
+    ).toEqual({
+      op: 'prefix',
+      prefix: 'ontrack.travel.',
+    });
     expect(isAgentUiUrl('ontrack://travel/abc')).toBe(false);
   });
 });
@@ -102,6 +114,36 @@ describe('agent-ui routes', () => {
       'ontrack:///calendar',
     );
   });
+
+  it('expands nested travel shortcuts and preserves query strings', () => {
+    expect(expandAgentUiShortcuts('travel/abc/add/flight')).toBe(
+      '/travel/abc?add=flight',
+    );
+    expect(expandAgentUiShortcuts('travel/abc/add/timeline')).toBe(
+      '/travel/abc?add=timeline',
+    );
+    expect(expandAgentUiShortcuts('travel/abc/import')).toBe(
+      '/travel/abc?previewModal=import',
+    );
+    expect(expandAgentUiShortcuts('travel/abc/expense')).toBe(
+      '/travel/abc?previewModal=expense',
+    );
+    expect(expandAgentUiShortcuts('travel/abc/stay-booking')).toBe(
+      '/travel/abc?openStayBooking=1',
+    );
+    expect(expandAgentUiShortcuts('health/mood')).toBe('/health/mood-check-in');
+    expect(expandAgentUiShortcuts('checklists/list-1')).toBe('/to-do/list-1');
+    expect(expandAgentUiShortcuts('plants/new')).toBe('/plants/new');
+    expect(resolveAgentUiDestination('travel/abc?add=stay')).toBe(
+      '/travel/abc?add=stay',
+    );
+    expect(resolveAgentUiDestination('travel/abc/add/flight')).toBe(
+      '/travel/abc?add=flight',
+    );
+    expect(agentUiDeepLinkForDestination('travel/abc/import')).toBe(
+      'ontrack:///travel/abc?previewModal=import',
+    );
+  });
 });
 
 describe('agent-ui request handler', () => {
@@ -113,7 +155,7 @@ describe('agent-ui request handler', () => {
     mockCreate.mockClear();
   });
 
-  it('dumps registered elements and taps by id', async () => {
+  it('dumps registered elements and taps by id without rewriting dump', async () => {
     const press = jest.fn();
     setAgentUiRoute('/travel');
     registerAgentUiTarget('ontrack.tabs.travel', {
@@ -126,17 +168,57 @@ describe('agent-ui request handler', () => {
     expect(mockWrite).toHaveBeenCalled();
     const dumpPayload = JSON.parse(mockWrite.mock.calls[0][0] as string);
     expect(dumpPayload.route).toBe('/travel');
+    const writesAfterDump = mockWrite.mock.calls.length;
 
     await expect(
       handleAgentUiRequest({ op: 'tap', id: 'ontrack.tabs.travel' }),
     ).resolves.toBe(true);
     expect(press).toHaveBeenCalledTimes(1);
+    // Status write only — no dump rewrite after tap.
+    expect(mockWrite.mock.calls.length).toBe(writesAfterDump + 1);
+    const statusPayload = JSON.parse(
+      mockWrite.mock.calls[writesAfterDump][0] as string,
+    );
+    expect(statusPayload.op).toBe('tap');
+    expect(statusPayload.ok).toBe(true);
 
     await expect(
       handleAgentUiRequest({ op: 'exists', id: 'ontrack.tabs.travel' }),
     ).resolves.toBe(true);
     await expect(
       handleAgentUiRequest({ op: 'exists', id: 'missing' }),
+    ).resolves.toBe(false);
+  });
+
+  it('supports cheap route and prefix probes', async () => {
+    setAgentUiRoute('/calendar');
+    registerAgentUiTarget('ontrack.calendar.day', { label: 'Day' });
+    registerAgentUiTarget('ontrack.calendar.next', { label: 'Next' });
+
+    await expect(handleAgentUiRequest({ op: 'route' })).resolves.toBe(true);
+    const routeStatus = JSON.parse(
+      mockWrite.mock.calls.at(-1)?.[0] as string,
+    );
+    expect(routeStatus).toMatchObject({
+      op: 'route',
+      ok: true,
+      route: '/calendar',
+    });
+
+    await expect(
+      handleAgentUiRequest({ op: 'prefix', prefix: 'ontrack.calendar.' }),
+    ).resolves.toBe(true);
+    const prefixStatus = JSON.parse(
+      mockWrite.mock.calls.at(-1)?.[0] as string,
+    );
+    expect(prefixStatus).toMatchObject({
+      op: 'prefix',
+      ok: true,
+      count: 2,
+    });
+
+    await expect(
+      handleAgentUiRequest({ op: 'prefix', prefix: 'ontrack.travel.' }),
     ).resolves.toBe(false);
   });
 
@@ -151,5 +233,81 @@ describe('agent-ui request handler', () => {
 
     await expect(handleAgentUiRequest({ op: 'reset' })).resolves.toBe(true);
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('runs batch ops and stops on first failure', async () => {
+    const navigate = jest.fn();
+    const press = jest.fn();
+    setAgentUiNavigator(navigate);
+    setAgentUiRoute('/travel');
+    registerAgentUiTarget('ontrack.travel.newTrip.open', {
+      label: 'New trip',
+      press,
+    });
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'batch',
+        ops: [
+          { op: 'goto', to: 'travel' },
+          { op: 'tap', id: 'ontrack.travel.newTrip.open' },
+          { op: 'exists', id: 'ontrack.travel.newTrip.open' },
+        ],
+      }),
+    ).resolves.toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/travel');
+    expect(press).toHaveBeenCalledTimes(1);
+    const batchStatus = JSON.parse(mockWrite.mock.calls.at(-1)?.[0] as string);
+    expect(batchStatus.op).toBe('batch');
+    expect(batchStatus.ok).toBe(true);
+    expect(batchStatus.results).toHaveLength(3);
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'batch',
+        ops: [
+          { op: 'tap', id: 'ontrack.travel.newTrip.open' },
+          { op: 'tap', id: 'missing' },
+          { op: 'tap', id: 'ontrack.travel.newTrip.open' },
+        ],
+      }),
+    ).resolves.toBe(false);
+    const failed = JSON.parse(mockWrite.mock.calls.at(-1)?.[0] as string);
+    expect(failed.ok).toBe(false);
+    expect(failed.results).toHaveLength(2);
+    expect(press).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits until a prefix appears', async () => {
+    setAgentUiRoute('/travel');
+    setTimeout(() => {
+      registerAgentUiTarget('ontrack.travel.planDetail.weather', {
+        label: 'Weather',
+      });
+    }, 60);
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'wait',
+        prefix: 'ontrack.travel.planDetail.',
+        timeoutMs: 1000,
+        ms: 0,
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('runs named flows and keeps status.op=flow', async () => {
+    const navigate = jest.fn();
+    setAgentUiNavigator(navigate);
+    registerAgentUiTarget('ontrack.calendar.day', { label: 'Day' });
+
+    await expect(
+      handleAgentUiRequest({ op: 'flow', to: 'calendar' }),
+    ).resolves.toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/calendar');
+    const flowStatus = JSON.parse(mockWrite.mock.calls.at(-1)?.[0] as string);
+    expect(flowStatus.op).toBe('flow');
+    expect(flowStatus.ok).toBe(true);
+    expect(flowStatus.results?.length).toBeGreaterThanOrEqual(2);
   });
 });

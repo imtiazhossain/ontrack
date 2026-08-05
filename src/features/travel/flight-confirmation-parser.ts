@@ -1,9 +1,15 @@
+import { airlineName, CONFIRMATION_AIRLINE_CODES } from './airline-catalog';
 import { findConfirmationMoney } from './confirmation-money';
+import { findAircraft, findPassenger } from './flight-confirmation-fields';
 import {
   emptyFlightDetailsDraft,
   type FlightDetailsDraft,
 } from './flight-details';
 import { flightExpenseTitleFromSegments } from './flight-expense-title';
+import {
+  parseLabeledFlightGate,
+  parseLabeledFlightTerminal,
+} from './flight-terminal';
 import { addDays } from '@/utils/date';
 
 export interface ParsedFlightSegment {
@@ -15,6 +21,8 @@ export interface ParsedFlightSegment {
   arrivalMinutes?: number;
   durationMinutes?: number;
   layoverMinutesAfter?: number;
+  /** Equipment line from the confirmation, e.g. "Boeing 737-800 Passenger". */
+  aircraft?: string;
   detectedFieldCount: number;
 }
 
@@ -26,32 +34,7 @@ export interface ParsedFlightConfirmation extends ParsedFlightSegment {
   currency?: string;
 }
 
-const AIRLINES: Record<string, string> = {
-  AA: 'American Airlines',
-  AC: 'Air Canada',
-  AF: 'Air France',
-  AS: 'Alaska Airlines',
-  BA: 'British Airways',
-  B6: 'JetBlue',
-  DL: 'Delta',
-  EI: 'Aer Lingus',
-  EK: 'Emirates',
-  FI: 'Icelandair',
-  IB: 'Iberia',
-  KL: 'KLM',
-  LH: 'Lufthansa',
-  NK: 'Spirit',
-  QF: 'Qantas',
-  QR: 'Qatar Airways',
-  SK: 'SAS',
-  TK: 'Turkish Airlines',
-  TP: 'TAP Air Portugal',
-  UA: 'United Airlines',
-  VS: 'Virgin Atlantic',
-  WN: 'Southwest',
-};
-
-const AIRLINE_CODES = Object.keys(AIRLINES).join('|');
+const AIRLINE_CODES = CONFIRMATION_AIRLINE_CODES.join('|');
 const NON_AIRPORT_CODES = new Set([
   'AND',
   'ARE',
@@ -448,23 +431,90 @@ function findLayoverMinutes(text: string): number[] {
     .filter((minutes) => minutes > 0);
 }
 
+function hasConnectingTimedItinerary(
+  events: TimedAirportEvent[],
+  layovers: number[],
+  legCount: number,
+): boolean {
+  if (legCount < 2 || events.length < legCount * 2) return false;
+  if (layovers.length > 0) return true;
+  for (let index = 0; index < legCount - 1; index += 1) {
+    const arrival = events[index * 2 + 1];
+    const nextDeparture = events[index * 2 + 2];
+    if (
+      arrival &&
+      nextDeparture &&
+      arrival.airportCode === nextDeparture.airportCode
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * When OCR finds timed airports for a layover itinerary but misses a flight
+ * number, pad segments so each leg still gets the correct airports/times.
+ */
+function padSegmentsForTimedLegs(
+  segments: ParsedFlightSegment[],
+  text: string,
+  tripRange: { startDate: string; endDate: string } | undefined,
+  legCount: number,
+): ParsedFlightSegment[] {
+  if (segments.length >= legCount) return segments.slice(0, legCount);
+  const flightNumbers = findFlightNumbers(text);
+  const confirmationCode = segments[0]?.flight.confirmationCode ?? '';
+  const airline = segments[0]?.flight.airline ?? '';
+  return Array.from({ length: legCount }, (_, index) => {
+    const existing = segments[index];
+    if (existing) return existing;
+    const flightNumber = flightNumbers[index];
+    if (flightNumber) {
+      const next = flightNumbers[index + 1];
+      return parseSegment(
+        text.slice(flightNumber.index, next?.index ?? text.length),
+        tripRange,
+        confirmationCode,
+        flightNumber,
+      );
+    }
+    return {
+      flight: {
+        ...emptyFlightDetailsDraft(),
+        confirmationCode,
+        airline,
+      },
+      detectedFieldCount: 0,
+    };
+  });
+}
+
 function applyTimedAirportItinerary(
   segments: ParsedFlightSegment[],
   text: string,
   tripRange?: { startDate: string; endDate: string },
 ): ParsedFlightSegment[] {
   const events = findTimedAirportEvents(text);
-  if (segments.length < 2 || events.length < segments.length * 2)
-    return segments;
-
-  const itineraryEvents = events.slice(0, segments.length * 2);
   const layovers = findLayoverMinutes(text);
+  const eventLegs = Math.floor(events.length / 2);
+  const connecting = hasConnectingTimedItinerary(events, layovers, eventLegs);
+  // Only grow beyond recognized flight numbers when layover/connection evidence exists.
+  const targetLegs = connecting
+    ? Math.max(segments.length, eventLegs)
+    : segments.length;
+  if (targetLegs < 2 || events.length < targetLegs * 2) return segments;
+
+  const padded = connecting
+    ? padSegmentsForTimedLegs(segments, text, tripRange, targetLegs)
+    : segments.slice(0, targetLegs);
+  const itineraryEvents = events.slice(0, padded.length * 2);
   const firstDate =
-    segments[0]?.date ??
+    padded[0]?.date ??
     findDate(text, tripRange?.startDate, tripRange?.endDate);
   let departureDate = firstDate;
 
-  return segments.map((segment, index) => {
+  return padded.map((segment, index) => {
     const departure = itineraryEvents[index * 2];
     const arrival = itineraryEvents[index * 2 + 1];
     const nextDeparture = itineraryEvents[index * 2 + 2];
@@ -474,11 +524,21 @@ function applyTimedAirportItinerary(
         ? (nextDeparture.minutes - arrival.minutes + 24 * 60) % (24 * 60)
         : undefined;
     const layoverMinutesAfter = directLayover ?? computedLayover;
+    const timedDuration =
+      departure && arrival
+        ? (arrival.minutes - departure.minutes + 24 * 60) % (24 * 60)
+        : undefined;
     const next = {
       ...segment,
       date: departureDate ?? segment.date,
       startMinutes: departure.minutes,
       title: `Flight ${departure.airportCode} → ${arrival.airportCode}`,
+      durationMinutes:
+        segment.durationMinutes && segment.durationMinutes > 0
+          ? segment.durationMinutes
+          : timedDuration && timedDuration > 0
+            ? timedDuration
+            : segment.durationMinutes,
       flight: {
         ...segment.flight,
         departureAirport: departure.airportCode,
@@ -507,11 +567,15 @@ function parseSegment(
   flight.confirmationCode = confirmationCode;
   if (flightNumber) {
     flight.flightNumber = `${flightNumber.code} ${flightNumber.number}`;
-    flight.airline = AIRLINES[flightNumber.code] ?? '';
+    flight.airline = airlineName(flightNumber.code) ?? '';
   }
   const route = findRoute(text);
   flight.departureAirport = route.departureAirport;
+  flight.departureTerminal = parseLabeledFlightTerminal(text, 'departure');
+  flight.departureGate = parseLabeledFlightGate(text, 'departure');
   flight.arrivalAirport = route.arrivalAirport;
+  flight.arrivalTerminal = parseLabeledFlightTerminal(text, 'arrival');
+  flight.arrivalGate = parseLabeledFlightGate(text, 'arrival');
   flight.seat =
     firstMatch(text, [
       /(?:seat|seat\s+assignment)\s*(?:[:#-]\s*|\n\s*)([A-Z]?\d{1,3}[A-Z]?)\b/i,
@@ -528,6 +592,7 @@ function parseSegment(
   const date = findDate(text, tripRange?.startDate, tripRange?.endDate);
   const startMinutes = findDepartureTime(text);
   const durationMinutes = findDurationMinutes(text);
+  const aircraft = findAircraft(text);
   const routeTitle = [flight.departureAirport, flight.arrivalAirport]
     .filter(Boolean)
     .join(' → ');
@@ -547,6 +612,7 @@ function parseSegment(
     date,
     startMinutes,
     durationMinutes,
+    ...(aircraft ? { aircraft } : {}),
     detectedFieldCount,
   };
 }
@@ -585,7 +651,15 @@ export function parseFlightConfirmation(
             );
           })
         : [parseSegment(text, tripRange, confirmationCode)];
-  const segments = applyTimedAirportItinerary(parsedSegments, text, tripRange);
+  const passenger = findPassenger(text);
+  const segments = applyTimedAirportItinerary(
+    parsedSegments,
+    text,
+    tripRange,
+  ).map((segment) => ({
+    ...segment,
+    flight: { ...segment.flight, ...passenger },
+  }));
   const itineraryDates = likelyItineraryDates(text);
   const first = segments[0];
   const money = findConfirmationMoney(text);

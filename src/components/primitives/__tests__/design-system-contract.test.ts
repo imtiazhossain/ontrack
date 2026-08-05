@@ -71,8 +71,10 @@ describe('canonical design-system contract', () => {
   it('uses a single blue-to-neutral background across Travel routes', () => {
     const surface = read('src/features/travel/travel-surface.tsx');
     const travelTab = read('src/app/(tabs)/travel.tsx');
+    const travelLayout = read('src/app/travel/_layout.tsx');
     const rootLayout = read('src/app/_layout.tsx');
-    expect(surface).toContain('travelSafeAreaStyle');
+    const safeAreaChrome = read('src/components/primitives/safe-area-chrome.tsx');
+    expect(surface).toContain('travelSafeAreaBackground');
     expect(surface).toContain("theme.name === 'dark' ? darkTheme : lightTheme");
     expect(surface).toContain('todayTheme(theme).backgroundPrimary');
     expect(surface).toContain('lightTravelTheme.backgroundPrimary');
@@ -81,10 +83,21 @@ describe('canonical design-system contract', () => {
     expect(surface).not.toContain('radial-gradient');
     expect(travelTab).toContain('style={travelStyle}');
     expect(travelTab).toContain('useTravelPageStyle(theme)');
+    expect(travelTab).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
+    expect(travelLayout).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
+    expect(safeAreaChrome).toContain('useSafeAreaChrome');
     expect(rootLayout).toMatch(
       /name="travel"[\s\S]*?headerShown: false/,
     );
-    expect(rootLayout).toContain('travelRoute ? travelSafeAreaStyle(theme, atmosphere)');
+    expect(rootLayout).toContain('<AppSafeArea>');
+    expect(rootLayout).not.toContain('travelRoute ? travelSafeAreaStyle');
+  });
+
+  it('paints Today status-bar chrome from the time-of-day wash', () => {
+    const dayHeader = read('src/features/daily-tracking/day-header.tsx');
+    const themes = read('src/design-system/themes.ts');
+    expect(themes).toContain('timeOfDaySafeAreaBackground');
+    expect(dayHeader).toContain('useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour))');
   });
 
   it('uses X dismissal instead of full-width Cancel actions on migrated surfaces', () => {

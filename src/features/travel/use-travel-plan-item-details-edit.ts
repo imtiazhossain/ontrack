@@ -6,6 +6,7 @@ import {
     validateFlightDetails,
     type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
+import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
 import {
     validateFlightSchedule,
     type FlightScheduleDraft,
@@ -92,6 +93,11 @@ export function useTravelPlanItemDetailsEdit({
               ...item,
               ...scheduleValidation.value,
               flight: validation.value,
+              title: flightItemDisplayTitle({
+                ...item,
+                ...scheduleValidation.value,
+                flight: validation.value,
+              }),
             }
           : item,
       ),

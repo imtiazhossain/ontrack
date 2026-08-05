@@ -127,7 +127,10 @@ function mergeSegment(
     flightNumber: localFlight.flightNumber || ai.flightNumber || '',
     confirmationCode: localFlight.confirmationCode || confirmationCode,
     departureAirport: localFlight.departureAirport || ai.departureAirport || '',
+    departureTerminal:
+      localFlight.departureTerminal || ai.departureTerminal || '',
     arrivalAirport: localFlight.arrivalAirport || ai.arrivalAirport || '',
+    arrivalTerminal: localFlight.arrivalTerminal || ai.arrivalTerminal || '',
   };
   const departureAirport = flight.departureAirport;
   const arrivalAirport = flight.arrivalAirport;

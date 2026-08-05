@@ -2,7 +2,9 @@ export type FlightConfirmationAISegment = {
   airline?: string;
   flightNumber?: string;
   departureAirport?: string;
+  departureTerminal?: string;
   arrivalAirport?: string;
+  arrivalTerminal?: string;
   departureDate?: string;
   departureMinutes?: number;
   arrivalDate?: string;

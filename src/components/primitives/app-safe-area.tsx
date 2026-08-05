@@ -1,22 +1,50 @@
 import type { PropsWithChildren } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import * as SystemUI from 'expo-system-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/use-theme';
+
+import {
+  SafeAreaChromeProvider,
+  useSafeAreaChromeColor,
+} from './safe-area-chrome';
 
 /**
  * Non-scrolling boundary for the entire navigation tree.
  * Keeping the top inset outside route scroll views prevents content and
  * overscroll effects from ever moving behind the device clock or cutout.
+ *
+ * The outer fill uses the focused route's safe-area chrome color when set
+ * (Today wash, Travel sky, …) so header backgrounds continue into the
+ * status-bar region without moving insets into scroll content.
  */
 export function AppSafeArea({
   children,
   style,
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
+  return (
+    <SafeAreaChromeProvider>
+      <AppSafeAreaFrame style={style}>{children}</AppSafeAreaFrame>
+    </SafeAreaChromeProvider>
+  );
+}
+
+function AppSafeAreaFrame({
+  children,
+  style,
+}: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   const theme = useTheme();
+  const chromeColor = useSafeAreaChromeColor();
+  const backgroundColor = chromeColor ?? theme.backgroundPrimary;
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(backgroundColor).catch(() => undefined);
+  }, [backgroundColor]);
 
   return (
-    <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
+    <View style={[styles.fill, { backgroundColor }, style]}>
       <SafeAreaView edges={['top']} style={styles.fill}>
         {children}
       </SafeAreaView>

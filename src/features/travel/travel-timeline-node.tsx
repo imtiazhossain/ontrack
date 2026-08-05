@@ -7,7 +7,7 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
+import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
@@ -20,7 +20,8 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsCardEditor } from '@/features/travel/flight-details-card-editor';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
-import { googleFlightStatusUrl } from '@/features/travel/flight-status-link';
+import { flightItineraryCaptionParts } from '@/features/travel/flight-arrival';
+import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
 import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
@@ -35,23 +36,23 @@ import {
   kindIcon,
   kindTint,
 } from '@/features/travel/travel-kind-chrome';
-import {
-  TravelItemNotesButton,
-  TravelItemNotesSheet,
-} from '@/features/travel/travel-item-notes-sheet';
+import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import {
   TRAVEL_CARD_SHADOW,
   travelCardBorder,
   travelCardFill,
+  travelMainCardFill,
 } from '@/features/travel/travel-surface';
 import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
 import {
   PhotoStrip,
+  TimelineFlightCaption,
   TimelineItemTitle,
-  validBookingUrl,
+  TimelineItemToolbar,
 } from '@/features/travel/travel-timeline-node-chrome';
 import {
+  flightCaptionInput,
   timelineEntryCaption,
   type TravelTimelinePhase,
 } from '@/features/travel/travel-timeline-entries';
@@ -226,7 +227,11 @@ export function TravelTimelineNode({
   const editingStructured =
     editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
-  const title = displayTitle ?? item.title;
+  const title =
+    displayTitle ??
+    (item.kind === 'flight' ? flightItemDisplayTitle(item) : item.title);
+  const cardFill =
+    item.kind === 'flight' ? travelMainCardFill(theme) : travelCardFill(theme);
   const caption = timelineEntryCaption(
     {
       key: item.id,
@@ -238,18 +243,33 @@ export function TravelTimelineNode({
     },
     dateDisplayFormat,
   );
+  const flightCaption =
+    item.kind === 'flight'
+      ? flightItineraryCaptionParts(flightCaptionInput(item, dateDisplayFormat))
+      : undefined;
   const accent = accentColor ?? kindAccent(item.kind, theme);
   const tint = tintColor ?? kindTint(item.kind, theme);
   const stripeColor = dense ? kindTint(item.kind, theme) : accent;
   const icon = kindIcon(item.kind);
+  // Transport FLIGHTS section only — timeline day markers also pass `compact`
+  // (with `dense`) and keep their smaller board/land chrome.
+  const isCompactFlight = compact && !dense && item.kind === 'flight';
+  const showKindBadgeResolved = showKindBadge;
   const showHeaderCaption =
-    compact && isStructuredTravelKind && isExpanded && Boolean(caption);
+    isCompactFlight ||
+    (compact && isStructuredTravelKind && isExpanded && Boolean(caption));
   const stripeWidth = dense
     ? Math.max(2, s(2))
     : compact
       ? Math.max(3, s(3))
       : Math.max(4, s(4));
   const toolbarActionSize = Math.max(28, s(28));
+  const compactActionSize = Math.max(32, s(34));
+  const kindPillSize = isCompactFlight
+    ? compactActionSize
+    : compact
+      ? Math.max(28, s(30))
+      : Math.max(28, s(28));
 
   return (
     <Animated.View
@@ -257,38 +277,47 @@ export function TravelTimelineNode({
       style={[
         styles.nodeCard,
         {
-          backgroundColor: travelCardFill(theme),
+          backgroundColor: cardFill,
           borderRadius: dense
             ? Math.max(8, s(9))
-            : compact
-              ? Math.max(10, s(11))
-              : 13,
+            : isCompactFlight
+              ? Math.max(16, s(18))
+              : compact
+                ? Math.max(10, s(11))
+                : 13,
           borderCurve: 'continuous',
-          borderWidth: dense ? StyleSheet.hairlineWidth : 0,
-          borderColor: dense ? travelCardBorder(theme) : 'transparent',
+          borderWidth:
+            dense || isCompactFlight ? StyleSheet.hairlineWidth : 0,
+          borderColor:
+            dense || isCompactFlight ? travelCardBorder(theme) : 'transparent',
           boxShadow: dense
             ? '0 2px 8px rgba(51, 39, 28, 0.08)'
-            : TRAVEL_CARD_SHADOW,
+            : isCompactFlight
+              ? undefined
+              : TRAVEL_CARD_SHADOW,
           overflow: 'hidden',
         },
       ]}
     >
-      <View
-        style={[
-          styles.stripe,
-          { width: stripeWidth, backgroundColor: stripeColor },
-        ]}
-      />
+      {isCompactFlight ? null : (
+        <View
+          style={[
+            styles.stripe,
+            { width: stripeWidth, backgroundColor: stripeColor },
+          ]}
+        />
+      )}
       <View
         style={[
           styles.nodeBody,
           {
-            padding: isExpanded ? rs.md : compact ? undefined : rs.sm,
-            paddingHorizontal: !isExpanded && compact ? rs.sm : undefined,
+            padding: isExpanded || isCompactFlight ? rs.md : compact ? undefined : rs.sm,
+            paddingHorizontal:
+              !isExpanded && compact && !isCompactFlight ? rs.sm : undefined,
             paddingVertical:
               !isExpanded && dense
                 ? Math.max(1, s(1))
-                : !isExpanded && compact
+                : !isExpanded && compact && !isCompactFlight
                   ? rs.xxs
                   : undefined,
             gap: dense ? rs.xxs : compact ? rs.xs : rs.sm,
@@ -309,35 +338,44 @@ export function TravelTimelineNode({
               styles.itemHeader,
               {
                 gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
-                alignItems: compact ? 'center' : 'flex-start',
+                alignItems:
+                  isCompactFlight || compact ? 'center' : 'flex-start',
               },
             ]}
           >
-            {showKindBadge ? (
+            {showKindBadgeResolved ? (
               <View
                 style={[
                   styles.kindPill,
                   {
                     backgroundColor: tint,
-                    width: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
-                    height: compact ? Math.max(28, s(30)) : Math.max(28, s(28)),
+                    width: kindPillSize,
+                    height: kindPillSize,
                   },
                 ]}
                 accessibilityLabel={titleCaseTravelKind(item.kind)}
               >
-                <Symbol name={icon} size={compact ? 10 : 12} color={accent} />
+                <Symbol
+                  name={icon}
+                  size={isCompactFlight ? 12 : compact ? 10 : 12}
+                  color={accent}
+                />
               </View>
             ) : null}
-            <View style={styles.flex}>
+            <View style={[styles.flex, isCompactFlight ? { gap: rs.xxs } : null]}>
               <TimelineItemTitle
                 title={title}
                 compact={compact}
                 dense={dense}
               />
               {showHeaderCaption ? (
-                <AppText variant="caption" color="secondary" fit>
-                  {caption}
-                </AppText>
+                flightCaption ? (
+                  <TimelineFlightCaption {...flightCaption} />
+                ) : (
+                  <AppText variant="caption" color="secondary" fit>
+                    {caption}
+                  </AppText>
+                )
               ) : null}
             </View>
             <View
@@ -347,17 +385,19 @@ export function TravelTimelineNode({
                   width: dense
                     ? Math.max(18, s(18))
                     : compact
-                      ? Math.max(32, s(34))
+                      ? compactActionSize
                       : Math.max(28, s(32)),
                   height: dense
                     ? Math.max(18, s(18))
                     : compact
-                      ? Math.max(32, s(34))
+                      ? compactActionSize
                       : Math.max(28, s(32)),
                   borderRadius: radii.pill,
                   backgroundColor: dense
                     ? 'transparent'
-                    : theme.backgroundSunken,
+                    : isCompactFlight
+                      ? tint
+                      : theme.backgroundSunken,
                 },
               ]}
             >
@@ -370,7 +410,7 @@ export function TravelTimelineNode({
                       : 'chevron-down'
                 }
                 size={dense || compact ? 10 : 12}
-                color={theme.textTertiary}
+                color={isCompactFlight ? accent : theme.textTertiary}
               />
             </View>
           </Pressable>
@@ -436,11 +476,13 @@ export function TravelTimelineNode({
             item.flight &&
             !editingFlight ? (
               <FlightDetailsSummary
+                itemId={item.id}
                 details={item.flight}
                 date={item.date}
                 startMinutes={item.startMinutes}
                 durationMinutes={item.durationMinutes}
-                dateDisplayFormat={dateDisplayFormat}
+                hideHero={isCompactFlight}
+                bare={isCompactFlight}
               />
             ) : null}
             {showStructuredDetails &&
@@ -539,120 +581,21 @@ export function TravelTimelineNode({
               />
             ) : null}
             {!editingStructured ? (
-              <View style={styles.itineraryActionsWrap}>
-                <View
-                  style={[styles.itineraryActions, { gap: Math.max(8, rs.xs) }]}
-                >
-                  <TravelItemNotesButton
-                    hasNotes={(item.notes?.length ?? 0) > 0}
-                    size={toolbarActionSize}
-                    iconSize="sm"
-                    testID={AgentUiIds.travel.notes.open(item.id)}
-                    onPress={() => setNotesOpen(true)}
-                  />
-                  <IconButton
-                    icon="photo"
-                    size={toolbarActionSize}
-                    iconSize="sm"
-                    background={theme.backgroundSunken}
-                    accessibilityLabel="Add Photos"
-                    onPress={onAddPhotos}
-                  />
-                  {showStructuredDetails &&
-                  item.kind === 'flight' &&
-                  googleFlightStatusUrl(item.flight, item.date) ? (
-                    <IconButton
-                      icon="clock"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel={`Check live status for ${item.flight?.flightNumber}`}
-                      onPress={() =>
-                        void Linking.openURL(
-                          googleFlightStatusUrl(item.flight, item.date)!,
-                        )
-                      }
-                    />
-                  ) : null}
-                  {allowStructuredEditing && item.kind === 'flight' ? (
-                    <IconButton
-                      testID={AgentUiIds.travel.timelineItem.editFlight(
-                        item.id,
-                      )}
-                      icon="edit"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel={
-                        item.flight ? 'Edit Flight' : 'Add Flight Details'
-                      }
-                      onPress={onBeginFlightEdit}
-                    />
-                  ) : null}
-                  {allowStructuredEditing && item.kind === 'rental' ? (
-                    <IconButton
-                      icon="edit"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel={
-                        item.rental ? 'Edit Rental' : 'Add Rental Details'
-                      }
-                      onPress={onBeginRentalEdit}
-                    />
-                  ) : null}
-                  {allowStructuredEditing && item.kind === 'transport' ? (
-                    <IconButton
-                      icon="edit"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel="Edit Transport Details"
-                      testID={AgentUiIds.travel.transport.edit(item.id)}
-                      onPress={() => setEditingTransport(true)}
-                    />
-                  ) : null}
-                  {allowStructuredEditing && item.kind === 'stay' ? (
-                    <IconButton
-                      icon="edit"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel={
-                        item.stay ? 'Edit Stay' : 'Add Stay Details'
-                      }
-                      onPress={onBeginStayEdit}
-                    />
-                  ) : null}
-                  {showStructuredDetails &&
-                  item.bookingUrl &&
-                  validBookingUrl(item.bookingUrl) ? (
-                    <IconButton
-                      icon="open-external"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      accessibilityLabel="Open Booking"
-                      onPress={openBooking}
-                    />
-                  ) : null}
-                  {isMoment ||
-                  (item.kind !== 'flight' &&
-                    item.kind !== 'rental' &&
-                    item.kind !== 'stay') ? (
-                    <IconButton
-                      icon="delete"
-                      size={toolbarActionSize}
-                      iconSize="sm"
-                      background={theme.backgroundSunken}
-                      color={theme.danger}
-                      testID={AgentUiIds.travel.removeConfirm.open}
-                      accessibilityLabel={`Remove ${item.title}`}
-                      onPress={onRemove}
-                    />
-                  ) : null}
-                </View>
-              </View>
+              <TimelineItemToolbar
+                item={item}
+                size={toolbarActionSize}
+                allowStructuredEditing={allowStructuredEditing}
+                showStructuredDetails={showStructuredDetails}
+                isMoment={isMoment}
+                onOpenNotes={() => setNotesOpen(true)}
+                onAddPhotos={onAddPhotos}
+                onBeginFlightEdit={onBeginFlightEdit}
+                onBeginRentalEdit={onBeginRentalEdit}
+                onBeginStayEdit={onBeginStayEdit}
+                onBeginTransportEdit={() => setEditingTransport(true)}
+                onOpenBooking={openBooking}
+                onRemove={onRemove}
+              />
             ) : null}
           </Animated.View>
         ) : null}

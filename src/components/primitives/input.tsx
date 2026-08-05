@@ -222,9 +222,6 @@ export function Input({
                   multiline ? styles.stackedMultilineInput : null,
                   trailing ? { paddingRight: s(40) } : null,
                   style,
-                  multiline
-                    ? { paddingTop: typography.caption.lineHeight + 2 }
-                    : null,
                 ]}
                 {...rest}
                 underlineColorAndroid="transparent"

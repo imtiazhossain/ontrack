@@ -9,12 +9,14 @@ import { applyImportedRentalToPlan } from '@/features/travel/apply-imported-rent
 import {
   importFlightConfirmation,
   type FlightConfirmationImportSource,
+  type ImportedFlightConfirmation,
 } from '@/features/travel/flight-confirmation-import';
 import {
   flightConfirmationSchedule,
   type ImportedFlightSchedule,
 } from '@/features/travel/flight-confirmation-schedule';
 import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
+import { enrichFlightConfirmationTerminals } from '@/features/travel/flight-status-client';
 import type { ExpenseFormState } from '@/features/travel/expenses/expense-form';
 import { defaultSplitIds } from '@/features/travel/expenses/expense-math';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
@@ -56,6 +58,10 @@ export type TravelPlanAddSheetImportBindings = {
   setFlightDetails: Dispatch<SetStateAction<FlightDetailsDraft>>;
   setFlightDetailsError: SetOptStr;
   setImportedFlightFileName: SetOptStr;
+  /** Full parsed confirmation so submit can expand connecting legs. */
+  setPendingFlightImport: Dispatch<
+    SetStateAction<ImportedFlightConfirmation | undefined>
+  >;
   setRentalDetails: Dispatch<SetStateAction<RentalDetailsDraft>>;
   setRentalDetailsError: SetOptStr;
   setImportedRentalFileName: SetOptStr;
@@ -201,7 +207,7 @@ export function useTravelPlanConfirmationImports({
       onReading: () => setImportingFlightTarget(target),
     });
     try {
-      const imported = await (target === 'new'
+      const parsedImport = await (target === 'new'
         ? runAddSheetImport(() =>
             importFlightConfirmation(
               {
@@ -220,7 +226,8 @@ export function useTravelPlanConfirmationImports({
             source,
             pickerUi,
           ));
-      if (!imported) return;
+      if (!parsedImport) return;
+      const imported = await enrichFlightConfirmationTerminals(parsedImport);
       const importedSchedule = flightConfirmationSchedule(imported, {
         date: addSheet.date,
         startMinutes: addSheet.startMinutes ?? undefined,
@@ -231,6 +238,8 @@ export function useTravelPlanConfirmationImports({
           : '';
       if (target === 'new') {
         // Import only fills the draft. The user still owns the Add to Timeline action.
+        // Keep the full parse so submit can expand connecting legs into the itinerary.
+        addSheet.setPendingFlightImport(imported);
         addSheet.setFlightDetails((current) =>
           mergeFlightConfirmationDraftDetails(current, imported),
         );

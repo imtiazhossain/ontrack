@@ -4,10 +4,14 @@ import { resolveAppIcon, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
+export type SymbolSize =
+  | keyof ReturnType<typeof useResponsive>['iconSizes']
+  | number;
+
 interface SymbolProps {
   /** Semantic app icon name. Legacy persisted SF Symbol strings also resolve. */
   name: AppIconName | (string & {});
-  size?: keyof ReturnType<typeof useResponsive>['iconSizes'] | number;
+  size?: SymbolSize;
   color?: string;
 }
 

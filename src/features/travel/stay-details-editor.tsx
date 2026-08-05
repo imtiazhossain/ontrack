@@ -16,6 +16,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { StayDetailsDraft } from './stay-details';
@@ -77,6 +78,7 @@ export function StayDetailsEditor({
           )}
           {onImport ? (
             <ConfirmationImportAction
+              testID={AgentUiIds.travel.confirmation.importAction('stay')}
               accessibilityLabel="Import stay confirmation document or screenshots"
               importing={importing}
               onPress={onImport}

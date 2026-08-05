@@ -79,6 +79,13 @@ describe('canonical travel sheet design', () => {
     expect(actions).toContain('shape="rounded"');
     expect(actions).toContain('borderWidth: StyleSheet.hairlineWidth');
     expect(actions).toContain('backgroundColor: iconTone.bg');
+    // Grid tiles left-align icon+label; full-width itinerary CTA stays centered.
+    expect(actions).toMatch(/action:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s);
+    expect(actions).toMatch(/actionWide:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
+    // Icon+label share one centered row (not Button leading/label split).
+    expect(actions).toMatch(/actionContent:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
+    expect(actions).toContain('{null}');
+    expect(actions).not.toContain('translateY');
   });
 
   it('marks the trip Calendar action as a sync and refreshes its schedule entries', () => {
@@ -131,7 +138,7 @@ describe('canonical travel sheet design', () => {
     expect(sheet).toContain('AgentUiIds.travel.dates.end');
   });
 
-  it('wraps trip titles to two lines before reducing their size', () => {
+  it('wraps trip titles to two lines then ellipsizes at a fixed size', () => {
     const tripCardHeader = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-trip-card-header.tsx'),
       'utf8',
@@ -150,12 +157,15 @@ describe('canonical travel sheet design', () => {
     }
     expect(tripCardHeader).toContain('styles.content');
     expect(tripCardHeader).toMatch(
-      /content:[\s\S]*?flex: 1,[\s\S]*?minWidth: 0,[\s\S]*?topRow:/,
+      /content:[\s\S]*?flex: 1,[\s\S]*?minWidth: 0,[\s\S]*?position: "relative"/,
     );
-    expect(title).toContain('lines.length > 2');
-    expect(title).toContain('height: scaledLineHeight * renderedLines.length');
-    expect(title).toContain('onTextLayout=');
-    expect(title).toContain('numberOfLines={scale <= MINIMUM_SCALE ? 2 : undefined}');
-    expect(title).toContain('const MINIMUM_SCALE = 0.42');
+    expect(tripCardHeader).toContain('Math.max(22, s(24))');
+    expect(tripCardHeader).toContain('paddingRight: controlsWidth + rs.sm');
+    expect(title).toContain('numberOfLines={2}');
+    expect(title).toContain('ellipsizeMode="tail"');
+    expect(title).toContain("width: '100%'");
+    expect(title).not.toContain('adjustsFontSizeToFit');
+    expect(title).not.toContain('fitMinimumScale');
+    expect(title).not.toContain('MINIMUM_SCALE');
   });
 });

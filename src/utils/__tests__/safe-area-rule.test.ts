@@ -16,9 +16,15 @@ describe('top safe-area invariant', () => {
       join(process.cwd(), 'src/components/primitives/app-safe-area.tsx'),
       'utf8',
     );
+    const safeAreaChrome = readFileSync(
+      join(process.cwd(), 'src/components/primitives/safe-area-chrome.tsx'),
+      'utf8',
+    );
 
     expect(rootLayout).toMatch(/<AppSafeArea(?:\s|>)/);
     expect(appSafeArea).toContain("edges={['top']}");
+    expect(appSafeArea).toContain('SafeAreaChromeProvider');
+    expect(safeAreaChrome).toContain('useSafeAreaChrome');
   });
 
   it('does not place the device top inset inside route content', () => {

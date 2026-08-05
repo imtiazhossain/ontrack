@@ -1,7 +1,11 @@
 import { Stack } from 'expo-router';
 
+import { useSafeAreaChrome } from '@/components/primitives';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
-import { useTravelPageStyle } from '@/features/travel/travel-surface';
+import {
+  travelSafeAreaBackground,
+  useTravelPageStyle,
+} from '@/features/travel/travel-surface';
 
 export default function TravelLayout() {
   return (
@@ -14,6 +18,7 @@ export default function TravelLayout() {
 function TravelStack() {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
+  useSafeAreaChrome(travelSafeAreaBackground(theme));
   return (
     <Stack
       screenOptions={{

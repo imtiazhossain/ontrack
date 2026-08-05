@@ -64,3 +64,6 @@ docs/token-usage-audit.md
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Simulator verification scratch screenshots
+.tmp-*.png

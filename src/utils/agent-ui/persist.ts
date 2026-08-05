@@ -15,6 +15,16 @@ export type AgentUiDumpPayload = {
   elements: AgentUiEntry[];
 };
 
+export type AgentUiStatusResult = {
+  op: string;
+  id?: string;
+  ok: boolean;
+  detail?: string;
+  element?: AgentUiEntry;
+  count?: number;
+  route?: string | null;
+};
+
 export type AgentUiStatusPayload = {
   generatedAt: string;
   op: string;
@@ -22,7 +32,11 @@ export type AgentUiStatusPayload = {
   ok: boolean;
   detail?: string;
   element?: AgentUiEntry;
+  /** Match count for prefix / ready checks (no dump file). */
+  count?: number;
   route?: string | null;
+  /** Per-step outcomes for `op=batch`. */
+  results?: AgentUiStatusResult[];
 };
 
 function writeJson(filename: string, payload: unknown): void {
@@ -30,7 +44,8 @@ function writeJson(filename: string, payload: unknown): void {
   if (!file.exists) {
     file.create({ intermediates: true });
   }
-  file.write(JSON.stringify(payload, null, 2));
+  // Compact JSON — hosts poll this path; pretty-print wasted I/O on every op.
+  file.write(JSON.stringify(payload));
 }
 
 export function writeAgentUiDump(): AgentUiDumpPayload {
@@ -45,7 +60,9 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
   return payload;
 }
 
-export function writeAgentUiStatus(payload: Omit<AgentUiStatusPayload, 'generatedAt'>): AgentUiStatusPayload {
+export function writeAgentUiStatus(
+  payload: Omit<AgentUiStatusPayload, 'generatedAt'>,
+): AgentUiStatusPayload {
   const full: AgentUiStatusPayload = {
     generatedAt: new Date().toISOString(),
     route: getAgentUiRoute(),

@@ -3,13 +3,18 @@
 #
 # Default (simulator-friendly):
 #   - Prefer packager host 127.0.0.1 (survives Wi-Fi / DHCP IP churn)
+#   - Start Metro via scripts/start-metro.sh (--lan bind + advertise 127.0.0.1)
 #   - Align EXPO_PUBLIC_API_BASE_URL in .env.local when it looks like a local Metro URL
-#   - Probe via agent-ui dump; reconnect the dev client ONLY if the probe fails
-#   - Never kill Metro; optionally start it if down (--start)
+#   - Probe via agent-ui dump; reconnect the dev client if the probe fails
+#     or if this run (re)launched Metro (new Metro = app's HMR socket is gone,
+#     even though the agent-ui bridge in the stale bundle still answers)
+#   - Never kill healthy Metro; with --start, replace IPv6-only or dead-watcher Metro
+#   - Require a live Watchman client on Metro ( /status 200 alone is not enough )
 #
 # Usage:
 #   ./scripts/ensure-packager.sh
-#   ./scripts/ensure-packager.sh --start          # start Metro if /status is down
+#   ./scripts/ensure-packager.sh --start          # start Metro if down / fix IPv6-only / dead watcher
+#   ./scripts/ensure-packager.sh --clear          # replace Metro and clear a poisoned cache
 #   ./scripts/ensure-packager.sh --lan            # use en0 LAN IP (physical device)
 #   ./scripts/ensure-packager.sh --force-reconnect
 #   ./scripts/ensure-packager.sh --check-only
@@ -20,31 +25,51 @@
 #   BUNDLE_ID=com.imtihoss.ontracknow
 #   METRO_PORT=8081
 #   WAIT_SECS=8
+#   START_WAIT_SECS=20
+#   METRO_WATCHER_FS_PROBE=1   # also touch beacon + confirm Watchman sees it
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# shellcheck source=lib/metro-watcher.sh
+source "$ROOT/scripts/lib/metro-watcher.sh"
+
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 METRO_PORT="${METRO_PORT:-8081}"
 WAIT_SECS="${WAIT_SECS:-8}"
+START_WAIT_SECS="${START_WAIT_SECS:-20}"
 NODE24_BIN="${NODE24_BIN:-$HOME/.nvm/versions/node/v24.12.0/bin}"
+START_METRO_SH="$ROOT/scripts/start-metro.sh"
+METRO_LOG="$ROOT/.cursor/metro-ensure.log"
+# macOS puts lsof in /usr/sbin — keep it reachable even when agent PATH is minimal.
+LSOF_BIN="${LSOF_BIN:-$(command -v lsof 2>/dev/null || true)}"
+if [[ -z "$LSOF_BIN" && -x /usr/sbin/lsof ]]; then
+  LSOF_BIN=/usr/sbin/lsof
+fi
+: "${LSOF_BIN:=lsof}"
 
 DO_START=0
+DO_CLEAR=0
 DO_FORCE=0
 CHECK_ONLY=0
 SYNC_ENV=1
 HOST_MODE="${PACKAGER_HOST:-localhost}"
+# Set when this run launches a new Metro process. A new Metro orphans the dev
+# client's HMR socket even though the app's agent-ui bridge (plain HTTP polling)
+# keeps answering — so probe_connected is a false positive and we must reconnect.
+METRO_RELAUNCHED=0
 
 usage() {
-  sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --start) DO_START=1 ;;
+    --clear) DO_START=1; DO_CLEAR=1 ;;
     --force-reconnect) DO_FORCE=1 ;;
     --check-only) CHECK_ONLY=1 ;;
     --no-env) SYNC_ENV=0 ;;
@@ -92,7 +117,7 @@ resolve_host() {
 
 ensure_node24_path() {
   if [[ -d "$NODE24_BIN" ]]; then
-    export PATH="$NODE24_BIN:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
+    export PATH="$NODE24_BIN:/opt/homebrew/bin:/usr/sbin:/usr/bin:/bin:$PATH"
   fi
 }
 
@@ -100,38 +125,379 @@ metro_status_url() {
   echo "http://$1:${METRO_PORT}/status"
 }
 
-start_metro_if_needed() {
-  local host="$1"
-  if http_ok "$(metro_status_url 127.0.0.1)" || http_ok "$(metro_status_url "$host")"; then
+metro_ipv4_ok() {
+  http_ok "$(metro_status_url 127.0.0.1)"
+}
+
+metro_ipv6_ok() {
+  http_ok "http://[::1]:${METRO_PORT}/status"
+}
+
+# True when ::1 answers and 127.0.0.1 does not — classic Expo --localhost trap.
+is_ipv6_only_metro() {
+  metro_ipv6_ok || return 1
+  metro_ipv4_ok && return 1
+  return 0
+}
+
+listening_pids() {
+  "$LSOF_BIN" -nP -iTCP:"${METRO_PORT}" -sTCP:LISTEN -t 2>/dev/null | sort -u || true
+}
+
+listening_addresses() {
+  # Compact NAME column values, e.g. *:8081 [::1]:8081 127.0.0.1:8081
+  "$LSOF_BIN" -nP -iTCP:"${METRO_PORT}" -sTCP:LISTEN 2>/dev/null \
+    | awk 'NR > 1 { print $9 }' \
+    | sort -u \
+    | tr '\n' ' ' \
+    | sed 's/[[:space:]]*$//' || true
+}
+
+pid_cwd() {
+  local pid="$1"
+  "$LSOF_BIN" -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
+}
+
+pid_belongs_to_repo() {
+  local pid="$1"
+  local cwd cmd
+  cwd="$(pid_cwd "$pid")"
+  if [[ -n "$cwd" && "$cwd" == "$ROOT" ]]; then
     return 0
   fi
-  if [[ "$DO_START" != "1" ]]; then
-    echo "error: Metro is down on :${METRO_PORT}. Re-run with --start, or: REACT_NATIVE_PACKAGER_HOSTNAME=${host} npm start" >&2
-    exit 1
+  cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+  if [[ -n "$cmd" && "$cmd" == *"$ROOT"* ]]; then
+    return 0
+  fi
+  # Expo/Metro children often keep repo cwd even when argv omits the path.
+  if [[ -n "$cwd" && "$cwd" == "$ROOT"/* ]]; then
+    return 0
+  fi
+  return 1
+}
+
+node_version_label() {
+  ensure_node24_path
+  if command -v node >/dev/null 2>&1; then
+    node -v 2>/dev/null || echo "unknown"
+  else
+    echo "missing"
+  fi
+}
+
+simulator_booted() {
+  xcrun simctl list devices booted 2>/dev/null | grep -q Booted
+}
+
+app_installed() {
+  xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+}
+
+probe_connected() {
+  # Agent-ui dump only succeeds when JS runtime is alive and listening for deep links.
+  # Skip heal recursion (dump → open → heal → ensure → probe).
+  AGENT_UI_SKIP_HEAL=1 WAIT_SECS=3 ./scripts/agent-ui-dump.sh >/dev/null 2>&1
+}
+
+ensure_fast_refresh_enabled() {
+  # The dev client persists the Fast Refresh toggle (RCTDevMenu.hotLoadingEnabled)
+  # per install. When it is off, the app never subscribes to HMR — edits silently
+  # never apply no matter how healthy Metro/Watchman are. Heal it here.
+  simulator_booted || return 0
+  app_installed || return 0
+  local menu
+  menu="$(xcrun simctl spawn booted defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
+  if [[ "$menu" != *"hotLoadingEnabled = 0"* ]]; then
+    return 0
+  fi
+  echo "Fast Refresh is OFF in the dev client (RCTDevMenu.hotLoadingEnabled=0) — enabling…"
+  # Terminate first so the running app cannot overwrite the setting on exit;
+  # the normal probe/reconnect flow below relaunches it.
+  xcrun simctl terminate booted "$BUNDLE_ID" 2>/dev/null || true
+  sleep 1
+  xcrun simctl spawn booted defaults write "$BUNDLE_ID" RCTDevMenu -dict-add hotLoadingEnabled -bool YES
+  echo "Fast Refresh re-enabled; app will be relaunched by the reconnect step."
+}
+
+print_packager_diagnostics() {
+  local host="$1"
+  local status="down"
+  local listen
+  local sim="not booted"
+  local app="n/a"
+
+  if metro_ipv4_ok; then
+    status="up (127.0.0.1)"
+  elif [[ "$host" != "127.0.0.1" ]] && http_ok "$(metro_status_url "$host")"; then
+    status="up (${host})"
+  elif is_ipv6_only_metro; then
+    status="IPv6-only (::1)"
+  elif metro_ipv6_ok; then
+    status="up (::1)"
   fi
 
+  listen="$(listening_addresses)"
+  [[ -z "$listen" ]] && listen="none"
+
+  if simulator_booted; then
+    sim="booted"
+    if app_installed; then
+      if probe_connected; then
+        app="installed + connected"
+      else
+        app="installed (not connected)"
+      fi
+    else
+      app="not installed"
+    fi
+  fi
+
+  cat <<EOF
+--- packager diagnostic ---
+Metro status:     ${status}
+Listening:        ${listen}
+Watchman client:  $(metro_has_watchman_client && echo yes || echo NO)
+Node:             $(node_version_label)
+Simulator:        ${sim}
+App (${BUNDLE_ID}): ${app}
+Host expected:    ${host}:${METRO_PORT}
+---------------------------
+EOF
+  print_metro_watcher_diagnostics
+}
+
+stop_repo_metro_listeners() {
+  local pids pid stopped=0
+  pids="$(listening_pids)"
+  if [[ -z "$pids" ]]; then
+    return 0
+  fi
+
+  for pid in $pids; do
+    if ! pid_belongs_to_repo "$pid"; then
+      echo "error: port ${METRO_PORT} is held by pid ${pid} outside this repository — not replacing" >&2
+      print_packager_diagnostics "$(resolve_host)"
+      exit 1
+    fi
+  done
+
+  for pid in $pids; do
+    echo "Stopping repo Metro listener pid ${pid}…"
+    kill "$pid" 2>/dev/null || true
+    stopped=1
+  done
+
+  if [[ "$stopped" == "1" ]]; then
+    local deadline=$((SECONDS + 8))
+    while (( SECONDS < deadline )); do
+      if [[ -z "$(listening_pids)" ]]; then
+        return 0
+      fi
+      sleep 0.25
+    done
+    # Escalate only for repo-owned listeners that ignored SIGTERM.
+    for pid in $(listening_pids); do
+      if pid_belongs_to_repo "$pid"; then
+        echo "Force-stopping pid ${pid}…"
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+    done
+    sleep 0.5
+  fi
+}
+
+launch_metro_background() {
+  local host="$1"
   ensure_node24_path
   if ! command -v node >/dev/null || [[ "$(node -p "process.versions.node.split('.')[0]")" -ge 25 ]]; then
     echo "error: need Node 24 on PATH to start Metro (see .nvmrc)" >&2
     exit 1
   fi
+  if [[ ! -f "$START_METRO_SH" ]]; then
+    echo "error: missing shared launcher ${START_METRO_SH}" >&2
+    exit 1
+  fi
 
-  echo "Starting Metro on ${host}:${METRO_PORT} (Node $(node -v))…"
-  # Detach so this script can continue probing.
-  (
-    cd "$ROOT"
-    export REACT_NATIVE_PACKAGER_HOSTNAME="$host"
-    nohup npm start >"$ROOT/.cursor/metro-ensure.log" 2>&1 &
-  )
-  local deadline=$((SECONDS + 45))
+  if ! wait_for_watchman; then
+    echo "error: Watchman capabilities not ready — refusing to start Metro" >&2
+    print_metro_watcher_diagnostics
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$METRO_LOG")"
+  : >"$METRO_LOG"
+  echo "Starting Metro via scripts/start-metro.sh (advertise ${host}:${METRO_PORT}, Node $(node -v))…"
+  local clear_flag=""
+  [[ "$DO_CLEAR" == "1" ]] && clear_flag="--clear"
+  # Detach into a new session so Cursor aborting an agent shell does not
+  # SIGTERM Metro (the recurring "Failed to load app from 127.0.0.1:8081" cause).
+  # Plain `nohup … &` stays in the agent process group and dies with the terminal.
+  ROOT="$ROOT" START_METRO_SH="$START_METRO_SH" HOST="$host" METRO_LOG="$METRO_LOG" PATH="$PATH" \
+    CLEAR_FLAG="$clear_flag" HOME="$HOME" USER="${USER:-}" TMPDIR="${TMPDIR:-/tmp}" \
+    NODE24_BIN="${NODE24_BIN:-}" \
+    python3 - <<'PY'
+import os, subprocess, sys
+
+root = os.environ["ROOT"]
+script = os.environ["START_METRO_SH"]
+host = os.environ["HOST"]
+log_path = os.environ["METRO_LOG"]
+extra = [f for f in [os.environ.get("CLEAR_FLAG", "")] if f]
+
+# Launch with a *clean* environment. Inheriting Cursor/VS Code agent env
+# (CURSOR_AGENT, VSCODE_*, sandbox restore hooks) can make Metro's
+# `watchman list-capabilities --no-spawn` fail silently → NativeWatcher →
+# Fast Refresh never applies for deep src/ edits while /status stays 200.
+path = os.environ.get("PATH", "/usr/bin:/bin")
+env = {
+    "PATH": path,
+    "HOME": os.environ.get("HOME", ""),
+    "USER": os.environ.get("USER", ""),
+    "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+    "TERM": "dumb",
+    "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+    "REACT_NATIVE_PACKAGER_HOSTNAME": host,
+    "DEBUG": "Metro:Watcher",
+}
+node24 = os.environ.get("NODE24_BIN") or ""
+if node24:
+    env["NODE24_BIN"] = node24
+# Preserve Expo/EAS tokens if present (not required for local Fast Refresh).
+for key in (
+    "EXPO_TOKEN",
+    "EXPO_PUBLIC_API_BASE_URL",
+    "SSH_AUTH_SOCK",
+):
+    if key in os.environ:
+        env[key] = os.environ[key]
+
+with open(log_path, "ab", buffering=0) as logf:
+    subprocess.Popen(
+        ["bash", script, "--hostname", host, *extra],
+        stdin=subprocess.DEVNULL,
+        stdout=logf,
+        stderr=subprocess.STDOUT,
+        cwd=root,
+        start_new_session=True,
+        env=env,
+    )
+print("Metro detached (new session); logs →", log_path, file=sys.stderr)
+PY
+  METRO_RELAUNCHED=1
+}
+
+wait_for_metro_ipv4() {
+  local host="$1"
+  local deadline=$((SECONDS + START_WAIT_SECS))
   while (( SECONDS < deadline )); do
-    if http_ok "$(metro_status_url 127.0.0.1)" || http_ok "$(metro_status_url "$host")"; then
-      echo "Metro is up."
+    if metro_ipv4_ok || { [[ "$host" != "127.0.0.1" ]] && http_ok "$(metro_status_url "$host")"; }; then
+      echo "Metro is up on IPv4."
       return 0
     fi
-    sleep 0.5
+    if is_ipv6_only_metro; then
+      echo "error: Metro is bound to IPv6 only." >&2
+      print_packager_diagnostics "$host"
+      echo "error: see ${METRO_LOG}" >&2
+      exit 1
+    fi
+    sleep 0.4
   done
-  echo "error: Metro did not become ready; see .cursor/metro-ensure.log" >&2
+  echo "error: Metro did not become ready within ${START_WAIT_SECS}s" >&2
+  print_packager_diagnostics "$host"
+  echo "error: see ${METRO_LOG}" >&2
+  exit 1
+}
+
+replace_metro() {
+  local host="$1"
+  local reason="$2"
+  echo "${reason}"
+  print_packager_diagnostics "$host"
+  reset_watchman_project
+  stop_repo_metro_listeners
+  launch_metro_background "$host"
+  wait_for_metro_ipv4 "$host"
+}
+
+start_metro_if_needed() {
+  local host="$1"
+
+  # --clear is for a poisoned resolver/transform cache (e.g. Metro claims
+  # node_modules/expo-router/entry does not exist). Replace even healthy Metro.
+  if [[ "$DO_CLEAR" == "1" ]]; then
+    replace_metro "$host" "Replacing Metro with a cleared cache…"
+    return 0
+  fi
+
+  if metro_ipv4_ok || { [[ "$host" != "127.0.0.1" ]] && http_ok "$(metro_status_url "$host")"; }; then
+    # /status 200 is necessary but not sufficient — a dead file watcher leaves
+    # Fast Refresh permanently stuck while looking healthy.
+    if metro_watcher_healthy; then
+      return 0
+    fi
+    echo "Metro /status is up but the file watcher is dead (no Watchman client)."
+    print_metro_watcher_diagnostics
+    if [[ "$DO_START" != "1" ]]; then
+      echo "error: re-run with --start to replace dead-watcher Metro (Fast Refresh will not apply until then)." >&2
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
+    replace_metro "$host" "Replacing dead-watcher Metro…"
+    return 0
+  fi
+
+  if is_ipv6_only_metro; then
+    echo "Metro is bound to IPv6 only."
+    print_packager_diagnostics "$host"
+    if [[ "$DO_START" != "1" ]]; then
+      echo "error: re-run with --start to replace this repo's IPv6-only Metro (scripts/start-metro.sh uses --lan)." >&2
+      exit 1
+    fi
+    replace_metro "$host" "Replacing IPv6-only Metro…"
+    return 0
+  fi
+
+  if [[ "$DO_START" != "1" ]]; then
+    echo "error: Metro is down on :${METRO_PORT}. Re-run with --start, or: npm start" >&2
+    print_packager_diagnostics "$host"
+    exit 1
+  fi
+
+  ensure_watchman_project || true
+  launch_metro_background "$host"
+  wait_for_metro_ipv4 "$host"
+}
+
+# After Metro answers /status, confirm Watchman is actually attached. Retries one
+# replace cycle when --start is set (covers races right after launch).
+ensure_metro_watcher() {
+  local host="$1"
+  local attempt
+
+  for attempt in 1 2 3; do
+    if metro_watcher_healthy; then
+      echo "Metro watcher: live (entry resolves + src edits observed)."
+      return 0
+    fi
+    echo "Metro watcher not ready (attempt ${attempt}/3)…"
+    print_metro_watcher_diagnostics
+    sleep 1
+  done
+
+  if [[ "$DO_START" == "1" || "$DO_CLEAR" == "1" ]]; then
+    METRO_WATCHER_HARD_RESET=1 replace_metro "$host" \
+      "Metro watcher unhealthy (entry resolve or src-edit probe failed) — replacing…"
+    for attempt in 1 2 3 4 5 6 7 8; do
+      if metro_watcher_healthy; then
+        echo "Metro watcher: live after replace."
+        return 0
+      fi
+      sleep 1
+    done
+  fi
+
+  echo "error: Metro watcher unhealthy — Fast Refresh will not apply." >&2
+  print_packager_diagnostics "$host"
   exit 1
 }
 
@@ -177,19 +543,6 @@ else:
 PY
 }
 
-simulator_booted() {
-  xcrun simctl list devices booted 2>/dev/null | grep -q Booted
-}
-
-app_installed() {
-  xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
-}
-
-probe_connected() {
-  # Agent-ui dump only succeeds when JS runtime is alive and listening for deep links.
-  WAIT_SECS=3 ./scripts/agent-ui-dump.sh >/dev/null 2>&1
-}
-
 reconnect_dev_client() {
   local host="$1"
   local encoded
@@ -199,10 +552,12 @@ reconnect_dev_client() {
   open -a Simulator >/dev/null 2>&1 || true
   if ! simulator_booted; then
     echo "error: no booted iOS Simulator" >&2
+    print_packager_diagnostics "$host"
     exit 1
   fi
   if ! app_installed; then
     echo "error: ${BUNDLE_ID} is not installed on the booted simulator" >&2
+    print_packager_diagnostics "$host"
     exit 1
   fi
 
@@ -211,7 +566,8 @@ reconnect_dev_client() {
   echo "Reconnecting dev client → http://${host}:${METRO_PORT}"
   xcrun simctl openurl booted "$url"
 
-  local deadline=$((SECONDS + WAIT_SECS + 10))
+  # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.
+  local deadline=$((SECONDS + WAIT_SECS + 30))
   while (( SECONDS < deadline )); do
     if probe_connected; then
       echo "Dev client connected (agent-ui dump ok)."
@@ -220,6 +576,7 @@ reconnect_dev_client() {
     sleep 0.75
   done
   echo "error: reconnect timed out — check Metro / Simulator launcher" >&2
+  print_packager_diagnostics "$host"
   exit 1
 }
 
@@ -232,11 +589,19 @@ LOCAL_OK=0
 HOST_OK=0
 http_ok "$(metro_status_url 127.0.0.1)" && LOCAL_OK=1
 http_ok "$(metro_status_url "$HOST")" && HOST_OK=1
+
 if [[ "$LOCAL_OK" != "1" && "$HOST_OK" != "1" ]]; then
-  echo "error: Metro /status is not 200" >&2
+  if is_ipv6_only_metro; then
+    echo "error: Metro is bound to IPv6 only." >&2
+  else
+    echo "error: Metro /status is not 200" >&2
+  fi
+  print_packager_diagnostics "$HOST"
   exit 1
 fi
 echo "Metro /status: localhost=$LOCAL_OK host=$HOST_OK"
+
+ensure_metro_watcher "$HOST"
 
 sync_env_local "$HOST"
 
@@ -246,8 +611,13 @@ if [[ "$CHECK_ONLY" == "1" ]]; then
     exit 0
   fi
   echo "App probe: not connected (check-only; not reconnecting)"
+  print_packager_diagnostics "$HOST"
   exit 1
 fi
+
+# Heal a persisted "Fast Refresh: Off" before deciding whether to reconnect
+# (it terminates the app when it flips the toggle, forcing the reconnect below).
+ensure_fast_refresh_enabled
 
 if [[ "$DO_FORCE" == "1" ]]; then
   reconnect_dev_client "$HOST"
@@ -261,6 +631,14 @@ fi
 
 if ! app_installed; then
   echo "note: app not installed on booted simulator — Metro is healthy"
+  exit 0
+fi
+
+if [[ "$METRO_RELAUNCHED" == "1" ]]; then
+  # A fresh Metro process cannot have the app's HMR socket; the stale bundle's
+  # agent-ui bridge still answers, so do NOT trust probe_connected here.
+  echo "Metro was (re)launched this run — forcing dev client reconnect…"
+  reconnect_dev_client "$HOST"
   exit 0
 fi
 

@@ -2,8 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { appPrompt, AppText, EmptyState, Screen, ScreenHeader } from '@/components/primitives';
-import { fontFamilies, spacing } from '@/design-system';
+import { appPrompt, EmptyState, Screen, ScreenHeader, useSafeAreaChrome } from '@/components/primitives';
+import { spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { isTravelPlanOnCalendar, travelCalendarDrafts } from '@/features/travel/calendar';
@@ -14,7 +14,6 @@ import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-
 import { TravelCalendarUpdatedModal, type TravelCalendarUpdatedPayload } from '@/features/travel/travel-calendar-updated-modal';
 import { TravelCurrencySheet } from '@/features/travel/travel-currency-sheet';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
 import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
@@ -23,11 +22,13 @@ import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-e
 import {
     TravelSectionLabel,
     TravelSurfaceCard,
+    travelSafeAreaBackground,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import { TravelTripCardHeader } from '@/features/travel/travel-trip-card-header';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
+import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
 import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
 import { TravelWeatherSheet } from '@/features/travel/weather';
@@ -53,7 +54,7 @@ export default function TravelScreen() {
 function TravelScreenContent() {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
-  const chrome = itinerarySheetChrome(theme);
+  useSafeAreaChrome(travelSafeAreaBackground(theme));
   const router = useRouter();
   const { editCover, tripId } = useLocalSearchParams<{
     editCover?: string;
@@ -477,30 +478,22 @@ function TravelScreenContent() {
               <TravelTripCardHeader
                 plan={plan}
                 collapsed={collapsed}
-                selfDisplayName={selfDisplayName}
-                coTravelersExpanded={expandedCoTravelerPlanId === plan.id}
                 onOpenCover={() => recordPlanInteraction(plan.id)}
                 onEdit={() => beginEditingDetails(plan)}
-                onToggleCollapsed={() => toggleCollapsed(plan.id)}
-                onCoTravelersExpandedChange={(next) => {
-                  if (next) recordPlanInteraction(plan.id);
-                  setExpandedCoTravelerPlanId(next ? plan.id : undefined);
-                }}
-              />
-              <TravelTripDatesRow
-                startLabel={formatDateKey(plan.startDate, dateDisplayFormat)}
-                endLabel={formatDateKey(plan.endDate, dateDisplayFormat)}
-                dayCount={days}
-                testID={AgentUiIds.travel.list.editDates(plan.id)}
-                onPress={() => {
-                  recordPlanInteraction(plan.id);
-                  setDatesPlanId(plan.id);
-                }}
-              />
+                onToggleCollapsed={() => toggleCollapsed(plan.id)}>
+                <TravelTripDatesRow
+                  startLabel={formatDateKey(plan.startDate, dateDisplayFormat)}
+                  endLabel={formatDateKey(plan.endDate, dateDisplayFormat)}
+                  dayCount={days}
+                  testID={AgentUiIds.travel.list.editDates(plan.id)}
+                  onPress={() => {
+                    recordPlanInteraction(plan.id);
+                    setDatesPlanId(plan.id);
+                  }}
+                />
+              </TravelTripCardHeader>
               {!collapsed && plan.notes ? (
-                <AppText variant="body" style={[styles.serif, { color: chrome.subtitle }]}>
-                  {plan.notes}
-                </AppText>
+                <TravelTripNotesCard notes={plan.notes} />
               ) : null}
               {!collapsed ? (
                 <TravelTripActionGrid
@@ -509,6 +502,18 @@ function TravelScreenContent() {
                   destination={plan.destination}
                   mode={plan.mode ?? 'flight'}
                   isOnCalendar={isTripOnCalendar(plan.id)}
+                  coTravelers={[
+                    { id: `${plan.id}-self`, name: selfDisplayName, isSelf: true },
+                    ...plan.participants.map((person) => ({
+                      id: person.id,
+                      name: person.name,
+                    })),
+                  ]}
+                  coTravelersExpanded={expandedCoTravelerPlanId === plan.id}
+                  onCoTravelersExpandedChange={(next) => {
+                    if (next) recordPlanInteraction(plan.id);
+                    setExpandedCoTravelerPlanId(next ? plan.id : undefined);
+                  }}
                   onOpenItinerary={() => {
                     recordPlanInteraction(plan.id);
                     router.push({
@@ -616,9 +621,5 @@ const styles = StyleSheet.create({
   screen: { gap: spacing.md },
   tripCardBody: {
     width: '100%',
-  },
-  serif: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
   },
 });

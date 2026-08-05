@@ -37,22 +37,22 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 
 ## Commands
 
-- `npm start` — Metro + Expo dev client on **Node 24** (keeps cache; Fast Refresh). Requires Node `<25` (see `.nvmrc`).
+- `npm start` — Metro + Expo dev client on **Node 24** via `scripts/start-metro.sh` (`--lan` bind + advertise `127.0.0.1`; Fast Refresh). Requires Node `<25` (see `.nvmrc`). **Human terminals only** — agents must not run this (Cursor aborts agent shells and kills Metro).
 - `npm run packager:ensure` — check Metro, sync local API base URL, reconnect the iOS Simulator **only if** the app lost the packager (`scripts/ensure-packager.sh`; prefer `127.0.0.1` for Simulator)
-- `npm run packager:ensure:start` — same, and start Metro if it is down
+- `npm run packager:ensure:start` — same; start Metro if down (detached session that survives agent-shell cleanup), or replace this repo’s IPv6-only Metro (`::1` up / `127.0.0.1` down)
 - `npm run start:clear` — Metro with cache clear (only when the bundle is stuck/stale)
 - `npm run ios` / `android` / `web` — Metro targeting that platform (no default cache clear)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — Jest (`**/__tests__/**/*.test.ts`)
 - `npm run lint` — ESLint
 
-Prefer leaving Metro running so Fast Refresh updates the simulator without app relaunches. Do not kill Metro or pass `--clear` after routine JS/UI edits. Do not start Metro with Homebrew Node 25 ahead of nvm on `PATH`. If the simulator shows the launcher / blank / LoadBundleFromServerError, run `npm run packager:ensure` before terminating the app.
+Prefer leaving Metro running so Fast Refresh updates the simulator without app relaunches. Do not kill Metro or pass `--clear` after routine JS/UI edits. Do not start Metro with Homebrew Node 25 ahead of nvm on `PATH`. **Agents:** always use `npm run packager:ensure:start` (never `npm start` in an agent shell). If the simulator shows the launcher / blank / LoadBundleFromServerError, run `npm run packager:ensure` before terminating the app.
 
 ## Agent close-out (required)
 
 After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator via Fast Refresh when possible**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
 
-When exercising UI in the simulator, **find controls by `testID`** (`./scripts/agent-ui-dump.sh` / `./scripts/agent-ui-tap.sh`, map in `docs/agent-ui-map.md`) — never screenshot coordinates. **Jump to surfaces with `./scripts/agent-ui-open.sh <alias>`** (route map in `docs/agent-routes.md`) instead of tab-hopping when the destination is known. **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change (see `.cursor/rules/agent-ui-selectors.mdc`).
+When exercising UI in the simulator, follow the **navigation decision tree** in `.cursor/rules/agent-ui-selectors.mdc`: named `agent-ui-flow.sh` → `agent-ui-open.sh` / batch → tap known ids from `docs/agent-ui-map.md` → dump only if unknown → **one** final proof screenshot. Never screenshot coordinates; never dump/screenshot mid-path “just to be sure.” **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change.
 
 If the change touches `supabase/migrations/` (or other DB schema), **auto-apply** with `supabase db push` in the same turn — never leave migrations pending. See `.cursor/rules/auto-apply-migrations.mdc` and the parent **Database Updates and Migrations Rule**.
 
@@ -108,7 +108,8 @@ Short pointers only. For domain depth, use skills under `.cursor/skills/` (**tra
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
 - **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
 - **Field leading icons:** `@/components/primitives/field-leading-icon` — `FieldLeadingIcon` + `fieldLeadingIconRowStyle` (`field-leading-icon-style.ts`) so icon plates stay vertically centered in every field (see `.cursor/rules/field-icon-centering.mdc`).
-- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui-dump.sh` / `agent-ui-tap.sh` / `agent-ui-open.sh` / `agent-ui-wait.sh` + `docs/agent-ui-map.md` + `docs/agent-routes.md`. **Always stamp `testID` on interactive controls you add or edit**; tap by id, open by route alias, never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
+- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui-flow.sh` / `agent-ui-seed.sh` / `agent-ui-open.sh` / `agent-ui-batch.sh` / `agent-ui-tap.sh` / `agent-ui-wait.sh` (+ dump only to discover) + `docs/agent-ui-map.md` + `docs/agent-routes.md`. **Always stamp `testID` on interactive controls you add or edit**; prefer named flows / open aliases over tab-hopping; never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
+- **Status-bar wash:** `@/components/primitives` `useSafeAreaChrome(color)` (or `<SafeAreaChrome color={…} />`) so a page header wash continues behind the clock / Dynamic Island. `AppSafeArea` paints the focused route’s chrome color; default is `theme.backgroundPrimary`. Travel uses `travelSafeAreaBackground`; Today uses `timeOfDaySafeAreaBackground`.
 - **Typography:** `@/design-system` `typeConfig` + `appTextStyle(variant, { bold? })`. One UI font app-wide; default weight is regular — only pass `bold` / `{ bold: true }` when emphasis is explicit. Prefer `AppText` (optional `bold` prop) over raw `Text` / ad-hoc `fontFamily` / `fontWeight`.
 - **Pull-to-refresh:** Scrollable `Screen`s refresh by default via `usePullToRefresh` / `refreshAppData` (cloud pull + shared todos/vehicles + friends). List screens that use `scroll={false}` should attach `refreshControl` from `usePullToRefresh()`. Set `refresh={false}` on dense editors/forms.
 - **Server HTTP:** auth/rate-limit/cors/compression live under `src/services/http/`.

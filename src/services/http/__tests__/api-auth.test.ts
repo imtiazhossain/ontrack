@@ -1,9 +1,58 @@
 import {
-    apiRateLimitSubject,
-    isApiRequestBlocked,
-    type ApiAuthResult,
+  apiRateLimitSubject,
+  isApiRequestBlocked,
+  resolveSupabaseAuthConfig,
+  type ApiAuthResult,
 } from '../api-auth';
 import { checkApiRateLimit, resetApiRateLimitsForTests } from '../api-rate-limit';
+
+describe('resolveSupabaseAuthConfig', () => {
+  const keys = [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  ] as const;
+  const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+
+  afterEach(() => {
+    for (const key of keys) {
+      const value = original[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  it('prefers server SUPABASE_* over EXPO_PUBLIC_*', () => {
+    process.env.SUPABASE_URL = 'https://server.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'server-key';
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://public.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-key';
+    expect(resolveSupabaseAuthConfig()).toEqual({
+      url: 'https://server.supabase.co',
+      apikey: 'server-key',
+    });
+  });
+
+  it('falls back to EXPO_PUBLIC_* when server vars are unset', () => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://public.supabase.co';
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-key';
+    expect(resolveSupabaseAuthConfig()).toEqual({
+      url: 'https://public.supabase.co',
+      apikey: 'public-key',
+    });
+  });
+
+  it('returns undefined when neither pair is complete', () => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    delete process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    expect(resolveSupabaseAuthConfig()).toBeUndefined();
+  });
+});
 
 describe('isApiRequestBlocked', () => {
   const original = process.env.ALLOW_UNAUTHENTICATED_API;

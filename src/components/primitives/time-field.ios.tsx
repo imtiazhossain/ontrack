@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radii, shadows, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { formatMinutes, formatTimePickerTitle, nowMinutes } from '@/utils/date';
 
 import { AppText } from './app-text';
@@ -68,6 +69,14 @@ export function TimeField({
     onChange(draftMinutes);
     setShowPicker(false);
   };
+  const agent = useAgentUiTarget(testID, {
+    label: resolvedA11yLabel,
+    onPress: disabled ? undefined : openPicker,
+  });
+  const doneAgent = useAgentUiTarget(testID ? `${testID}.done` : undefined, {
+    label: 'Done',
+    onPress: commitDraft,
+  });
 
   return (
     <View style={[styles.wrapper, { gap: rs.sm }]}>
@@ -77,6 +86,8 @@ export function TimeField({
         </AppText>
       ) : null}
       <Pressable
+        ref={agent.ref}
+        onLayout={agent.onLayout}
         accessibilityRole="button"
         accessibilityLabel={resolvedA11yLabel}
         accessibilityValue={{ text: displayValue }}
@@ -181,6 +192,7 @@ export function TimeField({
               <IconButton
                 icon="close"
                 accessibilityLabel="Close time picker"
+                testID={testID ? `${testID}.close` : undefined}
                 background={theme.backgroundSunken}
                 borderColor={theme.separator}
                 onPress={() => setShowPicker(false)}
@@ -200,6 +212,9 @@ export function TimeField({
               }
             />
             <Pressable
+              ref={doneAgent.ref}
+              testID={testID ? `${testID}.done` : undefined}
+              onLayout={doneAgent.onLayout}
               accessibilityRole="button"
               accessibilityLabel="Done"
               onPress={commitDraft}

@@ -7,37 +7,69 @@ Convention: `ontrack.<feature>.<surface>.<control>`
 ## Host commands
 
 ```bash
-# List currently registered elements (JSON; includes route)
-./scripts/agent-ui-dump.sh
-./scripts/agent-ui-dump.sh --prefix ontrack.today
+# Named flow (seed + navigate + settle — preferred)
+./scripts/agent-ui-flow.sh travel-demo
+./scripts/agent-ui-flow.sh travel-demo-add-flight
+./scripts/agent-ui-flow.sh --list
 
-# Invoke a control by id (no coordinates)
-./scripts/agent-ui-tap.sh ontrack.tabs.travel
-
-# Jump to a surface (prefer over tab-hopping)
+# Jump to a surface
 ./scripts/agent-ui-open.sh travel
+./scripts/agent-ui-open.sh travel/trip-agent-ui-demo/add/flight
 ./scripts/agent-ui-open.sh reset
 
-# Wait until an id/prefix/route is ready
+# Seed stable demo trip (trip-agent-ui-demo)
+./scripts/agent-ui-seed.sh travel-demo
+
+# Multi-step in one round trip (in-app waits)
+./scripts/agent-ui-batch.sh --seed travel-demo --goto travel/trip-agent-ui-demo --wait-prefix ontrack.travel.planDetail.
+
+# Invoke a known control by id (no dump, no coordinates)
+./scripts/agent-ui-tap.sh ontrack.tabs.travel
+
+# Cheap probes (status only — no dump file)
+./scripts/agent-ui-route.sh
+./scripts/agent-ui-exists.sh ontrack.travel.newTrip.open
 ./scripts/agent-ui-wait.sh --prefix ontrack.checklists.
+./scripts/agent-ui-wait.sh --route /calendar
+
+# Full dump only when discovering unknown ids
+./scripts/agent-ui-dump.sh
+./scripts/agent-ui-dump.sh --prefix ontrack.today
 ```
 
-See also [`docs/agent-routes.md`](./agent-routes.md) for aliases and deep links.
+See also [`docs/agent-routes.md`](./agent-routes.md) for aliases, nested shortcuts, fixtures, and flows.
 
-Deep links (same ops):
+Deep links / file ops:
 
 - `ontrack:///agent/ui?op=dump`
 - `ontrack:///agent/ui?op=tap&id=<testID>`
 - `ontrack:///agent/ui?op=exists&id=<testID>`
+- `ontrack:///agent/ui?op=prefix&prefix=ontrack.travel.`
+- `ontrack:///agent/ui?op=route`
 - `ontrack:///agent/ui?op=goto&to=calendar`
 - `ontrack:///agent/ui?op=reset`
+- File ops: `wait`, `seed`, `flow`, `batch` via `./scripts/agent-ui-*.sh`
 
 (Use three slashes after `ontrack:` so the path is `/agent/ui`.)
 
-Dump/status files live in the app Documents directory:
+Dump/status/command files live in the app Documents directory:
 
-- `agent-ui-dump.json` (includes `route`)
+- `agent-ui-dump.json` (includes `route`; written on `dump` only by default)
 - `agent-ui-status.json`
+- `agent-ui-command.json` (host → app)
+
+## Shared primitives
+
+`DateField` and `TimeField` derive their picker ids from the field's own `testID`:
+
+| testID                     | Control                                  |
+| -------------------------- | ---------------------------------------- |
+| `<field>`                  | Open the picker                          |
+| `<field>.day.<YYYY-MM-DD>` | Select a day (`DateField`)                |
+| `<field>.previousMonth`    | Show the previous month (`DateField`)     |
+| `<field>.nextMonth`        | Show the next month (`DateField`)         |
+| `<field>.done`             | Commit the selected date / time           |
+| `<field>.close`            | Dismiss without changing the value        |
 
 ## Tabs
 
@@ -139,6 +171,34 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.calendar.openDay`          | Open selected day   |
 | `ontrack.calendar.day.<YYYY-MM-DD>` | Month grid day cell |
 
+## Event detail (`/detail/generic/<activityId>`)
+
+| testID                            | Control                       |
+| --------------------------------- | ----------------------------- |
+| `ontrack.eventDetail.edit`        | Open the event in the form    |
+| `ontrack.eventDetail.toggleComplete` | Mark complete / incomplete |
+| `ontrack.eventDetail.close`       | Close the detail screen       |
+| `ontrack.eventDetail.goBack`      | Go back when the event is missing |
+
+## Event form (`/activity-form`)
+
+| testID                                  | Control                                |
+| --------------------------------------- | -------------------------------------- |
+| `ontrack.activityForm.category.<id>`    | Pick an event type (new event)         |
+| `ontrack.activityForm.guidedTitle`      | Guided title field (new event)         |
+| `ontrack.activityForm.title`            | Title field (editing)                  |
+| `ontrack.activityForm.date`             | Date field                             |
+| `ontrack.activityForm.duration`         | Duration (minutes)                     |
+| `ontrack.activityForm.startTime`        | Start time                             |
+| `ontrack.activityForm.notes`            | Notes                                  |
+| `ontrack.activityForm.pickPhoto`        | Choose / replace photo                 |
+| `ontrack.activityForm.analyzePhoto`     | Re-run meal photo analysis             |
+| `ontrack.activityForm.removePhoto`      | Remove photo                           |
+| `ontrack.activityForm.save`             | Save the event                         |
+| `ontrack.activityForm.cancel`           | Cancel                                 |
+| `ontrack.activityForm.delete`           | Delete the event                       |
+| `ontrack.activityForm.choice.<group>.<value>` | Editor choice chips (meal type, workout type, …) |
+
 ## Checklists (`/(tabs)/to-do`)
 
 | testID                                    | Control                               |
@@ -224,8 +284,13 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.newTrip.title`                    | New-trip title field                               |
 | `ontrack.travel.newTrip.origin`                   | New-trip starting point field                      |
 | `ontrack.travel.newTrip.destination`              | New-trip destination field                         |
-| `ontrack.travel.newTrip.startDate`                | New-trip departure date                            |
-| `ontrack.travel.newTrip.endDate`                  | New-trip return date                               |
+| `ontrack.travel.newTrip.dates`                    | New-trip Dates field (opens range calendar)        |
+| `ontrack.travel.newTrip.datesClose`               | Close the new-trip dates calendar modal            |
+| `ontrack.travel.newTrip.datesSave`                | Save the new-trip date range                       |
+| `ontrack.travel.newTrip.calendar`                 | New-trip range calendar                            |
+| `ontrack.travel.newTrip.calendar.previousMonth`   | Previous month on the new-trip calendar            |
+| `ontrack.travel.newTrip.calendar.nextMonth`       | Next month on the new-trip calendar                |
+| `ontrack.travel.newTrip.calendar.day.<YYYY-MM-DD>` | Select a day on the new-trip calendar             |
 | `ontrack.travel.newTrip.notes`                    | New-trip notes field                               |
 | `ontrack.travel.newTrip.create`                   | Create the trip                                    |
 | `ontrack.travel.editTrip.title`                   | Edit-trip title field                              |
@@ -238,6 +303,16 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.detailsEditor.cancel.<itemId>`    | Cancel itinerary detail editing                    |
 | `ontrack.travel.detailsEditor.remove.<itemId>`    | Remove an itinerary item                           |
 | `ontrack.travel.flight.layoverDuration`           | Set a flight-leg layover as hours and minutes      |
+| `ontrack.travel.flight.connectionAirport`         | Set the connection / layover airport code          |
+| `ontrack.travel.flight.departureTerminal`         | Set the departure airport terminal                 |
+| `ontrack.travel.flight.arrivalTerminal`           | Set the arrival airport terminal                   |
+| `ontrack.travel.flight.departureGate`             | Set the departure airport gate                     |
+| `ontrack.travel.flight.arrivalGate`               | Set the arrival airport gate                       |
+| `ontrack.travel.flight.status.<itemId>`           | View current flight status on explicit tap         |
+| `ontrack.travel.flight.copyConfirmation.<itemId>` | Copy the flight confirmation number                |
+| `ontrack.travel.confirmation.importAction.flight` | Import flight details from a confirmation          |
+| `ontrack.travel.confirmation.importAction.rental` | Import rental details from a confirmation          |
+| `ontrack.travel.confirmation.importAction.stay`   | Import stay details from a confirmation            |
 | `ontrack.travel.timelineItem.<itemId>.editFlight` | Edit a flight itinerary leg                        |
 | `ontrack.travel.addPhotos.confirmRemovePhoto`     | Confirm photo removal                              |
 | `ontrack.travel.importResult.close`               | Close an import result and return to the itinerary |

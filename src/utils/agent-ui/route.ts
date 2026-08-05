@@ -31,11 +31,94 @@ export const AGENT_UI_ROUTE_ALIASES = {
   'design-system': '/design-system',
   nutrition: '/nutrition-profile',
   activityForm: '/activity-form',
+  activity: '/activity-form',
   privacy: '/privacy',
   terms: '/terms',
 } as const;
 
 export type AgentUiRouteAlias = keyof typeof AGENT_UI_ROUTE_ALIASES;
+
+const TRAVEL_ADD_KINDS = new Set([
+  'moment',
+  'activity',
+  'flight',
+  'transport',
+  'stay',
+  'rental',
+  'timeline',
+]);
+
+/**
+ * Expand nested agent shortcuts before alias/path resolution.
+ * Keeps open/batch/flow args short for multi-tap flows.
+ */
+export function expandAgentUiShortcuts(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const qIndex = trimmed.indexOf('?');
+  const pathPart = qIndex >= 0 ? trimmed.slice(0, qIndex) : trimmed;
+  const existingQuery = qIndex >= 0 ? trimmed.slice(qIndex + 1) : '';
+  const path = pathPart.replace(/^\/+/, '');
+
+  const withQuery = (base: string) =>
+    existingQuery ? `${base}${base.includes('?') ? '&' : '?'}${existingQuery}` : base;
+
+  const addMatch =
+    /^travel\/([^/?#]+)\/add\/(moment|activity|flight|transport|stay|rental|timeline)$/i.exec(
+      path,
+    );
+  if (addMatch && TRAVEL_ADD_KINDS.has(addMatch[2].toLowerCase())) {
+    const kind = addMatch[2].toLowerCase();
+    return withQuery(`/travel/${addMatch[1]}?add=${kind}`);
+  }
+
+  const importMatch = /^travel\/([^/?#]+)\/import$/i.exec(path);
+  if (importMatch) {
+    return withQuery(`/travel/${importMatch[1]}?previewModal=import`);
+  }
+
+  const expenseMatch = /^travel\/([^/?#]+)\/expense$/i.exec(path);
+  if (expenseMatch) {
+    return withQuery(`/travel/${expenseMatch[1]}?previewModal=expense`);
+  }
+
+  const stayBookingMatch = /^travel\/([^/?#]+)\/stay-booking$/i.exec(path);
+  if (stayBookingMatch) {
+    return withQuery(`/travel/${stayBookingMatch[1]}?openStayBooking=1`);
+  }
+
+  // Cross-domain nested shortcuts
+  if (/^health\/mood$/i.test(path)) return withQuery('/health/mood-check-in');
+  if (/^health\/settings$/i.test(path)) return withQuery('/health/settings');
+  if (/^health\/playbook$/i.test(path)) return withQuery('/health/playbook-editor');
+  if (/^health\/factor$/i.test(path)) return withQuery('/health/factor-editor');
+  if (/^plants\/new$/i.test(path)) return withQuery('/plants/new');
+  if (/^vehicles\/new$/i.test(path)) return withQuery('/vehicles/new');
+
+  const checklistMatch = /^(?:checklists|todos|to-do)\/([^/?#]+)$/i.exec(path);
+  if (checklistMatch) {
+    return withQuery(`/to-do/${checklistMatch[1]}`);
+  }
+
+  const checklistSettingsMatch =
+    /^(?:checklists|todos|to-do)\/([^/?#]+)\/settings$/i.exec(path);
+  if (checklistSettingsMatch) {
+    return withQuery(`/todos/${checklistSettingsMatch[1]}/settings`);
+  }
+
+  const plantMatch = /^plants\/([^/?#]+)$/i.exec(path);
+  if (plantMatch && plantMatch[1].toLowerCase() !== 'new') {
+    return withQuery(`/plants/${plantMatch[1]}`);
+  }
+
+  const vehicleMatch = /^vehicles\/([^/?#]+)$/i.exec(path);
+  if (vehicleMatch && vehicleMatch[1].toLowerCase() !== 'new') {
+    return withQuery(`/vehicles/${vehicleMatch[1]}`);
+  }
+
+  return trimmed;
+}
 
 export function setAgentUiRoute(route: string | null): void {
   currentRoute = route;
@@ -62,22 +145,28 @@ export function agentUiNavigate(href: string): boolean {
 
 /**
  * Resolve an agent destination to an Expo Router href.
- * Accepts aliases (`today`), absolute paths (`/travel/abc`), or bare segments (`travel/abc`).
+ * Accepts aliases (`today`), absolute paths (`/travel/abc`), bare segments
+ * (`travel/abc`), query strings, and nested shortcuts (`travel/abc/add/flight`).
  */
 export function resolveAgentUiDestination(raw: string | undefined): string | null {
   if (!raw) return null;
-  const trimmed = raw.trim();
+  const expanded = expandAgentUiShortcuts(raw);
+  const trimmed = expanded.trim();
   if (!trimmed) return null;
 
-  const aliasKey = trimmed as AgentUiRouteAlias;
+  const qIndex = trimmed.indexOf('?');
+  const pathPart = qIndex >= 0 ? trimmed.slice(0, qIndex) : trimmed;
+  const query = qIndex >= 0 ? trimmed.slice(qIndex) : '';
+
+  const aliasKey = pathPart as AgentUiRouteAlias;
   if (aliasKey in AGENT_UI_ROUTE_ALIASES) {
-    return AGENT_UI_ROUTE_ALIASES[aliasKey];
+    return `${AGENT_UI_ROUTE_ALIASES[aliasKey]}${query}`;
   }
 
-  if (trimmed.startsWith('/')) return trimmed;
+  if (pathPart.startsWith('/')) return `${pathPart}${query}`;
 
   // Bare path: travel/xyz → /travel/xyz
-  return `/${trimmed.replace(/^\/+/, '')}`;
+  return `/${pathPart.replace(/^\/+/, '')}${query}`;
 }
 
 /** Host deep link for a destination (three-slash form). */

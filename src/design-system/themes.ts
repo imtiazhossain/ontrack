@@ -165,3 +165,8 @@ export function timeOfDayGradient(theme: Theme, hour: number): [string, string] 
   if (hour < 21) return light ? ['#EFDFD3', palette.paper0] : ['#2E211A', palette.night0];
   return light ? ['#E1DFE9', palette.paper0] : ['#1F1D28', palette.night0];
 }
+
+/** Top stop of the Today wash — paint the status-bar shell to match. */
+export function timeOfDaySafeAreaBackground(theme: Theme, hour: number): string {
+  return timeOfDayGradient(theme, hour)[0];
+}

@@ -16,6 +16,8 @@ describe('Input layout contract', () => {
     expect(source).toMatch(
       /stackedMultilineInput:\s*\{[\s\S]*?flexGrow:\s*0,[\s\S]*?flexBasis:\s*'auto'/,
     );
-    expect(source).toContain('paddingTop: typography.caption.lineHeight + 2');
+    // Label stays in normal flow above the value — do not pad the TextInput for it
+    // (that doubles empty height and makes placeholder-only fields look oversized).
+    expect(source).not.toContain('paddingTop: typography.caption.lineHeight + 2');
   });
 });

@@ -9,6 +9,7 @@ import { featureFlags } from '@/constants/feature-flags';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { normalizeTravelPlan, normalizeTravelPlans } from '@/features/travel/normalize';
 import type { TravelPlan } from '@/features/travel/types';
+import { useSchedule } from '@/store/schedule';
 
 interface TravelState {
   plans: TravelPlan[];
@@ -24,7 +25,7 @@ interface TravelState {
 
 export const useTravel = create<TravelState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       plans: withAllAccountsTestTrip([]),
       recentPlanIds: [],
       recordPlanInteraction: (id) =>
@@ -57,24 +58,27 @@ export const useTravel = create<TravelState>()(
         });
         return true;
       },
-      removePlan: (id) =>
+      removePlan: (id) => {
+        const keepPlan =
+          id === ALL_ACCOUNTS_TEST_TRIP.id && featureFlags.allAccountsTestTrip;
         set((state) => ({
-          plans:
-            id === ALL_ACCOUNTS_TEST_TRIP.id &&
-            featureFlags.allAccountsTestTrip
-              ? state.plans
-              : state.plans.filter((item) => item.id !== id),
+          plans: keepPlan ? state.plans : state.plans.filter((item) => item.id !== id),
           recentPlanIds: state.recentPlanIds.filter((planId) => planId !== id),
-        })),
-      replacePlans: (plans) =>
-        set((state) => {
-          const nextPlans = withAllAccountsTestTrip(normalizeTravelPlans(plans));
-          const nextIds = new Set(nextPlans.map((plan) => plan.id));
-          return {
-            plans: nextPlans,
-            recentPlanIds: state.recentPlanIds.filter((id) => nextIds.has(id)),
-          };
-        }),
+        }));
+        if (!keepPlan) useSchedule.getState().removeTravelActivities([id]);
+      },
+      replacePlans: (plans) => {
+        const nextPlans = withAllAccountsTestTrip(normalizeTravelPlans(plans));
+        const nextIds = new Set(nextPlans.map((plan) => plan.id));
+        const droppedIds = get()
+          .plans.map((plan) => plan.id)
+          .filter((id) => !nextIds.has(id));
+        set((state) => ({
+          plans: nextPlans,
+          recentPlanIds: state.recentPlanIds.filter((id) => nextIds.has(id)),
+        }));
+        useSchedule.getState().removeTravelActivities(droppedIds);
+      },
       reset: () => set({ plans: withAllAccountsTestTrip([]), recentPlanIds: [] }),
     }),
     {

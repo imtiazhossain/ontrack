@@ -10,22 +10,32 @@ import { radii, spacing } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 
 export function ConfirmationImportAction({
   accessibilityLabel,
   importing,
   onPress,
+  testID,
 }: {
   accessibilityLabel: string;
   importing: boolean;
   onPress: () => void;
+  testID: string;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs } = useResponsive();
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress,
+  });
 
   return (
     <Pressable
+      ref={agent.ref}
+      onLayout={agent.onLayout}
+      testID={agent.testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ busy: importing }}

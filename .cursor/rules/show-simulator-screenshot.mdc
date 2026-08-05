@@ -9,22 +9,30 @@ After any change that affects the running Expo/iOS app UI, **always test in the 
 
 Metro / Node 24 / Fast Refresh / reconnect details live in `.cursor/rules/verify-working-app.mdc` — follow that; do not restate here.
 
+Navigation speed rules live in `.cursor/rules/agent-ui-selectors.mdc` — follow the **decision tree** and **budget** there. This file only governs **final proof**.
+
 ## Required close-out
 
 1. Confirm Metro `/status` is 200 (reuse running bundler; `./scripts/ensure-packager.sh --start` only if down).
-2. Open the changed surface with `./scripts/agent-ui-open.sh <alias>` (see `docs/agent-routes.md`). Prefer `./scripts/agent-ui-tap.sh` / dump over screenshot coordinates.
+2. Land on the changed surface with `./scripts/agent-ui-flow.sh <name>` or `./scripts/agent-ui-open.sh <alias>` ([`docs/agent-routes.md`](../../docs/agent-routes.md)) — not tab-hopping. Tap known ids; dump only if an id is unknown.
 3. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
-4. Wait until fully loaded (`./scripts/agent-ui-wait.sh` when waiting on an id/prefix/route).
-5. Capture `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below, and leave the simulator on that working screen.
+4. Wait until fully loaded (in-app wait / `./scripts/agent-ui-wait.sh` on id/prefix/route — not dump loops).
+5. Capture **one** final `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below, and leave the simulator on that working screen.
+
+## Screenshot budget
+
+- **Allowed:** one post-action screenshot that visibly shows the claim (plus replacements only if the evidence gate fails).
+- **Forbidden:** mid-flow screenshots, screenshot-to-navigate, screenshot instead of `flow`/`open`/`tap`, or reading images to discover controls.
+- Dumps and route/exists probes are not screenshots — still keep dumps ≤ 1 per verification (see agent-ui-selectors).
 
 ## Screenshot evidence gate
 
 A screenshot is proof only when the pixels visibly demonstrate the result being claimed. Before handing off:
 
 1. Write down the concrete user-visible claims you intend to make (for example, “Departure shows 09/27/26” and “Arrival shows 09/27/26”).
-2. Inspect the captured screenshot itself—not the code, parser output, unit tests, accessibility dump, or expected state.
+2. Inspect the **final** captured screenshot itself—not the code, parser output, unit tests, accessibility dump, or expected state.
 3. For every claim, identify the visible UI text/state in the screenshot that proves it.
-4. If any claimed value is blank, off-screen, obscured, pre-action, or otherwise not visibly verifiable, the evidence check **fails**. Continue exercising/fixing the flow and capture a new screenshot.
+4. If any claimed value is blank, off-screen, obscured, pre-action, or otherwise not visibly verifiable, the evidence check **fails**. Continue exercising/fixing the flow and capture a **new final** screenshot (still no mid-hop gallery).
 5. Only describe a result as verified when the final screenshot visibly contains that result. Tests and logs may support the claim, but they never substitute for UI evidence.
 
 An empty form before import does **not** prove that import populated the form. A screenshot of the import picker does **not** prove the selected itinerary was parsed. For state-changing flows, capture the post-action state with the resulting values visible.
@@ -36,4 +44,5 @@ An empty form before import does **not** prove that import populated the form. A
 - End on “reload the app” without a simulator screenshot of the change.
 - Claim a value or behavior passed when that value/result is absent from the screenshot.
 - Use a pre-action, empty, or setup screen as evidence for a completed interaction.
+- Use mid-flow screenshots as navigation or progress checks.
 - Hand off a white screen, error boundary, partial load, or unrelated screen as the final visual proof.

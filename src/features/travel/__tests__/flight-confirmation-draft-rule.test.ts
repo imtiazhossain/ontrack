@@ -18,6 +18,7 @@ describe('flight confirmation add-sheet import', () => {
       'applyFlightScheduleToAddSheet(addSheet, importedSchedule);',
     );
     expect(addSheetBranch).toContain('addSheet.setFlightDetails');
+    expect(addSheetBranch).toContain('addSheet.setPendingFlightImport(imported)');
     expect(addSheetBranch).not.toContain('updatePlan(');
     expect(addSheetBranch).not.toContain('mergeImportedFlights(');
   });

@@ -2,8 +2,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Card, IconButton, ProgressRing, Symbol } from '@/components/primitives';
-import { layout, spacing, timeOfDayGradient } from '@/design-system';
+import { AppText, Card, IconButton, ProgressRing, Symbol, useSafeAreaChrome } from '@/components/primitives';
+import { layout, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import {
   unitSymbol,
@@ -34,7 +34,9 @@ export function DayHeader({
 }: DayHeaderProps) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
-  const gradient = timeOfDayGradient(theme, isToday(date) ? new Date().getHours() : 12);
+  const hour = isToday(date) ? new Date().getHours() : 12;
+  const gradient = timeOfDayGradient(theme, hour);
+  useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour));
   const viewingToday = isToday(date);
   const { hasLocation, weather, icon, loading, detectingLocation, error } = useHomeWeather();
   const [locationOpen, setLocationOpen] = useState(false);

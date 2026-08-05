@@ -182,20 +182,83 @@ export function formatFlightLandingLabel(arrival: FlightArrival): string {
   return `${time} (${sign}${arrival.dayOffset})`;
 }
 
-export function formatFlightItineraryCaption(input: {
+/** Compact local clock range, e.g. `5:21–7:00 AM` when both share a meridiem. */
+export function formatMinutesRange(startMinutes: number, endMinutes: number): string {
+  const startLabel = formatMinutes(startMinutes);
+  const endLabel = formatMinutes(endMinutes);
+  const meridiem = (label: string) =>
+    label.endsWith(' AM') ? ' AM' : label.endsWith(' PM') ? ' PM' : '';
+  const startMeridiem = meridiem(startLabel);
+  const endMeridiem = meridiem(endLabel);
+  if (startMeridiem && startMeridiem === endMeridiem) {
+    return `${startLabel.slice(0, -startMeridiem.length)}–${endLabel}`;
+  }
+  return `${startLabel}–${endLabel}`;
+}
+
+export type FlightItineraryCaptionInput = {
   dateLabel: string;
   startMinutes: number;
   durationMinutes: number;
   departureAirport?: string;
   arrivalAirport?: string;
+  connectionAirport?: string;
+  layoverMinutesAfter?: number;
+  connectionArrivalMinutes?: number;
+  connectionDepartureMinutes?: number;
+  /** When > 1, caption uses the connecting journey summary style. */
+  legCount?: number;
   date: string;
-}): string {
-  const arrival = calculateFlightArrival({
-    date: input.date,
-    startMinutes: input.startMinutes,
-    durationMinutes: input.durationMinutes,
-    departureAirport: input.departureAirport,
-    arrivalAirport: input.arrivalAirport,
-  });
-  return `${input.dateLabel} · ${formatMinutes(input.startMinutes)} → ${formatFlightLandingLabel(arrival)} · ${formatDuration(input.durationMinutes)}`;
+};
+
+/** Caption pieces for headers: date · duration · stops. */
+export function flightItineraryCaptionParts(
+  input: FlightItineraryCaptionInput,
+): { dateLabel: string; durationLabel: string; stopsLabel: string } {
+  const connection = input.connectionAirport?.trim().toUpperCase();
+  const dep = input.departureAirport?.trim().toUpperCase();
+  const arr = input.arrivalAirport?.trim().toUpperCase();
+  const connecting =
+    (input.legCount !== undefined && input.legCount > 1) ||
+    (Boolean(connection) && connection !== dep && connection !== arr);
+  const stops = connecting
+    ? Math.max(
+        1,
+        (input.legCount ?? 2) - 1,
+        connection && connection !== dep && connection !== arr ? 1 : 0,
+      )
+    : 0;
+  return {
+    dateLabel: input.dateLabel,
+    durationLabel: `${formatDuration(input.durationMinutes)} total`,
+    stopsLabel: stops === 0 ? 'Nonstop' : `${stops} stop${stops === 1 ? '' : 's'}`,
+  };
+}
+
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+/** Journey-card date chrome: `Sep 27`. */
+export function formatFlightJourneyDate(date: string): string {
+  const d = fromDateKey(date);
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+export function formatFlightItineraryCaption(
+  input: FlightItineraryCaptionInput,
+): string {
+  const parts = flightItineraryCaptionParts(input);
+  return [parts.dateLabel, parts.durationLabel, parts.stopsLabel].join(' · ');
 }

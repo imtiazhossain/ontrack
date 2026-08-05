@@ -37,6 +37,7 @@ import {
   cloneWorkout,
 } from '@/app/activity-form-editors';
 import { pickLibraryImage } from '@/utils/pick-image';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { isDateKey, nowMinutes, todayKey } from '@/utils/date';
 import { goBackOrReplace } from '@/utils/navigation';
@@ -396,21 +397,29 @@ export default function ActivityFormScreen() {
           <AppText variant="title">What are we getting into?</AppText>
           <AppText variant="body" color="secondary">Pick a vibe and I’ll help with the rest.</AppText>
           <View style={styles.wrap}>
-            {availableCategories.map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: item.id === categoryId }}
-                onPress={() => {
-                  setCategoryId(item.id);
-                  setTitle('');
-                  setMovie(undefined);
-                  setError(undefined);
-                }}
-                style={[styles.chip, { borderColor: item.id === categoryId ? theme.accentPrimary : theme.separator, backgroundColor: item.id === categoryId ? theme.accentFaint : theme.backgroundSunken }]}>
-                <CategoryBadge category={item} />
-              </Pressable>
-            ))}
+            {availableCategories.map((item) => {
+              const selectCategory = () => {
+                setCategoryId(item.id);
+                setTitle('');
+                setMovie(undefined);
+                setError(undefined);
+              };
+              return (
+                <AgentTestId
+                  key={item.id}
+                  testID={AgentUiIds.activityForm.category(item.id)}
+                  label={item.name}
+                  onPress={selectCategory}>
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: item.id === categoryId }}
+                    onPress={selectCategory}
+                    style={[styles.chip, { borderColor: item.id === categoryId ? theme.accentPrimary : theme.separator, backgroundColor: item.id === categoryId ? theme.accentFaint : theme.backgroundSunken }]}>
+                    <CategoryBadge category={item} />
+                  </Pressable>
+                </AgentTestId>
+              );
+            })}
           </View>
           {category ? (
             <View style={[styles.followUp, { borderTopColor: theme.separator }]}>
@@ -438,6 +447,7 @@ export default function ActivityFormScreen() {
                   placeholder={ASSISTANT_COPY[category.id]?.placeholder ?? 'What’s happening?'}
                   autoFocus
                   returnKeyType="next"
+                  testID={AgentUiIds.activityForm.guidedTitle}
                 />
               )}
             </View>
@@ -448,7 +458,13 @@ export default function ActivityFormScreen() {
       {isEditing && category ? (
         <>
           <CategoryBadge category={category} />
-          <Input label="Title" value={title} onChangeText={setTitle} placeholder="Event title" />
+          <Input
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Event title"
+            testID={AgentUiIds.activityForm.title}
+          />
         </>
       ) : null}
 
@@ -456,12 +472,40 @@ export default function ActivityFormScreen() {
       <>
       <SectionHeader title="Schedule" />
       <View style={styles.twoColumns}>
-        <View style={styles.flex}><DateField label="Date" value={date} onChange={setDate} /></View>
-        <View style={styles.flex}><Input label="Duration (min)" value={duration} onChangeText={setDuration} keyboardType="number-pad" /></View>
+        <View style={styles.flex}>
+          <DateField
+            label="Date"
+            value={date}
+            onChange={setDate}
+            testID={AgentUiIds.activityForm.date}
+          />
+        </View>
+        <View style={styles.flex}>
+          <Input
+            label="Duration (min)"
+            value={duration}
+            onChangeText={setDuration}
+            keyboardType="number-pad"
+            testID={AgentUiIds.activityForm.duration}
+          />
+        </View>
       </View>
-      <TimeField label="Start Time" value={startMinutes} onChange={setStartMinutes} />
+      <TimeField
+        label="Start Time"
+        value={startMinutes}
+        onChange={setStartMinutes}
+        testID={AgentUiIds.activityForm.startTime}
+      />
 
-      <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional context" multiline style={styles.multiline} />
+      <Input
+        label="Notes"
+        value={notes}
+        onChangeText={setNotes}
+        placeholder="Optional context"
+        multiline
+        style={styles.multiline}
+        testID={AgentUiIds.activityForm.notes}
+      />
 
       {category?.supportsPhotos && category.detailKind === 'food' ? (
         <>
@@ -475,7 +519,8 @@ export default function ActivityFormScreen() {
               onPress={() => void pickPhoto(aiEnabled)}
               disabled={analyzing}
               style={styles.flex}
-              accessibilityLabel={photo ? 'Replace and analyze meal photo' : 'Upload and analyze meal photo'}>
+              accessibilityLabel={photo ? 'Replace and analyze meal photo' : 'Upload and analyze meal photo'}
+              testID={AgentUiIds.activityForm.pickPhoto}>
               {analyzing ? 'Analyzing meal…' : photo ? 'Replace & analyze' : 'Upload & analyze'}
             </Button>
             {photo ? (
@@ -484,7 +529,8 @@ export default function ActivityFormScreen() {
                 onPress={() => void analyzePhoto()}
                 disabled={analyzing || !aiEnabled}
                 style={styles.flex}
-                accessibilityLabel="Analyze meal photo again">
+                accessibilityLabel="Analyze meal photo again"
+                testID={AgentUiIds.activityForm.analyzePhoto}>
                 Analyze again
               </Button>
             ) : null}
@@ -517,7 +563,8 @@ export default function ActivityFormScreen() {
                   aiAnalysis: undefined,
                 }));
               }}
-              accessibilityLabel="Remove meal photo">
+              accessibilityLabel="Remove meal photo"
+              testID={AgentUiIds.activityForm.removePhoto}>
               Remove photo
             </Button>
           ) : null}
@@ -527,8 +574,24 @@ export default function ActivityFormScreen() {
           <SectionHeader title="Photo" />
           {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
           <View style={styles.twoColumns}>
-            <Button variant="secondary" onPress={() => void pickPhoto()} style={styles.flex} accessibilityLabel="Choose photo">{photo ? 'Replace Photo' : 'Choose Photo'}</Button>
-            {photo ? <Button variant="ghost" onPress={() => setPhoto(undefined)} style={styles.flex} accessibilityLabel="Remove photo">Remove</Button> : null}
+            <Button
+              variant="secondary"
+              onPress={() => void pickPhoto()}
+              style={styles.flex}
+              accessibilityLabel="Choose photo"
+              testID={AgentUiIds.activityForm.pickPhoto}>
+              {photo ? 'Replace Photo' : 'Choose Photo'}
+            </Button>
+            {photo ? (
+              <Button
+                variant="ghost"
+                onPress={() => setPhoto(undefined)}
+                style={styles.flex}
+                accessibilityLabel="Remove photo"
+                testID={AgentUiIds.activityForm.removePhoto}>
+                Remove
+              </Button>
+            ) : null}
           </View>
         </>
       ) : null}
@@ -569,9 +632,29 @@ export default function ActivityFormScreen() {
 
       {error ? <ErrorMessage message={error} /> : null}
       <View style={styles.actions}>
-        <Button onPress={save} disabled={!title.trim()} accessibilityLabel="Save event">Save</Button>
-        <Button variant="ghost" onPress={close} accessibilityLabel="Cancel">Cancel</Button>
-        {isEditing ? <Button variant="danger" onPress={confirmDelete} accessibilityLabel="Delete event">Delete Event</Button> : null}
+        <Button
+          onPress={save}
+          disabled={!title.trim()}
+          accessibilityLabel="Save event"
+          testID={AgentUiIds.activityForm.save}>
+          Save
+        </Button>
+        <Button
+          variant="ghost"
+          onPress={close}
+          accessibilityLabel="Cancel"
+          testID={AgentUiIds.activityForm.cancel}>
+          Cancel
+        </Button>
+        {isEditing ? (
+          <Button
+            variant="danger"
+            onPress={confirmDelete}
+            accessibilityLabel="Delete event"
+            testID={AgentUiIds.activityForm.delete}>
+            Delete Event
+          </Button>
+        ) : null}
       </View>
       </>
       ) : null}

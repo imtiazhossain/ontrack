@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wait until a testID (or prefix) is registered in the agent-ui dump.
+# Wait until a testID, prefix, or route is ready — cheap status probes (no dump).
 #
 # Usage:
 #   ./scripts/agent-ui-wait.sh ontrack.checklists.detail.back
@@ -11,6 +11,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=lib/agent-ui-host.sh
+source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 WAIT_SECS="${WAIT_SECS:-8}"
 MODE=""
@@ -50,41 +52,67 @@ if [[ -z "$TARGET" ]]; then
   usage
 fi
 
+route_matches() {
+  local current="$1"
+  local target="$2"
+  [[ -z "$current" ]] && return 1
+  [[ "$current" == "$target" ]] && return 0
+  [[ "$current" == *"$target"* ]] && return 0
+  local stripped="${target%/}"
+  [[ "$current" == *"$stripped"* ]] && return 0
+  return 1
+}
+
 deadline=$((SECONDS + WAIT_SECS))
-TMP_DUMP="$(mktemp)"
-trap 'rm -f "${TMP_DUMP}"' EXIT
 while (( SECONDS < deadline )); do
-  if ./scripts/agent-ui-dump.sh >"${TMP_DUMP}" 2>/dev/null; then
-    RESULT="$(TMP_DUMP="${TMP_DUMP}" MODE="${MODE}" TARGET="${TARGET}" python3 - <<'PY'
+  case "$MODE" in
+    id)
+      if STATUS_JSON="$(agent_ui_send_op exists "${TARGET}" 2>/dev/null)"; then
+        PARSE="$(STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
 import json, os
-from pathlib import Path
-d = json.loads(Path(os.environ["TMP_DUMP"]).read_text())
-mode = os.environ["MODE"]
-target = os.environ["TARGET"]
-route = d.get("route") or ""
-ids = [e.get("testID","") for e in d.get("elements", [])]
-ok = False
-if mode == "id":
-    ok = target in ids
-elif mode == "prefix":
-    ok = any(i.startswith(target) for i in ids)
-elif mode == "route":
-    # Exact or suffix match (Expo may omit group segments).
-    ok = route == target or route.endswith(target) or target.rstrip("/") in route
-print("ok" if ok else "wait")
-print(route)
-print(len(ids))
+d = json.loads(os.environ["STATUS_JSON"])
+print("ok" if d.get("ok") else "wait")
+print(d.get("route") or "")
 PY
 )"
-    status="$(printf '%s\n' "$RESULT" | sed -n '1p')"
-    route="$(printf '%s\n' "$RESULT" | sed -n '2p')"
-    count="$(printf '%s\n' "$RESULT" | sed -n '3p')"
-    if [[ "$status" == "ok" ]]; then
-      echo "ready mode=${MODE} target=${TARGET} route=${route:-?} elements=${count}"
-      exit 0
-    fi
-  fi
-  sleep 0.1
+        status="$(printf '%s\n' "$PARSE" | sed -n '1p')"
+        route="$(printf '%s\n' "$PARSE" | sed -n '2p')"
+        if [[ "$status" == "ok" ]]; then
+          echo "ready mode=id target=${TARGET} route=${route:-?}"
+          exit 0
+        fi
+      fi
+      ;;
+    prefix)
+      if STATUS_JSON="$(agent_ui_send_op prefix "${TARGET}" 2>/dev/null)"; then
+        PARSE="$(STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
+import json, os
+d = json.loads(os.environ["STATUS_JSON"])
+print("ok" if d.get("ok") else "wait")
+print(d.get("route") or "")
+print(d.get("count") or 0)
+PY
+)"
+        status="$(printf '%s\n' "$PARSE" | sed -n '1p')"
+        route="$(printf '%s\n' "$PARSE" | sed -n '2p')"
+        count="$(printf '%s\n' "$PARSE" | sed -n '3p')"
+        if [[ "$status" == "ok" ]]; then
+          echo "ready mode=prefix target=${TARGET} route=${route:-?} matches=${count}"
+          exit 0
+        fi
+      fi
+      ;;
+    route)
+      if STATUS_JSON="$(agent_ui_send_op route 2>/dev/null)"; then
+        current="$(echo "${STATUS_JSON}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("route") or "")')"
+        if route_matches "$current" "$TARGET"; then
+          echo "ready mode=route target=${TARGET} route=${current}"
+          exit 0
+        fi
+      fi
+      ;;
+  esac
+  sleep 0.08
 done
 
 echo "error: timed out waiting for ${MODE}=${TARGET}" >&2

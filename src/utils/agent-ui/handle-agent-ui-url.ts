@@ -1,25 +1,72 @@
 import {
   getAgentUiTarget,
   isAgentUiEnabled,
+  listAgentUiTargets,
   tapAgentUiTarget,
 } from './registry';
-import { writeAgentUiDump, writeAgentUiStatus } from './persist';
+import {
+  writeAgentUiDump,
+  writeAgentUiStatus,
+  type AgentUiStatusResult,
+} from './persist';
 import {
   agentUiNavigate,
   getAgentUiRoute,
   resolveAgentUiDestination,
 } from './route';
+import { seedAgentUiFixture } from './fixtures';
+import { resolveAgentUiFlow } from './flows';
 
-export type AgentUiOp = 'dump' | 'tap' | 'exists' | 'goto' | 'reset';
+export type AgentUiOp =
+  | 'dump'
+  | 'tap'
+  | 'exists'
+  | 'prefix'
+  | 'route'
+  | 'goto'
+  | 'reset'
+  | 'batch'
+  | 'wait'
+  | 'seed'
+  | 'flow';
+
+export type AgentUiRequest = {
+  op?: string | string[];
+  id?: string | string[];
+  to?: string | string[];
+  path?: string | string[];
+  prefix?: string | string[];
+  /** Pure settle delay (ms) before wait polling / as standalone delay. */
+  ms?: number | string | string[];
+  /** Max poll window for wait (ms). Default 3000. */
+  timeoutMs?: number | string | string[];
+  /** Batch / flow steps. */
+  ops?: AgentUiRequest[];
+  /** When true on tap/goto, also rewrite the dump file (default false). */
+  refreshDump?: boolean | string | string[];
+};
 
 export type ParsedAgentUiUrl = {
   op: AgentUiOp;
   id?: string;
   to?: string;
+  prefix?: string;
 };
 
 const AGENT_UI_PATH = /(?:^|\/)agent\/ui\/?$/i;
-const OPS = new Set<AgentUiOp>(['dump', 'tap', 'exists', 'goto', 'reset']);
+const OPS = new Set<AgentUiOp>([
+  'dump',
+  'tap',
+  'exists',
+  'prefix',
+  'route',
+  'goto',
+  'reset',
+  'batch',
+  'wait',
+  'seed',
+  'flow',
+]);
 
 function parseOp(raw: string): AgentUiOp {
   const op = raw.toLowerCase() as AgentUiOp;
@@ -33,7 +80,6 @@ export function isAgentUiUrl(url: string): boolean {
     const parsed = new URL(url);
     const path = parsed.pathname.replace(/\/+$/, '') || '/';
     if (AGENT_UI_PATH.test(path) || path === '/agent/ui') return true;
-    // Custom schemes sometimes put the host as the first path segment.
     if (parsed.host === 'agent' && (parsed.pathname === '/ui' || parsed.pathname === '/ui/')) {
       return true;
     }
@@ -56,19 +102,25 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
       parsed.searchParams.get('to') ??
       parsed.searchParams.get('path') ??
       undefined;
+    const prefix = parsed.searchParams.get('prefix') ?? undefined;
     return {
       op,
       id: id || undefined,
       to: to || undefined,
+      prefix: prefix || undefined,
     };
   } catch {
     const opMatch = /[?&]op=([^&]+)/i.exec(url);
     const idMatch = /[?&]id=([^&]+)/i.exec(url);
     const toMatch = /[?&](?:to|path)=([^&]+)/i.exec(url);
+    const prefixMatch = /[?&]prefix=([^&]+)/i.exec(url);
     return {
       op: parseOp(opMatch?.[1] ?? 'dump'),
       id: idMatch?.[1] ? decodeURIComponent(idMatch[1]) : undefined,
       to: toMatch?.[1] ? decodeURIComponent(toMatch[1]) : undefined,
+      prefix: prefixMatch?.[1]
+        ? decodeURIComponent(prefixMatch[1])
+        : undefined,
     };
   }
 }
@@ -79,35 +131,252 @@ export async function handleAgentUiUrl(url: string): Promise<boolean> {
   return handleAgentUiRequest(parsed);
 }
 
-export async function handleAgentUiRequest(request: {
-  op?: string | string[];
-  id?: string | string[];
-  to?: string | string[];
-  path?: string | string[];
-}): Promise<boolean> {
+/**
+ * Run one agent-ui op. By default writes status (and dump only for `dump`).
+ * Batch/flow steps pass `emitStatus: false` and collect results.
+ */
+export async function handleAgentUiRequest(
+  request: AgentUiRequest,
+  options: { emitStatus?: boolean } = {},
+): Promise<boolean> {
+  const emitStatus = options.emitStatus !== false;
+
   if (!isAgentUiEnabled()) {
-    writeAgentUiStatus({
-      op: String(request.op ?? 'dump'),
-      id: asSingle(request.id),
-      ok: false,
-      detail: 'Agent UI bridge is only available in __DEV__ builds.',
-    });
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: String(asSingle(request.op) ?? 'dump'),
+        id: asSingle(request.id),
+        ok: false,
+        detail: 'Agent UI bridge is only available in __DEV__ builds.',
+      });
+    }
     return false;
   }
 
   const op = parseOp(asSingle(request.op) ?? 'dump');
   const id = asSingle(request.id);
   const to = asSingle(request.to) ?? asSingle(request.path);
+  const prefix = asSingle(request.prefix) ?? (op === 'prefix' ? id : undefined);
+  const refreshDump = asBool(request.refreshDump);
+
+  if (op === 'flow') {
+    const flowName = to ?? id;
+    const steps = resolveAgentUiFlow(flowName);
+    if (!steps) {
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op: 'flow',
+          ok: false,
+          detail: `Unknown flow: ${flowName ?? '(missing)'}`,
+        });
+      }
+      return false;
+    }
+    // Expand inline so status.op stays `flow` (host scripts wait on that).
+    const results: AgentUiStatusResult[] = [];
+    let allOk = true;
+    for (const step of steps) {
+      const stepOp = parseOp(asSingle(step.op) ?? 'dump');
+      const ok = await handleAgentUiRequest(step, { emitStatus: false });
+      const stepId =
+        asSingle(step.id) ?? asSingle(step.prefix) ?? asSingle(step.to);
+      results.push({
+        op: stepOp,
+        id: stepId,
+        ok,
+        route: getAgentUiRoute(),
+        detail: ok ? 'ok' : 'failed',
+      });
+      if (!ok) {
+        allOk = false;
+        break;
+      }
+    }
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'flow',
+        id: flowName,
+        ok: allOk,
+        detail: `${results.filter((r) => r.ok).length}/${steps.length} ok`,
+        results,
+        route: getAgentUiRoute(),
+      });
+    }
+    return allOk;
+  }
+
+  if (op === 'batch') {
+    const ops = Array.isArray(request.ops) ? request.ops : [];
+    if (ops.length === 0) {
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op: 'batch',
+          ok: false,
+          detail: 'Missing ops array for batch.',
+          results: [],
+        });
+      }
+      return false;
+    }
+    const results: AgentUiStatusResult[] = [];
+    let allOk = true;
+    for (const step of ops) {
+      const stepOp = parseOp(asSingle(step.op) ?? 'dump');
+      const ok = await handleAgentUiRequest(step, { emitStatus: false });
+      const stepId =
+        asSingle(step.id) ?? asSingle(step.prefix) ?? asSingle(step.to);
+      results.push({
+        op: stepOp,
+        id: stepId,
+        ok,
+        route: getAgentUiRoute(),
+        detail: ok ? 'ok' : 'failed',
+      });
+      if (!ok) {
+        allOk = false;
+        break;
+      }
+    }
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'batch',
+        ok: allOk,
+        detail: `${results.filter((r) => r.ok).length}/${ops.length} ok`,
+        results,
+        route: getAgentUiRoute(),
+      });
+    }
+    return allOk;
+  }
+
+  if (op === 'seed') {
+    const seeded = seedAgentUiFixture(to ?? id);
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'seed',
+        ok: Boolean(seeded),
+        detail: seeded
+          ? `seeded ${seeded.fixture} planId=${seeded.planId} flightId=${seeded.flightItemId}`
+          : `Unknown fixture: ${to ?? id ?? '(missing)'}`,
+        id: seeded?.planId,
+        route: getAgentUiRoute(),
+      });
+    }
+    return Boolean(seeded);
+  }
+
+  if (op === 'wait') {
+    const settleMs = Math.max(0, asNumber(request.ms) ?? 0);
+    const timeoutMs = Math.max(
+      settleMs,
+      asNumber(request.timeoutMs) ?? (hasWaitTarget(id, prefix, to) ? 3000 : settleMs || 0),
+    );
+    if (settleMs > 0) await sleep(settleMs);
+
+    const routeTarget = to;
+    const started = Date.now();
+    const poll = () => {
+      if (id && getAgentUiTarget(id)) return true;
+      if (
+        prefix &&
+        listAgentUiTargets().some((e) => e.testID.startsWith(prefix))
+      ) {
+        return true;
+      }
+      if (routeTarget && routeMatches(getAgentUiRoute(), routeTarget)) {
+        return true;
+      }
+      return false;
+    };
+
+    if (!hasWaitTarget(id, prefix, routeTarget)) {
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op: 'wait',
+          ok: true,
+          detail: `delayed ${settleMs}ms`,
+          route: getAgentUiRoute(),
+        });
+      }
+      return true;
+    }
+
+    let ok = poll();
+    while (!ok && Date.now() - started < timeoutMs) {
+      await sleep(40);
+      ok = poll();
+    }
+    const count = prefix
+      ? listAgentUiTargets().filter((e) => e.testID.startsWith(prefix)).length
+      : undefined;
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'wait',
+        id: id ?? prefix ?? routeTarget,
+        ok,
+        detail: ok
+          ? `ready after ${Date.now() - started}ms`
+          : `timed out after ${timeoutMs}ms`,
+        count,
+        route: getAgentUiRoute(),
+      });
+    }
+    return ok;
+  }
 
   if (op === 'dump') {
     const dump = writeAgentUiDump();
-    writeAgentUiStatus({
-      op: 'dump',
-      ok: true,
-      detail: `Wrote ${dump.count} elements.`,
-      route: dump.route,
-    });
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'dump',
+        ok: true,
+        detail: `Wrote ${dump.count} elements.`,
+        count: dump.count,
+        route: dump.route,
+      });
+    }
     return true;
+  }
+
+  if (op === 'route') {
+    const route = getAgentUiRoute();
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'route',
+        ok: Boolean(route),
+        detail: route ?? 'unknown',
+        route,
+      });
+    }
+    return Boolean(route);
+  }
+
+  if (op === 'prefix') {
+    if (!prefix) {
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op: 'prefix',
+          ok: false,
+          detail: 'Missing prefix.',
+          count: 0,
+        });
+      }
+      return false;
+    }
+    const count = listAgentUiTargets().filter((e) =>
+      e.testID.startsWith(prefix),
+    ).length;
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'prefix',
+        id: prefix,
+        ok: count > 0,
+        detail: count > 0 ? `matches=${count}` : 'no matches',
+        count,
+        route: getAgentUiRoute(),
+      });
+    }
+    return count > 0;
   }
 
   if (op === 'reset' || op === 'goto') {
@@ -115,62 +384,115 @@ export async function handleAgentUiRequest(request: {
       op === 'reset' ? 'reset' : to,
     );
     if (!destination) {
-      writeAgentUiStatus({
-        op,
-        ok: false,
-        detail: 'Missing to/path destination for goto.',
-      });
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op,
+          ok: false,
+          detail: 'Missing to/path destination for goto.',
+        });
+      }
       return false;
     }
     const ok = agentUiNavigate(destination);
-    writeAgentUiStatus({
-      op,
-      ok,
-      detail: ok
-        ? `Navigated to ${destination}`
-        : 'Navigator not ready (wait for app mount).',
-      route: getAgentUiRoute(),
-    });
-    // Give navigation a tick, then refresh dump.
-    writeAgentUiDump();
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op,
+        ok,
+        detail: ok
+          ? `Navigated to ${destination}`
+          : 'Navigator not ready (wait for app mount).',
+        route: getAgentUiRoute(),
+      });
+    }
+    if (ok && refreshDump) writeAgentUiDump();
     return ok;
   }
 
   if (!id) {
-    writeAgentUiStatus({
-      op,
-      ok: false,
-      detail: 'Missing id query parameter.',
-    });
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op,
+        ok: false,
+        detail: 'Missing id query parameter.',
+      });
+    }
     return false;
   }
 
   if (op === 'exists') {
     const element = getAgentUiTarget(id);
-    writeAgentUiStatus({
-      op: 'exists',
-      id,
-      ok: Boolean(element),
-      detail: element ? 'found' : 'not found',
-      element,
-    });
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'exists',
+        id,
+        ok: Boolean(element),
+        detail: element ? 'found' : 'not found',
+        element,
+        route: getAgentUiRoute(),
+      });
+    }
     return Boolean(element);
   }
 
   const tapped = tapAgentUiTarget(id);
-  writeAgentUiStatus({
-    op: 'tap',
-    id,
-    ok: tapped,
-    detail: tapped ? 'tapped' : 'not found or not tappable',
-    element: getAgentUiTarget(id),
-  });
-  // Refresh dump after tap so hosts can re-read the tree.
-  writeAgentUiDump();
+  if (emitStatus) {
+    writeAgentUiStatus({
+      op: 'tap',
+      id,
+      ok: tapped,
+      detail: tapped ? 'tapped' : 'not found or not tappable',
+      element: getAgentUiTarget(id),
+      route: getAgentUiRoute(),
+    });
+  }
+  if (tapped && refreshDump) writeAgentUiDump();
   return tapped;
+}
+
+function hasWaitTarget(
+  id: string | undefined,
+  prefix: string | undefined,
+  routeTarget: string | undefined,
+): boolean {
+  return Boolean(id || prefix || routeTarget);
+}
+
+function routeMatches(current: string | null, target: string): boolean {
+  if (!current) return false;
+  const resolved = resolveAgentUiDestination(target) ?? target;
+  const want = resolved.split('?')[0];
+  if (current === want) return true;
+  if (current.endsWith(want)) return true;
+  if (want !== '/' && current.includes(want)) return true;
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function asSingle(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function asNumber(
+  value: number | string | string[] | undefined,
+): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const raw = asSingle(
+    typeof value === 'string' || Array.isArray(value) ? value : undefined,
+  );
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function asBool(value: boolean | string | string[] | undefined): boolean {
+  if (typeof value === 'boolean') return value;
+  const raw = asSingle(
+    typeof value === 'string' || Array.isArray(value) ? value : undefined,
+  );
+  if (!raw) return false;
+  return raw === '1' || raw.toLowerCase() === 'true';
 }

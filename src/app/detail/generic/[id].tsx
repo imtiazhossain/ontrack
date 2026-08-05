@@ -6,6 +6,7 @@ import { CategoryBadge } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { spacing } from '@/design-system';
 import { useSchedule } from '@/store/schedule';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { formatDuration, formatMinutes } from '@/utils/date';
 
 export default function GenericDetailScreen() {
@@ -21,7 +22,10 @@ export default function GenericDetailScreen() {
     return (
       <Screen>
         <AppText variant="title">Activity Not Found</AppText>
-        <Button onPress={() => router.back()} accessibilityLabel="Go Back">
+        <Button
+          onPress={() => router.back()}
+          accessibilityLabel="Go Back"
+          testID={AgentUiIds.eventDetail.goBack}>
           Go Back
         </Button>
       </Screen>
@@ -44,7 +48,8 @@ export default function GenericDetailScreen() {
         icon="edit"
         style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
         onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}
-        accessibilityLabel={`Edit ${activity.title}`}>
+        accessibilityLabel={`Edit ${activity.title}`}
+        testID={AgentUiIds.eventDetail.edit}>
         Edit event
       </Button>
 
@@ -68,10 +73,15 @@ export default function GenericDetailScreen() {
           onPress={() =>
             setStatus(activity.id, activity.status === 'completed' ? 'upcoming' : 'completed')
           }
-          accessibilityLabel="Toggle complete">
+          accessibilityLabel="Toggle complete"
+          testID={AgentUiIds.eventDetail.toggleComplete}>
           {activity.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
         </Button>
-        <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Close">
+        <Button
+          variant="ghost"
+          onPress={() => router.back()}
+          accessibilityLabel="Close"
+          testID={AgentUiIds.eventDetail.close}>
           Close
         </Button>
       </View>

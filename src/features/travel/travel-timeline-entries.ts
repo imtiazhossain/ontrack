@@ -1,4 +1,9 @@
-import { calculateFlightArrival, formatFlightItineraryCaption } from '@/features/travel/flight-arrival';
+import {
+  calculateFlightArrival,
+  formatFlightItineraryCaption,
+  type FlightItineraryCaptionInput,
+} from '@/features/travel/flight-arrival';
+import { formatFlightRouteLabel } from '@/features/travel/flight-route-label';
 import type { TravelItineraryItem, TravelRouteStop } from '@/features/travel/types';
 import { transportModeLabel } from '@/features/travel/travel-mode';
 import { formatDateKeyShort, formatDuration, formatMinutes, type DateDisplayFormat } from '@/utils/date';
@@ -40,10 +45,28 @@ const PHASE_TITLE: Record<Exclude<TravelTimelinePhase, 'default'>, string> = {
 };
 
 function flightRoute(item: TravelItineraryItem): string | undefined {
-  const route = [item.flight?.departureAirport, item.flight?.arrivalAirport]
-    .filter(Boolean)
-    .join(' → ');
-  return route || undefined;
+  return formatFlightRouteLabel(item.flight);
+}
+
+/** Caption inputs for a flight, shared by string and header renderers. */
+export function flightCaptionInput(
+  item: TravelItineraryItem,
+  dateDisplayFormat: DateDisplayFormat,
+): FlightItineraryCaptionInput {
+  const legCount = item.flight?.legs?.length;
+  return {
+    date: item.date,
+    dateLabel: formatDateKeyShort(item.date, dateDisplayFormat),
+    startMinutes: item.startMinutes,
+    durationMinutes: item.durationMinutes,
+    departureAirport: item.flight?.departureAirport,
+    arrivalAirport: item.flight?.arrivalAirport,
+    connectionAirport: item.flight?.connectionAirport,
+    layoverMinutesAfter: item.flight?.layoverMinutesAfter,
+    connectionArrivalMinutes: item.flight?.connectionArrivalMinutes,
+    connectionDepartureMinutes: item.flight?.connectionDepartureMinutes,
+    ...(legCount ? { legCount } : {}),
+  };
 }
 
 function expandItem(item: TravelItineraryItem): TravelTimelineEntry[] {
@@ -257,14 +280,9 @@ export function timelineEntryCaption(
     return `${dateLabel} · ${formatMinutes(item.startMinutes)}`;
   }
   if (item.kind === 'flight') {
-    return formatFlightItineraryCaption({
-      date: item.date,
-      dateLabel: formatDateKeyShort(item.date, dateDisplayFormat),
-      startMinutes: item.startMinutes,
-      durationMinutes: item.durationMinutes,
-      departureAirport: item.flight?.departureAirport,
-      arrivalAirport: item.flight?.arrivalAirport,
-    });
+    return formatFlightItineraryCaption(
+      flightCaptionInput(item, dateDisplayFormat),
+    );
   }
   if (item.kind === 'rental') {
     const pickup = `${formatDateKeyShort(item.date, dateDisplayFormat)} · ${formatMinutes(item.startMinutes)}`;

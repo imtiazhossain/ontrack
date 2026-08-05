@@ -2,7 +2,10 @@ import {
   expandedTripRangeForFlights,
   mergeImportedFlights,
 } from '../flight-confirmation-itinerary';
-import type { ParsedFlightSegment } from '../flight-confirmation-parser';
+import {
+  parseFlightConfirmation,
+  type ParsedFlightSegment,
+} from '../flight-confirmation-parser';
 import type { TravelItineraryItem } from '../types';
 
 const SEGMENTS: ParsedFlightSegment[] = [
@@ -106,7 +109,7 @@ describe('flight confirmation itinerary merge', () => {
     });
   });
 
-  it('persists a layover on the connecting itinerary leg', () => {
+  it('persists a layover on the connecting journey', () => {
     const result = mergeImportedFlights({
       itinerary: [],
       segments: [{ ...SEGMENTS[0], layoverMinutesAfter: 99 }, SEGMENTS[1]],
@@ -114,8 +117,9 @@ describe('flight confirmation itinerary merge', () => {
       createId: () => crypto.randomUUID(),
     });
 
+    expect(result).toHaveLength(1);
     expect(result[0].flight?.layoverMinutesAfter).toBe(99);
-    expect(result[1].flight?.layoverMinutesAfter).toBeUndefined();
+    expect(result[0].flight?.legs).toHaveLength(2);
   });
 
   it('keeps each separately imported flight confirmation on its own item', () => {
@@ -145,5 +149,107 @@ describe('flight confirmation itinerary merge', () => {
     expect(result[1].flight?.confirmationUris).toEqual([
       'file:///Documents/travel-confirmations/flight/return.png',
     ]);
+  });
+
+  it('collapses a Chase layover itinerary into one journey with legs', () => {
+    const segments = [
+      {
+        ...SEGMENTS[0],
+        title: 'Flight GUA → IAH',
+        date: '2026-09-27',
+        startMinutes: 90,
+        durationMinutes: 171,
+        arrivalMinutes: 5 * 60 + 21,
+        layoverMinutesAfter: 99,
+        flight: {
+          airline: 'United Airlines',
+          flightNumber: 'UA 1907',
+          confirmationCode: '',
+          departureAirport: 'GUA',
+          arrivalAirport: 'IAH',
+          seat: '',
+        },
+      },
+      {
+        ...SEGMENTS[1],
+        title: 'Flight IAH → LGA',
+        date: '2026-09-27',
+        startMinutes: 420,
+        durationMinutes: 209,
+        arrivalMinutes: 11 * 60 + 29,
+        flight: {
+          airline: 'United Airlines',
+          flightNumber: 'UA 1697',
+          confirmationCode: '',
+          departureAirport: 'IAH',
+          arrivalAirport: 'LGA',
+          seat: '',
+        },
+      },
+    ];
+    const result = mergeImportedFlights({
+      itinerary: [],
+      segments,
+      tripRange: { startDate: '2026-09-27', endDate: '2026-09-28' },
+      createId: () => crypto.randomUUID(),
+      confirmationUris: [
+        'file:///Documents/travel-confirmations/flight/chase.png',
+      ],
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].durationMinutes).toBe(9 * 60 + 59);
+    expect(result[0].flight).toMatchObject({
+      departureAirport: 'GUA',
+      arrivalAirport: 'LGA',
+      layoverMinutesAfter: 99,
+      connectionAirport: 'IAH',
+      connectionArrivalMinutes: 5 * 60 + 21,
+      connectionDepartureMinutes: 7 * 60,
+      confirmationUris: [
+        'file:///Documents/travel-confirmations/flight/chase.png',
+      ],
+    });
+    expect(result[0].flight?.legs).toHaveLength(2);
+    expect(result[0].flight?.legs?.[1]).toMatchObject({
+      flightNumber: 'UA 1697',
+      departureAirport: 'IAH',
+      arrivalAirport: 'LGA',
+      departureMinutes: 420,
+      arrivalMinutes: 11 * 60 + 29,
+    });
+  });
+
+  it('uses printed door-to-door total from a parsed Chase confirmation', () => {
+    const imported = parseFlightConfirmation(
+      `
+      Flight details
+      Guatemala City (GUA) → New York (LGA)
+      Sun, Sep 27, 2026
+      1:30 am
+      Guatemala City, GT (GUA)
+      United Airlines
+      UA 1907
+      2h 51m
+      5:21 am
+      Houston, US (IAH)
+      1h 39m layover in Houston
+      7:00 am
+      Houston, US (IAH)
+      United Airlines
+      UA 1697
+      3h 29m
+      11:29 am
+      New York, US (LGA)
+    `,
+      { startDate: '2026-09-27', endDate: '2026-09-30' },
+    );
+    const result = mergeImportedFlights({
+      itinerary: [],
+      segments: imported.segments,
+      tripRange: { startDate: '2026-09-27', endDate: '2026-09-30' },
+      createId: () => 'chase',
+    });
+    expect(result[0].durationMinutes).toBe(9 * 60 + 59);
   });
 });

@@ -48,7 +48,7 @@ describe('new trip creation feedback', () => {
     );
   });
 
-  it('labels dates as start and end only on the new-trip form', () => {
+  it('opens a Dates field into a multiselect range calendar modal', () => {
     const newTripCard = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-new-trip-card.tsx'),
       'utf8',
@@ -58,9 +58,16 @@ describe('new trip creation feedback', () => {
       'utf8',
     );
 
-    expect(newTripCard).toContain('startLabel="Start"');
-    expect(newTripCard).toContain('endLabel="End"');
-    expect(dateRangeEditor).toContain("startLabel = 'Departure'");
-    expect(dateRangeEditor).toContain("endLabel = 'Return'");
+    expect(newTripCard).toContain('testID={AgentUiIds.travel.newTrip.dates}');
+    expect(newTripCard).toContain('calendarTestID={AgentUiIds.travel.newTrip.calendar}');
+    expect(dateRangeEditor).toContain('Dates');
+    expect(dateRangeEditor).toContain('<TravelSheetModal');
+    expect(dateRangeEditor).toContain('<DateFieldCalendar');
+    expect(dateRangeEditor).toContain(
+      'rangeStart={draftHasStart ? fromDateKey(draftStart) : undefined}',
+    );
+    expect(dateRangeEditor).toContain(
+      'rangeEnd={draftHasEnd ? fromDateKey(draftEnd) : undefined}',
+    );
   });
 });

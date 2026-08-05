@@ -6,6 +6,7 @@ import { fontFamilies, spacing } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
+import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
 import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import type { TravelPlan } from '@/features/travel/types';
 import { travelPlanModeLabel } from '@/features/travel/travel-mode';
@@ -80,11 +81,7 @@ export function TravelPlanHero({
         testID={onEditDates ? AgentUiIds.travel.list.editDates(plan.id) : undefined}
       />
 
-      {plan.notes ? (
-        <AppText variant="body" color="secondary" style={styles.serif} numberOfLines={3}>
-          {plan.notes}
-        </AppText>
-      ) : null}
+      {plan.notes ? <TravelTripNotesCard notes={plan.notes} /> : null}
     </View>
   );
 }

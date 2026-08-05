@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Button, IconButton, Symbol } from '@/components/primitives';
+import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
@@ -39,38 +39,44 @@ export function TravelSheetAction({
     <Button
       variant="secondary"
       shape="rounded"
-      leading={
-        <View
-          style={[
-            styles.actionIcon,
-            {
-              width: iconBox,
-              height: iconBox,
-              borderRadius: Math.max(8, s(9)),
-              backgroundColor: iconTone.bg,
-            },
-          ]}>
-          <Symbol name={icon} size="sm" color={iconTone.fg} />
-          {badgeIcon ? (
-            <View
-              style={[
-                styles.actionIconBadge,
-                {
-                  width: badgeSize,
-                  height: badgeSize,
-                  borderRadius: badgeSize / 2,
-                  backgroundColor: theme.backgroundElevated,
-                  borderColor: iconTone.bg,
-                },
-              ]}>
-              <Symbol name={badgeIcon} size={9} color={iconTone.fg} />
-            </View>
-          ) : null}
-        </View>
-      }
       onPress={onPress}
       testID={testID}
       accessibilityLabel={accessibilityLabel}
+      // One inner row owns icon+label centering.
+      leading={
+        <View style={[styles.actionContent, { gap: spacing.sm }]}>
+          <View
+            style={[
+              styles.actionIcon,
+              {
+                width: iconBox,
+                height: iconBox,
+                borderRadius: Math.max(8, s(9)),
+                backgroundColor: iconTone.bg,
+              },
+            ]}>
+            <Symbol name={icon} size="sm" color={iconTone.fg} />
+            {badgeIcon ? (
+              <View
+                style={[
+                  styles.actionIconBadge,
+                  {
+                    width: badgeSize,
+                    height: badgeSize,
+                    borderRadius: badgeSize / 2,
+                    backgroundColor: theme.backgroundElevated,
+                    borderColor: iconTone.bg,
+                  },
+                ]}>
+                <Symbol name={badgeIcon} size={9} color={iconTone.fg} />
+              </View>
+            ) : null}
+          </View>
+          <AppText variant="callout" fit style={styles.actionLabel}>
+            {label}
+          </AppText>
+        </View>
+      }
       style={[
         styles.action,
         wide ? styles.actionWide : undefined,
@@ -80,7 +86,7 @@ export function TravelSheetAction({
           borderColor: theme.separator,
         },
       ]}>
-      {label}
+      {null}
     </Button>
   );
 }
@@ -174,6 +180,12 @@ export function TravelSheetIconControl({
 }
 
 const styles = StyleSheet.create({
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+  },
   actionIcon: {
     position: 'relative',
     alignItems: 'center',
@@ -189,13 +201,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
   },
+  actionLabel: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
   action: {
     flexGrow: 1,
     flexBasis: '47%',
     minWidth: 0,
+    // Left-align icon+label so every tile in the 2-column grid shares one
+    // icon column (center justify makes short labels drift vs long ones).
+    justifyContent: 'flex-start',
     borderWidth: StyleSheet.hairlineWidth,
   },
   actionWide: {
     flexBasis: '100%',
+    // Full-width itinerary CTA stays centered as the primary next step.
+    justifyContent: 'center',
   },
 });

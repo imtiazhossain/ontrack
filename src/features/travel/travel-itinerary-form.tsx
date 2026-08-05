@@ -27,6 +27,7 @@ import { ItinerarySheetImportCard } from '@/features/travel/travel-itinerary-she
 import type { TravelItemKind } from '@/features/travel/types';
 import type { TransportDetailsDraft } from '@/features/travel/transport-details';
 import { TransportDetailsEditor } from '@/features/travel/transport-details-editor';
+import { useAutoGrowingNote } from '@/features/travel/use-auto-growing-note';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -146,15 +147,16 @@ export function TravelItineraryForm({
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
-  const { s, spacing: rs } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const [photosModalVisible, setPhotosModalVisible] = useState(false);
   const isMoment = kind === 'moment';
   const usesRange = kind === 'stay' || kind === 'flight' || kind === 'rental';
   const showDuration = kind === 'activity';
   const thumb = Math.max(64, s(72));
-  const detailsMinHeight = Math.max(56, s(60));
-  const [detailsHeight, setDetailsHeight] = useState(detailsMinHeight);
-  const [stayNotesHeight, setStayNotesHeight] = useState(detailsMinHeight);
+  // Grow the TextInput value area only — outer stacked chrome already sizes the row.
+  const detailsMinHeight = Math.max(22, Math.ceil(typography.body.lineHeight));
+  const detailsNote = useAutoGrowingNote(details, detailsMinHeight);
+  const stayNote = useAutoGrowingNote(stayDetails.notes, detailsMinHeight);
 
   const rangeStartLabel =
     kind === 'stay'
@@ -447,19 +449,11 @@ export function TravelItineraryForm({
           textAlignVertical="top"
           onChangeText={(next) => {
             const clipped = next.slice(0, DETAILS_MAX_LENGTH);
-            if (!clipped) setDetailsHeight(detailsMinHeight);
+            detailsNote.collapseWhenEmpty(clipped);
             onDetailsChange(clipped);
           }}
-          onContentSizeChange={(event) => {
-            const next = Math.ceil(event.nativeEvent.contentSize.height);
-            setDetailsHeight((current) => {
-              const measured = Math.max(detailsMinHeight, next);
-              return measured === current ? current : measured;
-            });
-          }}
-          style={{
-            minHeight: Math.max(detailsMinHeight, detailsHeight),
-          }}
+          onContentSizeChange={detailsNote.onContentSizeChange}
+          style={detailsNote.style}
           {...itinerarySheetFieldProps(chrome, 'note')}
         />
       )}
@@ -602,7 +596,7 @@ export function TravelItineraryForm({
           value={stayDetails.notes}
           onChangeText={(nextValue) => {
             const clipped = nextValue.slice(0, DETAILS_MAX_LENGTH);
-            if (!clipped) setStayNotesHeight(detailsMinHeight);
+            stayNote.collapseWhenEmpty(clipped);
             onStayDetailsChange({
               ...stayDetails,
               notes: clipped,
@@ -616,16 +610,8 @@ export function TravelItineraryForm({
           scrollEnabled={false}
           maxLength={DETAILS_MAX_LENGTH}
           textAlignVertical="top"
-          onContentSizeChange={(event) => {
-            const next = Math.ceil(event.nativeEvent.contentSize.height);
-            setStayNotesHeight((current) => {
-              const measured = Math.max(detailsMinHeight, next);
-              return measured === current ? current : measured;
-            });
-          }}
-          style={{
-            minHeight: Math.max(detailsMinHeight, stayNotesHeight),
-          }}
+          onContentSizeChange={stayNote.onContentSizeChange}
+          style={stayNote.style}
           {...itinerarySheetFieldProps(chrome, 'note')}
         />
       ) : null}

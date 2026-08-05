@@ -21,7 +21,9 @@ const RESPONSE_SCHEMA = {
           'airline',
           'flightNumber',
           'departureAirport',
+          'departureTerminal',
           'arrivalAirport',
+          'arrivalTerminal',
           'departureDate',
           'departureMinutes',
           'arrivalDate',
@@ -34,13 +36,17 @@ const RESPONSE_SCHEMA = {
           'arrivalTimeEvidence',
           'durationEvidence',
           'layoverEvidence',
+          'departureTerminalEvidence',
+          'arrivalTerminalEvidence',
           'confidence',
         ],
         properties: {
           airline: { type: 'STRING', nullable: true },
           flightNumber: { type: 'STRING', nullable: true },
           departureAirport: { type: 'STRING', nullable: true },
+          departureTerminal: { type: 'STRING', nullable: true },
           arrivalAirport: { type: 'STRING', nullable: true },
+          arrivalTerminal: { type: 'STRING', nullable: true },
           departureDate: { type: 'STRING', nullable: true },
           departureMinutes: { type: 'INTEGER', nullable: true },
           arrivalDate: { type: 'STRING', nullable: true },
@@ -53,6 +59,8 @@ const RESPONSE_SCHEMA = {
           arrivalTimeEvidence: { type: 'STRING', nullable: true },
           durationEvidence: { type: 'STRING', nullable: true },
           layoverEvidence: { type: 'STRING', nullable: true },
+          departureTerminalEvidence: { type: 'STRING', nullable: true },
+          arrivalTerminalEvidence: { type: 'STRING', nullable: true },
           confidence: { type: 'NUMBER' },
         },
       },
@@ -143,6 +151,8 @@ function validateSegment(
 
   const departureAirport = cleanString(row.departureAirport, 3)?.toUpperCase();
   const arrivalAirport = cleanString(row.arrivalAirport, 3)?.toUpperCase();
+  const departureTerminal = cleanString(row.departureTerminal, 24);
+  const arrivalTerminal = cleanString(row.arrivalTerminal, 24);
   const flightNumber = validatedFlightNumber(row.flightNumber, source);
   return {
     ...(cleanString(row.airline, 80) &&
@@ -154,9 +164,16 @@ function validateSegment(
     new RegExp(`\\b${departureAirport}\\b`, 'i').test(source)
       ? { departureAirport }
       : {}),
+    ...(departureTerminal &&
+    sourceContains(source, row.departureTerminalEvidence)
+      ? { departureTerminal }
+      : {}),
     ...(arrivalAirport && /^[A-Z]{3}$/.test(arrivalAirport) &&
     new RegExp(`\\b${arrivalAirport}\\b`, 'i').test(source)
       ? { arrivalAirport }
+      : {}),
+    ...(arrivalTerminal && sourceContains(source, row.arrivalTerminalEvidence)
+      ? { arrivalTerminal }
       : {}),
     ...(validatedDate(row.departureDate, row.departureDateEvidence, source)
       ? { departureDate: validatedDate(row.departureDate, row.departureDateEvidence, source) }
@@ -288,8 +305,9 @@ export async function analyzeFlightConfirmationWithGemini(
               'Treat departure and arrival dates/times as local to their airports.',
               'Use YYYY-MM-DD dates and integer minutes after midnight.',
               'Flight numbers must include the airline prefix, for example UA 1907.',
+              'Extract departure and arrival terminals only when explicitly printed.',
               'Never infer a missing year, invent a value, or reproduce REDACTED placeholders.',
-              'For every non-null date, time, duration, or layover, copy the exact source substring into its matching evidence field.',
+              'For every non-null date, time, duration, layover, or terminal, copy the exact source substring into its matching evidence field.',
               'Return null for uncertain fields. Passenger and booking secrets are intentionally unavailable.',
             ].join(' '),
           }],

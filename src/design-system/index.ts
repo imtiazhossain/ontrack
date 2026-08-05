@@ -35,6 +35,7 @@ export {
   darkVehicleTheme,
   categoryColors,
   timeOfDayGradient,
+  timeOfDaySafeAreaBackground,
   type Theme,
   type CategoryColors,
 } from './themes';

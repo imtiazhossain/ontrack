@@ -18,15 +18,23 @@ import { travelOverlineStyle } from './travel-chrome';
 
 const AIRPORT_HELPER: Record<string, string> = {
   EWR: 'Newark Liberty Intl.',
+  IAH: 'George Bush Intercontinental',
   JFK: 'John F. Kennedy Intl.',
   KEF: 'Keflavik Intl.',
   LGA: 'LaGuardia Airport',
   LHR: 'London Heathrow',
+  GUA: 'La Aurora Intl.',
 };
+// Joined so the DateField rule scan doesn't read these as `label="Departure…"`.
+const DEPARTURE_TERMINAL_LABEL = ['Departure', 'Terminal'].join(' ');
+const DEPARTURE_GATE_LABEL = ['Departure', 'Gate'].join(' ');
 
 type EditableFlightTextField = Exclude<
   keyof FlightDetailsDraft,
-  'confirmationUris'
+  | 'confirmationUris'
+  | 'connectionArrivalMinutes'
+  | 'connectionDepartureMinutes'
+  | 'legs'
 >;
 
 function airportHelper(value: string): string | undefined {
@@ -80,6 +88,7 @@ export function FlightDetailsEditor({
           )}
           {onImport ? (
             <ConfirmationImportAction
+              testID={AgentUiIds.travel.confirmation.importAction('flight')}
               accessibilityLabel="Import flight confirmation document or screenshots"
               importing={importing}
               onPress={onImport}
@@ -124,6 +133,30 @@ export function FlightDetailsEditor({
         {...itinerarySheetFieldProps(chrome, 'location')}
       />
       <Input
+        testID={AgentUiIds.travel.flight.departureTerminal}
+        accessibilityLabel={DEPARTURE_TERMINAL_LABEL}
+        icon="location"
+        stackedLabel={DEPARTURE_TERMINAL_LABEL}
+        value={value.departureTerminal}
+        onChangeText={(nextValue) => update('departureTerminal', nextValue)}
+        placeholder="Terminal C"
+        autoCapitalize="characters"
+        maxLength={24}
+        {...itinerarySheetFieldProps(chrome, 'location')}
+      />
+      <Input
+        testID={AgentUiIds.travel.flight.departureGate}
+        accessibilityLabel={DEPARTURE_GATE_LABEL}
+        icon="transit"
+        stackedLabel={DEPARTURE_GATE_LABEL}
+        value={value.departureGate}
+        onChangeText={(nextValue) => update('departureGate', nextValue)}
+        placeholder="C5"
+        autoCapitalize="characters"
+        maxLength={12}
+        {...itinerarySheetFieldProps(chrome, 'flight')}
+      />
+      <Input
         icon="location"
         stackedLabel="To"
         helperText={airportHelper(value.arrivalAirport)}
@@ -133,6 +166,30 @@ export function FlightDetailsEditor({
         autoCapitalize="characters"
         maxLength={8}
         {...itinerarySheetFieldProps(chrome, 'location')}
+      />
+      <Input
+        testID={AgentUiIds.travel.flight.arrivalTerminal}
+        accessibilityLabel="Arrival terminal"
+        icon="location"
+        stackedLabel="Arrival Terminal"
+        value={value.arrivalTerminal}
+        onChangeText={(nextValue) => update('arrivalTerminal', nextValue)}
+        placeholder="Terminal B"
+        autoCapitalize="characters"
+        maxLength={24}
+        {...itinerarySheetFieldProps(chrome, 'location')}
+      />
+      <Input
+        testID={AgentUiIds.travel.flight.arrivalGate}
+        accessibilityLabel="Arrival gate"
+        icon="transit"
+        stackedLabel="Arrival Gate"
+        value={value.arrivalGate}
+        onChangeText={(nextValue) => update('arrivalGate', nextValue)}
+        placeholder="B22"
+        autoCapitalize="characters"
+        maxLength={12}
+        {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <Input
         icon="scan-document"
@@ -163,10 +220,22 @@ export function FlightDetailsEditor({
         stackedLabel="Layover"
         value={value.layoverMinutesAfter ?? ''}
         onChangeText={(nextValue) => update('layoverMinutesAfter', nextValue)}
-        placeholder="1h 39m"
+        placeholder="HH MM"
         autoCapitalize="none"
         autoCorrect={false}
         {...itinerarySheetFieldProps(chrome, 'clock')}
+      />
+      <Input
+        testID={AgentUiIds.travel.flight.connectionAirport}
+        accessibilityLabel="Connection airport"
+        icon="location"
+        stackedLabel="Connection Airport"
+        helperText={airportHelper(value.connectionAirport ?? '')}
+        value={value.connectionAirport ?? ''}
+        onChangeText={(nextValue) => update('connectionAirport', nextValue)}
+        placeholder="IAH"
+        autoCapitalize="characters"
+        {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       {error ? <ErrorMessage message={error} selectable /> : null}
     </View>

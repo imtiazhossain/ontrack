@@ -106,13 +106,15 @@ export function Button({
       ) : icon ? (
         <Symbol name={icon} size="sm" color={iconColor} />
       ) : null}
-      <AppText
-        variant={size === 'lg' ? 'subheading' : size === 'sm' ? 'caption' : 'callout'}
-        color={textColor}
-        fit
-        style={[{ flexShrink: 1 }, textStyle]}>
-        {children}
-      </AppText>
+      {children != null && children !== false && children !== '' ? (
+        <AppText
+          variant={size === 'lg' ? 'subheading' : size === 'sm' ? 'caption' : 'callout'}
+          color={textColor}
+          fit
+          style={[{ flexShrink: 1, minWidth: 0 }, textStyle]}>
+          {children}
+        </AppText>
+      ) : null}
     </Pressable>
   );
 }

@@ -1,6 +1,7 @@
 import {
   confirmationUrisForDisplay,
   isImageConfirmationUri,
+  newestStoredConfirmationUris,
   normalizeConfirmationUris,
   resolveConfirmationUris,
 } from '../confirmation-attachments';
@@ -43,5 +44,10 @@ describe('confirmation attachments', () => {
   it('does not borrow another item\'s confirmation when none is stored', () => {
     expect(confirmationUrisForDisplay(undefined, 'flight')).toEqual([]);
     expect(confirmationUrisForDisplay([], 'stay')).toEqual([]);
+  });
+
+  it('exports newest-on-disk confirmation lookup for orphan recovery', () => {
+    expect(typeof newestStoredConfirmationUris).toBe('function');
+    expect(newestStoredConfirmationUris('flight', 0)).toEqual([]);
   });
 });

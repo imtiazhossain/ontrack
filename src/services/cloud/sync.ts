@@ -12,10 +12,7 @@ import {
     hasCustomizedVisionBoardItems,
 } from '@/features/vision-board/selectors';
 import { ensurePlantSample } from '@/features/plants/sample';
-import type {
-    VisionBoardCategory,
-    VisionBoardItem,
-} from '@/features/vision-board/types';
+import type { VisionBoardCategory, VisionBoardItem } from '@/features/vision-board/types';
 import { deletePlant } from '@/services/plants/schedule';
 import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
 import { pullAllTravelTripExpenses } from '@/services/travel/expense-collaboration';

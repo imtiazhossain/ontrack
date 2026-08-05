@@ -1,6 +1,7 @@
 import type { ActivityDraft } from '@/store/schedule';
 import { addDays } from '@/utils/date';
 
+import { formatFlightRouteLabel } from './flight-route-label';
 import type { TravelItemKind, TravelPlan } from './types';
 
 const ITEM_ICON: Record<Exclude<TravelItemKind, 'moment'>, string> = {
@@ -118,9 +119,7 @@ export function travelCalendarDrafts(plan: TravelPlan): ActivityDraft[] {
         ];
       }
       const flightRoute = item.flight
-        ? [item.flight.departureAirport, item.flight.arrivalAirport]
-            .filter(Boolean)
-            .join(' → ')
+        ? formatFlightRouteLabel(item.flight)
         : undefined;
       const flightNumber = item.flight
         ? [item.flight.airline, item.flight.flightNumber].filter(Boolean).join(' · ')

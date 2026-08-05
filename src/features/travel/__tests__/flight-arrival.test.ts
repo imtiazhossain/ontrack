@@ -104,7 +104,7 @@ describe('flight arrival', () => {
     });
   });
 
-  it('formats the itinerary caption with landing time', () => {
+  it('formats non-stop captions with total time and the non-stop descriptor', () => {
     expect(
       formatFlightItineraryCaption({
         date: '2026-09-08',
@@ -114,6 +114,39 @@ describe('flight arrival', () => {
         departureAirport: 'EWR',
         arrivalAirport: 'KEF',
       }),
-    ).toBe('9/8 · 8:25 PM → 6:15 AM (+1) · 5h 50m');
+    ).toBe('9/8 · 5h 50m total · Nonstop');
+  });
+
+  it('formats connecting journey captions with total time and stops', () => {
+    expect(
+      formatFlightItineraryCaption({
+        date: '2026-09-27',
+        dateLabel: '9/27',
+        startMinutes: 90,
+        durationMinutes: 9 * 60 + 59,
+        departureAirport: 'GUA',
+        arrivalAirport: 'LGA',
+        connectionAirport: 'IAH',
+        layoverMinutesAfter: 99,
+        connectionArrivalMinutes: 5 * 60 + 21,
+        connectionDepartureMinutes: 7 * 60,
+        legCount: 2,
+      }),
+    ).toBe('9/27 · 9h 59m total · 1 stop');
+  });
+
+  it('uses the connecting summary when only connection airport is known', () => {
+    expect(
+      formatFlightItineraryCaption({
+        date: '2026-09-27',
+        dateLabel: '9/27',
+        startMinutes: 90,
+        durationMinutes: 9 * 60 + 59,
+        departureAirport: 'GUA',
+        arrivalAirport: 'LGA',
+        connectionAirport: 'IAH',
+        layoverMinutesAfter: 99,
+      }),
+    ).toBe('9/27 · 9h 59m total · 1 stop');
   });
 });

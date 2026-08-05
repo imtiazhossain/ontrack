@@ -124,6 +124,10 @@ export function DateField({
     onChange(toDateKey(draftDate));
     setShowPicker(false);
   };
+  const doneAgent = useAgentUiTarget(testID ? `${testID}.done` : undefined, {
+    label: 'Done',
+    onPress: commitDraft,
+  });
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -255,6 +259,7 @@ export function DateField({
                 <IconButton
                   icon="close"
                   accessibilityLabel="Close calendar"
+                  testID={testID ? `${testID}.close` : undefined}
                   background={theme.backgroundSunken}
                   borderColor={theme.separator}
                   onPress={() => setShowPicker(false)}
@@ -270,6 +275,9 @@ export function DateField({
                 testID={testID}
               />
               <Pressable
+                ref={doneAgent.ref}
+                testID={testID ? `${testID}.done` : undefined}
+                onLayout={doneAgent.onLayout}
                 accessibilityRole="button"
                 accessibilityLabel="Done"
                 onPress={commitDraft}

@@ -92,7 +92,7 @@ export function useTravelPageStyle(theme: Theme): ViewStyle {
   return travelPageStyle(theme);
 }
 
-/** Continue the page wash behind the status bar without changing content insets. */
+/** Continue the page wash behind the status bar via shared `useSafeAreaChrome`. */
 export function travelSafeAreaStyle(
   theme: Theme,
   _atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,

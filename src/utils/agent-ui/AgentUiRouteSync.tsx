@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 
-import { handleAgentUiRequest } from './handle-agent-ui-url';
+import { handleAgentUiRequest, type AgentUiRequest } from './handle-agent-ui-url';
 import { AGENT_UI_COMMAND_FILENAME } from './persist';
 import { isAgentUiEnabled } from './registry';
 import { setAgentUiNavigator, setAgentUiRoute } from './route';
@@ -10,6 +10,7 @@ import { setAgentUiNavigator, setAgentUiRoute } from './route';
 /**
  * Keeps agent-ui dump `route` in sync and registers an in-app navigator for
  * `op=goto` / `op=reset` without screenshot coordinates.
+ * Polls Documents/`agent-ui-command.json` so host scripts avoid openurl round-trips.
  */
 export function AgentUiRouteSync() {
   const pathname = usePathname();
@@ -34,14 +35,20 @@ export function AgentUiRouteSync() {
       if (processing || !command.exists) return;
       processing = true;
       try {
-        const request = JSON.parse(command.textSync()) as { op?: string; id?: string; to?: string };
+        const request = JSON.parse(command.textSync()) as AgentUiRequest;
         command.delete();
-        void handleAgentUiRequest(request).finally(() => { processing = false; });
+        void handleAgentUiRequest(request).finally(() => {
+          processing = false;
+        });
       } catch {
-        try { command.delete(); } catch { /* Ignore a concurrent host rewrite. */ }
+        try {
+          command.delete();
+        } catch {
+          /* Ignore a concurrent host rewrite. */
+        }
         processing = false;
       }
-    }, 75);
+    }, 40);
     return () => clearInterval(timer);
   }, []);
 

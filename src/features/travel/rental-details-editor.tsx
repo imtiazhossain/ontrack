@@ -10,6 +10,7 @@ import {
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { ConfirmationImportBanner } from './confirmation-import-banner';
 import type { RentalDetailsDraft } from './rental-details';
@@ -79,6 +80,7 @@ export function RentalDetailsEditor({
           )}
           {onImport ? (
             <ConfirmationImportAction
+              testID={AgentUiIds.travel.confirmation.importAction('rental')}
               accessibilityLabel="Import car rental confirmation document or screenshots"
               importing={importing}
               onPress={onImport}

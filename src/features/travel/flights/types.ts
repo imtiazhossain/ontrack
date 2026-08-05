@@ -49,3 +49,34 @@ export interface FlightApiError {
   error?: string;
   code?: 'INVALID_SEARCH' | 'NOT_CONFIGURED' | 'NO_AIRPORT' | 'RATE_LIMITED' | 'PROVIDER_FAILURE';
 }
+
+export type FlightOperationalStatus =
+  | 'scheduled'
+  | 'check-in'
+  | 'boarding'
+  | 'gate-closed'
+  | 'departed'
+  | 'delayed'
+  | 'approaching'
+  | 'landed'
+  | 'cancelled'
+  | 'diverted'
+  | 'unknown';
+
+export interface FlightStatusInput {
+  flightNumber: string;
+  date: string;
+  departureAirport?: string;
+  arrivalAirport?: string;
+  mode: 'terminals' | 'status';
+}
+
+export interface FlightStatusResponse {
+  departureTerminal?: string;
+  departureGate?: string;
+  arrivalTerminal?: string;
+  arrivalGate?: string;
+  status?: FlightOperationalStatus;
+  statusLabel?: string;
+  checkedAt: string;
+}

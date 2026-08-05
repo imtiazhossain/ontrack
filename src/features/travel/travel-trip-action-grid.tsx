@@ -3,9 +3,14 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
 import { spacing } from '@/design-system';
-import { AgentUiIds } from '@/utils/agent-ui';
+import {
+  TravelCoTravelerStack,
+  type CoTravelerAvatarPerson,
+} from '@/features/travel/travel-cotraveler-stack';
 import { promotesFlightSearch } from '@/features/travel/travel-mode';
 import type { TravelPlanMode } from '@/features/travel/types';
+import { useResponsive } from '@/hooks/use-responsive';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 import { TravelSheetAction } from './travel-list-actions';
 
@@ -15,6 +20,9 @@ interface TravelTripActionGridProps {
   destination: string;
   mode: TravelPlanMode;
   isOnCalendar: boolean;
+  coTravelers: CoTravelerAvatarPerson[];
+  coTravelersExpanded: boolean;
+  onCoTravelersExpandedChange: (expanded: boolean) => void;
   onOpenItinerary: () => void;
   onOpenCalendar: () => void;
   onSearchFlights: () => void;
@@ -29,16 +37,27 @@ interface TravelTripActionGridProps {
 
 function ActionGroup({
   title,
+  trailing,
   children,
 }: {
   title: string;
+  trailing?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <View style={styles.group}>
-      <AppText variant="callout" color="secondary" bold>
-        {title}
-      </AppText>
+      <View style={styles.groupHeader}>
+        <AppText
+          variant="callout"
+          color="secondary"
+          bold
+          fit
+          numberOfLines={1}
+          style={styles.groupTitle}>
+          {title}
+        </AppText>
+        {trailing ? <View style={styles.groupTrailing}>{trailing}</View> : null}
+      </View>
       <View style={styles.grid}>{children}</View>
     </View>
   );
@@ -51,6 +70,9 @@ export function TravelTripActionGrid({
   destination,
   mode,
   isOnCalendar,
+  coTravelers,
+  coTravelersExpanded,
+  onCoTravelersExpandedChange,
   onOpenItinerary,
   onOpenCalendar,
   onSearchFlights,
@@ -62,6 +84,10 @@ export function TravelTripActionGrid({
   onOpenChat,
   onOpenCoTravelers,
 }: TravelTripActionGridProps) {
+  const { s } = useResponsive();
+  // Keep the stacked chip budget tight so many travelers overlap beside the title.
+  const coTravelerPackWidth = Math.max(72, s(96));
+
   return (
     <View style={styles.container}>
       <View style={styles.itineraryAction}>
@@ -146,7 +172,18 @@ export function TravelTripActionGrid({
         />
       </ActionGroup>
 
-      <ActionGroup title="Travel together">
+      <ActionGroup
+        title="Travel together"
+        trailing={
+          coTravelers.length > 0 ? (
+            <TravelCoTravelerStack
+              people={coTravelers}
+              expanded={coTravelersExpanded}
+              maxPackedWidth={coTravelerPackWidth}
+              onExpandedChange={onCoTravelersExpandedChange}
+            />
+          ) : null
+        }>
         <TravelSheetAction
           label="Group Chat"
           icon="chat"
@@ -178,6 +215,23 @@ const styles = StyleSheet.create({
   },
   group: {
     gap: spacing.sm,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    minHeight: 32,
+    overflow: 'visible',
+    zIndex: 4,
+  },
+  groupTitle: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  groupTrailing: {
+    flexShrink: 0,
+    overflow: 'visible',
   },
   grid: {
     flexDirection: 'row',

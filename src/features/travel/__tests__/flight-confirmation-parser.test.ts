@@ -92,7 +92,7 @@ describe('flight confirmation parser', () => {
       'Confirmation # Q7W9K2\nDL 246\nATL → LAX\n09/10/2026\nDepart 07:05 AM',
       { startDate: '2026-09-01', endDate: '2026-09-30' },
     );
-    expect(result.flight).toEqual({
+    expect(result.flight).toMatchObject({
       airline: 'Delta',
       flightNumber: 'DL 246',
       confirmationCode: 'Q7W9K2',
@@ -102,6 +102,27 @@ describe('flight confirmation parser', () => {
     });
     expect(result.date).toBe('2026-09-10');
     expect(result.startMinutes).toBe(425);
+  });
+
+  it('extracts explicitly labeled departure and arrival terminals', () => {
+    const result = parseFlightConfirmation(
+      [
+        'Flight UA 1907',
+        'GUA → IAH',
+        'Departure terminal: 2',
+        'Arrival terminal: C',
+        'September 27, 2026',
+        'Depart 1:30 AM',
+      ].join('\n'),
+      { startDate: '2026-09-27', endDate: '2026-09-27' },
+    );
+
+    expect(result.flight).toMatchObject({
+      departureAirport: 'GUA',
+      departureTerminal: '2',
+      arrivalAirport: 'IAH',
+      arrivalTerminal: 'C',
+    });
   });
 
   it('ignores unrelated dates outside the trip range', () => {
@@ -306,6 +327,50 @@ describe('flight confirmation parser', () => {
       },
     });
   });
+
+  it('recovers a connecting leg from timed airports when a flight number is missing', () => {
+    const parsed = parseFlightConfirmation(
+      `
+        Flight details
+        Guatemala City (GUA) → New York (LGA)
+        Sun, Sep 27, 2026
+        1:30 am
+        Guatemala City, GT (GUA)
+        United Airlines
+        UA 1907
+        2h 51m
+        5:21 am
+        Houston, US (IAH)
+        1h 39m layover in Houston
+        7:00 am
+        Houston, US (IAH)
+        United Airlines
+        3h 29m
+        11:29 am
+        New York, US (LGA)
+      `,
+      { startDate: '2026-09-27', endDate: '2026-09-27' },
+    );
+
+    expect(parsed.segments).toHaveLength(2);
+    expect(parsed.segments[0]).toMatchObject({
+      title: 'Flight GUA → IAH',
+      layoverMinutesAfter: 99,
+      flight: {
+        flightNumber: 'UA 1907',
+        departureAirport: 'GUA',
+        arrivalAirport: 'IAH',
+      },
+    });
+    expect(parsed.segments[1]).toMatchObject({
+      title: 'Flight IAH → LGA',
+      startMinutes: 420,
+      flight: {
+        departureAirport: 'IAH',
+        arrivalAirport: 'LGA',
+      },
+    });
+  });
 });
 
 describe('flight confirmation expense', () => {
@@ -342,6 +407,36 @@ describe('flight confirmation expense', () => {
       currency: 'USD',
       notes: 'Confirmation: AB2ZQV',
       title: 'Flights EWR ↔ KEF',
+    });
+  });
+
+  it('reads the traveler count and per-leg gates', () => {
+    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
+    expect(parsed.segments.map((segment) => segment.flight.passengerCount)).toEqual(
+      ['2', '2'],
+    );
+
+    const boardingPass = parseFlightConfirmation(`
+      United Airlines
+      Confirmation: HF7K2Q
+      Flight UA 1907
+      Guatemala City (GUA) to New York (LGA)
+      Departure: September 27, 2026 1:30 AM
+      Departure terminal: 1
+      Departure gate: 5
+      Arrival terminal: B
+      Arrival gate: 22
+      Passenger: Ada Lovelace
+    `);
+    expect(boardingPass.flight).toMatchObject({
+      departureTerminal: '1',
+      departureGate: '5',
+      arrivalTerminal: 'B',
+      arrivalGate: '22',
+      passengerName: 'Ada Lovelace',
     });
   });
 

@@ -18,28 +18,36 @@ export type TravelDetailsSummaryRow = {
   value?: string;
   detail?: string;
   icon?: AppIconName;
+  /** Brand mark filling the icon well instead of the glyph (airline logos). */
+  mark?: ReactNode;
 };
 
 export function TravelDetailsSummaryCard({
   title,
   subtitle,
   icon,
+  mark,
   accentColor,
   tintColor,
   confirmationCode,
   onPressConfirmation,
   rows,
   children,
+  backgroundColor,
 }: {
   title: string;
   subtitle?: string;
   icon: AppIconName;
+  /** Brand mark filling the header well instead of the glyph. */
+  mark?: ReactNode;
   accentColor: string;
   tintColor: string;
   confirmationCode?: string;
   onPressConfirmation?: () => void;
   rows: TravelDetailsSummaryRow[];
   children?: ReactNode;
+  /** Override elevated fill (e.g. white flight cards on the travel wash). */
+  backgroundColor?: string;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
@@ -50,7 +58,7 @@ export function TravelDetailsSummaryCard({
       style={[
         styles.card,
         {
-          backgroundColor: travelCardFill(theme),
+          backgroundColor: backgroundColor ?? travelCardFill(theme),
           borderColor: travelCardBorder(theme),
           borderRadius: Math.max(radii.lg, s(18)),
           boxShadow: travelCardShadow(theme),
@@ -69,7 +77,7 @@ export function TravelDetailsSummaryCard({
               backgroundColor: tintColor,
             },
           ]}>
-          <Symbol name={icon} size="lg" color={accentColor} />
+          {mark ?? <Symbol name={icon} size="lg" color={accentColor} />}
         </View>
         <View style={[styles.titleCopy, { gap: rs.xxs }]}>
           <AppText variant="heading" fit style={styles.editorialTitle}>
@@ -138,11 +146,13 @@ export function TravelDetailsSummaryCard({
                     backgroundColor: tintColor,
                   },
                 ]}>
-                <Symbol
-                  name={row.icon ?? 'calendar'}
-                  size="md"
-                  color={accentColor}
-                />
+                {row.mark ?? (
+                  <Symbol
+                    name={row.icon ?? 'calendar'}
+                    size="md"
+                    color={accentColor}
+                  />
+                )}
               </View>
               <View style={[styles.rowCopy, { gap: rs.xxs }]}>
                 <AppText
@@ -183,7 +193,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: { flexDirection: 'row', alignItems: 'center' },
-  iconWell: { alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  iconWell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
   titleCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
   editorialTitle: { fontFamily: fontFamilies.serif },
   confirmation: { maxWidth: '42%', alignItems: 'flex-end', flexShrink: 1 },
@@ -192,6 +208,12 @@ const styles = StyleSheet.create({
   rows: { borderTopWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth },
-  rowIcon: { alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
   rowCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
 });

@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { TravelItemNotesButton } from '@/features/travel/travel-item-notes-sheet';
+import type { TravelItineraryItem } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { isHttpsUrl } from '@/utils/safe-url';
 
 export function validBookingUrl(value: string): boolean {
@@ -16,20 +19,30 @@ export function TimelineItemTitle({
   title,
   compact = false,
   dense = false,
+  emphasize = false,
 }: {
   title: string;
   compact?: boolean;
   dense?: boolean;
+  /** Larger route header used by compact flight cards. */
+  emphasize?: boolean;
 }) {
-  const primaryVariant = dense ? 'caption' : compact ? 'callout' : 'subheading';
+  const primaryVariant = dense
+    ? 'caption'
+    : emphasize
+      ? 'heading'
+      : compact
+        ? 'callout'
+        : 'subheading';
   const separator = ' · ';
   const breakAt = title.indexOf(separator);
   if (breakAt <= 0) {
     return (
       <AppText
         variant={primaryVariant}
+        bold={emphasize}
         fit
-        style={compact ? styles.compactTitle : undefined}>
+        style={compact && !emphasize ? styles.compactTitle : undefined}>
         {title}
       </AppText>
     );
@@ -50,6 +63,145 @@ export function TimelineItemTitle({
         fit>
         {tail}
       </AppText>
+    </View>
+  );
+}
+
+/** Compact flight meta under the route: `9/27 · 9h 59m total · 1 stop`. */
+export function TimelineFlightCaption({
+  dateLabel,
+  durationLabel,
+  stopsLabel,
+}: {
+  dateLabel: string;
+  durationLabel: string;
+  stopsLabel: string;
+}) {
+  return (
+    <AppText variant="caption" color="secondary" fit>
+      {[dateLabel, durationLabel, stopsLabel].join(' · ')}
+    </AppText>
+  );
+}
+
+/** Icon row under an expanded itinerary item: notes, photos, edit, open, remove. */
+export function TimelineItemToolbar({
+  item,
+  size,
+  allowStructuredEditing,
+  showStructuredDetails,
+  isMoment,
+  onOpenNotes,
+  onAddPhotos,
+  onBeginFlightEdit,
+  onBeginRentalEdit,
+  onBeginStayEdit,
+  onBeginTransportEdit,
+  onOpenBooking,
+  onRemove,
+}: {
+  item: TravelItineraryItem;
+  size: number;
+  allowStructuredEditing: boolean;
+  showStructuredDetails: boolean;
+  isMoment: boolean;
+  onOpenNotes: () => void;
+  onAddPhotos: () => void;
+  onBeginFlightEdit: () => void;
+  onBeginRentalEdit: () => void;
+  onBeginStayEdit: () => void;
+  onBeginTransportEdit: () => void;
+  onOpenBooking: () => void;
+  onRemove: () => void;
+}) {
+  const theme = useTheme();
+  const { spacing: rs } = useResponsive();
+  const shared = {
+    size,
+    iconSize: 'sm' as const,
+    background: theme.backgroundSunken,
+  };
+  const canEdit = (kind: TravelItineraryItem['kind']) =>
+    allowStructuredEditing && item.kind === kind;
+
+  return (
+    <View style={styles.toolbarWrap}>
+      <View style={[styles.toolbar, { gap: Math.max(8, rs.xs) }]}>
+        <TravelItemNotesButton
+          hasNotes={(item.notes?.length ?? 0) > 0}
+          size={size}
+          iconSize="sm"
+          testID={AgentUiIds.travel.notes.open(item.id)}
+          onPress={onOpenNotes}
+        />
+        <IconButton
+          {...shared}
+          icon="photo"
+          accessibilityLabel="Add Photos"
+          onPress={onAddPhotos}
+        />
+        {canEdit('flight') ? (
+          <IconButton
+            {...shared}
+            testID={AgentUiIds.travel.timelineItem.editFlight(item.id)}
+            icon="edit"
+            accessibilityLabel={
+              item.flight ? 'Edit Flight' : 'Add Flight Details'
+            }
+            onPress={onBeginFlightEdit}
+          />
+        ) : null}
+        {canEdit('rental') ? (
+          <IconButton
+            {...shared}
+            icon="edit"
+            accessibilityLabel={
+              item.rental ? 'Edit Rental' : 'Add Rental Details'
+            }
+            onPress={onBeginRentalEdit}
+          />
+        ) : null}
+        {canEdit('transport') ? (
+          <IconButton
+            {...shared}
+            icon="edit"
+            accessibilityLabel="Edit Transport Details"
+            testID={AgentUiIds.travel.transport.edit(item.id)}
+            onPress={onBeginTransportEdit}
+          />
+        ) : null}
+        {canEdit('stay') ? (
+          <IconButton
+            {...shared}
+            icon="edit"
+            accessibilityLabel={item.stay ? 'Edit Stay' : 'Add Stay Details'}
+            onPress={onBeginStayEdit}
+          />
+        ) : null}
+        {showStructuredDetails &&
+        item.bookingUrl &&
+        validBookingUrl(item.bookingUrl) ? (
+          <IconButton
+            {...shared}
+            icon="open-external"
+            accessibilityLabel="Open Booking"
+            onPress={onOpenBooking}
+          />
+        ) : null}
+        {isMoment ||
+        (item.kind !== 'flight' &&
+          item.kind !== 'rental' &&
+          item.kind !== 'stay') ? (
+          <IconButton
+            {...shared}
+            icon="delete"
+            color={theme.danger}
+            testID={AgentUiIds.travel.removeConfirm.open}
+            accessibilityLabel={`Remove ${item.title}`}
+            onPress={onRemove}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -101,6 +253,13 @@ export function PhotoStrip({
 
 const styles = StyleSheet.create({
   titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
+  toolbarWrap: { width: '100%', alignItems: 'center' },
+  toolbar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   compactTitle: { fontWeight: '400' },
   photoStrip: { gap: spacing.sm, paddingVertical: spacing.xxs },
   photoWrap: {

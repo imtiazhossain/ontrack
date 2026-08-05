@@ -122,6 +122,37 @@ export function confirmationUrisForDisplay(
   return [];
 }
 
+/**
+ * Newest confirmation files on disk for a kind (name/mtime descending).
+ * Used only for explicit orphan-recovery when an item has no stored URIs —
+ * never as a display fallback for arbitrary items.
+ */
+export function newestStoredConfirmationUris(
+  kind: 'flight' | 'rental' | 'stay' | 'transport',
+  limit = 1,
+): string[] {
+  if (Platform.OS === 'web' || limit <= 0) return [];
+  try {
+    const directory = new Directory(Paths.document, 'travel-confirmations', kind);
+    if (!directory.exists) return [];
+    const entries = directory
+      .list()
+      .flatMap((entry) => {
+        try {
+          if (!(entry instanceof File) || !entry.exists) return [];
+          const info = entry.info();
+          return [{ uri: entry.uri, mtime: info.modificationTime ?? 0 }];
+        } catch {
+          return [];
+        }
+      })
+      .sort((a, b) => b.mtime - a.mtime || b.uri.localeCompare(a.uri));
+    return entries.slice(0, limit).map((entry) => entry.uri);
+  } catch {
+    return [];
+  }
+}
+
 /** Open confirmations in the system document preview (Quick Look / viewer). */
 export async function openConfirmationAttachments(uris: string[]): Promise<void> {
   const existing = resolveConfirmationUris(uris);

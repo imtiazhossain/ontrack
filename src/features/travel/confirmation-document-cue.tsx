@@ -1,6 +1,14 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, ScreenHeader } from '@/components/primitives';
@@ -19,11 +27,21 @@ export function ConfirmationDocumentCue({
   kind,
   accentColor: _accentColor,
   accessibilityLabel = 'View uploaded confirmation',
+  label = 'Confirmation',
+  icon,
+  size = 'sm',
+  style,
 }: {
   uris?: string[];
   kind: 'flight' | 'rental' | 'stay' | 'transport';
   accentColor?: string;
   accessibilityLabel?: string;
+  /** Visible button copy; defaults to “Confirmation”. */
+  label?: string;
+  icon?: 'note' | 'scan-document' | 'copy';
+  size?: 'sm' | 'md';
+  /** Lets action rows stretch the button instead of centering it. */
+  style?: StyleProp<ViewStyle>;
 }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
@@ -44,13 +62,13 @@ export function ConfirmationDocumentCue({
   return (
     <>
       <Button
-        size="sm"
-        icon="receipt"
+        size={size}
+        icon={icon}
         testID={AgentUiIds.travel.confirmation.open(kind)}
         accessibilityLabel={accessibilityLabel}
         onPress={open}
-        style={styles.openButton}>
-        View Confirmation
+        style={[styles.openButton, style]}>
+        {label}
       </Button>
 
       <Modal

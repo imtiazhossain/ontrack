@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, Input } from '@/components/primitives';
-import { layout, spacing, timeOfDayGradient } from '@/design-system';
+import { AppText, Button, Input, useSafeAreaChrome } from '@/components/primitives';
+import { layout, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 
@@ -24,7 +24,9 @@ export default function OnboardingScreen() {
     router.replace(returnTo === '/travel' ? ('/travel' as never) : '/(tabs)');
   };
 
-  const gradient = timeOfDayGradient(theme, new Date().getHours());
+  const hour = new Date().getHours();
+  const gradient = timeOfDayGradient(theme, hour);
+  useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour));
 
   return (
     <View style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}> 

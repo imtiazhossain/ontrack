@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, ErrorMessage, Screen } from '@/components/primitives';
-import { radii, shadows, spacing, timeOfDayGradient } from '@/design-system';
+import { AppText, ErrorMessage, Screen, useSafeAreaChrome } from '@/components/primitives';
+import { radii, shadows, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
@@ -46,7 +46,9 @@ export function AuthScreen({
     label: 'Continue as Guest',
     onPress: busy ? undefined : () => { void continueAsGuest(); },
   });
-  const gradient = timeOfDayGradient(theme, new Date().getHours());
+  const hour = new Date().getHours();
+  const gradient = timeOfDayGradient(theme, hour);
+  useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour));
   const router = useRouter();
 
   useEffect(() => {

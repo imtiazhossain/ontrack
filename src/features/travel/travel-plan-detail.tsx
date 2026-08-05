@@ -23,7 +23,18 @@ import {
     validateFlightDetails,
     type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
+import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
+import type { ImportedFlightConfirmation } from '@/features/travel/flight-confirmation-import';
+import {
+  applyFlightTerminalPatches,
+  fetchFlightTerminalPatches,
+} from '@/features/travel/flight-terminal-enrichment';
+import {
+  attachOrphanedFlightConfirmationUris,
+  mergeDuplicateItemConfirmationUris,
+} from '@/features/travel/confirmation-uri-attach';
 import { isDuplicateItineraryItem, normalizeTravelPlan } from '@/features/travel/normalize';
+import { upgradeLegacyConnectingFlights } from '@/features/travel/upgrade-legacy-connecting-flights';
 import {
     emptyRentalDetailsDraft,
     validateRentalDetails,
@@ -177,6 +188,9 @@ function TravelPlanDetailLoaded({
   );
   const [flightDetailsError, setFlightDetailsError] = useState<string>();
   const [importedFlightFileName, setImportedFlightFileName] = useState<string>();
+  const [pendingFlightImport, setPendingFlightImport] = useState<
+    ImportedFlightConfirmation | undefined
+  >();
   const [transportDetails, setTransportDetails] = useState<TransportDetailsDraft>(() =>
     emptyTransportDetailsDraft({
       origin: plan.origin,
@@ -237,6 +251,14 @@ function TravelPlanDetailLoaded({
             travelCalendarDrafts(next),
           );
         }
+        return;
+      }
+
+      // Link confirmation files that were saved during import but never attached
+      // (e.g. Add-to-Timeline hit a duplicate and discarded the new item).
+      if (current) {
+        const repaired = attachOrphanedFlightConfirmationUris(current);
+        if (repaired) useTravel.getState().savePlan(repaired);
       }
     }, [planId]),
   );
@@ -292,6 +314,76 @@ function TravelPlanDetailLoaded({
     savePlan(next);
     replaceTravelActivities(next.id, travelCalendarDrafts(next));
   };
+  const terminalLookupFingerprintRef = useRef<string | undefined>(undefined);
+  const terminalLookupFingerprint = itinerary
+    .filter((item) => item.kind === 'flight' && item.flight)
+    .map((item) => {
+      const flight = item.flight!;
+      const legs = flight.legs?.length
+        ? flight.legs
+            .map((leg) =>
+              [
+                leg.flightNumber,
+                leg.date,
+                leg.departureTerminal,
+                leg.arrivalTerminal,
+              ].join(':'),
+            )
+            .join(',')
+        : [
+            flight.flightNumber,
+            item.date,
+            flight.departureTerminal,
+            flight.arrivalTerminal,
+          ].join(':');
+      return `${item.id}:${legs}`;
+    })
+    .join('|');
+
+  useEffect(() => {
+    if (
+      !terminalLookupFingerprint ||
+      terminalLookupFingerprintRef.current === terminalLookupFingerprint
+    ) {
+      return;
+    }
+    terminalLookupFingerprintRef.current = terminalLookupFingerprint;
+    let cancelled = false;
+    void fetchFlightTerminalPatches(plan).then((patches) => {
+      if (cancelled || !Object.keys(patches).length) return;
+      const latest = useTravel
+        .getState()
+        .plans.find((entry) => entry.id === plan.id);
+      if (!latest) return;
+      const next = applyFlightTerminalPatches(latest, patches);
+      if (next) updatePlan(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // The fingerprint changes only when lookup-relevant fields change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan.id, terminalLookupFingerprint]);
+
+  // One-shot: attach per-leg journey data onto legacy collapsed connecting flights.
+  useEffect(() => {
+    if (!plan) return;
+    const upgraded = upgradeLegacyConnectingFlights(plan, () =>
+      newId('trip-item'),
+    );
+    if (upgraded) updatePlan(upgraded);
+    // Intentionally depend on plan.id + a cheap fingerprint so we don't loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    plan?.id,
+    plan?.itinerary
+      ?.map((item) =>
+        item.kind === 'flight'
+          ? `${item.id}:${item.flight?.legs?.length ?? 0}:${item.durationMinutes}:${item.flight?.connectionArrivalMinutes ?? ''}`
+          : item.id,
+      )
+      .join('|'),
+  ]);
 
   const itemEdit = useTravelPlanItemDetailsEdit({ plan, itinerary, updatePlan });
   const itemMedia = useTravelPlanItemMedia({ planId, plan, itinerary, updatePlan });
@@ -364,6 +456,7 @@ function TravelPlanDetailLoaded({
       setFlightDetails,
       setFlightDetailsError,
       setImportedFlightFileName,
+      setPendingFlightImport,
       setRentalDetails,
       setRentalDetailsError,
       setImportedRentalFileName,
@@ -606,6 +699,53 @@ function TravelPlanDetailLoaded({
       stopAddItem();
       return setStayDetailsError(validatedStayDetails.error);
     }
+
+    // Connecting confirmations expand into one itinerary leg per flight on submit.
+    const connectingImport =
+      kind === 'flight' &&
+      pendingFlightImport &&
+      pendingFlightImport.segments.length > 1
+        ? pendingFlightImport
+        : undefined;
+    if (connectingImport) {
+      const planBeforeConnect = useTravel.getState().plans.find((entry) => entry.id === planId);
+      if (!planBeforeConnect) {
+        stopAddItem();
+        return;
+      }
+      const confirmationUris =
+        validatedFlightDetails.value?.confirmationUris?.length
+          ? validatedFlightDetails.value.confirmationUris
+          : connectingImport.confirmationUris;
+      const nextPlan = applyImportedFlightsToPlan({
+        plan: planBeforeConnect,
+        imported: { ...connectingImport, confirmationUris },
+        createId: () => newId('trip-item'),
+      });
+      updatePlan(nextPlan);
+      setTitle('');
+      setDetails('');
+      setBookingUrl('');
+      setPhotoUris([]);
+      setFlightDetails(emptyFlightDetailsDraft());
+      setImportedFlightFileName(undefined);
+      setPendingFlightImport(undefined);
+      setFlightDetailsError(undefined);
+      setRentalDetails(emptyRentalDetailsDraft());
+      setImportedRentalFileName(undefined);
+      setStayDetails(
+        defaultStayDetails({
+          checkoutDate: plan.endDate,
+          checkoutMinutes: String(11 * 60),
+        }),
+      );
+      setImportedStayFileName(undefined);
+      setIsAddingItem(false);
+      stopAddItem();
+      maybeShowImportedAddPrompt(nextPlan, false);
+      return;
+    }
+
     const itemId = newId('trip-item');
     const now = new Date().toISOString();
     const incomingItem: TravelItineraryItem = {
@@ -637,12 +777,18 @@ function TravelPlanDetailLoaded({
         isDuplicateItineraryItem(existing, incomingItem),
       );
       if (duplicateExists) {
+        const merged = mergeDuplicateItemConfirmationUris(
+          planBeforeAsync,
+          incomingItem,
+        );
+        if (merged) updatePlan(merged);
         setTitle('');
         setDetails('');
         setBookingUrl('');
         setPhotoUris([]);
         setFlightDetails(emptyFlightDetailsDraft());
         setImportedFlightFileName(undefined);
+        setPendingFlightImport(undefined);
         setRentalDetails(emptyRentalDetailsDraft());
         setImportedRentalFileName(undefined);
         setStayDetails(
@@ -654,7 +800,7 @@ function TravelPlanDetailLoaded({
         setImportedStayFileName(undefined);
         setIsAddingItem(false);
         stopAddItem();
-        maybeShowImportedAddPrompt(planBeforeAsync, false);
+        maybeShowImportedAddPrompt(merged ?? planBeforeAsync, false);
         return;
       }
 
@@ -672,12 +818,18 @@ function TravelPlanDetailLoaded({
         isDuplicateItineraryItem(existing, incomingItem),
       );
       if (duplicateExistsAfterAsync) {
+        const merged = mergeDuplicateItemConfirmationUris(
+          planToUpdate,
+          incomingItem,
+        );
+        if (merged) updatePlan(merged);
         setTitle('');
         setDetails('');
         setBookingUrl('');
         setPhotoUris([]);
         setFlightDetails(emptyFlightDetailsDraft());
         setImportedFlightFileName(undefined);
+        setPendingFlightImport(undefined);
         setRentalDetails(emptyRentalDetailsDraft());
         setImportedRentalFileName(undefined);
         setStayDetails(
@@ -689,7 +841,7 @@ function TravelPlanDetailLoaded({
         setImportedStayFileName(undefined);
         setIsAddingItem(false);
         stopAddItem();
-        maybeShowImportedAddPrompt(planToUpdate, false);
+        maybeShowImportedAddPrompt(merged ?? planToUpdate, false);
         return;
       }
 
@@ -724,6 +876,7 @@ function TravelPlanDetailLoaded({
       setPhotoUris([]);
       setFlightDetails(emptyFlightDetailsDraft());
       setImportedFlightFileName(undefined);
+      setPendingFlightImport(undefined);
       setTransportDetails(emptyTransportDetailsDraft({
         origin: plan.origin,
         destination: plan.destination,
@@ -810,6 +963,7 @@ function TravelPlanDetailLoaded({
     setEndMinutes(11 * 60);
     setFlightDetails(emptyFlightDetailsDraft());
     setImportedFlightFileName(undefined);
+    setPendingFlightImport(undefined);
     setFlightDetailsError(undefined);
     setTransportDetails(emptyTransportDetailsDraft({
       origin: plan.origin,

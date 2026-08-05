@@ -67,6 +67,7 @@ interface ScheduleState {
   seedIfNeeded: () => void;
   addActivity: (draft: ActivityDraft) => Activity;
   replaceTravelActivities: (travelPlanId: string, drafts: ActivityDraft[]) => Activity[];
+  removeTravelActivities: (travelPlanIds: readonly string[]) => void;
   importEvents: (drafts: ImportedEventDraft[]) => Activity[];
   saveEvent: (payload: EventSavePayload) => Activity;
   updateActivity: (id: string, patch: Partial<Omit<Activity, 'id' | 'createdAt'>>) => void;
@@ -136,6 +137,19 @@ export const useSchedule = create<ScheduleState>()(
           ],
         }));
         return activities;
+      },
+
+      removeTravelActivities: (travelPlanIds) => {
+        const removed = new Set(travelPlanIds);
+        if (removed.size === 0) return;
+        set((state) => {
+          const activities = state.activities.filter(
+            (activity) =>
+              !activity.travelPlanId || !removed.has(activity.travelPlanId),
+          );
+          if (activities.length === state.activities.length) return state;
+          return { activities };
+        });
       },
 
       importEvents: (drafts) => {
