@@ -76,6 +76,16 @@ export const AgentUiIds = {
     saveOdometer: 'ontrack.vehicles.detail.saveOdometer',
     overviewSettingsTip: (vehicleId: string) =>
       `ontrack.vehicles.detail.overviewSettingsTip.${vehicleId}`,
+    new: {
+      nickname: 'ontrack.vehicles.new.nickname',
+      year: 'ontrack.vehicles.new.year',
+      make: 'ontrack.vehicles.new.make',
+      model: 'ontrack.vehicles.new.model',
+      vin: 'ontrack.vehicles.new.vin',
+      odometer: 'ontrack.vehicles.new.odometer',
+      save: 'ontrack.vehicles.new.save',
+      cancel: 'ontrack.vehicles.new.cancel',
+    },
     expenses: {
       title: 'ontrack.vehicles.expenses.title',
       amount: 'ontrack.vehicles.expenses.amount',
@@ -131,6 +141,120 @@ export const AgentUiIds = {
       task: (taskId: string) => `ontrack.checklists.detail.task.${taskId}`,
     },
   },
+  grocery: {
+    addRecipe: 'ontrack.grocery.detail.addRecipe',
+    settings: 'ontrack.grocery.detail.settings',
+    share: 'ontrack.grocery.detail.share',
+    copy: 'ontrack.grocery.detail.copy',
+    view: (view: string) => `ontrack.grocery.detail.view.${view}`,
+    recipe: (recipeId: string) => `ontrack.grocery.detail.recipe.${recipeId}`,
+    task: (taskId: string) => `ontrack.grocery.detail.task.${taskId}`,
+    combinedItem: (groupId: string) =>
+      `ontrack.grocery.detail.combined.${groupId}`,
+  },
+  recipeImport: {
+    cancel: 'ontrack.recipeImport.cancel',
+    stop: 'ontrack.recipeImport.stop',
+    url: 'ontrack.recipeImport.url',
+    analyze: 'ontrack.recipeImport.analyze',
+    camera: 'ontrack.recipeImport.camera',
+    library: 'ontrack.recipeImport.library',
+    mealName: 'ontrack.recipeImport.mealName',
+    sourceUrl: 'ontrack.recipeImport.sourceUrl',
+    sourceServings: 'ontrack.recipeImport.sourceServings',
+    targetServings: 'ontrack.recipeImport.targetServings',
+    addIngredient: 'ontrack.recipeImport.ingredient.add',
+    ingredientName: (ingredientId: string) =>
+      `ontrack.recipeImport.ingredient.${ingredientId}.name`,
+    removeIngredient: (ingredientId: string) =>
+      `ontrack.recipeImport.ingredient.${ingredientId}.remove`,
+    save: 'ontrack.recipeImport.save',
+  },
+  plants: {
+    add: 'ontrack.plants.list.add',
+    plant: (plantId: string) => `ontrack.plants.list.plant.${plantId}`,
+    detail: {
+      edit: 'ontrack.plants.detail.edit',
+      amount: 'ontrack.plants.detail.amount',
+      logWatering: 'ontrack.plants.detail.logWatering',
+      adjustSchedule: 'ontrack.plants.detail.adjustSchedule',
+      undoWatering: 'ontrack.plants.detail.undoWatering',
+      checkIn: 'ontrack.plants.detail.checkIn',
+      delete: 'ontrack.plants.detail.delete',
+    },
+    new: {
+      camera: 'ontrack.plants.new.camera',
+      library: 'ontrack.plants.new.library',
+      analyze: 'ontrack.plants.new.analyze',
+      confirmIdentity: 'ontrack.plants.new.confirmIdentity',
+      nickname: 'ontrack.plants.new.nickname',
+      buildCarePlan: 'ontrack.plants.new.buildCarePlan',
+      save: 'ontrack.plants.new.save',
+    },
+  },
+  peoplePicker: {
+    close: 'ontrack.peoplePicker.close',
+    search: 'ontrack.peoplePicker.search',
+    friend: (friendId: string) => `ontrack.peoplePicker.friend.${friendId}`,
+    confirm: 'ontrack.peoplePicker.confirm',
+  },
+  food: {
+    analyze: 'ontrack.food.detail.analyze',
+    link: 'ontrack.food.detail.link',
+    findMeal: 'ontrack.food.detail.findMeal',
+    candidate: (candidateId: string) =>
+      `ontrack.food.detail.candidate.${candidateId}`,
+    confirmSave: 'ontrack.food.detail.confirmSave',
+    analyzeAnother: 'ontrack.food.detail.analyzeAnother',
+    edit: 'ontrack.food.detail.edit',
+    close: 'ontrack.food.detail.close',
+  },
+  workouts: {
+    customPlanner: 'ontrack.workouts.header.customPlanner',
+    planFromScratch: 'ontrack.workouts.today.planFromScratch',
+    todayPlan: (activityId: string) =>
+      `ontrack.workouts.todayPlan.${activityId}`,
+    builderClear: 'ontrack.workouts.builder.clear',
+    addToToday: 'ontrack.workouts.builder.addToToday',
+    exerciseAdd: (exerciseId: string) =>
+      `ontrack.workouts.exercise.${exerciseId}.add`,
+    exercisePreview: (exerciseId: string) =>
+      `ontrack.workouts.exercise.${exerciseId}.preview`,
+    anatomySex: (sex: string) => `ontrack.workouts.explorer.anatomySex.${sex}`,
+    bodyView: (view: string) => `ontrack.workouts.explorer.bodyView.${view}`,
+    muscleChip: (muscleKey: string) =>
+      `ontrack.workouts.explorer.muscle.${muscleKey}`,
+    gym: {
+      edit: 'ontrack.workouts.gym.edit',
+      start: 'ontrack.workouts.gym.start',
+      close: 'ontrack.workouts.gym.close',
+      completeSet: 'ontrack.workouts.gymActive.completeSet',
+      finish: 'ontrack.workouts.gymActive.finish',
+    },
+  },
+  vision: {
+    consolidatedCategory: (categoryId: string) =>
+      `ontrack.vision.consolidated.category.${categoryId}`,
+    categoryMode: 'ontrack.vision.category.mode',
+    addImage: 'ontrack.vision.category.addImage',
+    addAffirmation: 'ontrack.vision.category.addAffirmation',
+    addGoal: 'ontrack.vision.category.addGoal',
+    canvasItem: (itemId: string) =>
+      `ontrack.vision.category.canvasItem.${itemId}`,
+    selectionDeselect: 'ontrack.vision.category.selection.deselect',
+    selectionEdit: 'ontrack.vision.category.selection.edit',
+    selectionLayerBack: 'ontrack.vision.category.selection.layerBack',
+    selectionLayerForward: 'ontrack.vision.category.selection.layerForward',
+    selectionDelete: 'ontrack.vision.category.selection.delete',
+    itemPrimary: 'ontrack.vision.itemEditor.primary',
+    itemSecondary: 'ontrack.vision.itemEditor.secondary',
+    itemSave: 'ontrack.vision.itemEditor.save',
+    itemClose: 'ontrack.vision.itemEditor.close',
+  },
+  listSettings: {
+    name: 'ontrack.listSettings.name',
+    saveName: 'ontrack.listSettings.saveName',
+  },
   profile: {
     avatar: 'ontrack.profile.avatar',
     homeLocation: 'ontrack.profile.homeLocation',
@@ -153,7 +277,12 @@ export const AgentUiIds = {
     terms: 'ontrack.auth.terms',
   },
   games: {
+    challengeFriend: 'ontrack.games.hub.challengeFriend',
+    balloonPopCard: 'ontrack.games.hub.balloonPop',
     balloonPopPlay: 'ontrack.games.balloonPop.play',
+    balloonPopRetry: 'ontrack.games.balloonPop.retry',
+    balloonPopBack: 'ontrack.games.balloonPop.back',
+    balloonPopClose: 'ontrack.games.balloonPop.close',
     balloon: (balloonId: string) =>
       `ontrack.games.balloonPop.balloon.${balloonId}`,
   },
@@ -505,6 +634,10 @@ export const AgentUiIds = {
   chrome: {
     back: 'ontrack.chrome.back',
     headerBack: 'ontrack.chrome.headerBack',
+  },
+  agentUi: {
+    /** __DEV__ overlay root — present when AgentUiOverlay is mounted. */
+    overlayRoot: 'ontrack.agentUi.overlay.root',
   },
 } as const;
 

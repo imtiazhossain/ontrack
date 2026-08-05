@@ -29,6 +29,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
 import { haptics } from '@/utils/haptics';
+import { AgentUiIds } from '@/utils/agent-ui';
+
 import { BoardCard, FilterChip } from './consolidated-card';
 import {
     BOARD_SIDE_PADDING,
@@ -302,6 +304,7 @@ export function VisionBoardConsolidated() {
               label="All"
               icon="vision-board"
               selected={selectedCategoryId === 'all'}
+              testID={AgentUiIds.vision.consolidatedCategory('all')}
               onPress={() => setSelectedCategoryId('all')}
             />
             {orderedCategories.map((category) => (
@@ -310,6 +313,7 @@ export function VisionBoardConsolidated() {
                 label={category.name}
                 icon={category.icon}
                 selected={selectedCategoryId === category.id}
+                testID={AgentUiIds.vision.consolidatedCategory(category.id)}
                 onPress={() => setSelectedCategoryId(category.id)}
               />
             ))}

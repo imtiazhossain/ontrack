@@ -39,6 +39,10 @@ describe('agent-ui selector rule', () => {
     expect(rule).toMatch(/verify` before `flow`/i);
     expect(rule).toMatch(/No re-land for handoff/i);
     expect(rule).toMatch(/Re-run `once --flow`/i);
+    expect(rule).toMatch(/layout anchors/i);
+    expect(rule).toContain('agent-ui-source.sh');
+    expect(rule).toContain('agent-ui-hit.sh');
+    expect(rule).toContain('hit|overlay');
 
     const screenshotRule = readFileSync(
       join(process.cwd(), '.cursor/rules/show-simulator-screenshot.mdc'),
@@ -48,11 +52,22 @@ describe('agent-ui selector rule', () => {
     expect(screenshotRule).toMatch(/Forbidden:\*\* mid-flow screenshots/i);
     expect(screenshotRule).toMatch(/agent-ui-assert\.sh/i);
 
+    const triage = readFileSync(
+      join(process.cwd(), '.cursor/rules/screenshot-triage.mdc'),
+      'utf8',
+    );
+    expect(triage).toMatch(/Screenshot → code triage/i);
+    expect(triage).toContain('agent-ui-source.sh');
+    expect(triage).toContain('agent-ui-hit.sh');
+    expect(triage).toContain('agent-ui-overlay.sh');
+    expect(triage).toContain('docs/agent-ui-sources.json');
+
     const agents = readFileSync(join(process.cwd(), 'AGENTS.md'), 'utf8');
     expect(agents).toMatch(/navigation decision tree/i);
     expect(agents).toContain('agent-ui.sh verify');
     expect(agents).toContain('agent-ui-flow.sh');
     expect(agents).toMatch(/Never re-run a flow just to re-check/i);
+    expect(agents).toContain('agent-ui-source.sh');
   });
 
   it('forwards testID on core primitives', () => {

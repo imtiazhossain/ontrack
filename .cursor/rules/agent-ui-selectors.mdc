@@ -19,9 +19,13 @@ When you **create or edit** any interactive / agent-tappable control, you **must
 
 **Requires a `testID`:** buttons, icon buttons, tabs, links, inputs, date/time fields, switches, rows with `onPress`, sheet/modal close/dismiss, primary/secondary CTAs, provider/list row actions, anything an agent would tap or focus.
 
-**Does not need a `testID`:** pure decorative views, static labels, non-interactive layout wrappers.
+**Also stamp layout anchors** (via `AgentTestId` **without** `onPress`) on major sections/panels that appear in bug screenshots — so dump / hit / overlay can resolve them to a source file. Naming: `ontrack.<feature>.<surface>.section.<name>` (see travel `planDetail.section.*`).
+
+**Does not need a `testID`:** tiny decorative glyphs, static body copy, non-meaningful layout spacers.
 
 Do not merge UI that agents must exercise without an id. Do not leave “add testID later.”
+
+**User posted a screenshot?** Follow [`.cursor/rules/screenshot-triage.mdc`](./screenshot-triage.mdc) — `agent-ui-source.sh` / hit / overlay before broad file search.
 
 ## Navigation decision tree (mandatory — stop at the first match)
 
@@ -34,9 +38,11 @@ When exercising the simulator, pick **exactly one** path in order. Do not “exp
 3. **Else known surface / nested shortcut?** → `./scripts/agent-ui-open.sh <alias|path>` or one `./scripts/agent-ui-batch.sh …`
 4. **Else known `testID` in the map / `AgentUiIds`?** → `./scripts/agent-ui-tap.sh <id>` (no dump). JS key paths work: `travel.planDetail.transportSection`, and parameterized factories too: `travel.timelineItem.<itemId>.default`, `travel.flight.openConfirmation.<itemId>`
 5. **Else id truly unknown?** → **one** `./scripts/agent-ui-dump.sh --prefix ontrack.<feature>` then tap; if still missing, **add** the testID + map entry in the same change
-6. **Proof** → structural **assert** for route/id/label; `--color <id> <hex>` for accent chrome; **one** screenshot only for broader visual/layout claims. Never screenshot to decide the next tap.
+6. **Screenshot bug report?** → [`screenshot-triage.mdc`](./screenshot-triage.mdc): label/`agent-ui-source.sh` → hit (`./scripts/agent-ui-hit.sh`) → overlay (`./scripts/agent-ui-overlay.sh on`) → then edit the resolved file
+7. **Proof** → structural **assert** for route/id/label; `--color <id> <hex>` for accent chrome; **one** screenshot only for broader visual/layout claims. Never screenshot to decide the next tap.
 
-Demo fixture: `trip-agent-ui-demo` / `item-agent-ui-demo-flight` via `./scripts/agent-ui-seed.sh travel-demo` or flows — do not recreate trip data.
+Demo fixtures via `./scripts/agent-ui-seed.sh` / named `*-demo` flows — do not recreate domain data by hand:
+`travel-demo`, `checklist-demo`, `grocery-demo`, `health-demo`, `vehicle-demo`, `plants-demo`, `activity-demo`, `workouts-demo`, `vision-board-demo` (+ deep flows: `*-gym-*`, `*-anatomy`, `*-item-editor`, `*-log-watering`, `*-settings`, `games-balloon-pop`; ids in `src/utils/agent-ui/fixtures.ts`).
 
 Routes/flows: [`docs/agent-routes.md`](../../docs/agent-routes.md). IDs: [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md).
 
@@ -109,7 +115,8 @@ These habits dominate host/bridge micro-opts. Follow them every verification:
 - **Never** use screenshot / vision coordinates to tap when a registry id exists or can be added.
 - If dump has no matching id: **stop**, add `testID` + map entry + ids constant, then tap by id. Coordinates are not an alternative.
 - Keep `accessibilityLabel` for VoiceOver; labels alone are not unique selectors (`Close`, `Done` collide).
-- Bridge is `__DEV__` only (`dump|tap|exists|prefix|route|goto|reset|wait|seed|flow|batch|assert`).
+- Bridge is `__DEV__` only (`dump|tap|exists|prefix|route|goto|reset|wait|seed|flow|batch|assert|hit|overlay`).
+- Source lookup: `./scripts/agent-ui-source.sh <id|keyPath>` / `--label TEXT` → [`docs/agent-ui-sources.json`](../../docs/agent-ui-sources.json).
 
 ## Do not (failure modes)
 

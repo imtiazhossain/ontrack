@@ -20,6 +20,7 @@ import {
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import type { Meal, MealAnalysis } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 
 export default function FoodDetailScreen() {
@@ -221,21 +222,40 @@ export default function FoodDetailScreen() {
           message="Take a photo, choose one, paste a restaurant link, or enter nutrition manually."
           actionLabel={aiEnabled ? 'Add Meal Nutrition' : 'AI disabled in settings'}
           onAction={aiEnabled ? showMealSources : undefined}
+          actionTestID={AgentUiIds.food.analyze}
         />
       ) : null}
 
       {showLinkInput ? (
         <View style={styles.linkCard}>
           <SectionHeader title="Restaurant or Delivery Link" />
-          <Input label="Meal Link" autoCapitalize="none" keyboardType="url" value={linkInput} onChangeText={setLinkInput} placeholder="https://…" />
-          <Button onPress={resolveLink} disabled={!linkInput.trim() || analyzing}>Find Meal</Button>
+          <Input
+            label="Meal Link"
+            testID={AgentUiIds.food.link}
+            autoCapitalize="none"
+            keyboardType="url"
+            value={linkInput}
+            onChangeText={setLinkInput}
+            placeholder="https://…"
+          />
+          <Button
+            testID={AgentUiIds.food.findMeal}
+            onPress={resolveLink}
+            disabled={!linkInput.trim() || analyzing}>
+            Find Meal
+          </Button>
           <AppText variant="caption" color="secondary">Blocked or ambiguous links will ask you to confirm the item or provide menu text/photo.</AppText>
         </View>
       ) : null}
 
       {candidates.length ? <SectionHeader title="Confirm the Meal" /> : null}
       {candidates.map((candidate) => (
-        <Button key={candidate.id} variant="secondary" onPress={() => chooseCandidate(candidate)} accessibilityLabel={`Choose ${candidate.itemName}`}>
+        <Button
+          key={candidate.id}
+          variant="secondary"
+          testID={AgentUiIds.food.candidate(candidate.id)}
+          onPress={() => chooseCandidate(candidate)}
+          accessibilityLabel={`Choose ${candidate.itemName}`}>
           {[candidate.restaurant, candidate.itemName, candidate.size].filter(Boolean).join(' · ')}
         </Button>
       ))}
@@ -251,10 +271,32 @@ export default function FoodDetailScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        {pendingAnalysis ? <Button onPress={saveAnalysis} disabled={analyzing}>Confirm and Save</Button> : null}
-        {aiEnabled && displayAnalysis ? <Button variant="secondary" onPress={showMealSources}>Analyze Another Source</Button> : null}
-        <Button variant="secondary" icon="edit" onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>Edit Meal Manually</Button>
-        <Button variant="ghost" onPress={() => router.back()}>Close</Button>
+        {pendingAnalysis ? (
+          <Button
+            testID={AgentUiIds.food.confirmSave}
+            onPress={saveAnalysis}
+            disabled={analyzing}>
+            Confirm and Save
+          </Button>
+        ) : null}
+        {aiEnabled && displayAnalysis ? (
+          <Button
+            variant="secondary"
+            testID={AgentUiIds.food.analyzeAnother}
+            onPress={showMealSources}>
+            Analyze Another Source
+          </Button>
+        ) : null}
+        <Button
+          variant="secondary"
+          icon="edit"
+          testID={AgentUiIds.food.edit}
+          onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}>
+          Edit Meal Manually
+        </Button>
+        <Button variant="ghost" testID={AgentUiIds.food.close} onPress={() => router.back()}>
+          Close
+        </Button>
       </View>
     </Screen>
   );

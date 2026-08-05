@@ -12,6 +12,7 @@ import {
 } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
 import { createEmptyVehicle, useVehicles } from '@/store/vehicles';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { asFiniteNonNegative, asPositiveNumber } from '@/utils/parse';
 
 export default function NewVehicleScreen() {
@@ -74,6 +75,7 @@ export default function NewVehicleScreen() {
         <SectionHeader title="Basics" />
         <Input
           label="Nickname"
+          testID={AgentUiIds.vehicles.new.nickname}
           value={nickname}
           onChangeText={setNickname}
           placeholder="Daily driver"
@@ -83,6 +85,7 @@ export default function NewVehicleScreen() {
           <View style={styles.half}>
             <Input
               label="Year"
+              testID={AgentUiIds.vehicles.new.year}
               value={year}
               onChangeText={setYear}
               keyboardType="number-pad"
@@ -92,6 +95,7 @@ export default function NewVehicleScreen() {
           <View style={styles.half}>
             <Input
               label="Make"
+              testID={AgentUiIds.vehicles.new.make}
               value={make}
               onChangeText={setMake}
               placeholder="Honda"
@@ -101,6 +105,7 @@ export default function NewVehicleScreen() {
         </View>
         <Input
           label="Model"
+          testID={AgentUiIds.vehicles.new.model}
           value={model}
           onChangeText={setModel}
           placeholder="Civic"
@@ -125,6 +130,7 @@ export default function NewVehicleScreen() {
         <SectionHeader title="Identifiers" />
         <Input
           label="VIN"
+          testID={AgentUiIds.vehicles.new.vin}
           value={vin}
           onChangeText={setVin}
           autoCapitalize="characters"
@@ -138,6 +144,7 @@ export default function NewVehicleScreen() {
         />
         <Input
           label="Odometer (mi)"
+          testID={AgentUiIds.vehicles.new.odometer}
           value={odometer}
           onChangeText={setOdometer}
           keyboardType="number-pad"
@@ -145,10 +152,17 @@ export default function NewVehicleScreen() {
       </View>
 
       {error ? <ErrorMessage message={error} /> : null}
-      <Button onPress={save} accessibilityLabel="Save vehicle">
+      <Button
+        testID={AgentUiIds.vehicles.new.save}
+        onPress={save}
+        accessibilityLabel="Save vehicle">
         Save vehicle
       </Button>
-      <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Cancel">
+      <Button
+        variant="ghost"
+        testID={AgentUiIds.vehicles.new.cancel}
+        onPress={() => router.back()}
+        accessibilityLabel="Cancel">
         Cancel
       </Button>
     </Screen>

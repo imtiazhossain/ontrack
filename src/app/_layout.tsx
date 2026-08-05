@@ -33,7 +33,7 @@ import { useAuthAccess } from '@/store/auth-access';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
-import { AgentUiRouteSync } from '@/utils/agent-ui';
+import { AgentUiOverlay, AgentUiRouteSync } from '@/utils/agent-ui';
 import { todayKey } from '@/utils/date';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
@@ -115,7 +115,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   }
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
         <AgentUiRouteSync />
         <Stack
           screenOptions={{
@@ -285,6 +285,8 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         }}
       />
     </Stack>
-    </>
+        {/* After Stack inside flex:1 so absolute overlay covers the window. */}
+        <AgentUiOverlay />
+    </View>
   );
 }

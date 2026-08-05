@@ -7,6 +7,7 @@ import { layout, radii, spacing, typography } from '@/design-system';
 import type { CombinedCompletion } from '@/features/todos/grocery-utils';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoRecipe, TodoTask } from '@/store/todos';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { openHttpsUrl, safeHttpsUrl } from '@/utils/safe-url';
 
 export function Checkbox({
@@ -52,9 +53,16 @@ export const GroceryTaskRow = memo(function GroceryTaskRow({
   onDelete?: () => void;
 }) {
   const theme = useTheme();
+  const toggleAgent = useAgentUiTarget(AgentUiIds.grocery.task(task.id), {
+    label: task.ingredientName || task.title,
+    onPress: canComplete ? onToggle : undefined,
+  });
   return (
     <View style={[styles.taskRow, { borderTopColor: theme.separator }]}>
       <Pressable
+        ref={toggleAgent.ref}
+        testID={toggleAgent.testID}
+        onLayout={toggleAgent.onLayout}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: task.completed, disabled: !canComplete }}
         disabled={!canComplete}
@@ -113,6 +121,10 @@ export const MealCard = memo(function MealCard({
 }) {
   const theme = useTheme();
   const done = tasks.filter((task) => task.completed).length;
+  const recipeAgent = useAgentUiTarget(AgentUiIds.grocery.recipe(recipe.id), {
+    label: recipe.name,
+    onPress: onToggleCollapsed,
+  });
   return (
     <Card padded={false}>
       {recipe.sourceImageUri ? (
@@ -126,6 +138,9 @@ export const MealCard = memo(function MealCard({
         />
       ) : null}
       <Pressable
+        ref={recipeAgent.ref}
+        testID={recipeAgent.testID}
+        onLayout={recipeAgent.onLayout}
         accessibilityRole="button"
         accessibilityState={{ expanded: !collapsed }}
         onPress={onToggleCollapsed}
@@ -198,6 +213,7 @@ export const CombinedRow = memo(function CombinedRow({
   amounts,
   occurrences,
   onToggle,
+  testID,
 }: {
   completion: CombinedCompletion;
   disabled: boolean;
@@ -206,10 +222,18 @@ export const CombinedRow = memo(function CombinedRow({
   amounts: string[];
   occurrences: number;
   onToggle: () => void;
+  testID?: string;
 }) {
   const theme = useTheme();
+  const agent = useAgentUiTarget(testID, {
+    label: name,
+    onPress: disabled ? undefined : onToggle,
+  });
   return (
     <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
       accessibilityRole="checkbox"
       accessibilityState={{
         checked: completion === 'mixed' ? 'mixed' : completion === 'checked',

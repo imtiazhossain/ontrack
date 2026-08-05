@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { ChallengeFriendButton } from '@/features/workouts/challenge-friend-button';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -19,6 +20,10 @@ export function WorkoutsScreenHeader({
   const { s } = useResponsive();
   const titleSize = s(34);
   const titleControlSize = s(30);
+  const customPlannerAgent = useAgentUiTarget(AgentUiIds.workouts.customPlanner, {
+    label: 'Plan a custom workout',
+    onPress: onOpenCustomPlanner,
+  });
 
   return (
     <View style={styles.header}>
@@ -56,6 +61,9 @@ export function WorkoutsScreenHeader({
               </AppText>
             </View>
             <Pressable
+              ref={customPlannerAgent.ref}
+              testID={customPlannerAgent.testID}
+              onLayout={customPlannerAgent.onLayout}
               accessibilityRole="button"
               accessibilityLabel="Plan a custom workout"
               hitSlop={8}

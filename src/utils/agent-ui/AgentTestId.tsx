@@ -12,8 +12,10 @@ type AgentTestIdProps = PropsWithChildren<{
 }>;
 
 /**
- * Thin __DEV__ registration wrapper for custom Pressables that cannot use
- * Button/Input primitives. Passes through children unchanged in production.
+ * Thin __DEV__ registration wrapper for custom Pressables / layout anchors
+ * that cannot use Button/Input primitives. Pass `onPress` for tappable
+ * controls; omit it for non-interactive section/panel anchors that still
+ * need dump/hit/overlay → source lookup. Production passes children through.
  */
 export function AgentTestId({
   testID,

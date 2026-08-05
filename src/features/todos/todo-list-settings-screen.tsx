@@ -37,6 +37,7 @@ import {
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import { useFriends } from '@/store/friends';
 import { useTodos, type TodoMember } from '@/store/todos';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
@@ -231,11 +232,13 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
           <AppText variant="heading">List Details</AppText>
           <Input
             label="List Name"
+            testID={AgentUiIds.listSettings.name}
             value={name}
             onChangeText={setName}
             maxLength={80}
           />
           <Button
+            testID={AgentUiIds.listSettings.saveName}
             disabled={!name.trim() || name.trim() === list.name}
             onPress={() => renameList(list.id, name)}>
             Save name

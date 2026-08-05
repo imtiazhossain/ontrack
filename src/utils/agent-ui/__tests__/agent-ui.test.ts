@@ -151,6 +151,9 @@ describe('agent-ui routes', () => {
     );
     expect(expandAgentUiShortcuts('health/mood')).toBe('/health/mood-check-in');
     expect(expandAgentUiShortcuts('checklists/list-1')).toBe('/to-do/list-1');
+    expect(expandAgentUiShortcuts('checklists/list-1/recipe-import')).toBe(
+      '/todos/list-1/recipe-import',
+    );
     expect(expandAgentUiShortcuts('plants/new')).toBe('/plants/new');
     expect(resolveAgentUiDestination('travel/abc?add=stay')).toBe(
       '/travel/abc?add=stay',

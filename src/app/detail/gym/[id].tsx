@@ -9,6 +9,7 @@ import { aiProvider } from '@/services/ai';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import type { WorkoutRecommendation } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export default function GymDetailScreen() {
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function GymDetailScreen() {
       <Button
         variant="secondary"
         icon="edit"
+        testID={AgentUiIds.workouts.gym.edit}
         style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
         onPress={() => router.push({ pathname: '/activity-form', params: { id: activity.id } })}
         accessibilityLabel="Edit workout">
@@ -103,11 +105,16 @@ export default function GymDetailScreen() {
       ) : null}
 
       <Button
+        testID={AgentUiIds.workouts.gym.start}
         onPress={() => router.push({ pathname: '/detail/gym-active/[id]', params: { id: activityId } })}
         accessibilityLabel="Start workout">
         Start workout
       </Button>
-      <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Close">
+      <Button
+        variant="ghost"
+        testID={AgentUiIds.workouts.gym.close}
+        onPress={() => router.back()}
+        accessibilityLabel="Close">
         Close
       </Button>
     </Screen>

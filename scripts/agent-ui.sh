@@ -28,6 +28,9 @@ usage:
   agent-ui.sh open <alias|path>
   agent-ui.sh batch …
   agent-ui.sh tap|exists|route|wait|dump|seed|goto …
+  agent-ui.sh hit <x> <y> | --pixel <px> <py> | --overlay on|off|toggle
+  agent-ui.sh source <id|keyPath> | --label TEXT
+  agent-ui.sh overlay on|off|toggle|status
 EOF
   exit 2
 }
@@ -83,6 +86,18 @@ case "${CMD}" in
     ;;
   goto)
     exec "${ROOT}/scripts/agent-ui-goto.sh" "$@"
+    ;;
+  hit)
+    exec "${ROOT}/scripts/agent-ui-hit.sh" "$@"
+    ;;
+  source|sources)
+    if [[ "${CMD}" == "sources" ]]; then
+      exec "${ROOT}/scripts/agent-ui-sources.sh" "$@"
+    fi
+    exec "${ROOT}/scripts/agent-ui-source.sh" "$@"
+    ;;
+  overlay)
+    exec "${ROOT}/scripts/agent-ui-overlay.sh" "$@"
     ;;
   -h|--help|help)
     usage

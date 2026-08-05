@@ -23,6 +23,8 @@ export const AGENT_UI_ROUTE_ALIASES = {
   travel: '/travel',
   visionBoard: '/vision-board',
   'vision-board': '/vision-board',
+  visionBoardCategories: '/vision-board/categories',
+  'vision-board-categories': '/vision-board/categories',
   games: '/games',
   vehicles: '/vehicles',
   health: '/health',
@@ -110,6 +112,12 @@ export function expandAgentUiShortcuts(raw: string): string {
     /^(?:checklists|todos|to-do)\/([^/?#]+)\/settings$/i.exec(path);
   if (checklistSettingsMatch) {
     return withQuery(`/todos/${checklistSettingsMatch[1]}/settings`);
+  }
+
+  const recipeImportMatch =
+    /^(?:checklists|todos|to-do)\/([^/?#]+)\/recipe-import$/i.exec(path);
+  if (recipeImportMatch) {
+    return withQuery(`/todos/${recipeImportMatch[1]}/recipe-import`);
   }
 
   const plantMatch = /^plants\/([^/?#]+)$/i.exec(path);

@@ -161,8 +161,15 @@ export function BalloonPopScreen() {
                 Score {score} · reached level {level.level}
               </AppText>
               <View style={styles.actions}>
-                <Button onPress={() => startLevel(level.level, false)}>Retry</Button>
-                <Button variant="secondary" onPress={leave}>
+                <Button
+                  testID={AgentUiIds.games.balloonPopRetry}
+                  onPress={() => startLevel(level.level, false)}>
+                  Retry
+                </Button>
+                <Button
+                  variant="secondary"
+                  testID={AgentUiIds.games.balloonPopBack}
+                  onPress={leave}>
                   Back to Games
                 </Button>
               </View>

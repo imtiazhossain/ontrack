@@ -1,0 +1,5546 @@
+{
+  "generatedAt": "2026-08-05T17:10:24Z",
+  "idCount": 351,
+  "byId": {
+    "ontrack.activityForm.analyzePhoto": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx",
+        "src/app/meal-analysis/photo+api.ts",
+        "src/services/nutrition/server.ts"
+      ],
+      "keyPaths": [
+        "activityForm.analyzePhoto",
+        "analyzePhoto"
+      ]
+    },
+    "ontrack.activityForm.cancel": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.cancel"
+      ]
+    },
+    "ontrack.activityForm.date": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.date"
+      ]
+    },
+    "ontrack.activityForm.delete": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.delete"
+      ]
+    },
+    "ontrack.activityForm.duration": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/share-event.tsx",
+        "src/components/primitives/app-prompt.tsx",
+        "src/components/primitives/loading-spinner.tsx",
+        "src/components/primitives/progress-ring.tsx",
+        "src/components/shared/activity-card.tsx",
+        "src/constants/seed.ts",
+        "src/design-system/index.ts"
+      ],
+      "keyPaths": [
+        "activityForm.duration",
+        "duration"
+      ]
+    },
+    "ontrack.activityForm.guidedTitle": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "activityForm.guidedTitle",
+        "guidedTitle"
+      ]
+    },
+    "ontrack.activityForm.notes": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.notes"
+      ]
+    },
+    "ontrack.activityForm.pickPhoto": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx",
+        "src/features/account/profile-avatar-editor-sheet.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.pickPhoto",
+        "pickPhoto"
+      ]
+    },
+    "ontrack.activityForm.removePhoto": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.removePhoto"
+      ]
+    },
+    "ontrack.activityForm.save": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.save"
+      ]
+    },
+    "ontrack.activityForm.startTime": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx",
+        "src/features/travel/flight-details-card-editor.tsx",
+        "src/features/travel/rental-details-card-editor.tsx",
+        "src/features/travel/stay-details-card-editor.tsx",
+        "src/features/travel/transport-details-card-editor.tsx",
+        "src/features/travel/travel-range-fields.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.startTime",
+        "startTime"
+      ]
+    },
+    "ontrack.activityForm.title": {
+      "feature": "activityForm",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "activityForm.title"
+      ]
+    },
+    "ontrack.agentUi.overlay.root": {
+      "feature": "agentUi",
+      "entry": "src/utils/agent-ui/",
+      "skill": null,
+      "files": [
+        "src/utils/agent-ui/AgentUiOverlay.tsx"
+      ],
+      "keyPaths": [
+        "agentUi.overlayRoot",
+        "overlayRoot"
+      ]
+    },
+    "ontrack.auth.apple": {
+      "feature": "auth",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/+html.tsx",
+        "src/features/account/cloud-account-card.tsx",
+        "src/features/auth/auth-screen.tsx",
+        "src/features/health/defaults.ts",
+        "src/features/health/health-screen.tsx",
+        "src/features/health/health-settings-screen.tsx",
+        "src/features/health/model.ts",
+        "src/features/health/mood-check-in-screen.tsx",
+        "src/features/health/types.ts",
+        "src/features/todos/todo-collaborator-join-screen.tsx",
+        "src/features/todos/todo-join-screen.tsx",
+        "src/features/travel/address-map-link.ts"
+      ],
+      "keyPaths": [
+        "apple",
+        "auth.apple"
+      ]
+    },
+    "ontrack.auth.google": {
+      "feature": "auth",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/travel/[id]/flights.tsx",
+        "src/features/account/cloud-account-card.tsx",
+        "src/features/auth/auth-screen.tsx",
+        "src/features/todos/todo-collaborator-join-screen.tsx",
+        "src/features/todos/todo-join-screen.tsx",
+        "src/features/travel/address-map-link.ts",
+        "src/features/travel/currency-conversion-link.ts",
+        "src/features/travel/invite-landing.tsx",
+        "src/features/travel/open-join-landing.tsx",
+        "src/features/travel/provider.ts",
+        "src/features/travel/stays/provider.ts",
+        "src/features/travel/stays/stay-provider-logo-lookup.ts"
+      ],
+      "keyPaths": [
+        "auth.google",
+        "google"
+      ]
+    },
+    "ontrack.auth.guest": {
+      "feature": "auth",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/_layout.tsx",
+        "src/app/auth/data-choice.tsx",
+        "src/features/account/cloud-account-card.tsx",
+        "src/features/account/self-display-name.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/auth/auth-provider.tsx",
+        "src/features/auth/auth-screen.tsx",
+        "src/features/travel/flight-confirmation-fields.ts",
+        "src/features/travel/flight-status-client.ts",
+        "src/features/travel/stay-confirmation-parser.ts",
+        "src/features/travel/stays/provider.ts",
+        "src/features/travel/stays/stay-provider-screen.tsx"
+      ],
+      "keyPaths": [
+        "auth.guest",
+        "guest"
+      ]
+    },
+    "ontrack.auth.privacy": {
+      "feature": "auth",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/auth/auth-screen.tsx"
+      ],
+      "keyPaths": [
+        "auth.privacy"
+      ]
+    },
+    "ontrack.auth.terms": {
+      "feature": "auth",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/auth/auth-screen.tsx"
+      ],
+      "keyPaths": [
+        "auth.terms"
+      ]
+    },
+    "ontrack.calendar.jumpToday": {
+      "feature": "calendar",
+      "entry": "src/app/(tabs)/calendar.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx"
+      ],
+      "keyPaths": [
+        "calendar.jumpToday",
+        "jumpToday"
+      ]
+    },
+    "ontrack.calendar.nextMonth": {
+      "feature": "calendar",
+      "entry": "src/app/(tabs)/calendar.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx",
+        "src/components/primitives/date-field-calendar.tsx"
+      ],
+      "keyPaths": [
+        "calendar.nextMonth",
+        "nextMonth"
+      ]
+    },
+    "ontrack.calendar.openDay": {
+      "feature": "calendar",
+      "entry": "src/app/(tabs)/calendar.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx"
+      ],
+      "keyPaths": [
+        "calendar.openDay",
+        "openDay"
+      ]
+    },
+    "ontrack.calendar.prevMonth": {
+      "feature": "calendar",
+      "entry": "src/app/(tabs)/calendar.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx"
+      ],
+      "keyPaths": [
+        "calendar.prevMonth",
+        "prevMonth"
+      ]
+    },
+    "ontrack.checklists.collaborators": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/_layout.tsx",
+        "src/app/todo-collaborators.tsx",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/todos/todo-collaborators-screen.tsx",
+        "src/features/todos/todo-list-card.tsx",
+        "src/features/todos/todo-lists-overview.tsx",
+        "src/features/vehicles/vehicle-activity-panel.tsx",
+        "src/features/vehicles/vehicle-overview-panel.tsx"
+      ],
+      "keyPaths": [
+        "checklists.collaborators",
+        "collaborators"
+      ]
+    },
+    "ontrack.checklists.createList": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/share-import.tsx",
+        "src/features/todos/todo-lists-overview.tsx",
+        "src/store/todos.ts"
+      ],
+      "keyPaths": [
+        "checklists.createList",
+        "createList"
+      ]
+    },
+    "ontrack.checklists.detail.actions": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/plants/[id].tsx",
+        "src/app/plants/[id]/check-in.tsx",
+        "src/components/primitives/app-prompt.tsx",
+        "src/components/primitives/screen-header.tsx"
+      ],
+      "keyPaths": [
+        "actions",
+        "checklists.detail.actions"
+      ]
+    },
+    "ontrack.checklists.detail.addTask": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/features/todos/grocery-list-screen.tsx",
+        "src/features/todos/todo-list-header.tsx",
+        "src/features/todos/todo-list-screen.tsx",
+        "src/store/todos.ts"
+      ],
+      "keyPaths": [
+        "addTask",
+        "checklists.detail.addTask"
+      ]
+    },
+    "ontrack.checklists.detail.back": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/todo-list-header.tsx"
+      ],
+      "keyPaths": [
+        "checklists.detail.back"
+      ]
+    },
+    "ontrack.checklists.detail.editMode": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/todo-list-screen.tsx"
+      ],
+      "keyPaths": [
+        "checklists.detail.editMode"
+      ]
+    },
+    "ontrack.checklists.detail.newTask": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/todo-list-header.tsx",
+        "src/features/todos/todo-list-screen.tsx"
+      ],
+      "keyPaths": [
+        "checklists.detail.newTask",
+        "newTask"
+      ]
+    },
+    "ontrack.checklists.detail.sort": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/nutrition-profile.tsx",
+        "src/app/share-event.tsx",
+        "src/design-system/icons.ts",
+        "src/features/daily-tracking/day-view.tsx",
+        "src/features/health/model.ts",
+        "src/features/social/social-feed-model.ts",
+        "src/features/social/social-trip-membership.ts"
+      ],
+      "keyPaths": [
+        "checklists.detail.sort",
+        "sort"
+      ]
+    },
+    "ontrack.checklists.editMode": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/todo-lists-overview.tsx"
+      ],
+      "keyPaths": [
+        "checklists.editMode"
+      ]
+    },
+    "ontrack.checklists.newListName": {
+      "feature": "checklists",
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/share-import.tsx",
+        "src/features/todos/todo-lists-overview.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "checklists.newListName",
+        "newListName"
+      ]
+    },
+    "ontrack.chrome.back": {
+      "feature": "chrome",
+      "entry": "src/components/primitives/",
+      "skill": null,
+      "files": [
+        "src/components/primitives/back-button.tsx",
+        "src/features/social/social-action-modal.tsx",
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/social/social-hub-sections.tsx",
+        "src/features/travel/travel-plan-hero.tsx"
+      ],
+      "keyPaths": [
+        "chrome.back"
+      ]
+    },
+    "ontrack.chrome.headerBack": {
+      "feature": "chrome",
+      "entry": "src/components/primitives/",
+      "skill": null,
+      "files": [
+        "src/components/primitives/back-button.tsx",
+        "src/features/travel/travel-collapsible-section.tsx"
+      ],
+      "keyPaths": [
+        "chrome.headerBack",
+        "headerBack"
+      ]
+    },
+    "ontrack.designSystem.delete": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/features/design-system/design-system-gallery.tsx"
+      ],
+      "keyPaths": [
+        "designSystem.delete"
+      ]
+    },
+    "ontrack.designSystem.ghost": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/auth/data-choice.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/detail/gym/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/detail/work/[id].tsx",
+        "src/app/f/[code].tsx"
+      ],
+      "keyPaths": [
+        "designSystem.ghost",
+        "ghost"
+      ]
+    },
+    "ontrack.designSystem.info": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/design-system/design-system-gallery.tsx",
+        "src/features/travel/confirmation-attachments.ts",
+        "src/features/travel/destination-cover-lookup.ts",
+        "src/features/travel/fixtures/chase-roundtrip-confirmation.ts",
+        "src/features/travel/stay-confirmation-parser.ts",
+        "src/features/travel/travel-timeline-add-modal.tsx",
+        "src/services/ai/provider.ts",
+        "src/services/nutrition/server.ts"
+      ],
+      "keyPaths": [
+        "designSystem.info",
+        "info"
+      ]
+    },
+    "ontrack.designSystem.input": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/health/action-suggestions+api.ts",
+        "src/app/meal-analysis/confirm+api.ts",
+        "src/app/meal-analysis/link+api.ts",
+        "src/app/meal-analysis/photo+api.ts",
+        "src/app/meal-images/enhance+api.ts",
+        "src/app/meal-links/resolve+api.ts",
+        "src/app/nutrition-targets/calculate+api.ts",
+        "src/app/plant-analysis/care+api.ts",
+        "src/app/plant-analysis/check-in+api.ts",
+        "src/app/plant-analysis/identify+api.ts"
+      ],
+      "keyPaths": [
+        "designSystem.input",
+        "input"
+      ]
+    },
+    "ontrack.designSystem.primary": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/features/design-system/design-system-gallery.tsx"
+      ],
+      "keyPaths": [
+        "designSystem.primary"
+      ]
+    },
+    "ontrack.designSystem.secondary": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/auth/callback.tsx",
+        "src/app/auth/data-choice.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/gym-active/[id].tsx"
+      ],
+      "keyPaths": [
+        "designSystem.secondary",
+        "secondary"
+      ]
+    },
+    "ontrack.designSystem.sheet.close": {
+      "feature": "designSystem",
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "files": [
+        "src/features/design-system/design-system-gallery.tsx"
+      ],
+      "keyPaths": [
+        "designSystem.sheetClose",
+        "sheetClose"
+      ]
+    },
+    "ontrack.eventDetail.close": {
+      "feature": "eventDetail",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/detail/generic/[id].tsx"
+      ],
+      "keyPaths": [
+        "eventDetail.close"
+      ]
+    },
+    "ontrack.eventDetail.edit": {
+      "feature": "eventDetail",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/detail/generic/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "eventDetail.edit"
+      ]
+    },
+    "ontrack.eventDetail.goBack": {
+      "feature": "eventDetail",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/activity-form.tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/components/primitives/back-button.tsx",
+        "src/features/games/balloon-pop/balloon-pop-screen.tsx",
+        "src/features/travel/flights/flight-search-screen.tsx",
+        "src/features/travel/stays/stay-provider-screen.tsx",
+        "src/features/travel/travel-plan-hero.tsx",
+        "src/features/vision-board/vision-board-category-screen.tsx",
+        "src/utils/navigation.ts"
+      ],
+      "keyPaths": [
+        "eventDetail.goBack",
+        "goBack"
+      ]
+    },
+    "ontrack.eventDetail.toggleComplete": {
+      "feature": "eventDetail",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/app/detail/generic/[id].tsx",
+        "src/features/daily-tracking/day-view.tsx"
+      ],
+      "keyPaths": [
+        "eventDetail.toggleComplete",
+        "toggleComplete"
+      ]
+    },
+    "ontrack.food.detail.analyze": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "food.analyze"
+      ]
+    },
+    "ontrack.food.detail.analyzeAnother": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "analyzeAnother",
+        "food.analyzeAnother"
+      ]
+    },
+    "ontrack.food.detail.close": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "food.close"
+      ]
+    },
+    "ontrack.food.detail.confirmSave": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "confirmSave",
+        "food.confirmSave"
+      ]
+    },
+    "ontrack.food.detail.edit": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "food.edit"
+      ]
+    },
+    "ontrack.food.detail.findMeal": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "findMeal",
+        "food.findMeal"
+      ]
+    },
+    "ontrack.food.detail.link": {
+      "feature": "food",
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/auth/callback.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/meal-links/resolve+api.ts",
+        "src/app/todos/[id].tsx",
+        "src/app/travel/[id].tsx",
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/design-system/icons.ts",
+        "src/design-system/responsive.ts",
+        "src/design-system/typography.ts",
+        "src/features/account/privacy-policy-content.ts"
+      ],
+      "keyPaths": [
+        "food.link",
+        "link"
+      ]
+    },
+    "ontrack.games.balloonPop.back": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/balloon-pop/balloon-pop-screen.tsx"
+      ],
+      "keyPaths": [
+        "balloonPopBack",
+        "games.balloonPopBack"
+      ]
+    },
+    "ontrack.games.balloonPop.close": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/balloon-pop/balloon-pop-hud.tsx"
+      ],
+      "keyPaths": [
+        "balloonPopClose",
+        "games.balloonPopClose"
+      ]
+    },
+    "ontrack.games.balloonPop.play": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/balloon-pop/balloon-pop-screen.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "balloonPopPlay",
+        "games.balloonPopPlay"
+      ]
+    },
+    "ontrack.games.balloonPop.retry": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/balloon-pop/balloon-pop-screen.tsx"
+      ],
+      "keyPaths": [
+        "balloonPopRetry",
+        "games.balloonPopRetry"
+      ]
+    },
+    "ontrack.games.hub.balloonPop": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/games-hub.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "balloonPopCard",
+        "games.balloonPopCard"
+      ]
+    },
+    "ontrack.games.hub.challengeFriend": {
+      "feature": "games",
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "files": [
+        "src/features/games/games-hub.tsx",
+        "src/features/workouts/challenge-friend-button.tsx",
+        "src/features/workouts/workouts-screen-header.tsx"
+      ],
+      "keyPaths": [
+        "challengeFriend",
+        "games.challengeFriend"
+      ]
+    },
+    "ontrack.grocery.detail.addRecipe": {
+      "feature": "grocery",
+      "entry": "src/features/todos/grocery-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/grocery-list-screen.tsx",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/store/todos-recipe-actions.ts",
+        "src/store/todos.ts"
+      ],
+      "keyPaths": [
+        "addRecipe",
+        "grocery.addRecipe"
+      ]
+    },
+    "ontrack.grocery.detail.copy": {
+      "feature": "grocery",
+      "entry": "src/features/todos/grocery-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/components/primitives/app-prompt.tsx",
+        "src/components/primitives/form-section.tsx",
+        "src/components/primitives/input.tsx",
+        "src/components/primitives/screen-header.tsx",
+        "src/design-system/icons.ts",
+        "src/features/design-system/design-system-gallery.tsx",
+        "src/features/social/social-action-modal.tsx",
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-trip-membership.ts",
+        "src/features/todos/grocery-list-screen.tsx",
+        "src/features/todos/share.ts",
+        "src/features/todos/todo-list-header.tsx"
+      ],
+      "keyPaths": [
+        "copy",
+        "grocery.copy"
+      ]
+    },
+    "ontrack.grocery.detail.settings": {
+      "feature": "grocery",
+      "entry": "src/features/todos/grocery-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/grocery-list-screen.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "grocery.settings"
+      ]
+    },
+    "ontrack.grocery.detail.share": {
+      "feature": "grocery",
+      "entry": "src/features/todos/grocery-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/+html.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/plants/new.tsx",
+        "src/app/share-event.tsx",
+        "src/app/share-import.tsx",
+        "src/app/vehicles/[id].tsx"
+      ],
+      "keyPaths": [
+        "grocery.share",
+        "share"
+      ]
+    },
+    "ontrack.health.body.connect": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/app/+html.tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/f/[code].tsx",
+        "src/design-system/icons.ts",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/agents/agent-manager.tsx",
+        "src/features/health/factor-editor-screen.tsx",
+        "src/features/health/health-screen.tsx",
+        "src/features/health/health-settings-screen.tsx",
+        "src/features/social/social-feed-model.ts",
+        "src/features/social/social-feed.tsx"
+      ],
+      "keyPaths": [
+        "connect",
+        "health.connect"
+      ]
+    },
+    "ontrack.health.body.openAppleHealth": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx",
+        "src/features/health/health-settings-screen.tsx",
+        "src/services/health/apple-health.ts"
+      ],
+      "keyPaths": [
+        "health.openAppleHealth",
+        "openAppleHealth"
+      ]
+    },
+    "ontrack.health.body.refresh": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/f/[code].tsx",
+        "src/app/plants/[id]/check-in.tsx",
+        "src/app/plants/[id]/edit.tsx",
+        "src/app/plants/new.tsx",
+        "src/app/share-event.tsx",
+        "src/app/share-import.tsx",
+        "src/app/vehicles/new.tsx",
+        "src/components/primitives/screen.tsx"
+      ],
+      "keyPaths": [
+        "health.refresh",
+        "refresh"
+      ]
+    },
+    "ontrack.health.body.sleepHandoff": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/app/detail/sleep/[id].tsx"
+      ],
+      "keyPaths": [
+        "health.sleepHandoff",
+        "sleepHandoff"
+      ]
+    },
+    "ontrack.health.checkIn.addCustomEmotion": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/mood-check-in-screen.tsx",
+        "src/store/health.ts"
+      ],
+      "keyPaths": [
+        "addCustomEmotion",
+        "health.addCustomEmotion"
+      ]
+    },
+    "ontrack.health.checkIn.customEmotion": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/mood-check-in-screen.tsx",
+        "src/store/health.ts"
+      ],
+      "keyPaths": [
+        "customEmotion",
+        "health.customEmotion"
+      ]
+    },
+    "ontrack.health.checkIn.note": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/generic/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/plants/[id].tsx",
+        "src/app/plants/[id]/edit.tsx",
+        "src/app/share-event.tsx",
+        "src/constants/seed.ts"
+      ],
+      "keyPaths": [
+        "health.note",
+        "note"
+      ]
+    },
+    "ontrack.health.checkIn.save": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/mood-check-in-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.saveCheckIn",
+        "saveCheckIn"
+      ]
+    },
+    "ontrack.health.factor.delete": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/factor-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "deleteFactor",
+        "health.deleteFactor"
+      ]
+    },
+    "ontrack.health.factor.name": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/factor-editor-screen.tsx",
+        "src/features/health/playbook-editor-screen.tsx",
+        "src/services/health/action-suggestions.ts"
+      ],
+      "keyPaths": [
+        "factorName",
+        "health.factorName"
+      ]
+    },
+    "ontrack.health.factor.save": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/factor-editor-screen.tsx",
+        "src/store/health.ts",
+        "src/utils/agent-ui/fixtures.ts"
+      ],
+      "keyPaths": [
+        "health.saveFactor",
+        "saveFactor"
+      ]
+    },
+    "ontrack.health.mind.addFactor": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx"
+      ],
+      "keyPaths": [
+        "addFactor",
+        "health.addFactor"
+      ]
+    },
+    "ontrack.health.mind.addPlaybook": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx"
+      ],
+      "keyPaths": [
+        "addPlaybook",
+        "health.addPlaybook"
+      ]
+    },
+    "ontrack.health.mind.checkIn": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "health.checkIn"
+      ]
+    },
+    "ontrack.health.playbook.delete": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "deletePlaybook",
+        "health.deletePlaybook"
+      ]
+    },
+    "ontrack.health.playbook.duration": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.playbookDuration",
+        "playbookDuration"
+      ]
+    },
+    "ontrack.health.playbook.name": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.playbookName",
+        "playbookName"
+      ]
+    },
+    "ontrack.health.playbook.save": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx",
+        "src/store/health.ts"
+      ],
+      "keyPaths": [
+        "health.savePlaybook",
+        "savePlaybook"
+      ]
+    },
+    "ontrack.health.playbook.steps": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.playbookSteps",
+        "playbookSteps"
+      ]
+    },
+    "ontrack.health.playbook.suggest": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/playbook-editor-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.suggestPlaybook",
+        "suggestPlaybook"
+      ]
+    },
+    "ontrack.health.settings": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx",
+        "src/features/health/health-settings-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.settings"
+      ]
+    },
+    "ontrack.health.settings.connect": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-settings-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.settingsConnect",
+        "settingsConnect"
+      ]
+    },
+    "ontrack.health.settings.openAppleHealth": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-settings-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.openAppleHealthSettings",
+        "openAppleHealthSettings"
+      ]
+    },
+    "ontrack.health.settings.reset": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/travel/flights/search+api.ts",
+        "src/app/travel/flights/status+api.ts",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/auth/auth-provider.tsx",
+        "src/features/health/health-settings-screen.tsx",
+        "src/features/travel/expenses/fx-rates.ts",
+        "src/features/travel/use-flight-status.ts",
+        "src/features/travel/use-travel-plan-confirmation-imports.ts",
+        "src/features/travel/use-travel-plan-detail-add-form.ts",
+        "src/features/travel/use-travel-plan-detail-add-item.ts",
+        "src/features/vision-board/consolidated-card.tsx"
+      ],
+      "keyPaths": [
+        "health.reset",
+        "reset"
+      ]
+    },
+    "ontrack.health.support.call988": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx"
+      ],
+      "keyPaths": [
+        "call988",
+        "health.call988"
+      ]
+    },
+    "ontrack.health.support.text988": {
+      "feature": "health",
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "files": [
+        "src/features/health/health-screen.tsx"
+      ],
+      "keyPaths": [
+        "health.text988",
+        "text988"
+      ]
+    },
+    "ontrack.listSettings.name": {
+      "feature": "listSettings",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/+html.tsx"
+      ],
+      "keyPaths": [
+        "listSettings.name",
+        "name"
+      ]
+    },
+    "ontrack.listSettings.saveName": {
+      "feature": "listSettings",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/todos/todo-list-settings-screen.tsx"
+      ],
+      "keyPaths": [
+        "listSettings.saveName",
+        "saveName"
+      ]
+    },
+    "ontrack.peoplePicker.close": {
+      "feature": "peoplePicker",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/social/people-picker.tsx"
+      ],
+      "keyPaths": [
+        "peoplePicker.close"
+      ]
+    },
+    "ontrack.peoplePicker.confirm": {
+      "feature": "peoplePicker",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/social/people-picker.tsx"
+      ],
+      "keyPaths": [
+        "peoplePicker.confirm"
+      ]
+    },
+    "ontrack.peoplePicker.search": {
+      "feature": "peoplePicker",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/agents/types.ts",
+        "src/app/activity-form-editors.tsx",
+        "src/app/api/destination-cover+api.ts",
+        "src/app/api/movies/[id]+api.ts",
+        "src/app/api/movies/search+api.ts",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/nutrition-insights+api.ts",
+        "src/app/nutrition-profile+api.ts",
+        "src/app/plant-analysis/search+api.ts"
+      ],
+      "keyPaths": [
+        "peoplePicker.search",
+        "search"
+      ]
+    },
+    "ontrack.plants.detail.adjustSchedule": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "adjustSchedule",
+        "plants.detail.adjustSchedule"
+      ]
+    },
+    "ontrack.plants.detail.amount": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "plants.detail.amount"
+      ]
+    },
+    "ontrack.plants.detail.checkIn": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "plants.detail.checkIn"
+      ]
+    },
+    "ontrack.plants.detail.delete": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "plants.detail.delete"
+      ]
+    },
+    "ontrack.plants.detail.edit": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "plants.detail.edit"
+      ]
+    },
+    "ontrack.plants.detail.logWatering": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "logWatering",
+        "plants.detail.logWatering"
+      ]
+    },
+    "ontrack.plants.detail.undoWatering": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "plants.detail.undoWatering",
+        "undoWatering"
+      ]
+    },
+    "ontrack.plants.list.add": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/plants.tsx"
+      ],
+      "keyPaths": [
+        "plants.add"
+      ]
+    },
+    "ontrack.plants.new.analyze": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "plants.new.analyze"
+      ]
+    },
+    "ontrack.plants.new.buildCarePlan": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "buildCarePlan",
+        "plants.new.buildCarePlan"
+      ]
+    },
+    "ontrack.plants.new.camera": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "plants.new.camera"
+      ]
+    },
+    "ontrack.plants.new.confirmIdentity": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "confirmIdentity",
+        "plants.new.confirmIdentity"
+      ]
+    },
+    "ontrack.plants.new.library": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "plants.new.library"
+      ]
+    },
+    "ontrack.plants.new.nickname": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "plants.new.nickname"
+      ]
+    },
+    "ontrack.plants.new.save": {
+      "feature": "plants",
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "files": [
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "plants.new.save"
+      ]
+    },
+    "ontrack.profile.agents": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/agents/registry.ts",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/_layout.tsx",
+        "src/app/agents.tsx",
+        "src/design-system/icons.ts",
+        "src/features/agents/agent-manager.tsx",
+        "src/features/auth/auth-provider.tsx",
+        "src/hooks/use-hydrated.ts",
+        "src/services/cloud/entitlements.ts",
+        "src/services/cloud/sync.ts",
+        "src/services/storage/index.ts",
+        "src/store/agents.ts"
+      ],
+      "keyPaths": [
+        "agents",
+        "profile.agents"
+      ]
+    },
+    "ontrack.profile.avatar": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/features/account/avatar-cache.ts",
+        "src/features/account/avatar-color-picker.tsx",
+        "src/features/account/iconify-icon.tsx",
+        "src/features/account/iconify-search.ts",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/account/profile-avatar-editor-sheet.tsx",
+        "src/features/account/profile-avatar-media.ts",
+        "src/features/account/profile-avatar-model.ts",
+        "src/features/account/profile-avatar.tsx",
+        "src/features/social/social-feed.tsx",
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "avatar",
+        "profile.avatar"
+      ]
+    },
+    "ontrack.profile.deleteAccount": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/features/account/cloud-account-card.tsx",
+        "src/features/auth/auth-provider.tsx"
+      ],
+      "keyPaths": [
+        "deleteAccount",
+        "profile.deleteAccount"
+      ]
+    },
+    "ontrack.profile.designSystem": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/features/design-system/design-system-gallery.tsx",
+        "src/utils/agent-ui/route.ts",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "designSystem",
+        "profile.designSystem"
+      ]
+    },
+    "ontrack.profile.homeLocation": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/features/daily-tracking/home-location-sheet.tsx",
+        "src/features/daily-tracking/use-home-weather.ts",
+        "src/store/preferences.ts"
+      ],
+      "keyPaths": [
+        "homeLocation",
+        "profile.homeLocation"
+      ]
+    },
+    "ontrack.profile.nutrition": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/meal-analysis/confirm+api.ts",
+        "src/app/meal-analysis/link+api.ts",
+        "src/app/meal-analysis/photo+api.ts",
+        "src/app/meal-images/enhance+api.ts",
+        "src/app/meal-links/resolve+api.ts"
+      ],
+      "keyPaths": [
+        "nutrition",
+        "profile.nutrition"
+      ]
+    },
+    "ontrack.profile.privacy": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx"
+      ],
+      "keyPaths": [
+        "profile.privacy"
+      ]
+    },
+    "ontrack.profile.resetData": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx"
+      ],
+      "keyPaths": [
+        "profile.resetData",
+        "resetData"
+      ]
+    },
+    "ontrack.profile.signOut": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/features/account/cloud-account-card.tsx",
+        "src/features/auth/auth-provider.tsx",
+        "src/services/cloud/account.ts"
+      ],
+      "keyPaths": [
+        "profile.signOut",
+        "signOut"
+      ]
+    },
+    "ontrack.profile.terms": {
+      "feature": "profile",
+      "entry": "src/features/account/",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx"
+      ],
+      "keyPaths": [
+        "profile.terms"
+      ]
+    },
+    "ontrack.prompt.close": {
+      "feature": "prompt",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/components/primitives/app-prompt.tsx"
+      ],
+      "keyPaths": [
+        "prompt.close"
+      ]
+    },
+    "ontrack.recipeImport.analyze": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.analyze"
+      ]
+    },
+    "ontrack.recipeImport.camera": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.camera"
+      ]
+    },
+    "ontrack.recipeImport.cancel": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.cancel"
+      ]
+    },
+    "ontrack.recipeImport.ingredient.add": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-ingredient-editor.tsx"
+      ],
+      "keyPaths": [
+        "addIngredient",
+        "recipeImport.addIngredient"
+      ]
+    },
+    "ontrack.recipeImport.library": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.library"
+      ]
+    },
+    "ontrack.recipeImport.mealName": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/meal-analysis/photo+api.ts",
+        "src/app/meal-images/enhance+api.ts",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/services/ai/mock-provider.ts",
+        "src/services/ai/provider.ts",
+        "src/services/nutrition/client.ts",
+        "src/services/nutrition/server.ts",
+        "src/services/nutrition/types.ts"
+      ],
+      "keyPaths": [
+        "mealName",
+        "recipeImport.mealName"
+      ]
+    },
+    "ontrack.recipeImport.save": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.save"
+      ]
+    },
+    "ontrack.recipeImport.sourceServings": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/grocery-utils.ts",
+        "src/features/todos/recipe-import-screen.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.sourceServings",
+        "sourceServings"
+      ]
+    },
+    "ontrack.recipeImport.sourceUrl": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/detail/food/[id].tsx",
+        "src/features/todos/grocery-rows.tsx",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/features/todos/share.ts",
+        "src/services/recipes/server.ts",
+        "src/services/recipes/types.ts",
+        "src/store/todos-normalize.ts",
+        "src/store/todos-recipe-actions.ts",
+        "src/store/todos-types.ts",
+        "src/store/todos.ts",
+        "src/types/models.ts",
+        "src/utils/agent-ui/fixtures.ts"
+      ],
+      "keyPaths": [
+        "recipeImport.sourceUrl",
+        "sourceUrl"
+      ]
+    },
+    "ontrack.recipeImport.stop": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/design-system/themes.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/features/travel/calendar.ts",
+        "src/features/travel/flight-arrival.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flight-journey-chrome.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-route-label.ts",
+        "src/features/travel/flights/flight-search-presentational.tsx",
+        "src/features/travel/flights/normalize.ts",
+        "src/features/travel/flights/types.ts"
+      ],
+      "keyPaths": [
+        "recipeImport.stop",
+        "stop"
+      ]
+    },
+    "ontrack.recipeImport.targetServings": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/features/todos/grocery-rows.tsx",
+        "src/features/todos/grocery-utils.ts",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/features/todos/share.ts",
+        "src/services/recipes/server.ts",
+        "src/services/recipes/types.ts",
+        "src/store/todos-normalize.ts",
+        "src/store/todos-recipe-actions.ts",
+        "src/store/todos-types.ts",
+        "src/store/todos.ts",
+        "src/utils/agent-ui/fixtures.ts"
+      ],
+      "keyPaths": [
+        "recipeImport.targetServings",
+        "targetServings"
+      ]
+    },
+    "ontrack.recipeImport.url": {
+      "feature": "recipeImport",
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "files": [
+        "src/app/api/destination-cover+api.ts",
+        "src/app/api/movies/[id]+api.ts",
+        "src/app/api/movies/search+api.ts",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/detail/food/[id].tsx",
+        "src/app/meal-links/resolve+api.ts",
+        "src/app/nutrition-insights+api.ts",
+        "src/app/nutrition-profile+api.ts",
+        "src/app/plant-analysis/search+api.ts",
+        "src/app/plants/[id].tsx",
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "recipeImport.url",
+        "url"
+      ]
+    },
+    "ontrack.social.actionModal.close": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-action-modal.tsx"
+      ],
+      "keyPaths": [
+        "social.actionModal.close"
+      ]
+    },
+    "ontrack.social.actionModal.primary": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-action-modal.tsx"
+      ],
+      "keyPaths": [
+        "social.actionModal.primary"
+      ]
+    },
+    "ontrack.social.feed.loadMore": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-feed.tsx"
+      ],
+      "keyPaths": [
+        "feedLoadMore",
+        "social.feedLoadMore"
+      ]
+    },
+    "ontrack.social.friend.email": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-trip-membership.ts"
+      ],
+      "keyPaths": [
+        "friendEmail",
+        "social.friendEmail"
+      ]
+    },
+    "ontrack.social.friend.send": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "friendSend",
+        "social.friendSend"
+      ]
+    },
+    "ontrack.social.friends.add": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-hub-sections.tsx"
+      ],
+      "keyPaths": [
+        "social.friends.add"
+      ]
+    },
+    "ontrack.social.friends.close": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "social.friends.close"
+      ]
+    },
+    "ontrack.social.friends.seeAll": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-hub-sections.tsx"
+      ],
+      "keyPaths": [
+        "social.friends.seeAll"
+      ]
+    },
+    "ontrack.social.friends.signIn": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx",
+        "src/services/cloud/account.ts"
+      ],
+      "keyPaths": [
+        "signIn",
+        "social.friends.signIn"
+      ]
+    },
+    "ontrack.social.header.addFriend": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/social/social-hub-sections.tsx"
+      ],
+      "keyPaths": [
+        "addFriend",
+        "social.header.addFriend"
+      ]
+    },
+    "ontrack.social.header.messages": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/agents/types.ts",
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/social/social-hub-sections.tsx",
+        "src/features/travel/chat.ts",
+        "src/features/travel/travel-chat-screen.tsx",
+        "src/services/ai/vision-transport.ts",
+        "src/store/agents.ts"
+      ],
+      "keyPaths": [
+        "messages",
+        "social.header.messages"
+      ]
+    },
+    "ontrack.social.invite.copy": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "inviteCopy",
+        "social.inviteCopy"
+      ]
+    },
+    "ontrack.social.invite.save": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "inviteSave",
+        "social.inviteSave"
+      ]
+    },
+    "ontrack.social.invite.share": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "inviteShare",
+        "social.inviteShare"
+      ]
+    },
+    "ontrack.social.invite.slug": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-friends-modal.tsx"
+      ],
+      "keyPaths": [
+        "inviteSlug",
+        "social.inviteSlug"
+      ]
+    },
+    "ontrack.social.upcoming.empty": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/agents/registry.ts",
+        "src/components/primitives/date-field.tsx",
+        "src/components/primitives/index.ts",
+        "src/components/primitives/input.tsx",
+        "src/features/account/iconify-search.ts",
+        "src/features/account/profile-avatar-model.ts",
+        "src/features/calendar/month-grid.tsx",
+        "src/features/daily-tracking/day-view.tsx",
+        "src/features/plants/sample.ts",
+        "src/features/social/social-feed.tsx",
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-hub-sections.tsx"
+      ],
+      "keyPaths": [
+        "empty",
+        "social.upcoming.empty"
+      ]
+    },
+    "ontrack.social.upcoming.seeAll": {
+      "feature": "social",
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "files": [
+        "src/features/social/social-hub-sections.tsx"
+      ],
+      "keyPaths": [
+        "social.upcoming.seeAll"
+      ]
+    },
+    "ontrack.tabs.calendar": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [],
+      "keyPaths": [
+        "tabs.calendar"
+      ]
+    },
+    "ontrack.tabs.checklists": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/app/+html.tsx",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/todos/grocery-list-screen.tsx",
+        "src/features/todos/share.ts",
+        "src/features/todos/todo-collaborator-join-screen.tsx",
+        "src/features/todos/todo-collaborators-screen.tsx",
+        "src/features/todos/todo-list-card.tsx",
+        "src/features/todos/todo-list-header.tsx",
+        "src/features/todos/todo-list-screen.tsx",
+        "src/features/todos/todo-lists-overview.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "checklists",
+        "tabs.checklists"
+      ]
+    },
+    "ontrack.tabs.games": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/games.tsx",
+        "src/app/_layout.tsx",
+        "src/app/games/balloon-pop.tsx",
+        "src/components/navigation/floating-tab-bar.tsx",
+        "src/design-system/icons.ts",
+        "src/features/account/terms-of-use-content.ts",
+        "src/features/games/balloon-pop/balloon-pop-hud.tsx",
+        "src/features/games/balloon-pop/balloon-pop-screen.tsx",
+        "src/features/games/balloon-pop/balloon-pop-stage.tsx"
+      ],
+      "keyPaths": [
+        "games",
+        "tabs.games"
+      ]
+    },
+    "ontrack.tabs.health": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/health.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/_layout.tsx",
+        "src/app/detail/sleep/[id].tsx",
+        "src/app/health/action-suggestions+api.ts",
+        "src/app/health/factor-editor.tsx",
+        "src/app/health/mood-check-in.tsx",
+        "src/app/health/playbook-editor.tsx"
+      ],
+      "keyPaths": [
+        "health",
+        "tabs.health"
+      ]
+    },
+    "ontrack.tabs.insights": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/nutrition-insights+api.ts",
+        "src/components/navigation/floating-tab-bar.tsx",
+        "src/design-system/icons.ts",
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/social/social-types.ts",
+        "src/features/travel/travel-currency-rate-panel.tsx",
+        "src/utils/agent-ui/route.ts",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "insights",
+        "tabs.insights"
+      ]
+    },
+    "ontrack.tabs.plants": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/agents/registry.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/_layout.tsx",
+        "src/app/plant-analysis/care+api.ts",
+        "src/app/plant-analysis/check-in+api.ts",
+        "src/app/plant-analysis/identify+api.ts",
+        "src/app/plant-analysis/search+api.ts",
+        "src/app/plants/[id].tsx"
+      ],
+      "keyPaths": [
+        "plants",
+        "tabs.plants"
+      ]
+    },
+    "ontrack.tabs.profile": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/_layout.tsx",
+        "src/app/design-system.tsx",
+        "src/app/nutrition-insights+api.ts",
+        "src/app/nutrition-profile+api.ts",
+        "src/app/nutrition-profile.tsx",
+        "src/app/nutrition-targets/calculate+api.ts"
+      ],
+      "keyPaths": [
+        "profile",
+        "tabs.profile"
+      ]
+    },
+    "ontrack.tabs.social": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/social.tsx",
+        "src/app/f/[code].tsx",
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/components/navigation/floating-tab-bar.tsx",
+        "src/features/games/games-hub.tsx",
+        "src/features/social/social-action-modal.tsx",
+        "src/features/social/social-chrome.ts",
+        "src/features/social/social-feed-model.ts",
+        "src/features/social/social-feed.tsx",
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-hub-screen.tsx"
+      ],
+      "keyPaths": [
+        "social",
+        "tabs.social"
+      ]
+    },
+    "ontrack.tabs.today": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/nutrition-profile.tsx",
+        "src/app/plants/[id].tsx",
+        "src/app/plants/new.tsx",
+        "src/components/navigation/floating-tab-bar.tsx"
+      ],
+      "keyPaths": [
+        "tabs.today",
+        "today"
+      ]
+    },
+    "ontrack.tabs.travel": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/agents/registry.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/+html.tsx",
+        "src/app/_layout.tsx",
+        "src/app/api/destination-cover+api.ts",
+        "src/app/i/[code].tsx",
+        "src/app/invite/travel.tsx",
+        "src/app/j/[code].tsx"
+      ],
+      "keyPaths": [
+        "tabs.travel",
+        "travel"
+      ]
+    },
+    "ontrack.tabs.vehicles": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/_layout.tsx",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/v/[code].tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/app/vehicles/_layout.tsx",
+        "src/app/vehicles/new.tsx"
+      ],
+      "keyPaths": [
+        "tabs.vehicles",
+        "vehicles"
+      ]
+    },
+    "ontrack.tabs.visionBoard": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vision-board/consolidated-model.ts",
+        "src/features/vision-board/sample.ts",
+        "src/features/vision-board/vision-board-dashboard.tsx",
+        "src/features/vision-board/vision-board-item-card.tsx",
+        "src/services/cloud/sync.ts",
+        "src/services/storage/index.ts",
+        "src/store/vision-board.ts",
+        "src/utils/agent-ui/route.ts",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "tabs.visionBoard",
+        "visionBoard"
+      ]
+    },
+    "ontrack.tabs.workouts": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/agents/registry.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/detail/gym/[id].tsx",
+        "src/app/onboarding.tsx",
+        "src/components/navigation/floating-tab-bar.tsx",
+        "src/constants/seed.ts"
+      ],
+      "keyPaths": [
+        "tabs.workouts",
+        "workouts"
+      ]
+    },
+    "ontrack.today.addActivity": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/day-view.tsx",
+        "src/store/schedule.ts"
+      ],
+      "keyPaths": [
+        "addActivity",
+        "today.addActivity"
+      ]
+    },
+    "ontrack.today.emptyAddActivity": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/day-view.tsx"
+      ],
+      "keyPaths": [
+        "emptyAddActivity",
+        "today.emptyAddActivity"
+      ]
+    },
+    "ontrack.today.location.clear": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/auth/callback.tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/plant-analysis/identify+api.ts",
+        "src/app/plants/new.tsx",
+        "src/app/share-event.tsx",
+        "src/app/share-import.tsx",
+        "src/components/primitives/error-message.tsx"
+      ],
+      "keyPaths": [
+        "clear",
+        "today.location.clear"
+      ]
+    },
+    "ontrack.today.location.close": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/home-location-sheet.tsx"
+      ],
+      "keyPaths": [
+        "today.location.close"
+      ]
+    },
+    "ontrack.today.location.place": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/+native-intent.ts",
+        "src/app/_layout.tsx",
+        "src/app/account.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/agent/ui.tsx",
+        "src/app/auth/callback.tsx",
+        "src/app/auth/data-choice.tsx",
+        "src/app/detail/food/[id].tsx"
+      ],
+      "keyPaths": [
+        "place",
+        "today.location.place"
+      ]
+    },
+    "ontrack.today.location.save": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/home-location-sheet.tsx"
+      ],
+      "keyPaths": [
+        "today.location.save"
+      ]
+    },
+    "ontrack.today.location.useCurrent": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/home-location-sheet.tsx"
+      ],
+      "keyPaths": [
+        "today.location.useCurrent",
+        "useCurrent"
+      ]
+    },
+    "ontrack.today.nextDay": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/day-header.tsx"
+      ],
+      "keyPaths": [
+        "nextDay",
+        "today.nextDay"
+      ]
+    },
+    "ontrack.today.prevDay": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/day-header.tsx"
+      ],
+      "keyPaths": [
+        "prevDay",
+        "today.prevDay"
+      ]
+    },
+    "ontrack.today.weather": {
+      "feature": "today",
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "files": [
+        "src/features/daily-tracking/day-header.tsx"
+      ],
+      "keyPaths": [
+        "today.weather"
+      ]
+    },
+    "ontrack.travel.addPhotos.chooseFromPhotos": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-add-photos-modal.tsx"
+      ],
+      "keyPaths": [
+        "chooseFromPhotos",
+        "travel.addPhotos.chooseFromPhotos"
+      ]
+    },
+    "ontrack.travel.addPhotos.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-add-photos-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.addPhotos.close"
+      ]
+    },
+    "ontrack.travel.addPhotos.confirmRemovePhoto": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-add-photos-modal.tsx"
+      ],
+      "keyPaths": [
+        "confirmRemovePhoto",
+        "travel.addPhotos.confirmRemovePhoto"
+      ]
+    },
+    "ontrack.travel.addPhotos.dismiss": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "travel.addPhotos.dismiss"
+      ]
+    },
+    "ontrack.travel.addPhotos.removePhoto": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-add-photos-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.addPhotos.removePhoto"
+      ]
+    },
+    "ontrack.travel.addPhotos.takePhoto": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/detail/food/[id].tsx",
+        "src/features/travel/travel-add-photos-modal.tsx"
+      ],
+      "keyPaths": [
+        "takePhoto",
+        "travel.addPhotos.takePhoto"
+      ]
+    },
+    "ontrack.travel.calendarUpdated.backToTravel": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "backToTravel",
+        "travel.calendarUpdated.backToTravel"
+      ]
+    },
+    "ontrack.travel.calendarUpdated.dismiss": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-calendar-updated-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.calendarUpdated.dismiss"
+      ]
+    },
+    "ontrack.travel.calendarUpdated.goToCalendar": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-calendar-updated-modal.tsx"
+      ],
+      "keyPaths": [
+        "goToCalendar",
+        "travel.calendarUpdated.goToCalendar"
+      ]
+    },
+    "ontrack.travel.chat.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-chat-screen.tsx"
+      ],
+      "keyPaths": [
+        "travel.chat.close"
+      ]
+    },
+    "ontrack.travel.chat.composer": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-chat-screen.tsx"
+      ],
+      "keyPaths": [
+        "travel.chat.composer"
+      ]
+    },
+    "ontrack.travel.chat.enableNotifications": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-chat-screen.tsx"
+      ],
+      "keyPaths": [
+        "enableNotifications",
+        "travel.chat.enableNotifications"
+      ]
+    },
+    "ontrack.travel.chat.send": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/design-system/icons.ts",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/social/social-friends-modal.tsx",
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/todos/todo-collaborators-screen.tsx",
+        "src/features/todos/todo-list-settings-screen.tsx",
+        "src/features/travel/chat.ts",
+        "src/features/travel/open-join-landing.tsx",
+        "src/features/travel/share.ts",
+        "src/features/travel/travel-chat-chrome.tsx",
+        "src/features/travel/travel-chat-screen.tsx"
+      ],
+      "keyPaths": [
+        "send",
+        "travel.chat.send"
+      ]
+    },
+    "ontrack.travel.confirmation.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/confirmation-document-cue.tsx"
+      ],
+      "keyPaths": [
+        "travel.confirmation.close"
+      ]
+    },
+    "ontrack.travel.dates.calendar": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-dates-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.dates.calendar"
+      ]
+    },
+    "ontrack.travel.dates.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-dates-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.dates.close"
+      ]
+    },
+    "ontrack.travel.dates.end": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/index.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/social.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx"
+      ],
+      "keyPaths": [
+        "end",
+        "travel.dates.end"
+      ]
+    },
+    "ontrack.travel.dates.save": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-dates-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.dates.save"
+      ]
+    },
+    "ontrack.travel.dates.start": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-dates-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.dates.start"
+      ]
+    },
+    "ontrack.travel.editTrip.cancel": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.cancel"
+      ]
+    },
+    "ontrack.travel.editTrip.cover": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/api/destination-cover+api.ts",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/plants/[id].tsx",
+        "src/app/plants/[id]/check-in.tsx"
+      ],
+      "keyPaths": [
+        "cover",
+        "travel.editTrip.cover"
+      ]
+    },
+    "ontrack.travel.editTrip.destination": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.destination"
+      ]
+    },
+    "ontrack.travel.editTrip.endDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.endDate"
+      ]
+    },
+    "ontrack.travel.editTrip.notes": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.notes"
+      ]
+    },
+    "ontrack.travel.editTrip.origin": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.origin"
+      ]
+    },
+    "ontrack.travel.editTrip.save": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.save"
+      ]
+    },
+    "ontrack.travel.editTrip.startDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx",
+        "src/constants/travel.ts",
+        "src/features/calendar-import/parser.ts",
+        "src/features/social/social-feed-model.ts",
+        "src/features/social/social-hub-sections.tsx",
+        "src/features/social/social-trip-membership.ts",
+        "src/features/travel/calendar.ts",
+        "src/features/travel/date-range.ts",
+        "src/features/travel/expenses/expense-form.tsx",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-import.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts"
+      ],
+      "keyPaths": [
+        "startDate",
+        "travel.editTrip.startDate"
+      ]
+    },
+    "ontrack.travel.editTrip.title": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.editTrip.title"
+      ]
+    },
+    "ontrack.travel.expenses.addExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx",
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "addExpense",
+        "travel.expenses.addExpense"
+      ]
+    },
+    "ontrack.travel.expenses.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.expenses.close"
+      ]
+    },
+    "ontrack.travel.expenses.confirmDelete": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.expenses.confirmDelete"
+      ]
+    },
+    "ontrack.travel.expenses.deleteExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/expense-form.tsx",
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "deleteExpense",
+        "travel.expenses.deleteExpense"
+      ]
+    },
+    "ontrack.travel.expenses.deleteExpenseFooter": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "deleteExpenseFooter",
+        "travel.expenses.deleteExpenseFooter"
+      ]
+    },
+    "ontrack.travel.expenses.list": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/to-do/[id].tsx",
+        "src/app/(tabs)/to-do/index.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/+html.tsx",
+        "src/app/agent/ui.tsx",
+        "src/app/share-import.tsx",
+        "src/app/todos/[id].tsx",
+        "src/app/todos/[id]/recipe-import.tsx",
+        "src/app/todos/[id]/settings.tsx"
+      ],
+      "keyPaths": [
+        "list",
+        "travel.expenses.list"
+      ]
+    },
+    "ontrack.travel.expenses.paidBy": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/expense-form.tsx",
+        "src/features/travel/expenses/expense-math.ts",
+        "src/features/travel/expenses/travel-expenses-sheet.tsx",
+        "src/features/travel/flight-expense-from-import.ts",
+        "src/features/travel/normalize.ts",
+        "src/features/travel/rental-expense-from-import.ts",
+        "src/features/travel/stay-expense-from-import.ts",
+        "src/features/travel/types.ts",
+        "src/features/travel/use-travel-plan-confirmation-imports.ts",
+        "src/services/travel/expense-collaboration.ts"
+      ],
+      "keyPaths": [
+        "paidBy",
+        "travel.expenses.paidBy"
+      ]
+    },
+    "ontrack.travel.expenses.saveExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "saveExpense",
+        "travel.expenses.saveExpense"
+      ]
+    },
+    "ontrack.travel.expenses.splitWith": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/expense-form.tsx",
+        "src/features/travel/expenses/expense-math.ts",
+        "src/features/travel/flight-expense-from-import.ts",
+        "src/features/travel/normalize.ts",
+        "src/features/travel/rental-expense-from-import.ts",
+        "src/features/travel/stay-expense-from-import.ts",
+        "src/features/travel/types.ts",
+        "src/features/travel/use-travel-plan-confirmation-imports.ts",
+        "src/services/travel/expense-collaboration.ts"
+      ],
+      "keyPaths": [
+        "splitWith",
+        "travel.expenses.splitWith"
+      ]
+    },
+    "ontrack.travel.expenses.submitExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/expenses/travel-expenses-sheet.tsx"
+      ],
+      "keyPaths": [
+        "submitExpense",
+        "travel.expenses.submitExpense"
+      ]
+    },
+    "ontrack.travel.flight.arrivalGate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-status-client.ts",
+        "src/features/travel/flights/status-server.ts",
+        "src/features/travel/flights/types.ts",
+        "src/features/travel/types.ts"
+      ],
+      "keyPaths": [
+        "arrivalGate",
+        "travel.flight.arrivalGate"
+      ]
+    },
+    "ontrack.travel.flight.arrivalTerminal": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-status-client.ts",
+        "src/features/travel/flight-terminal-enrichment.ts",
+        "src/features/travel/flights/status-server.ts"
+      ],
+      "keyPaths": [
+        "arrivalTerminal",
+        "travel.flight.arrivalTerminal"
+      ]
+    },
+    "ontrack.travel.flight.connectionAirport": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-arrival.ts",
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-return-leg-fields.tsx",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-route-label.ts",
+        "src/features/travel/travel-timeline-entries.ts",
+        "src/features/travel/types.ts",
+        "src/features/travel/upgrade-legacy-connecting-flights.ts"
+      ],
+      "keyPaths": [
+        "connectionAirport",
+        "travel.flight.connectionAirport"
+      ]
+    },
+    "ontrack.travel.flight.departureGate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-status-client.ts",
+        "src/features/travel/flights/status-server.ts",
+        "src/features/travel/flights/types.ts",
+        "src/features/travel/types.ts"
+      ],
+      "keyPaths": [
+        "departureGate",
+        "travel.flight.departureGate"
+      ]
+    },
+    "ontrack.travel.flight.departureTerminal": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-status-client.ts",
+        "src/features/travel/flight-terminal-enrichment.ts",
+        "src/features/travel/flights/status-server.ts"
+      ],
+      "keyPaths": [
+        "departureTerminal",
+        "travel.flight.departureTerminal"
+      ]
+    },
+    "ontrack.travel.flight.layoverDuration": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "layoverDuration",
+        "travel.flight.layoverDuration"
+      ]
+    },
+    "ontrack.travel.flightSearch.back": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flights/flight-search-screen.tsx"
+      ],
+      "keyPaths": [
+        "travel.flightSearch.back"
+      ]
+    },
+    "ontrack.travel.flightSearch.compareGoogle": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flights/flight-search-screen.tsx"
+      ],
+      "keyPaths": [
+        "compareGoogle",
+        "travel.flightSearch.compareGoogle"
+      ]
+    },
+    "ontrack.travel.flightSearch.currency": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flights/flight-search-screen.tsx"
+      ],
+      "keyPaths": [
+        "travel.flightSearch.currency"
+      ]
+    },
+    "ontrack.travel.flightSearch.departure": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/travel/date-range.ts",
+        "src/features/travel/flight-arrival.ts",
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-confirmation-schedule.ts",
+        "src/features/travel/flight-details-card-editor.tsx",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-expense-title.ts"
+      ],
+      "keyPaths": [
+        "departure",
+        "travel.flightSearch.departure"
+      ]
+    },
+    "ontrack.travel.flightSearch.from": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/games.tsx",
+        "src/app/(tabs)/health.tsx",
+        "src/app/(tabs)/index.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx"
+      ],
+      "keyPaths": [
+        "from",
+        "travel.flightSearch.from"
+      ]
+    },
+    "ontrack.travel.flightSearch.return": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/games.tsx",
+        "src/app/(tabs)/index.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/social.tsx",
+        "src/app/(tabs)/to-do/[id].tsx"
+      ],
+      "keyPaths": [
+        "return",
+        "travel.flightSearch.return"
+      ]
+    },
+    "ontrack.travel.flightSearch.searchLive": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flights/flight-search-screen.tsx"
+      ],
+      "keyPaths": [
+        "searchLive",
+        "travel.flightSearch.searchLive"
+      ]
+    },
+    "ontrack.travel.flightSearch.to": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/index.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/to-do/[id].tsx",
+        "src/app/(tabs)/to-do/index.tsx"
+      ],
+      "keyPaths": [
+        "to",
+        "travel.flightSearch.to"
+      ]
+    },
+    "ontrack.travel.flightSearch.travelers": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/travel/flights/search+api.ts",
+        "src/features/travel/expenses/travel-expenses-sheet.tsx",
+        "src/features/travel/fixtures/chase-roundtrip-confirmation.ts",
+        "src/features/travel/flight-confirmation-fields.ts",
+        "src/features/travel/flight-journey-card.tsx",
+        "src/features/travel/flights/flight-search-screen.tsx",
+        "src/features/travel/provider.ts",
+        "src/features/travel/stays/stay-provider-screen.tsx",
+        "src/features/travel/travel-cotraveler-stack.tsx",
+        "src/features/travel/travel-trip-action-grid.tsx"
+      ],
+      "keyPaths": [
+        "travel.flightSearch.travelers",
+        "travelers"
+      ]
+    },
+    "ontrack.travel.friends.cancelInvite": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/trip-people.tsx"
+      ],
+      "keyPaths": [
+        "cancelInvite",
+        "travel.friends.cancelInvite"
+      ]
+    },
+    "ontrack.travel.friends.createInvite": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/trip-people.tsx"
+      ],
+      "keyPaths": [
+        "createInvite",
+        "travel.friends.createInvite"
+      ]
+    },
+    "ontrack.travel.friends.inviteEmail": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-friends-sheet.tsx",
+        "src/features/travel/trip-people.tsx",
+        "src/features/travel/use-travel-friends-sheet-actions.ts"
+      ],
+      "keyPaths": [
+        "inviteEmail",
+        "travel.friends.inviteEmail"
+      ]
+    },
+    "ontrack.travel.friends.inviteName": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-friends-sheet.tsx",
+        "src/features/travel/trip-people.tsx",
+        "src/features/travel/use-travel-friends-sheet-actions.ts"
+      ],
+      "keyPaths": [
+        "inviteName",
+        "travel.friends.inviteName"
+      ]
+    },
+    "ontrack.travel.friends.openInvite": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/trip-people.tsx"
+      ],
+      "keyPaths": [
+        "openInvite",
+        "travel.friends.openInvite"
+      ]
+    },
+    "ontrack.travel.importResult.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-import-result-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.importResult.close"
+      ]
+    },
+    "ontrack.travel.importResult.reviewExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-import-result-modal.tsx"
+      ],
+      "keyPaths": [
+        "reviewExpense",
+        "travel.importResult.reviewExpense"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.bookingUrl": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/booking-open.ts",
+        "src/features/travel/calendar.ts",
+        "src/features/travel/normalize.ts",
+        "src/features/travel/stay-confirmation-parser.ts",
+        "src/features/travel/travel-invite-codec.ts",
+        "src/features/travel/travel-itinerary-form.tsx",
+        "src/features/travel/travel-plan-detail-overlays.tsx",
+        "src/features/travel/travel-timeline-node-chrome.tsx",
+        "src/features/travel/types.ts",
+        "src/features/travel/use-travel-plan-confirmation-imports.ts",
+        "src/features/travel/use-travel-plan-detail-add-form.ts",
+        "src/features/travel/use-travel-plan-detail-add-item.ts"
+      ],
+      "keyPaths": [
+        "bookingUrl",
+        "travel.itineraryAdd.bookingUrl"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-add-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.close"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.date": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-form-schedule-fields.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.date"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.details": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/agents/registry.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/plant-analysis/care+api.ts",
+        "src/app/plants/new.tsx",
+        "src/features/account/privacy-policy-content.ts",
+        "src/features/design-system/design-system-gallery.tsx",
+        "src/features/social/social-feed.tsx",
+        "src/features/todos/recipe-import-screen.tsx",
+        "src/features/todos/todo-collaborator-join-screen.tsx"
+      ],
+      "keyPaths": [
+        "details",
+        "travel.itineraryAdd.details"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.endDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-form-schedule-fields.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.endDate"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.endTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-details-card-editor.tsx",
+        "src/features/travel/rental-details-card-editor.tsx",
+        "src/features/travel/stay-details-card-editor.tsx",
+        "src/features/travel/transport-details-card-editor.tsx",
+        "src/features/travel/travel-itinerary-form-schedule-fields.tsx",
+        "src/features/travel/travel-range-fields.tsx"
+      ],
+      "keyPaths": [
+        "endTime",
+        "travel.itineraryAdd.endTime"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.importDocument": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-form.tsx"
+      ],
+      "keyPaths": [
+        "importDocument",
+        "travel.itineraryAdd.importDocument"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.importScreenshots": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-form.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.importScreenshots"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnAirline": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnAirline",
+        "travel.itineraryAdd.returnAirline"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnConnectionAirport": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": []
+    },
+    "ontrack.travel.itineraryAdd.returnDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx",
+        "src/features/travel/flights/flight-search-screen.tsx",
+        "src/features/travel/flights/server.ts",
+        "src/features/travel/flights/types.ts",
+        "src/features/travel/provider.ts"
+      ],
+      "keyPaths": [
+        "returnDate",
+        "travel.itineraryAdd.returnDate"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnEndDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnEndDate",
+        "travel.itineraryAdd.returnEndDate"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnEndTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnEndTime",
+        "travel.itineraryAdd.returnEndTime"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnFlightNumber": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnFlightNumber",
+        "travel.itineraryAdd.returnFlightNumber"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnFrom": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnFrom",
+        "travel.itineraryAdd.returnFrom"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnLayoverDuration": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnLayoverDuration",
+        "travel.itineraryAdd.returnLayoverDuration"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx"
+      ],
+      "keyPaths": [
+        "returnTime",
+        "travel.itineraryAdd.returnTime"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnTitle": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-return-leg-fields.tsx",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/use-travel-plan-detail-add-item.ts"
+      ],
+      "keyPaths": [
+        "returnTitle",
+        "travel.itineraryAdd.returnTitle"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.returnTo": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/_layout.tsx",
+        "src/app/account.tsx",
+        "src/app/agent/ui.tsx",
+        "src/app/f/[code].tsx",
+        "src/app/onboarding.tsx",
+        "src/app/v/[code].tsx",
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/features/auth/auth-provider.tsx",
+        "src/features/auth/auth-screen.tsx",
+        "src/features/social/social-hub-screen.tsx",
+        "src/features/todos/todo-collaborators-screen.tsx",
+        "src/features/todos/todo-invites-screen.tsx"
+      ],
+      "keyPaths": [
+        "returnTo",
+        "travel.itineraryAdd.returnTo"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.submit": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-add-sheet.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.submit"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.time": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/detail/movie/[id].tsx",
+        "src/app/nutrition-insights+api.ts",
+        "src/app/nutrition-profile+api.ts",
+        "src/app/nutrition-targets/[id]/approve+api.ts",
+        "src/app/onboarding.tsx",
+        "src/app/plants/[id]/edit.tsx"
+      ],
+      "keyPaths": [
+        "time",
+        "travel.itineraryAdd.time"
+      ]
+    },
+    "ontrack.travel.itineraryAdd.title": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-form.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryAdd.title"
+      ]
+    },
+    "ontrack.travel.newTrip.calendar": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "travel.newTrip.calendar"
+      ]
+    },
+    "ontrack.travel.newTrip.cancel": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "travel.newTrip.cancel"
+      ]
+    },
+    "ontrack.travel.newTrip.create": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/agents/registry.ts",
+        "src/agents/runtime.ts",
+        "src/agents/types.ts",
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx"
+      ],
+      "keyPaths": [
+        "create",
+        "travel.newTrip.create"
+      ]
+    },
+    "ontrack.travel.newTrip.dates": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/agents/registry.ts",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/+html.tsx",
+        "src/app/detail/food/[id].tsx",
+        "src/app/share-import.tsx",
+        "src/app/travel/flights/search+api.ts",
+        "src/features/account/avatar-color-picker.tsx",
+        "src/features/social/social-feed.tsx",
+        "src/features/todos/todo-invites-screen.tsx",
+        "src/features/travel/date-range.ts",
+        "src/features/travel/destination-cover-lookup.ts",
+        "src/features/travel/destination-cover.ts"
+      ],
+      "keyPaths": [
+        "dates",
+        "travel.newTrip.dates"
+      ]
+    },
+    "ontrack.travel.newTrip.datesClose": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "datesClose",
+        "travel.newTrip.datesClose"
+      ]
+    },
+    "ontrack.travel.newTrip.datesSave": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "datesSave",
+        "travel.newTrip.datesSave"
+      ]
+    },
+    "ontrack.travel.newTrip.destination": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "travel.newTrip.destination"
+      ]
+    },
+    "ontrack.travel.newTrip.importFile": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/use-new-trip-flight-import.ts"
+      ],
+      "keyPaths": [
+        "importFile",
+        "travel.newTrip.importFile"
+      ]
+    },
+    "ontrack.travel.newTrip.importItinerary": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx",
+        "src/features/travel/travel-new-trip-card.tsx",
+        "src/features/travel/use-new-trip-flight-import.ts"
+      ],
+      "keyPaths": [
+        "importItinerary",
+        "travel.newTrip.importItinerary"
+      ]
+    },
+    "ontrack.travel.newTrip.importScreenshots": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/use-new-trip-flight-import.ts"
+      ],
+      "keyPaths": [
+        "travel.newTrip.importScreenshots"
+      ]
+    },
+    "ontrack.travel.newTrip.notes": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "travel.newTrip.notes"
+      ]
+    },
+    "ontrack.travel.newTrip.open": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx",
+        "src/utils/agent-ui/flows.ts",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "travel.newTrip.open"
+      ]
+    },
+    "ontrack.travel.newTrip.origin": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx"
+      ],
+      "keyPaths": [
+        "travel.newTrip.origin"
+      ]
+    },
+    "ontrack.travel.newTrip.title": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-new-trip-card.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "travel.newTrip.title"
+      ]
+    },
+    "ontrack.travel.notes.cancelEdit": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-item-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "cancelEdit",
+        "travel.notes.cancelEdit"
+      ]
+    },
+    "ontrack.travel.notes.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-item-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.notes.close"
+      ]
+    },
+    "ontrack.travel.notes.composer": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-item-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.notes.composer"
+      ]
+    },
+    "ontrack.travel.notes.confirmDelete": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-item-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.notes.confirmDelete"
+      ]
+    },
+    "ontrack.travel.notes.submit": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-item-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.notes.submit"
+      ]
+    },
+    "ontrack.travel.planDetail.addToTimeline": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-hero.tsx"
+      ],
+      "keyPaths": [
+        "addToTimeline",
+        "travel.planDetail.addToTimeline"
+      ]
+    },
+    "ontrack.travel.planDetail.currency": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-actions.tsx"
+      ],
+      "keyPaths": [
+        "travel.planDetail.currency"
+      ]
+    },
+    "ontrack.travel.planDetail.section.flights": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-transport-sections.tsx"
+      ],
+      "keyPaths": [
+        "flightsSection",
+        "travel.planDetail.flightsSection"
+      ]
+    },
+    "ontrack.travel.planDetail.section.ground": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-transport-sections.tsx",
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "groundSection",
+        "travel.planDetail.groundSection"
+      ]
+    },
+    "ontrack.travel.planDetail.section.notes": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx",
+        "src/features/travel/travel-plan-hero.tsx"
+      ],
+      "keyPaths": [
+        "notesSection",
+        "travel.planDetail.notesSection"
+      ]
+    },
+    "ontrack.travel.planDetail.section.rentals": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-transport-sections.tsx"
+      ],
+      "keyPaths": [
+        "rentalsSection",
+        "travel.planDetail.rentalsSection"
+      ]
+    },
+    "ontrack.travel.planDetail.section.stays": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-transport-sections.tsx"
+      ],
+      "keyPaths": [
+        "staysSection",
+        "travel.planDetail.staysSection"
+      ]
+    },
+    "ontrack.travel.planDetail.section.transport": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-transport-sections.tsx",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "transportSection",
+        "travel.planDetail.transportSection"
+      ]
+    },
+    "ontrack.travel.planDetail.weather": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-actions.tsx",
+        "docs/agent-routes.md"
+      ],
+      "keyPaths": [
+        "travel.planDetail.weather"
+      ]
+    },
+    "ontrack.travel.planDetail.weatherCard": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "travel.planDetail.weatherCard",
+        "weatherCard"
+      ]
+    },
+    "ontrack.travel.removeConfirm.cancel": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "travel.removeConfirm.cancel"
+      ]
+    },
+    "ontrack.travel.removeConfirm.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-remove-confirm-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.removeConfirm.close"
+      ]
+    },
+    "ontrack.travel.removeConfirm.confirm": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-remove-confirm-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.removeConfirm.confirm"
+      ]
+    },
+    "ontrack.travel.removeConfirm.dismiss": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "travel.removeConfirm.dismiss"
+      ]
+    },
+    "ontrack.travel.removeConfirm.open": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-details-editor.tsx",
+        "src/features/travel/travel-timeline-node-chrome.tsx"
+      ],
+      "keyPaths": [
+        "travel.removeConfirm.open"
+      ]
+    },
+    "ontrack.travel.staySearch.back": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/stays/stay-provider-screen.tsx"
+      ],
+      "keyPaths": [
+        "travel.staySearch.back"
+      ]
+    },
+    "ontrack.travel.timelineAdd.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-timeline-add-modal.tsx"
+      ],
+      "keyPaths": [
+        "travel.timelineAdd.close"
+      ]
+    },
+    "ontrack.travel.timelineAdd.dismiss": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [],
+      "keyPaths": [
+        "travel.timelineAdd.dismiss"
+      ]
+    },
+    "ontrack.travel.transport.addStop": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "addStop",
+        "travel.transport.addStop"
+      ]
+    },
+    "ontrack.travel.transport.arrivalDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/calendar.ts",
+        "src/features/travel/flight-arrival.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-confirmation-schedule.ts",
+        "src/features/travel/flight-details-card-editor.tsx",
+        "src/features/travel/flight-journey-model.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flight-schedule.ts",
+        "src/features/travel/new-trip-flight-draft.ts",
+        "src/features/travel/transport-details-card-editor.tsx"
+      ],
+      "keyPaths": [
+        "arrivalDate",
+        "travel.transport.arrivalDate"
+      ]
+    },
+    "ontrack.travel.transport.arrivalTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx",
+        "src/services/travel/flight-confirmation-ai-server.ts"
+      ],
+      "keyPaths": [
+        "arrivalTime",
+        "travel.transport.arrivalTime"
+      ]
+    },
+    "ontrack.travel.transport.attachDocument": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "attachDocument",
+        "travel.transport.attachDocument"
+      ]
+    },
+    "ontrack.travel.transport.attachScreenshots": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "attachScreenshots",
+        "travel.transport.attachScreenshots"
+      ]
+    },
+    "ontrack.travel.transport.confirmationCode": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/apply-imported-rental.ts",
+        "src/features/travel/booking-open.ts",
+        "src/features/travel/calendar.ts",
+        "src/features/travel/confirmation-uri-attach.ts",
+        "src/features/travel/expenses/expense-math.ts",
+        "src/features/travel/flight-booking-panel.tsx",
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-import.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "confirmationCode",
+        "travel.transport.confirmationCode"
+      ]
+    },
+    "ontrack.travel.transport.currency": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.transport.currency"
+      ]
+    },
+    "ontrack.travel.transport.destination": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.transport.destination"
+      ]
+    },
+    "ontrack.travel.transport.distance": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/flight-confirmation-parser-dates.ts",
+        "src/features/travel/transport-details-editor.tsx",
+        "src/features/travel/transport-details-summary.tsx",
+        "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-invite-codec.ts",
+        "src/features/travel/types.ts",
+        "src/services/plants/server.ts"
+      ],
+      "keyPaths": [
+        "distance",
+        "travel.transport.distance"
+      ]
+    },
+    "ontrack.travel.transport.edit.arrivalDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-card-editor.tsx"
+      ],
+      "keyPaths": [
+        "editArrivalDate",
+        "travel.transport.editArrivalDate"
+      ]
+    },
+    "ontrack.travel.transport.edit.arrivalTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-card-editor.tsx"
+      ],
+      "keyPaths": [
+        "editArrivalTime",
+        "travel.transport.editArrivalTime"
+      ]
+    },
+    "ontrack.travel.transport.edit.departureDate": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-card-editor.tsx"
+      ],
+      "keyPaths": [
+        "editDepartureDate",
+        "travel.transport.editDepartureDate"
+      ]
+    },
+    "ontrack.travel.transport.edit.departureTime": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-card-editor.tsx"
+      ],
+      "keyPaths": [
+        "editDepartureTime",
+        "travel.transport.editDepartureTime"
+      ]
+    },
+    "ontrack.travel.transport.fare": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/confirmation-money.ts",
+        "src/features/travel/transport-details-editor.tsx",
+        "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-itinerary-add-sheet.tsx",
+        "src/features/travel/types.ts",
+        "src/features/travel/use-travel-plan-detail-add-item.ts",
+        "src/features/travel/use-travel-plan-detail-item-handlers.ts"
+      ],
+      "keyPaths": [
+        "fare",
+        "travel.transport.fare"
+      ]
+    },
+    "ontrack.travel.transport.operator": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/calendar.ts",
+        "src/features/travel/transport-details-editor.tsx",
+        "src/features/travel/transport-details-summary.tsx",
+        "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-invite-codec.ts",
+        "src/features/travel/types.ts",
+        "src/services/nutrition/url-safety.ts"
+      ],
+      "keyPaths": [
+        "operator",
+        "travel.transport.operator"
+      ]
+    },
+    "ontrack.travel.transport.origin": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/transport-details-editor.tsx"
+      ],
+      "keyPaths": [
+        "travel.transport.origin"
+      ]
+    },
+    "ontrack.travel.transport.platform": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/agents/registry.ts",
+        "src/components/primitives/symbol.tsx",
+        "src/design-system/icons.ts",
+        "src/features/travel/address-map-link.ts",
+        "src/features/travel/transport-details-editor.tsx",
+        "src/features/travel/transport-details-summary.tsx",
+        "src/features/travel/transport-details.ts",
+        "src/features/travel/types.ts",
+        "src/hooks/use-responsive.ts",
+        "src/services/cloud/account.ts",
+        "docs/ADDONS.md"
+      ],
+      "keyPaths": [
+        "platform",
+        "travel.transport.platform"
+      ]
+    },
+    "ontrack.travel.transport.remove.keepExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/use-travel-plan-item-media.ts"
+      ],
+      "keyPaths": [
+        "removeKeepExpense",
+        "travel.transport.removeKeepExpense"
+      ]
+    },
+    "ontrack.travel.transport.remove.withExpense": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/use-travel-plan-item-media.ts"
+      ],
+      "keyPaths": [
+        "removeWithExpense",
+        "travel.transport.removeWithExpense"
+      ]
+    },
+    "ontrack.travel.transport.seat": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/calendar.ts",
+        "src/features/travel/fixtures/chase-roundtrip-confirmation.ts",
+        "src/features/travel/flight-confirmation-draft.ts",
+        "src/features/travel/flight-confirmation-enrichment.ts",
+        "src/features/travel/flight-confirmation-itinerary.ts",
+        "src/features/travel/flight-confirmation-parser.ts",
+        "src/features/travel/flight-details-editor.tsx",
+        "src/features/travel/flight-details.ts",
+        "src/features/travel/flight-roundtrip-draft.ts",
+        "src/features/travel/flights/flight-search-screen.tsx",
+        "src/features/travel/flights/normalize.ts",
+        "src/features/travel/flights/types.ts"
+      ],
+      "keyPaths": [
+        "seat",
+        "travel.transport.seat"
+      ]
+    },
+    "ontrack.travel.transport.serviceNumber": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/calendar.ts",
+        "src/features/travel/transport-details-editor.tsx",
+        "src/features/travel/transport-details-summary.tsx",
+        "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-invite-codec.ts",
+        "src/features/travel/types.ts"
+      ],
+      "keyPaths": [
+        "serviceNumber",
+        "travel.transport.serviceNumber"
+      ]
+    },
+    "ontrack.travel.transport.vehicle": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/addons/registry.ts",
+        "src/addons/types.ts",
+        "src/app/(tabs)/_layout.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/_layout.tsx",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/v/[code].tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/[id]/settings.tsx",
+        "src/app/vehicles/_layout.tsx",
+        "src/app/vehicles/new.tsx"
+      ],
+      "keyPaths": [
+        "travel.transport.vehicle",
+        "vehicle"
+      ]
+    },
+    "ontrack.vehicles.detail.saveOdometer": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/vehicles/[id].tsx",
+        "src/features/vehicles/vehicle-overview-panel.tsx"
+      ],
+      "keyPaths": [
+        "saveOdometer",
+        "vehicles.saveOdometer"
+      ]
+    },
+    "ontrack.vehicles.detail.settings": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/vehicles/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "vehicles.settings"
+      ]
+    },
+    "ontrack.vehicles.expenses.add": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.add"
+      ]
+    },
+    "ontrack.vehicles.expenses.amount": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.amount"
+      ]
+    },
+    "ontrack.vehicles.expenses.confirmDelete": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.confirmDelete"
+      ]
+    },
+    "ontrack.vehicles.expenses.date": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.date"
+      ]
+    },
+    "ontrack.vehicles.expenses.notes": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.notes"
+      ]
+    },
+    "ontrack.vehicles.expenses.title": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/features/vehicles/vehicle-expenses-panel.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.expenses.title"
+      ]
+    },
+    "ontrack.vehicles.list.add": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/vehicles.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.add"
+      ]
+    },
+    "ontrack.vehicles.new.cancel": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/vehicles/new.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.new.cancel"
+      ]
+    },
+    "ontrack.vehicles.new.make": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/plants/new.tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/new.tsx",
+        "src/features/travel/travel-friends-sheet.tsx",
+        "src/features/travel/travel-list-actions.tsx",
+        "src/features/travel/trip-friend-row.tsx",
+        "src/features/travel/trip-roster.ts",
+        "src/features/travel/use-travel-friends-sheet-actions.ts",
+        "src/features/vehicles/normalize.ts"
+      ],
+      "keyPaths": [
+        "make",
+        "vehicles.new.make"
+      ]
+    },
+    "ontrack.vehicles.new.model": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/addons/registry.ts",
+        "src/app/(tabs)/plants.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/detail/food/[id].tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/detail/gym/[id].tsx"
+      ],
+      "keyPaths": [
+        "model",
+        "vehicles.new.model"
+      ]
+    },
+    "ontrack.vehicles.new.nickname": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/vehicles/new.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "vehicles.new.nickname"
+      ]
+    },
+    "ontrack.vehicles.new.odometer": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/new.tsx",
+        "src/features/vehicles/normalize.ts",
+        "src/features/vehicles/share.ts",
+        "src/features/vehicles/types.ts",
+        "src/features/vehicles/vehicle-maintenance-panel.tsx",
+        "src/features/vehicles/vehicle-mileage-panel.tsx",
+        "src/features/vehicles/vehicle-overview-panel.tsx",
+        "src/store/vehicles.ts",
+        "src/utils/agent-ui/fixtures.ts"
+      ],
+      "keyPaths": [
+        "odometer",
+        "vehicles.new.odometer"
+      ]
+    },
+    "ontrack.vehicles.new.save": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/vehicles/new.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.new.save"
+      ]
+    },
+    "ontrack.vehicles.new.vin": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/_layout.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/api/vehicles/vin-decode+api.ts",
+        "src/app/auth/callback.tsx",
+        "src/app/plants/new.tsx",
+        "src/app/share-event.tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/new.tsx",
+        "src/components/primitives/app-safe-area.tsx",
+        "src/components/primitives/input.tsx"
+      ],
+      "keyPaths": [
+        "vehicles.new.vin",
+        "vin"
+      ]
+    },
+    "ontrack.vehicles.new.year": {
+      "feature": "vehicles",
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "files": [
+        "src/app/(tabs)/calendar.tsx",
+        "src/app/(tabs)/vehicles.tsx",
+        "src/app/api/vehicles/parts/search+api.ts",
+        "src/app/vehicles/[id].tsx",
+        "src/app/vehicles/new.tsx",
+        "src/components/primitives/date-field-calendar.tsx",
+        "src/features/calendar-import/parser.ts",
+        "src/features/calendar/month-grid.tsx",
+        "src/features/travel/chat.ts",
+        "src/features/travel/flight-arrival.ts",
+        "src/features/travel/flight-confirmation-parser-dates.ts",
+        "src/features/travel/rental-confirmation-parser.ts"
+      ],
+      "keyPaths": [
+        "vehicles.new.year",
+        "year"
+      ]
+    },
+    "ontrack.vision.category.addAffirmation": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "addAffirmation",
+        "vision.addAffirmation"
+      ]
+    },
+    "ontrack.vision.category.addGoal": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "addGoal",
+        "vision.addGoal"
+      ]
+    },
+    "ontrack.vision.category.addImage": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "addImage",
+        "vision.addImage"
+      ]
+    },
+    "ontrack.vision.category.mode": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "categoryMode",
+        "vision.categoryMode"
+      ]
+    },
+    "ontrack.vision.category.selection.delete": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "selectionDelete",
+        "vision.selectionDelete"
+      ]
+    },
+    "ontrack.vision.category.selection.deselect": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "selectionDeselect",
+        "vision.selectionDeselect"
+      ]
+    },
+    "ontrack.vision.category.selection.edit": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "selectionEdit",
+        "vision.selectionEdit"
+      ]
+    },
+    "ontrack.vision.category.selection.layerBack": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "selectionLayerBack",
+        "vision.selectionLayerBack"
+      ]
+    },
+    "ontrack.vision.category.selection.layerForward": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-category-screen.tsx"
+      ],
+      "keyPaths": [
+        "selectionLayerForward",
+        "vision.selectionLayerForward"
+      ]
+    },
+    "ontrack.vision.itemEditor.close": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-item-editor.tsx"
+      ],
+      "keyPaths": [
+        "itemClose",
+        "vision.itemClose"
+      ]
+    },
+    "ontrack.vision.itemEditor.primary": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-item-editor.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "itemPrimary",
+        "vision.itemPrimary"
+      ]
+    },
+    "ontrack.vision.itemEditor.save": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-item-editor.tsx"
+      ],
+      "keyPaths": [
+        "itemSave",
+        "vision.itemSave"
+      ]
+    },
+    "ontrack.vision.itemEditor.secondary": {
+      "feature": "vision",
+      "entry": null,
+      "skill": null,
+      "files": [
+        "src/features/vision-board/vision-board-item-editor.tsx"
+      ],
+      "keyPaths": [
+        "itemSecondary",
+        "vision.itemSecondary"
+      ]
+    },
+    "ontrack.workouts.builder.addToToday": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/features/workouts/workout-session-builder.tsx"
+      ],
+      "keyPaths": [
+        "addToToday",
+        "workouts.addToToday"
+      ]
+    },
+    "ontrack.workouts.builder.clear": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/features/workouts/workout-session-builder.tsx"
+      ],
+      "keyPaths": [
+        "builderClear",
+        "workouts.builderClear"
+      ]
+    },
+    "ontrack.workouts.gym.close": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/app/detail/gym/[id].tsx"
+      ],
+      "keyPaths": [
+        "workouts.gym.close"
+      ]
+    },
+    "ontrack.workouts.gym.edit": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/app/detail/gym/[id].tsx"
+      ],
+      "keyPaths": [
+        "workouts.gym.edit"
+      ]
+    },
+    "ontrack.workouts.gym.start": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/app/detail/gym/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "workouts.gym.start"
+      ]
+    },
+    "ontrack.workouts.gymActive.completeSet": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/app/detail/gym-active/[id].tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "completeSet",
+        "workouts.gym.completeSet"
+      ]
+    },
+    "ontrack.workouts.gymActive.finish": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/onboarding.tsx",
+        "src/components/navigation/floating-tab-bar.tsx",
+        "src/features/auth/auth-provider.tsx",
+        "src/features/todos/todo-lists-overview.tsx",
+        "src/features/vision-board/vision-board-canvas-item.tsx",
+        "src/features/workouts/exercise-form-steps.ts",
+        "src/features/workouts/human-body-map.tsx",
+        "src/features/workouts/muscle-atlas.ts",
+        "src/features/workouts/muscle-data.ts",
+        "src/features/workouts/muscle-highlight-images.ts",
+        "src/features/workouts/muscle-hit-targets.ts"
+      ],
+      "keyPaths": [
+        "finish",
+        "workouts.gym.finish"
+      ]
+    },
+    "ontrack.workouts.header.customPlanner": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/features/workouts/workouts-screen-header.tsx"
+      ],
+      "keyPaths": [
+        "customPlanner",
+        "workouts.customPlanner"
+      ]
+    },
+    "ontrack.workouts.today.planFromScratch": {
+      "feature": "workouts",
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "files": [
+        "src/features/workouts/workout-today-plan.tsx"
+      ],
+      "keyPaths": [
+        "planFromScratch",
+        "workouts.planFromScratch"
+      ]
+    }
+  },
+  "byFeature": {
+    "activityForm": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.activityForm.analyzePhoto",
+        "ontrack.activityForm.cancel",
+        "ontrack.activityForm.date",
+        "ontrack.activityForm.delete",
+        "ontrack.activityForm.duration",
+        "ontrack.activityForm.guidedTitle",
+        "ontrack.activityForm.notes",
+        "ontrack.activityForm.pickPhoto",
+        "ontrack.activityForm.removePhoto",
+        "ontrack.activityForm.save",
+        "ontrack.activityForm.startTime",
+        "ontrack.activityForm.title"
+      ]
+    },
+    "agentUi": {
+      "entry": "src/utils/agent-ui/",
+      "skill": null,
+      "ids": [
+        "ontrack.agentUi.overlay.root"
+      ]
+    },
+    "auth": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.auth.apple",
+        "ontrack.auth.google",
+        "ontrack.auth.guest",
+        "ontrack.auth.privacy",
+        "ontrack.auth.terms"
+      ]
+    },
+    "calendar": {
+      "entry": "src/app/(tabs)/calendar.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.calendar.jumpToday",
+        "ontrack.calendar.nextMonth",
+        "ontrack.calendar.openDay",
+        "ontrack.calendar.prevMonth"
+      ]
+    },
+    "checklists": {
+      "entry": "src/features/todos/todo-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "ids": [
+        "ontrack.checklists.collaborators",
+        "ontrack.checklists.createList",
+        "ontrack.checklists.detail.actions",
+        "ontrack.checklists.detail.addTask",
+        "ontrack.checklists.detail.back",
+        "ontrack.checklists.detail.editMode",
+        "ontrack.checklists.detail.newTask",
+        "ontrack.checklists.detail.sort",
+        "ontrack.checklists.editMode",
+        "ontrack.checklists.newListName"
+      ]
+    },
+    "chrome": {
+      "entry": "src/components/primitives/",
+      "skill": null,
+      "ids": [
+        "ontrack.chrome.back",
+        "ontrack.chrome.headerBack"
+      ]
+    },
+    "designSystem": {
+      "entry": "src/app/design-system.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.designSystem.delete",
+        "ontrack.designSystem.ghost",
+        "ontrack.designSystem.info",
+        "ontrack.designSystem.input",
+        "ontrack.designSystem.primary",
+        "ontrack.designSystem.secondary",
+        "ontrack.designSystem.sheet.close"
+      ]
+    },
+    "eventDetail": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.eventDetail.close",
+        "ontrack.eventDetail.edit",
+        "ontrack.eventDetail.goBack",
+        "ontrack.eventDetail.toggleComplete"
+      ]
+    },
+    "food": {
+      "entry": "src/app/detail/food/[id].tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.food.detail.analyze",
+        "ontrack.food.detail.analyzeAnother",
+        "ontrack.food.detail.close",
+        "ontrack.food.detail.confirmSave",
+        "ontrack.food.detail.edit",
+        "ontrack.food.detail.findMeal",
+        "ontrack.food.detail.link"
+      ]
+    },
+    "games": {
+      "entry": "src/app/(tabs)/games.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.games.balloonPop.back",
+        "ontrack.games.balloonPop.close",
+        "ontrack.games.balloonPop.play",
+        "ontrack.games.balloonPop.retry",
+        "ontrack.games.hub.balloonPop",
+        "ontrack.games.hub.challengeFriend"
+      ]
+    },
+    "grocery": {
+      "entry": "src/features/todos/grocery-list-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "ids": [
+        "ontrack.grocery.detail.addRecipe",
+        "ontrack.grocery.detail.copy",
+        "ontrack.grocery.detail.settings",
+        "ontrack.grocery.detail.share"
+      ]
+    },
+    "health": {
+      "entry": "src/app/(tabs)/health.tsx",
+      "skill": ".cursor/skills/health/SKILL.md",
+      "ids": [
+        "ontrack.health.body.connect",
+        "ontrack.health.body.openAppleHealth",
+        "ontrack.health.body.refresh",
+        "ontrack.health.body.sleepHandoff",
+        "ontrack.health.checkIn.addCustomEmotion",
+        "ontrack.health.checkIn.customEmotion",
+        "ontrack.health.checkIn.note",
+        "ontrack.health.checkIn.save",
+        "ontrack.health.factor.delete",
+        "ontrack.health.factor.name",
+        "ontrack.health.factor.save",
+        "ontrack.health.mind.addFactor",
+        "ontrack.health.mind.addPlaybook",
+        "ontrack.health.mind.checkIn",
+        "ontrack.health.playbook.delete",
+        "ontrack.health.playbook.duration",
+        "ontrack.health.playbook.name",
+        "ontrack.health.playbook.save",
+        "ontrack.health.playbook.steps",
+        "ontrack.health.playbook.suggest",
+        "ontrack.health.settings",
+        "ontrack.health.settings.connect",
+        "ontrack.health.settings.openAppleHealth",
+        "ontrack.health.settings.reset",
+        "ontrack.health.support.call988",
+        "ontrack.health.support.text988"
+      ]
+    },
+    "listSettings": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.listSettings.name",
+        "ontrack.listSettings.saveName"
+      ]
+    },
+    "peoplePicker": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.peoplePicker.close",
+        "ontrack.peoplePicker.confirm",
+        "ontrack.peoplePicker.search"
+      ]
+    },
+    "plants": {
+      "entry": "src/app/(tabs)/plants.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.plants.detail.adjustSchedule",
+        "ontrack.plants.detail.amount",
+        "ontrack.plants.detail.checkIn",
+        "ontrack.plants.detail.delete",
+        "ontrack.plants.detail.edit",
+        "ontrack.plants.detail.logWatering",
+        "ontrack.plants.detail.undoWatering",
+        "ontrack.plants.list.add",
+        "ontrack.plants.new.analyze",
+        "ontrack.plants.new.buildCarePlan",
+        "ontrack.plants.new.camera",
+        "ontrack.plants.new.confirmIdentity",
+        "ontrack.plants.new.library",
+        "ontrack.plants.new.nickname",
+        "ontrack.plants.new.save"
+      ]
+    },
+    "profile": {
+      "entry": "src/features/account/",
+      "skill": null,
+      "ids": [
+        "ontrack.profile.agents",
+        "ontrack.profile.avatar",
+        "ontrack.profile.deleteAccount",
+        "ontrack.profile.designSystem",
+        "ontrack.profile.homeLocation",
+        "ontrack.profile.nutrition",
+        "ontrack.profile.privacy",
+        "ontrack.profile.resetData",
+        "ontrack.profile.signOut",
+        "ontrack.profile.terms"
+      ]
+    },
+    "prompt": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.prompt.close"
+      ]
+    },
+    "recipeImport": {
+      "entry": "src/features/todos/recipe-import-screen.tsx",
+      "skill": ".cursor/skills/todos/SKILL.md",
+      "ids": [
+        "ontrack.recipeImport.analyze",
+        "ontrack.recipeImport.camera",
+        "ontrack.recipeImport.cancel",
+        "ontrack.recipeImport.ingredient.add",
+        "ontrack.recipeImport.library",
+        "ontrack.recipeImport.mealName",
+        "ontrack.recipeImport.save",
+        "ontrack.recipeImport.sourceServings",
+        "ontrack.recipeImport.sourceUrl",
+        "ontrack.recipeImport.stop",
+        "ontrack.recipeImport.targetServings",
+        "ontrack.recipeImport.url"
+      ]
+    },
+    "social": {
+      "entry": "src/app/(tabs)/social.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.social.actionModal.close",
+        "ontrack.social.actionModal.primary",
+        "ontrack.social.feed.loadMore",
+        "ontrack.social.friend.email",
+        "ontrack.social.friend.send",
+        "ontrack.social.friends.add",
+        "ontrack.social.friends.close",
+        "ontrack.social.friends.seeAll",
+        "ontrack.social.friends.signIn",
+        "ontrack.social.header.addFriend",
+        "ontrack.social.header.messages",
+        "ontrack.social.invite.copy",
+        "ontrack.social.invite.save",
+        "ontrack.social.invite.share",
+        "ontrack.social.invite.slug",
+        "ontrack.social.upcoming.empty",
+        "ontrack.social.upcoming.seeAll"
+      ]
+    },
+    "tabs": {
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.tabs.calendar",
+        "ontrack.tabs.checklists",
+        "ontrack.tabs.games",
+        "ontrack.tabs.health",
+        "ontrack.tabs.insights",
+        "ontrack.tabs.plants",
+        "ontrack.tabs.profile",
+        "ontrack.tabs.social",
+        "ontrack.tabs.today",
+        "ontrack.tabs.travel",
+        "ontrack.tabs.vehicles",
+        "ontrack.tabs.visionBoard",
+        "ontrack.tabs.workouts"
+      ]
+    },
+    "today": {
+      "entry": "src/features/daily-tracking/day-view.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.today.addActivity",
+        "ontrack.today.emptyAddActivity",
+        "ontrack.today.location.clear",
+        "ontrack.today.location.close",
+        "ontrack.today.location.place",
+        "ontrack.today.location.save",
+        "ontrack.today.location.useCurrent",
+        "ontrack.today.nextDay",
+        "ontrack.today.prevDay",
+        "ontrack.today.weather"
+      ]
+    },
+    "travel": {
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "ids": [
+        "ontrack.travel.addPhotos.chooseFromPhotos",
+        "ontrack.travel.addPhotos.close",
+        "ontrack.travel.addPhotos.confirmRemovePhoto",
+        "ontrack.travel.addPhotos.dismiss",
+        "ontrack.travel.addPhotos.removePhoto",
+        "ontrack.travel.addPhotos.takePhoto",
+        "ontrack.travel.calendarUpdated.backToTravel",
+        "ontrack.travel.calendarUpdated.dismiss",
+        "ontrack.travel.calendarUpdated.goToCalendar",
+        "ontrack.travel.chat.close",
+        "ontrack.travel.chat.composer",
+        "ontrack.travel.chat.enableNotifications",
+        "ontrack.travel.chat.send",
+        "ontrack.travel.confirmation.close",
+        "ontrack.travel.dates.calendar",
+        "ontrack.travel.dates.close",
+        "ontrack.travel.dates.end",
+        "ontrack.travel.dates.save",
+        "ontrack.travel.dates.start",
+        "ontrack.travel.editTrip.cancel",
+        "ontrack.travel.editTrip.cover",
+        "ontrack.travel.editTrip.destination",
+        "ontrack.travel.editTrip.endDate",
+        "ontrack.travel.editTrip.notes",
+        "ontrack.travel.editTrip.origin",
+        "ontrack.travel.editTrip.save",
+        "ontrack.travel.editTrip.startDate",
+        "ontrack.travel.editTrip.title",
+        "ontrack.travel.expenses.addExpense",
+        "ontrack.travel.expenses.close",
+        "ontrack.travel.expenses.confirmDelete",
+        "ontrack.travel.expenses.deleteExpense",
+        "ontrack.travel.expenses.deleteExpenseFooter",
+        "ontrack.travel.expenses.list",
+        "ontrack.travel.expenses.paidBy",
+        "ontrack.travel.expenses.saveExpense",
+        "ontrack.travel.expenses.splitWith",
+        "ontrack.travel.expenses.submitExpense",
+        "ontrack.travel.flight.arrivalGate",
+        "ontrack.travel.flight.arrivalTerminal",
+        "ontrack.travel.flight.connectionAirport",
+        "ontrack.travel.flight.departureGate",
+        "ontrack.travel.flight.departureTerminal",
+        "ontrack.travel.flight.layoverDuration",
+        "ontrack.travel.flightSearch.back",
+        "ontrack.travel.flightSearch.compareGoogle",
+        "ontrack.travel.flightSearch.currency",
+        "ontrack.travel.flightSearch.departure",
+        "ontrack.travel.flightSearch.from",
+        "ontrack.travel.flightSearch.return",
+        "ontrack.travel.flightSearch.searchLive",
+        "ontrack.travel.flightSearch.to",
+        "ontrack.travel.flightSearch.travelers",
+        "ontrack.travel.friends.cancelInvite",
+        "ontrack.travel.friends.createInvite",
+        "ontrack.travel.friends.inviteEmail",
+        "ontrack.travel.friends.inviteName",
+        "ontrack.travel.friends.openInvite",
+        "ontrack.travel.importResult.close",
+        "ontrack.travel.importResult.reviewExpense",
+        "ontrack.travel.itineraryAdd.bookingUrl",
+        "ontrack.travel.itineraryAdd.close",
+        "ontrack.travel.itineraryAdd.date",
+        "ontrack.travel.itineraryAdd.details",
+        "ontrack.travel.itineraryAdd.endDate",
+        "ontrack.travel.itineraryAdd.endTime",
+        "ontrack.travel.itineraryAdd.importDocument",
+        "ontrack.travel.itineraryAdd.importScreenshots",
+        "ontrack.travel.itineraryAdd.returnAirline",
+        "ontrack.travel.itineraryAdd.returnConnectionAirport",
+        "ontrack.travel.itineraryAdd.returnDate",
+        "ontrack.travel.itineraryAdd.returnEndDate",
+        "ontrack.travel.itineraryAdd.returnEndTime",
+        "ontrack.travel.itineraryAdd.returnFlightNumber",
+        "ontrack.travel.itineraryAdd.returnFrom",
+        "ontrack.travel.itineraryAdd.returnLayoverDuration",
+        "ontrack.travel.itineraryAdd.returnTime",
+        "ontrack.travel.itineraryAdd.returnTitle",
+        "ontrack.travel.itineraryAdd.returnTo",
+        "ontrack.travel.itineraryAdd.submit",
+        "ontrack.travel.itineraryAdd.time",
+        "ontrack.travel.itineraryAdd.title",
+        "ontrack.travel.newTrip.calendar",
+        "ontrack.travel.newTrip.cancel",
+        "ontrack.travel.newTrip.create",
+        "ontrack.travel.newTrip.dates",
+        "ontrack.travel.newTrip.datesClose",
+        "ontrack.travel.newTrip.datesSave",
+        "ontrack.travel.newTrip.destination",
+        "ontrack.travel.newTrip.importFile",
+        "ontrack.travel.newTrip.importItinerary",
+        "ontrack.travel.newTrip.importScreenshots",
+        "ontrack.travel.newTrip.notes",
+        "ontrack.travel.newTrip.open",
+        "ontrack.travel.newTrip.origin",
+        "ontrack.travel.newTrip.title",
+        "ontrack.travel.notes.cancelEdit",
+        "ontrack.travel.notes.close",
+        "ontrack.travel.notes.composer",
+        "ontrack.travel.notes.confirmDelete",
+        "ontrack.travel.notes.submit",
+        "ontrack.travel.planDetail.addToTimeline",
+        "ontrack.travel.planDetail.currency",
+        "ontrack.travel.planDetail.section.flights",
+        "ontrack.travel.planDetail.section.ground",
+        "ontrack.travel.planDetail.section.notes",
+        "ontrack.travel.planDetail.section.rentals",
+        "ontrack.travel.planDetail.section.stays",
+        "ontrack.travel.planDetail.section.transport",
+        "ontrack.travel.planDetail.weather",
+        "ontrack.travel.planDetail.weatherCard",
+        "ontrack.travel.removeConfirm.cancel",
+        "ontrack.travel.removeConfirm.close",
+        "ontrack.travel.removeConfirm.confirm",
+        "ontrack.travel.removeConfirm.dismiss",
+        "ontrack.travel.removeConfirm.open",
+        "ontrack.travel.staySearch.back",
+        "ontrack.travel.timelineAdd.close",
+        "ontrack.travel.timelineAdd.dismiss",
+        "ontrack.travel.transport.addStop",
+        "ontrack.travel.transport.arrivalDate",
+        "ontrack.travel.transport.arrivalTime",
+        "ontrack.travel.transport.attachDocument",
+        "ontrack.travel.transport.attachScreenshots",
+        "ontrack.travel.transport.confirmationCode",
+        "ontrack.travel.transport.currency",
+        "ontrack.travel.transport.destination",
+        "ontrack.travel.transport.distance",
+        "ontrack.travel.transport.edit.arrivalDate",
+        "ontrack.travel.transport.edit.arrivalTime",
+        "ontrack.travel.transport.edit.departureDate",
+        "ontrack.travel.transport.edit.departureTime",
+        "ontrack.travel.transport.fare",
+        "ontrack.travel.transport.operator",
+        "ontrack.travel.transport.origin",
+        "ontrack.travel.transport.platform",
+        "ontrack.travel.transport.remove.keepExpense",
+        "ontrack.travel.transport.remove.withExpense",
+        "ontrack.travel.transport.seat",
+        "ontrack.travel.transport.serviceNumber",
+        "ontrack.travel.transport.vehicle"
+      ]
+    },
+    "vehicles": {
+      "entry": "src/app/(tabs)/vehicles.tsx",
+      "skill": null,
+      "ids": [
+        "ontrack.vehicles.detail.saveOdometer",
+        "ontrack.vehicles.detail.settings",
+        "ontrack.vehicles.expenses.add",
+        "ontrack.vehicles.expenses.amount",
+        "ontrack.vehicles.expenses.confirmDelete",
+        "ontrack.vehicles.expenses.date",
+        "ontrack.vehicles.expenses.notes",
+        "ontrack.vehicles.expenses.title",
+        "ontrack.vehicles.list.add",
+        "ontrack.vehicles.new.cancel",
+        "ontrack.vehicles.new.make",
+        "ontrack.vehicles.new.model",
+        "ontrack.vehicles.new.nickname",
+        "ontrack.vehicles.new.odometer",
+        "ontrack.vehicles.new.save",
+        "ontrack.vehicles.new.vin",
+        "ontrack.vehicles.new.year"
+      ]
+    },
+    "vision": {
+      "entry": null,
+      "skill": null,
+      "ids": [
+        "ontrack.vision.category.addAffirmation",
+        "ontrack.vision.category.addGoal",
+        "ontrack.vision.category.addImage",
+        "ontrack.vision.category.mode",
+        "ontrack.vision.category.selection.delete",
+        "ontrack.vision.category.selection.deselect",
+        "ontrack.vision.category.selection.edit",
+        "ontrack.vision.category.selection.layerBack",
+        "ontrack.vision.category.selection.layerForward",
+        "ontrack.vision.itemEditor.close",
+        "ontrack.vision.itemEditor.primary",
+        "ontrack.vision.itemEditor.save",
+        "ontrack.vision.itemEditor.secondary"
+      ]
+    },
+    "workouts": {
+      "entry": "src/app/(tabs)/workouts.tsx",
+      "skill": ".cursor/skills/workouts/SKILL.md",
+      "ids": [
+        "ontrack.workouts.builder.addToToday",
+        "ontrack.workouts.builder.clear",
+        "ontrack.workouts.gym.close",
+        "ontrack.workouts.gym.edit",
+        "ontrack.workouts.gym.start",
+        "ontrack.workouts.gymActive.completeSet",
+        "ontrack.workouts.gymActive.finish",
+        "ontrack.workouts.header.customPlanner",
+        "ontrack.workouts.today.planFromScratch"
+      ]
+    }
+  }
+}

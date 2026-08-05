@@ -23,6 +23,7 @@ import { fontFamilies, radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { newVisionBoardId, useVisionBoard } from '@/store/vision-board';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { goBackOrReplace } from '@/utils/navigation';
 import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
@@ -267,6 +268,7 @@ export function VisionBoardCategoryScreen() {
           <Button
             icon={mode === 'edit' ? 'gallery' : 'edit'}
             variant={mode === 'edit' ? 'secondary' : 'primary'}
+            testID={AgentUiIds.vision.categoryMode}
             onPress={switchMode}
             accessibilityLabel={
               mode === 'edit' ? 'Show read-only gallery' : 'Return to editable board'
@@ -350,6 +352,7 @@ export function VisionBoardCategoryScreen() {
               icon="photo"
               variant="secondary"
               disabled={busy}
+              testID={AgentUiIds.vision.addImage}
               onPress={showImageActions}
               accessibilityLabel="Add an image to this vision board">
               {busy ? 'Adding…' : 'Image'}
@@ -357,6 +360,7 @@ export function VisionBoardCategoryScreen() {
             <Button
               icon="smart"
               variant="secondary"
+              testID={AgentUiIds.vision.addAffirmation}
               onPress={() => openItemEditor('affirmation')}
               accessibilityLabel="Add an affirmation to this vision board">
               Affirmation
@@ -364,6 +368,7 @@ export function VisionBoardCategoryScreen() {
             <Button
               icon="target"
               variant="secondary"
+              testID={AgentUiIds.vision.addGoal}
               onPress={() => openItemEditor('goal')}
               accessibilityLabel="Add a goal to this vision board">
               Goal
@@ -385,6 +390,7 @@ export function VisionBoardCategoryScreen() {
                 </View>
                 <IconButton
                   icon="close"
+                  testID={AgentUiIds.vision.selectionDeselect}
                   accessibilityLabel="Deselect board item"
                   onPress={() => setSelectedId(undefined)}
                 />
@@ -392,22 +398,26 @@ export function VisionBoardCategoryScreen() {
               <View style={styles.toolRow}>
                 <IconButton
                   icon="edit"
+                  testID={AgentUiIds.vision.selectionEdit}
                   accessibilityLabel={`Edit selected ${selected.kind}`}
                   onPress={() => openItemEditor(selected.kind, selected.id)}
                 />
                 <IconButton
                   icon="layer-back"
+                  testID={AgentUiIds.vision.selectionLayerBack}
                   accessibilityLabel="Send selected item backward"
                   onPress={() => moveItemLayer(selected.id, 'back')}
                 />
                 <IconButton
                   icon="layer-forward"
+                  testID={AgentUiIds.vision.selectionLayerForward}
                   accessibilityLabel="Bring selected item forward"
                   onPress={() => moveItemLayer(selected.id, 'forward')}
                 />
                 <IconButton
                   icon="delete"
                   color={theme.danger}
+                  testID={AgentUiIds.vision.selectionDelete}
                   accessibilityLabel={`Delete selected ${selected.kind}`}
                   onPress={() => confirmDelete(selected)}
                 />

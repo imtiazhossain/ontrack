@@ -14,6 +14,7 @@ import {
   undoPlantWatering,
 } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { DAY_MS, formatDueLabel, formatMinutes, fromDateKey, toDateKey, todayKey } from '@/utils/date';
 import { openHttpsUrl } from '@/utils/safe-url';
@@ -66,7 +67,12 @@ function PlantDetailContent() {
           <AppText variant="callout" color="secondary">{plant.identity.commonName}</AppText>
           <AppText variant="caption" color="tertiary" style={styles.italic}>{plant.identity.scientificName}</AppText>
         </View>
-        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>Edit</Button>
+        <Button
+          variant="secondary"
+          testID={AgentUiIds.plants.detail.edit}
+          onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>
+          Edit
+        </Button>
       </View>
 
       <SectionHeader title="Watering schedule" detail={`Every ${plant.carePlan.watering.intervalDays} days`} />
@@ -80,15 +86,40 @@ function PlantDetailContent() {
           Start with {Math.round(plant.carePlan.watering.minMl)}–{Math.round(plant.carePlan.watering.maxMl)} mL only when the soil check says it is needed.
         </AppText>
         <AppText variant="caption" color="tertiary">{plant.carePlan.watering.notes}</AppText>
-        <Input label="Amount Used (mL, Optional)" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
-        <Button onPress={() => {
-          const parsed = Number(amount);
-          void logPlantWatering(plant.id, amount.trim() && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined);
-        }}>Log Watering Now</Button>
-        <Button variant="secondary" onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>
+        <Input
+          label="Amount Used (mL, Optional)"
+          keyboardType="decimal-pad"
+          value={amount}
+          onChangeText={setAmount}
+          testID={AgentUiIds.plants.detail.amount}
+        />
+        <Button
+          testID={AgentUiIds.plants.detail.logWatering}
+          onPress={() => {
+            const parsed = Number(amount);
+            void logPlantWatering(
+              plant.id,
+              amount.trim() && Number.isFinite(parsed) && parsed >= 0
+                ? parsed
+                : undefined,
+            );
+          }}>
+          Log Watering Now
+        </Button>
+        <Button
+          variant="secondary"
+          testID={AgentUiIds.plants.detail.adjustSchedule}
+          onPress={() => router.push({ pathname: '/plants/[id]/edit', params: { id: plant.id } })}>
           Adjust schedule
         </Button>
-        {latestLog?.activityId ? <Button variant="ghost" onPress={() => void undoPlantWatering(latestLog.activityId!)}>Undo Last Watering</Button> : null}
+        {latestLog?.activityId ? (
+          <Button
+            variant="ghost"
+            testID={AgentUiIds.plants.detail.undoWatering}
+            onPress={() => void undoPlantWatering(latestLog.activityId!)}>
+            Undo Last Watering
+          </Button>
+        ) : null}
       </Card>
 
       <SectionHeader title="Health check-in" detail={`${Math.round(plant.health.confidence * 100)}% confidence`} />
@@ -107,7 +138,10 @@ function PlantDetailContent() {
             ))}
           </View>
         ) : null}
-        <Button onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })} icon="camera">
+        <Button
+          testID={AgentUiIds.plants.detail.checkIn}
+          onPress={() => router.push({ pathname: '/plants/[id]/check-in', params: { id: plant.id } })}
+          icon="camera">
           Take photo for health status
         </Button>
       </Card>
@@ -172,7 +206,12 @@ function PlantDetailContent() {
         </AppText>
       ))}
       <AppText variant="caption" color="tertiary">{plant.carePlan.disclaimer}</AppText>
-      <Button variant="danger" onPress={remove}>Delete Plant</Button>
+      <Button
+        variant="danger"
+        testID={AgentUiIds.plants.detail.delete}
+        onPress={remove}>
+        Delete Plant
+      </Button>
     </Screen>
   );
 }

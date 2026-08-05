@@ -240,7 +240,7 @@ agent_ui_send() {
 }
 
 agent_ui_send_op() {
-  # agent_ui_send_op dump|tap|exists|prefix|route|goto|reset|seed|flow|wait|batch|assert …
+  # agent_ui_send_op dump|tap|exists|prefix|route|goto|reset|seed|flow|wait|batch|assert|hit|overlay …
   local op="$1"
   shift || true
   : "${WAIT_SECS:=${AGENT_UI_COLD_WAIT_SECS}}"
@@ -271,6 +271,13 @@ agent_ui_send_op() {
       ;;
     flow)
       flags+=(--to "${1:-}")
+      ;;
+    overlay)
+      flags+=(--to "${1:-toggle}")
+      ;;
+    hit)
+      # agent_ui_send_op hit <x> <y>
+      flags+=(--x "${1:-}" --y "${2:-}" --allow-fail)
       ;;
     assert)
       # Remaining args are bridge --id/--to/--prefix/--contains/--missing flags.

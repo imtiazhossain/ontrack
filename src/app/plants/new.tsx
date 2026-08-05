@@ -25,6 +25,7 @@ import type {
     PlantIdentity,
     RoomProfile,
 } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { fromDateKey, todayKey } from '@/utils/date';
 import { pickCameraImage, pickLibraryImage } from '@/utils/pick-image';
 import { openHttpsUrl } from '@/utils/safe-url';
@@ -283,10 +284,28 @@ export default function NewPlantScreen() {
         <>
           {plantPhoto ? <Image source={plantPhoto} style={styles.hero} contentFit="cover" /> : <View style={styles.photoPlaceholder}><AppText color="secondary">No Plant Photo Yet</AppText></View>}
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Button onPress={() => void capturePhoto('plant')} icon="camera">Camera</Button></View>
-            <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('plant')} icon="photo">Library</Button></View>
+            <View style={styles.flex}>
+              <Button
+                testID={AgentUiIds.plants.new.camera}
+                onPress={() => void capturePhoto('plant')}
+                icon="camera">
+                Camera
+              </Button>
+            </View>
+            <View style={styles.flex}>
+              <Button
+                testID={AgentUiIds.plants.new.library}
+                variant="secondary"
+                onPress={() => void choosePhoto('plant')}
+                icon="photo">
+                Library
+              </Button>
+            </View>
           </View>
-          <Button onPress={() => void analyzeIdentity()} disabled={!plantPhoto || busy}>
+          <Button
+            testID={AgentUiIds.plants.new.analyze}
+            onPress={() => void analyzeIdentity()}
+            disabled={!plantPhoto || busy}>
             {busy ? 'Analyzing…' : 'Identify and Assess'}
           </Button>
         </>
@@ -330,7 +349,10 @@ export default function NewPlantScreen() {
           ) : null}
           {searchError ? <ErrorMessage message={searchError} variant="caption" selectable /> : null}
           <Input label="Botanical Name" value={identity.scientificName} onChangeText={(scientificName) => updateIdentity({ scientificName })} />
-          <Button variant="secondary" onPress={confirmIdentity}>
+          <Button
+            variant="secondary"
+            testID={AgentUiIds.plants.new.confirmIdentity}
+            onPress={confirmIdentity}>
             {identityConfirmed ? 'Identification confirmed' : 'Confirm Identification'}
           </Button>
           {identityConfirmed ? (
@@ -338,7 +360,12 @@ export default function NewPlantScreen() {
               {identity.identificationSource === 'user-corrected' ? 'Using your corrected identification.' : 'Using your confirmed identification.'}
             </AppText>
           ) : null}
-          <Input label="Plant Nickname" value={nickname} onChangeText={setNickname} />
+          <Input
+            label="Plant Nickname"
+            testID={AgentUiIds.plants.new.nickname}
+            value={nickname}
+            onChangeText={setNickname}
+          />
           <View style={styles.buttonRow}>
             <View style={styles.flex}><Input label="Pot Diameter (cm)" keyboardType="decimal-pad" value={potDiameter} onChangeText={setPotDiameter} /></View>
             <View style={styles.flex}><DateField label="Last Watered" value={lastWatered} onChange={setLastWatered} maximumDate={todayKey()} /></View>
@@ -358,7 +385,12 @@ export default function NewPlantScreen() {
             <View style={styles.flex}><Button variant="secondary" onPress={() => void capturePhoto('room')} icon="camera">Room Camera</Button></View>
             <View style={styles.flex}><Button variant="secondary" onPress={() => void choosePhoto('room')} icon="photo">Room Library</Button></View>
           </View>
-          <Button onPress={() => void generateCarePlan()} disabled={busy || !identityConfirmed}>{busy ? 'Building Care Plan…' : 'Build Care Plan'}</Button>
+          <Button
+            testID={AgentUiIds.plants.new.buildCarePlan}
+            onPress={() => void generateCarePlan()}
+            disabled={busy || !identityConfirmed}>
+            {busy ? 'Building Care Plan…' : 'Build Care Plan'}
+          </Button>
         </>
       ) : null}
 
@@ -396,7 +428,13 @@ export default function NewPlantScreen() {
             </AppText>
           ))}
           <AppText variant="caption" color="tertiary">{carePlan.disclaimer}</AppText>
-          <Button size="lg" onPress={() => void savePlant()} disabled={busy}>{busy ? 'Saving…' : 'Confirm and Schedule'}</Button>
+          <Button
+            size="lg"
+            testID={AgentUiIds.plants.new.save}
+            onPress={() => void savePlant()}
+            disabled={busy}>
+            {busy ? 'Saving…' : 'Confirm and Schedule'}
+          </Button>
         </>
       ) : null}
 

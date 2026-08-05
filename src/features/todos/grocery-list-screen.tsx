@@ -43,6 +43,7 @@ import {
 } from '@/store/todos';
 import { useUI } from '@/store/ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { listReferenceEquality } from '@/utils/list-equality';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,6 +105,33 @@ export function GroceryListScreen({ listId }: { listId: string }) {
     new Set(),
   );
   const [draft, setDraft] = useState('');
+  const settingsAgent = useAgentUiTarget(AgentUiIds.grocery.settings, {
+    label: 'Grocery list settings',
+    onPress: () => router.push(`/todos/${listId}/settings` as never),
+  });
+  const shareAgent = useAgentUiTarget(AgentUiIds.grocery.share, {
+    label: 'Share grocery list',
+  });
+  const copyAgent = useAgentUiTarget(AgentUiIds.grocery.copy, {
+    label: 'Copy grocery list',
+  });
+  const mealViewAgent = useAgentUiTarget(AgentUiIds.grocery.view('meal'), {
+    label: 'By meal',
+    onPress: () => {
+      setView('meal');
+      haptics.select();
+    },
+  });
+  const combinedViewAgent = useAgentUiTarget(
+    AgentUiIds.grocery.view('combined'),
+    {
+      label: 'Combined',
+      onPress: () => {
+        setView('combined');
+        haptics.select();
+      },
+    },
+  );
 
   const standalone = useMemo(
     () =>
@@ -240,7 +268,11 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 <AppText variant="heading">Combined Ingredients</AppText>
               </View>
               <Pressable
+                ref={copyAgent.ref}
+                testID={copyAgent.testID}
+                onLayout={copyAgent.onLayout}
                 accessibilityRole="button"
+                accessibilityLabel="Copy grocery list"
                 onPress={() => void copyTodoListText(list, tasks, members, recipes)}>
                 <AppText variant="caption" color="accent">
                   Copy
@@ -255,6 +287,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 {item.groups.map((group, index) => (
                   <CombinedRow
                     key={group.id}
+                    testID={AgentUiIds.grocery.combinedItem(group.id)}
                     completion={group.completion}
                     disabled={!group.taskIds.some((id) => {
                       const task = tasks.find((entry) => entry.id === id);
@@ -340,6 +373,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
       addOther,
       collapsedIds,
       completedCount,
+      copyAgent,
       deleteRecipe,
       deleteTask,
       draft,
@@ -430,6 +464,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
               {owner ? (
                 <Button
                   icon="add"
+                  testID={AgentUiIds.grocery.addRecipe}
                   onPress={() =>
                     router.push(`/todos/${listId}/recipe-import` as never)
                   }>
@@ -443,6 +478,9 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 </Card>
               )}
               <Pressable
+                ref={settingsAgent.ref}
+                testID={settingsAgent.testID}
+                onLayout={settingsAgent.onLayout}
                 accessibilityLabel="Grocery list settings"
                 accessibilityRole="button"
                 onPress={() => router.push(`/todos/${listId}/settings` as never)}
@@ -453,6 +491,9 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 <Symbol name="settings" size={20} color={theme.textSecondary} />
               </Pressable>
               <Pressable
+                ref={shareAgent.ref}
+                testID={shareAgent.testID}
+                onLayout={shareAgent.onLayout}
                 accessibilityLabel="Share grocery list"
                 accessibilityRole="button"
                 onPress={() =>
@@ -479,13 +520,16 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 { backgroundColor: theme.backgroundSunken },
               ]}>
               {([
-                ['meal', 'By meal'],
-                ['combined', 'Combined'],
-              ] as const).map(([id, label]) => {
+                ['meal', 'By meal', mealViewAgent] as const,
+                ['combined', 'Combined', combinedViewAgent] as const,
+              ]).map(([id, label, agent]) => {
                 const selected = view === id;
                 return (
                   <Pressable
                     key={id}
+                    ref={agent.ref}
+                    testID={agent.testID}
+                    onLayout={agent.onLayout}
                     accessibilityRole="tab"
                     accessibilityState={{ selected }}
                     onPress={() => {

@@ -8,6 +8,7 @@ import { spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useSchedule } from '@/store/schedule';
 import type { WorkoutExercise } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export default function ActiveWorkoutScreen() {
@@ -143,10 +144,18 @@ export default function ActiveWorkoutScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Button size="lg" onPress={completeSet} accessibilityLabel="Complete set">
+        <Button
+          size="lg"
+          testID={AgentUiIds.workouts.gym.completeSet}
+          onPress={completeSet}
+          accessibilityLabel="Complete set">
           Complete set
         </Button>
-        <Button variant="ghost" onPress={() => finish('partial')} accessibilityLabel="Finish workout">
+        <Button
+          variant="ghost"
+          testID={AgentUiIds.workouts.gym.finish}
+          onPress={() => finish('partial')}
+          accessibilityLabel="Finish workout">
           Finish workout
         </Button>
       </View>

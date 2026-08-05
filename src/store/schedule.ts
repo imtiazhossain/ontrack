@@ -238,7 +238,8 @@ export const useSchedule = create<ScheduleState>()(
         const existing = payload.id
           ? get().activities.find((activity) => activity.id === payload.id)
           : undefined;
-        const id = existing?.id ?? newId();
+        // Prefer an explicit payload id so __DEV__ fixtures can upsert stable keys.
+        const id = existing?.id ?? payload.id ?? newId();
         const activity: Activity = {
           id,
           createdAt: existing?.createdAt ?? now,

@@ -77,6 +77,72 @@ export function tapAgentUiTarget(testID: string): boolean {
   return true;
 }
 
+function frameArea(frame: AgentUiFrame): number {
+  return Math.max(0, frame.width) * Math.max(0, frame.height);
+}
+
+function frameContains(frame: AgentUiFrame, x: number, y: number): boolean {
+  return (
+    x >= frame.x &&
+    y >= frame.y &&
+    x <= frame.x + frame.width &&
+    y <= frame.y + frame.height
+  );
+}
+
+/**
+ * Resolve the registered target under a logical window point.
+ * Prefers the smallest containing frame (innermost control), then longest testID.
+ * Coordinates are for lookup only — always tap by testID afterward.
+ */
+export function hitAgentUiTarget(
+  x: number,
+  y: number,
+): AgentUiEntry | undefined {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+  let best: AgentUiEntry | undefined;
+  let bestArea = Number.POSITIVE_INFINITY;
+  for (const entry of targets.values()) {
+    const frame = entry.frame;
+    if (!frame || !frameContains(frame, x, y)) continue;
+    const area = frameArea(frame);
+    const candidate: AgentUiEntry = {
+      testID: entry.testID,
+      label: entry.label,
+      frame: entry.frame,
+      tappable: entry.tappable,
+    };
+    if (
+      !best ||
+      area < bestArea ||
+      (area === bestArea && candidate.testID.length > best.testID.length)
+    ) {
+      best = candidate;
+      bestArea = area;
+    }
+  }
+  return best;
+}
+
+/** All registered targets whose frames contain the point, smallest first. */
+export function hitAgentUiTargets(x: number, y: number): AgentUiEntry[] {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
+  return Array.from(targets.values())
+    .filter((entry) => entry.frame && frameContains(entry.frame, x, y))
+    .map(({ testID, label, frame, tappable }) => ({
+      testID,
+      label,
+      frame,
+      tappable,
+    }))
+    .sort((a, b) => {
+      const areaA = a.frame ? frameArea(a.frame) : Number.POSITIVE_INFINITY;
+      const areaB = b.frame ? frameArea(b.frame) : Number.POSITIVE_INFINITY;
+      if (areaA !== areaB) return areaA - areaB;
+      return b.testID.length - a.testID.length;
+    });
+}
+
 /** Test helper — clears registry between cases. */
 export function resetAgentUiRegistry(): void {
   targets.clear();
