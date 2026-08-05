@@ -5,6 +5,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { AppText, Button } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import type { ExerciseTemplate } from '@/features/workouts/muscle-data';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 interface WorkoutSessionBuilderProps {
   selectedExercises: ExerciseTemplate[];
@@ -22,6 +23,14 @@ export function WorkoutSessionBuilder({
   onClear,
   onAddToToday,
 }: WorkoutSessionBuilderProps) {
+  // Hooks must run even when the builder is empty (not yet selected).
+  const clearAgent = useAgentUiTarget(
+    selectedExercises.length ? AgentUiIds.workouts.builderClear : undefined,
+    {
+      label: 'Clear selected exercises',
+      onPress: onClear,
+    },
+  );
   if (selectedExercises.length === 0) return null;
 
   return (
@@ -41,6 +50,9 @@ export function WorkoutSessionBuilder({
             </AppText>
           </View>
           <Pressable
+            ref={clearAgent.ref}
+            testID={clearAgent.testID}
+            onLayout={clearAgent.onLayout}
             accessibilityRole="button"
             accessibilityLabel="Clear selected exercises"
             hitSlop={8}
@@ -84,6 +96,7 @@ export function WorkoutSessionBuilder({
         <Button
           size="lg"
           icon="calendar-add"
+          testID={AgentUiIds.workouts.addToToday}
           onPress={onAddToToday}
           accessibilityLabel={`Add ${selectedExercises.length} exercises to today`}>
           Add workout to today

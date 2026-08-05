@@ -21,6 +21,7 @@ import {
 } from '@/features/workouts/muscle-explorer-selection';
 import type { resolveAtlasWorkoutSelection } from '@/features/workouts/atlas-workout-selection';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 const HumanBodyMap = lazy(() =>
   import('@/features/workouts/human-body-map').then((mod) => ({ default: mod.HumanBodyMap })),
@@ -88,29 +89,16 @@ export function MuscleExplorer({
               {([
                 { id: 'male' as const, label: 'Male' },
                 { id: 'female' as const, label: 'Female' },
-              ]).map((option) => {
-                const selected = anatomySex === option.id;
-                return (
-                  <Pressable
-                    key={option.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${option.label} anatomy`}
-                    accessibilityState={{ selected }}
-                    hitSlop={4}
-                    onPress={() => onChangeAnatomySex(option.id)}
-                    style={[
-                      styles.sexToggleTab,
-                      selected && { backgroundColor: theme.backgroundSunken },
-                    ]}>
-                    <AppText
-                      variant="caption"
-                      color={selected ? 'primary' : 'secondary'}
-                      fit>
-                      {option.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
+              ]).map((option) => (
+                <AnatomySexTab
+                  key={option.id}
+                  id={option.id}
+                  label={option.label}
+                  selected={anatomySex === option.id}
+                  selectedBg={theme.backgroundSunken}
+                  onPress={() => onChangeAnatomySex(option.id)}
+                />
+              ))}
             </View>
 
             <View
@@ -121,28 +109,16 @@ export function MuscleExplorer({
                   borderColor: theme.separator,
                 },
               ]}>
-              {BODY_VIEW_TABS.map((tab) => {
-                const selected = bodyView === tab.view;
-                return (
-                  <Pressable
-                    key={tab.view}
-                    accessibilityRole="tab"
-                    accessibilityLabel={`${tab.label} body view`}
-                    accessibilityState={{ selected }}
-                    onPress={() => onChangeBodyView(tab.view)}
-                    style={[
-                      styles.bodyTab,
-                      selected && { backgroundColor: theme.backgroundSunken },
-                    ]}>
-                    <AppText
-                      variant="caption"
-                      color={selected ? 'primary' : 'secondary'}
-                      fit>
-                      {tab.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
+              {BODY_VIEW_TABS.map((tab) => (
+                <BodyViewTab
+                  key={tab.view}
+                  view={tab.view}
+                  label={tab.label}
+                  selected={bodyView === tab.view}
+                  selectedBg={theme.backgroundSunken}
+                  onPress={() => onChangeBodyView(tab.view)}
+                />
+              ))}
             </View>
           </View>
 
@@ -200,29 +176,137 @@ export function MuscleExplorer({
         accessibilityRole="tablist"
         contentContainerStyle={styles.muscleChips}
         showsHorizontalScrollIndicator={false}>
-        {visibleMuscles.map((group) => {
-          const selected = group.key === selectedMuscle;
-          return (
-            <Pressable
-              key={group.key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              onPress={() => onSelectMuscle(group.key)}
-              style={[
-                styles.muscleChip,
-                {
-                  backgroundColor: selected ? gymColors.main : theme.backgroundElevated,
-                  borderColor: selected ? gymColors.main : theme.separator,
-                },
-              ]}>
-              <AppText variant="callout" color={selected ? 'onAccent' : 'secondary'}>
-                {group.label}
-              </AppText>
-            </Pressable>
-          );
-        })}
+        {visibleMuscles.map((group) => (
+          <MuscleChip
+            key={group.key}
+            muscleKey={group.key}
+            label={group.label}
+            selected={group.key === selectedMuscle}
+            selectedBg={gymColors.main}
+            idleBg={theme.backgroundElevated}
+            borderColor={
+              group.key === selectedMuscle ? gymColors.main : theme.separator
+            }
+            onPress={() => onSelectMuscle(group.key)}
+          />
+        ))}
       </ScrollView>
     </View>
+  );
+}
+
+function AnatomySexTab({
+  id,
+  label,
+  selected,
+  selectedBg,
+  onPress,
+}: {
+  id: AnatomySex;
+  label: string;
+  selected: boolean;
+  selectedBg: string;
+  onPress: () => void;
+}) {
+  const accessibilityLabel = `${label} anatomy`;
+  const agent = useAgentUiTarget(AgentUiIds.workouts.anatomySex(id), {
+    label: accessibilityLabel,
+    onPress,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected }}
+      hitSlop={4}
+      onPress={onPress}
+      style={[styles.sexToggleTab, selected && { backgroundColor: selectedBg }]}>
+      <AppText variant="caption" color={selected ? 'primary' : 'secondary'} fit>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function BodyViewTab({
+  view,
+  label,
+  selected,
+  selectedBg,
+  onPress,
+}: {
+  view: BodyView;
+  label: string;
+  selected: boolean;
+  selectedBg: string;
+  onPress: () => void;
+}) {
+  const accessibilityLabel = `${label} body view`;
+  const agent = useAgentUiTarget(AgentUiIds.workouts.bodyView(view), {
+    label: accessibilityLabel,
+    onPress,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="tab"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[styles.bodyTab, selected && { backgroundColor: selectedBg }]}>
+      <AppText variant="caption" color={selected ? 'primary' : 'secondary'} fit>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function MuscleChip({
+  muscleKey,
+  label,
+  selected,
+  selectedBg,
+  idleBg,
+  borderColor,
+  onPress,
+}: {
+  muscleKey: MuscleKey;
+  label: string;
+  selected: boolean;
+  selectedBg: string;
+  idleBg: string;
+  borderColor: string;
+  onPress: () => void;
+}) {
+  const agent = useAgentUiTarget(AgentUiIds.workouts.muscleChip(muscleKey), {
+    label,
+    onPress,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[
+        styles.muscleChip,
+        {
+          backgroundColor: selected ? selectedBg : idleBg,
+          borderColor,
+        },
+      ]}>
+      <AppText variant="callout" color={selected ? 'onAccent' : 'secondary'}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 

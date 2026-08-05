@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, ProgressRing, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { VISION_BOARD_ACCENTS } from './defaults';
@@ -16,21 +17,31 @@ export function FilterChip({
   icon,
   selected,
   onPress,
+  testID,
 }: {
   label: string;
   icon: AppIconName;
   selected: boolean;
   onPress: () => void;
+  testID?: string;
 }) {
   const theme = useTheme();
+  const handlePress = () => {
+    haptics.select();
+    onPress();
+  };
+  const agent = useAgentUiTarget(testID, {
+    label,
+    onPress: handlePress,
+  });
   return (
     <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
       accessibilityRole="tab"
       accessibilityState={{ selected }}
-      onPress={() => {
-        haptics.select();
-        onPress();
-      }}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.filterChip,
         {

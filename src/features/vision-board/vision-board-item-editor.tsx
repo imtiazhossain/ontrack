@@ -15,6 +15,7 @@ import { initialCanvasFrame } from '@/features/vision-board/canvas';
 import type { VisionBoardItemKind } from '@/features/vision-board/types';
 import { useTheme } from '@/hooks/use-theme';
 import { newVisionBoardId, useVisionBoard } from '@/store/vision-board';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -144,6 +145,7 @@ export function VisionBoardItemEditor() {
           icon="close"
           accessibilityLabel="Close"
           background={theme.backgroundSunken}
+          testID={AgentUiIds.vision.itemClose}
           onPress={close}
         />
       </View>
@@ -161,6 +163,7 @@ export function VisionBoardItemEditor() {
         maxLength={type === 'affirmation' ? 240 : 120}
         multiline
         autoFocus
+        testID={AgentUiIds.vision.itemPrimary}
       />
       {type !== 'image' ? (
         <Input
@@ -170,10 +173,13 @@ export function VisionBoardItemEditor() {
           placeholder={type === 'goal' ? 'Lead. Inspire. Impact.' : 'Your name or source'}
           maxLength={160}
           multiline={type === 'goal'}
+          testID={AgentUiIds.vision.itemSecondary}
         />
       ) : null}
       {error ? <ErrorMessage message={error} /> : null}
-      <Button onPress={save}>Save</Button>
+      <Button testID={AgentUiIds.vision.itemSave} onPress={save}>
+        Save
+      </Button>
     </Screen>
   );
 }

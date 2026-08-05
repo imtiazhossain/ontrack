@@ -4,6 +4,30 @@ Stable `testID`s for AI agents driving the iOS Simulator. Prefer these over scre
 
 Convention: `ontrack.<feature>.<surface>.<control>`
 
+## Screenshot → code (fast path)
+
+When a user posts a UI screenshot, do **not** browse the tree. Resolve a reference point:
+
+```bash
+# Visible label / chrome text → candidate ids
+./scripts/agent-ui-source.sh --label "Transport"
+
+# Known id / AgentUiIds key path → source files + feature entry
+./scripts/agent-ui-source.sh travel.planDetail.transportSection
+
+# Point on the live sim (logical window points) → id + files
+./scripts/agent-ui-hit.sh 200 480
+./scripts/agent-ui-hit.sh --pixel 600 1440   # screenshot pixels ÷ scale
+
+# Burn ids into the screenshot (DEV overlay; pointerEvents=none)
+./scripts/agent-ui-overlay.sh on
+./scripts/agent-ui-overlay.sh off
+```
+
+Generated index: [`docs/agent-ui-sources.json`](./agent-ui-sources.json) (`npm run agent-ui:sources`). Triage rule: `.cursor/rules/screenshot-triage.mdc`.
+
+Each map row below is a stable id; use `agent-ui-source.sh` for the **file** column (generated — stays in sync without hand-maintaining hundreds of paths here).
+
 ## Host commands
 
 ```bash
@@ -39,6 +63,11 @@ Convention: `ontrack.<feature>.<surface>.<control>`
 # Full dump only when discovering unknown ids
 ./scripts/agent-ui-dump.sh
 ./scripts/agent-ui-dump.sh --prefix ontrack.today
+
+# Screenshot triage
+./scripts/agent-ui-source.sh travel.planDetail.weather
+./scripts/agent-ui-hit.sh 180 420
+./scripts/agent-ui-overlay.sh on
 ```
 
 See also [`docs/agent-routes.md`](./agent-routes.md) for aliases, nested shortcuts, fixtures, and flows.
@@ -52,6 +81,8 @@ Deep links / file ops:
 - `ontrack:///agent/ui?op=route`
 - `ontrack:///agent/ui?op=goto&to=calendar`
 - `ontrack:///agent/ui?op=reset`
+- `ontrack:///agent/ui?op=hit&x=<points>&y=<points>`
+- `ontrack:///agent/ui?op=overlay&to=on|off|toggle`
 - File ops: `wait`, `seed`, `flow`, `batch` via `./scripts/agent-ui-*.sh`
 
 (Use three slashes after `ontrack:` so the path is `/agent/ui`.)
@@ -92,7 +123,7 @@ Dump/status/command files live in the app Documents directory:
 | `ontrack.tabs.games`                                      | Games            | addon                                                                                                 |
 | `ontrack.tabs.vehicles`                                   | Vehicles         | addon                                                                                                 |
 | `ontrack.vehicles.list.add`                               | Vehicles         | Add a vehicle                                                                                         |
-| `ontrack.vehicles.list.vehicle.<vehicleId>`               | Vehicles         | Open a vehicle                                                                                        |
+| `ontrack.vehicles.list.vehicle.<vehicleId>`               | Vehicles         | Open a vehicle (`vehicle-agent-ui-demo` via `vehicle-demo`)                                           |
 | `ontrack.vehicles.detail.settings`                        | Vehicle detail   | Open vehicle settings                                                                                 |
 | `ontrack.vehicles.detail.section.<section>`               | Vehicle detail   | Switch detail section (`overview`, `maintenance`, `mileage`, `expenses`, `parts`, `docs`, `activity`) |
 | `ontrack.vehicles.detail.saveOdometer`                    | Vehicle detail   | Save the current odometer value                                                                       |
@@ -105,6 +136,23 @@ Dump/status/command files live in the app Documents directory:
 | `ontrack.vehicles.expenses.add`                           | Vehicle expenses | Add expense                                                                                           |
 | `ontrack.vehicles.expenses.delete.<expenseId>`            | Vehicle expenses | Delete expense                                                                                        |
 | `ontrack.vehicles.expenses.confirmDelete`                 | Vehicle expenses | Confirm expense deletion prompt                                                                       |
+| `ontrack.vehicles.new.nickname` / `.year` / `.make` / `.model` / `.vin` / `.odometer` | New vehicle | Create form fields |
+| `ontrack.vehicles.new.save` / `.cancel`                   | New vehicle      | Save / Cancel                                                                                         |
+
+## Food detail (`/detail/food/<id>`)
+
+| testID                              | Control                 |
+| ----------------------------------- | ----------------------- |
+| `ontrack.food.detail.analyze`       | Add meal nutrition CTA  |
+| `ontrack.food.detail.link`          | Meal link field         |
+| `ontrack.food.detail.findMeal`      | Resolve link            |
+| `ontrack.food.detail.candidate.<id>`| Choose link candidate   |
+| `ontrack.food.detail.confirmSave`   | Confirm and save        |
+| `ontrack.food.detail.analyzeAnother`| Analyze another source  |
+| `ontrack.food.detail.edit`          | Edit meal manually      |
+| `ontrack.food.detail.close`         | Close                   |
+
+Demo: `activity-agent-ui-demo-meal` via `food-demo`.
 
 ## Social
 
@@ -141,10 +189,24 @@ Dump/status/command files live in the app Documents directory:
 
 ## Games
 
-| testID                                  | Control           |
-| --------------------------------------- | ----------------- |
-| `ontrack.games.balloonPop.play`         | Start Balloon Pop |
-| `ontrack.games.balloonPop.balloon.<id>` | Pop a balloon     |
+| testID                                  | Control                    |
+| --------------------------------------- | -------------------------- |
+| `ontrack.games.hub.challengeFriend`     | Challenge a Friend         |
+| `ontrack.games.hub.balloonPop`          | Open Balloon Pop card      |
+| `ontrack.games.balloonPop.play`         | Start Balloon Pop          |
+| `ontrack.games.balloonPop.retry`        | Retry after loss           |
+| `ontrack.games.balloonPop.back`         | Back to Games after loss   |
+| `ontrack.games.balloonPop.close`        | Close in-game HUD          |
+| `ontrack.games.balloonPop.balloon.<id>` | Pop a balloon              |
+
+## People picker (shared sheet)
+
+| testID                                  | Control              |
+| --------------------------------------- | -------------------- |
+| `ontrack.peoplePicker.close`            | Close sheet          |
+| `ontrack.peoplePicker.search`           | Search field         |
+| `ontrack.peoplePicker.friend.<friendId>`| Select friend row    |
+| `ontrack.peoplePicker.confirm`          | Confirm selection    |
 
 Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
@@ -221,6 +283,116 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.checklists.detail.actions`       | List actions menu                     |
 | `ontrack.checklists.detail.editMode`      | Edit / Done tasks                     |
 | `ontrack.checklists.detail.task.<taskId>` | Task row                              |
+
+Demo fixture: `list-agent-ui-demo-checklist` / `task-agent-ui-demo-plan` via `./scripts/agent-ui-seed.sh checklist-demo` or flow `checklist-demo`.
+
+## Grocery (`/(tabs)/to-do/<groceryListId>`)
+
+| testID                                         | Control                          |
+| ---------------------------------------------- | -------------------------------- |
+| `ontrack.grocery.detail.addRecipe`             | Add Recipe                       |
+| `ontrack.grocery.detail.settings`              | List settings                    |
+| `ontrack.grocery.detail.share`                 | Share list                       |
+| `ontrack.grocery.detail.copy`                  | Copy combined shopping list      |
+| `ontrack.grocery.detail.view.meal`             | By meal tab                      |
+| `ontrack.grocery.detail.view.combined`         | Combined tab                     |
+| `ontrack.grocery.detail.recipe.<recipeId>`     | Expand / collapse meal card      |
+| `ontrack.grocery.detail.task.<taskId>`         | Toggle ingredient checkbox       |
+| `ontrack.grocery.detail.combined.<groupId>`    | Toggle combined ingredient group |
+
+Demo fixture: `list-agent-ui-demo-grocery` / `recipe-agent-ui-demo-pasta` via `./scripts/agent-ui-seed.sh grocery-demo` or flow `grocery-demo`. Settings: `grocery-demo-settings` → `ontrack.listSettings.name`.
+
+## List settings (`/todos/<listId>/settings`)
+
+| testID                         | Control      |
+| ------------------------------ | ------------ |
+| `ontrack.listSettings.name`    | List name    |
+| `ontrack.listSettings.saveName`| Save name    |
+
+## Recipe import (`/todos/<listId>/recipe-import`)
+
+| testID                                              | Control                |
+| --------------------------------------------------- | ---------------------- |
+| `ontrack.recipeImport.cancel`                       | Cancel / discard       |
+| `ontrack.recipeImport.stop`                         | Stop analysis          |
+| `ontrack.recipeImport.url`                          | Recipe URL field       |
+| `ontrack.recipeImport.analyze`                      | Analyze URL            |
+| `ontrack.recipeImport.camera`                       | Camera capture         |
+| `ontrack.recipeImport.library`                      | Photo / screenshot     |
+| `ontrack.recipeImport.mealName`                     | Review meal name       |
+| `ontrack.recipeImport.sourceUrl`                    | Review source URL      |
+| `ontrack.recipeImport.sourceServings`               | Source servings        |
+| `ontrack.recipeImport.targetServings`               | Target servings        |
+| `ontrack.recipeImport.ingredient.add`               | Add ingredient row     |
+| `ontrack.recipeImport.ingredient.<id>.name`         | Ingredient name field  |
+| `ontrack.recipeImport.ingredient.<id>.remove`       | Remove ingredient row  |
+| `ontrack.recipeImport.save`                         | Save recipe to list    |
+
+Flow: `grocery-demo-recipe-import`.
+
+## Plants (`/(tabs)/plants`)
+
+| testID                                   | Control                    |
+| ---------------------------------------- | -------------------------- |
+| `ontrack.plants.list.add`                | Add plant                  |
+| `ontrack.plants.list.plant.<plantId>`    | Open plant card            |
+| `ontrack.plants.detail.edit`             | Edit plant                 |
+| `ontrack.plants.detail.amount`           | Optional watering amount   |
+| `ontrack.plants.detail.logWatering`      | Log watering now           |
+| `ontrack.plants.detail.adjustSchedule`   | Adjust schedule            |
+| `ontrack.plants.detail.undoWatering`     | Undo last watering         |
+| `ontrack.plants.detail.checkIn`          | Health photo check-in      |
+| `ontrack.plants.detail.delete`           | Delete plant               |
+| `ontrack.plants.new.camera`              | New plant — camera         |
+| `ontrack.plants.new.library`             | New plant — library        |
+| `ontrack.plants.new.analyze`             | Identify and assess        |
+| `ontrack.plants.new.confirmIdentity`     | Confirm identification     |
+| `ontrack.plants.new.nickname`            | Plant nickname             |
+| `ontrack.plants.new.buildCarePlan`       | Build care plan            |
+| `ontrack.plants.new.save`                | Confirm and schedule       |
+
+Demo fixture: `plant-sample-monstera` via `./scripts/agent-ui-seed.sh plants-demo` or flow `plants-demo`.
+
+## Workouts (`/(tabs)/workouts`)
+
+| testID                                              | Control                         |
+| --------------------------------------------------- | ------------------------------- |
+| `ontrack.workouts.header.customPlanner`             | Custom planner header control   |
+| `ontrack.workouts.today.planFromScratch`            | Plan from scratch               |
+| `ontrack.workouts.todayPlan.<activityId>`           | Open today’s workout card       |
+| `ontrack.workouts.builder.clear`                    | Clear session builder           |
+| `ontrack.workouts.builder.addToToday`               | Add workout to today            |
+| `ontrack.workouts.exercise.<exerciseId>.add`        | Add/remove catalog exercise     |
+| `ontrack.workouts.exercise.<exerciseId>.preview`    | Preview anatomy animation       |
+| `ontrack.workouts.explorer.anatomySex.male\|female` | Male / Female anatomy toggle    |
+| `ontrack.workouts.explorer.bodyView.front\|side\|back` | Body plate tabs              |
+| `ontrack.workouts.explorer.muscle.<muscleKey>`      | Muscle group chip               |
+| `ontrack.workouts.gym.edit` / `.start` / `.close`   | Gym detail                      |
+| `ontrack.workouts.gymActive.completeSet` / `.finish`| Active workout                  |
+
+Demo fixture: `activity-agent-ui-demo-workout` via `workouts-demo`; explorer wait target `incline-curl`. Flows: `workouts-demo-anatomy`, `workouts-demo-gym-detail`, `workouts-demo-gym-active`.
+
+## Vision board (`/(tabs)/vision-board`)
+
+| testID                                                    | Control                      |
+| --------------------------------------------------------- | ---------------------------- |
+| `ontrack.vision.consolidated.category.<categoryId>`       | Category filter chip         |
+| `ontrack.vision.category.mode`                            | Edit Board / Gallery toggle  |
+| `ontrack.vision.category.addImage`                        | Add image                    |
+| `ontrack.vision.category.addAffirmation`                  | Add affirmation              |
+| `ontrack.vision.category.addGoal`                         | Add goal                     |
+| `ontrack.vision.category.canvasItem.<itemId>`             | Select canvas item           |
+| `ontrack.vision.category.selection.deselect`              | Deselect selected item       |
+| `ontrack.vision.category.selection.edit`                  | Edit selected item           |
+| `ontrack.vision.category.selection.layerBack`             | Send selected backward       |
+| `ontrack.vision.category.selection.layerForward`          | Bring selected forward       |
+| `ontrack.vision.category.selection.delete`                | Delete selected item         |
+| `ontrack.vision.itemEditor.primary`                       | Affirmation / goal / caption |
+| `ontrack.vision.itemEditor.secondary`                     | Optional note / attribution  |
+| `ontrack.vision.itemEditor.save`                          | Save item                    |
+| `ontrack.vision.itemEditor.close`                         | Close editor                 |
+
+Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` / `vision-board-demo-edit` / `vision-board-demo-item-editor`.
 
 ## Profile (`/(tabs)/profile`)
 
@@ -390,6 +562,8 @@ Deep link: `ontrack://health` / Expo route `/(tabs)/health`
 | `ontrack.health.settings.stateSync.<off                | on>`                                | Configure State of Mind sync |
 | `ontrack.profile.addon.health`                         | Toggle the iPhone Health add-on     |
 
+Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scripts/agent-ui-seed.sh health-demo` or flow `health-demo`.
+
 ## Travel plan detail
 
 | testID                                         | Control                                                                  |
@@ -506,6 +680,19 @@ Deep link: `ontrack://travel/<planId>/chat` → `/travel/[id]/chat`
 | `ontrack.chrome.back`       | `BackButton` default       |
 | `ontrack.chrome.headerBack` | `HeaderBackButton` default |
 
+## Agent UI (DEV)
+
+| testID                         | Control                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `ontrack.agentUi.overlay.root` | Overlay host (`./scripts/agent-ui-overlay.sh on` paints framed testIDs) |
+
 ## Source of truth
 
 IDs are defined in [`src/utils/agent-ui/ids.ts`](../src/utils/agent-ui/ids.ts). **When creating or editing an interactive control, always add an ID there, stamp `testID` on the control, and update this map in the same change.** An ID should never be “missing” for a tappable control — that is a defect, not a reason to use coordinates.
+
+Major layout sections that show up in bug screenshots should also get a non-tappable `AgentTestId` anchor. After adding/renaming many ids, refresh the file index:
+
+```bash
+npm run agent-ui:sources
+# or: ./scripts/agent-ui-sources.sh
+```

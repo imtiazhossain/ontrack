@@ -24,6 +24,15 @@ Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulat
 ./scripts/agent-ui-flow.sh travel-demo
 ./scripts/agent-ui-flow.sh travel-demo-add-flight
 ./scripts/agent-ui-flow.sh open-new-trip
+./scripts/agent-ui-flow.sh checklist-demo
+./scripts/agent-ui-flow.sh grocery-demo
+./scripts/agent-ui-flow.sh grocery-demo-recipe-import
+./scripts/agent-ui-flow.sh health-demo
+./scripts/agent-ui-flow.sh plants-demo
+./scripts/agent-ui-flow.sh activity-demo-edit
+./scripts/agent-ui-flow.sh workouts-demo
+./scripts/agent-ui-flow.sh vision-board-demo-edit
+./scripts/agent-ui-flow.sh vehicle-demo-detail
 ./scripts/agent-ui-flow.sh --list
 
 # Structural asserts (Playwright-style — prefer over screenshots for route/id)
@@ -33,8 +42,16 @@ Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulat
 ./scripts/agent-ui-assert.sh --prefix travel.planDetail.
 ./scripts/agent-ui-assert.sh --color travel.planDetail.transportSection '#2474A8'
 
-# Stable demo trip (id trip-agent-ui-demo) without wiping other trips
+# Stable demo fixtures (upsert; do not wipe other domain data)
 ./scripts/agent-ui-seed.sh travel-demo
+./scripts/agent-ui-seed.sh checklist-demo
+./scripts/agent-ui-seed.sh grocery-demo
+./scripts/agent-ui-seed.sh health-demo
+./scripts/agent-ui-seed.sh vehicle-demo
+./scripts/agent-ui-seed.sh plants-demo
+./scripts/agent-ui-seed.sh activity-demo
+./scripts/agent-ui-seed.sh workouts-demo
+./scripts/agent-ui-seed.sh vision-board-demo
 
 # One hop to a surface (in-app goto + wait)
 ./scripts/agent-ui-open.sh travel
@@ -51,6 +68,8 @@ Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulat
 
 Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](./agent-ui-map.md). Prefer **assert** / **`--color`** for route/id/label/accent claims; screenshot only for broader visual/layout proof.
 
+**Screenshot bug report?** Use the triage ladder in `.cursor/rules/screenshot-triage.mdc`: `./scripts/agent-ui-source.sh` / `--label` → `./scripts/agent-ui-hit.sh` → `./scripts/agent-ui-overlay.sh on` → edit the resolved file. File index: [`agent-ui-sources.json`](./agent-ui-sources.json).
+
 **Mandatory decision tree** (also in `.cursor/rules/agent-ui-selectors.mdc`): `verify` (skip land if on route) → `once`/flow → open/batch → known tap (wire id or `AgentUiIds` path) → dump only if unknown → assert/`--color` or one final screenshot. Budget: ≤1 dump; ≤1 screenshot and only for visual claims. Fail-fast when the daemon is warm (~2.5s simple / ~5s flow). Never re-run a flow just to re-check a screen you’re already on; never prophylactic Metro heal.
 
 ## Named flows
@@ -64,9 +83,36 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
 | `open-new-trip` | Travel list → New Trip sheet |
 | `open-new-checklist` | Checklists → new-list name field ready |
+| `checklist-demo` | Seed demo checklist → open list detail (task ready) |
+| `checklist-demo-list` | Seed → checklists overview with demo list card |
+| `grocery-demo` | Seed demo grocery list → open meal view (recipe ready) |
+| `grocery-demo-combined` | Seed → grocery detail → Combined tab (copy ready) |
+| `grocery-demo-recipe-import` | Seed → recipe import URL field ready |
+| `grocery-demo-settings` | Seed → grocery detail → settings (list name field) |
+| `health-demo` | Seed mood factor + entry → Health Mind section |
+| `health-demo-mood` | Seed → mood check-in with demo factor chip |
+| `plants-demo` | Seed Monstera sample → plant detail (log watering ready) |
+| `plants-demo-list` | Seed → plants list with sample card |
+| `plants-demo-log-watering` | Seed → log watering → undo control ready |
+| `activity-demo` | Seed mindfulness activity → Today card |
+| `activity-demo-detail` | Seed → open generic event detail |
+| `activity-demo-edit` | Seed → open activity form editor |
+| `workouts-demo` | Seed gym activity → Today’s Plan card |
+| `workouts-demo-explore` | Seed → Muscle Explorer (incline-curl add ready) |
+| `workouts-demo-anatomy` | Seed → Female + Side anatomy controls (chest chip) |
+| `workouts-demo-gym-detail` | Seed → gym detail (Start workout) |
+| `workouts-demo-gym-active` | Seed → active workout (Complete set) |
+| `vision-board-demo` | Seed sample board → consolidated Mindset filter |
+| `vision-board-demo-edit` | Seed → Mindset board edit (affirmation + sample canvas item) |
+| `vision-board-demo-item-editor` | Seed → select sample item → edit → item editor primary |
+| `vehicle-demo` | Seed demo vehicle → vehicles list card |
+| `vehicle-demo-detail` | Seed → open vehicle detail |
+| `vehicle-demo-expenses` | Seed → expenses section (amount field) |
+| `food-demo` | Seed meal activity → food detail (edit ready) |
+| `games-balloon-pop` | Games hub → Balloon Pop Play ready |
 | `travel-list` / `calendar` / `today` / `checklists` / `health` / `health-mood` / `health-settings` / `activity-form` / `profile` / `vehicles` / `vehicles-new` / `social` / `workouts` / `plants` / `plants-new` / `vision-board` / `games` | Goto + settle |
 
-Demo IDs: `trip-agent-ui-demo`, `item-agent-ui-demo-flight`, `item-agent-ui-demo-chase-outbound`, `item-agent-ui-demo-chase-return` (`src/utils/agent-ui/fixtures.ts`).
+Demo IDs (`src/utils/agent-ui/fixtures.ts`): travel `trip-agent-ui-demo` / `item-agent-ui-demo-flight` / chase outbound+return; checklist `list-agent-ui-demo-checklist` / `task-agent-ui-demo-plan`; grocery `list-agent-ui-demo-grocery` / `recipe-agent-ui-demo-pasta`; health `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm`; vehicle `vehicle-agent-ui-demo`; plant `plant-sample-monstera`; activity `activity-agent-ui-demo-mindfulness`; workout `activity-agent-ui-demo-workout`; vision `vision-mindset` / `vision-sample-forest`.
 
 Chase traveler-count proof (no dump — stable ids after submit):
 
@@ -131,8 +177,8 @@ npm run packager:ensure:start
 - `op=reset` / `op=goto&to=…` / `op=route` / `op=prefix&prefix=…` / `op=exists&id=…` / `op=tap&id=…` / `op=dump`
 - `op=assert` — structural checks (`id` / `missing` / `prefix` / `to` route / `contains` label); prefer over screenshots for these claims
 - `op=wait` — settle (`ms`) and/or poll until `id` / `prefix` / route (`to`) within `timeoutMs` (default 2000)
-- `op=seed&to=travel-demo` — upsert stable demo trip
-- `op=flow&to=travel-demo` — expand named recipe
+- `op=seed&to=…-demo` — upsert stable demo data (`travel|checklist|grocery|health|vehicle|plants|activity|workouts|vision-board`)
+- `op=flow&to=travel-demo` (or other named flow) — expand named recipe
 - `op=batch` with `ops: […]` — run steps in one command
 
 Tap/goto no longer rewrite the dump by default.
@@ -151,8 +197,10 @@ Tap/goto no longer rewrite the dump by default.
 | `health/settings` | `/health/settings` |
 | `health/playbook` | `/health/playbook-editor` |
 | `plants/new` / `vehicles/new` | create screens |
+| `plants/<id>` | `/plants/<id>` |
 | `checklists/<id>` | `/to-do/<id>` |
 | `checklists/<id>/settings` | `/todos/<id>/settings` |
+| `checklists/<id>/recipe-import` | `/todos/<id>/recipe-import` |
 
 ## Alias → Expo path → deep link
 

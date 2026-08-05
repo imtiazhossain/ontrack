@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Seed a stable __DEV__ fixture (does not wipe other trips).
+# Seed a stable __DEV__ fixture (upsert; does not wipe other domain data).
 #
 # Usage:
 #   ./scripts/agent-ui-seed.sh
 #   ./scripts/agent-ui-seed.sh travel-demo
+#   ./scripts/agent-ui-seed.sh …-demo  (travel|checklist|grocery|health|vehicle|plants|activity|workouts|vision-board)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

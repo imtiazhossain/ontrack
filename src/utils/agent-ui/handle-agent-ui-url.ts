@@ -1,5 +1,10 @@
-import { seedAgentUiFixture } from './fixtures';
+import { formatAgentUiSeedDetail, seedAgentUiFixture } from './fixtures';
 import { resolveAgentUiFlow } from './flows';
+import {
+  isAgentUiOverlayEnabled,
+  setAgentUiOverlayEnabled,
+  toggleAgentUiOverlay,
+} from './overlay';
 import {
     writeAgentUiDump,
     writeAgentUiStatus,
@@ -7,6 +12,8 @@ import {
 } from './persist';
 import {
     getAgentUiTarget,
+    hitAgentUiTarget,
+    hitAgentUiTargets,
     isAgentUiEnabled,
     listAgentUiTargets,
     tapAgentUiTarget,
@@ -29,7 +36,9 @@ export type AgentUiOp =
   | 'wait'
   | 'seed'
   | 'flow'
-  | 'assert';
+  | 'assert'
+  | 'hit'
+  | 'overlay';
 
 export type AgentUiRequest = {
   op?: string | string[];
@@ -37,6 +46,10 @@ export type AgentUiRequest = {
   to?: string | string[];
   path?: string | string[];
   prefix?: string | string[];
+  /** Logical window X for `op=hit` (points, not screenshot pixels). */
+  x?: number | string | string[];
+  /** Logical window Y for `op=hit` (points, not screenshot pixels). */
+  y?: number | string | string[];
   /** Pure settle delay (ms) before wait polling / as standalone delay. */
   ms?: number | string | string[];
   /** Max poll window for wait (ms). Default 2000. */
@@ -58,6 +71,8 @@ export type ParsedAgentUiUrl = {
   id?: string;
   to?: string;
   prefix?: string;
+  x?: string;
+  y?: string;
 };
 
 const AGENT_UI_PATH = /(?:^|\/)agent\/ui\/?$/i;
@@ -74,6 +89,8 @@ const OPS = new Set<AgentUiOp>([
   'seed',
   'flow',
   'assert',
+  'hit',
+  'overlay',
 ]);
 
 function parseOp(raw: string): AgentUiOp {
@@ -111,24 +128,37 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
       parsed.searchParams.get('path') ??
       undefined;
     const prefix = parsed.searchParams.get('prefix') ?? undefined;
+    const x = parsed.searchParams.get('x') ?? undefined;
+    const y = parsed.searchParams.get('y') ?? undefined;
     return {
       op,
-      id: id || undefined,
-      to: to || undefined,
-      prefix: prefix || undefined,
+      ...(id ? { id } : {}),
+      ...(to ? { to } : {}),
+      ...(prefix ? { prefix } : {}),
+      ...(x ? { x } : {}),
+      ...(y ? { y } : {}),
     };
   } catch {
     const opMatch = /[?&]op=([^&]+)/i.exec(url);
     const idMatch = /[?&]id=([^&]+)/i.exec(url);
     const toMatch = /[?&](?:to|path)=([^&]+)/i.exec(url);
     const prefixMatch = /[?&]prefix=([^&]+)/i.exec(url);
+    const xMatch = /[?&]x=([^&]+)/i.exec(url);
+    const yMatch = /[?&]y=([^&]+)/i.exec(url);
+    const id = idMatch?.[1] ? decodeURIComponent(idMatch[1]) : undefined;
+    const to = toMatch?.[1] ? decodeURIComponent(toMatch[1]) : undefined;
+    const prefix = prefixMatch?.[1]
+      ? decodeURIComponent(prefixMatch[1])
+      : undefined;
+    const x = xMatch?.[1] ? decodeURIComponent(xMatch[1]) : undefined;
+    const y = yMatch?.[1] ? decodeURIComponent(yMatch[1]) : undefined;
     return {
       op: parseOp(opMatch?.[1] ?? 'dump'),
-      id: idMatch?.[1] ? decodeURIComponent(idMatch[1]) : undefined,
-      to: toMatch?.[1] ? decodeURIComponent(toMatch[1]) : undefined,
-      prefix: prefixMatch?.[1]
-        ? decodeURIComponent(prefixMatch[1])
-        : undefined,
+      ...(id ? { id } : {}),
+      ...(to ? { to } : {}),
+      ...(prefix ? { prefix } : {}),
+      ...(x ? { x } : {}),
+      ...(y ? { y } : {}),
     };
   }
 }
@@ -264,9 +294,9 @@ export async function handleAgentUiRequest(
         op: 'seed',
         ok: Boolean(seeded),
         detail: seeded
-          ? `seeded ${seeded.fixture} planId=${seeded.planId} flightId=${seeded.flightItemId}`
+          ? formatAgentUiSeedDetail(seeded)
           : `Unknown fixture: ${to ?? id ?? '(missing)'}`,
-        id: seeded?.planId,
+        id: seeded?.primaryId,
         route: getAgentUiRoute(),
       });
     }
@@ -348,6 +378,72 @@ export async function handleAgentUiRequest(
       });
     }
     return true;
+  }
+
+  if (op === 'overlay') {
+    const mode = (to ?? id ?? 'toggle').trim().toLowerCase();
+    let enabled = isAgentUiOverlayEnabled();
+    if (mode === 'on' || mode === '1' || mode === 'true' || mode === 'yes') {
+      setAgentUiOverlayEnabled(true);
+      enabled = true;
+    } else if (
+      mode === 'off' ||
+      mode === '0' ||
+      mode === 'false' ||
+      mode === 'no'
+    ) {
+      setAgentUiOverlayEnabled(false);
+      enabled = false;
+    } else if (mode === 'status' || mode === 'get') {
+      // leave as-is
+    } else {
+      enabled = toggleAgentUiOverlay();
+    }
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'overlay',
+        ok: true,
+        detail: enabled ? 'overlay on' : 'overlay off',
+        id: enabled ? 'on' : 'off',
+        route: getAgentUiRoute(),
+      });
+    }
+    return true;
+  }
+
+  if (op === 'hit') {
+    const x = asNumber(request.x) ?? asNumber(asSingle(request.id)?.split(',')[0]);
+    const y =
+      asNumber(request.y) ??
+      asNumber(asSingle(request.id)?.split(',')[1]) ??
+      asNumber(to);
+    if (x === undefined || y === undefined) {
+      if (emitStatus) {
+        writeAgentUiStatus({
+          op: 'hit',
+          ok: false,
+          detail: 'Missing x/y (logical window points).',
+          route: getAgentUiRoute(),
+        });
+      }
+      return false;
+    }
+    const element = hitAgentUiTarget(x, y);
+    const stack = hitAgentUiTargets(x, y);
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'hit',
+        id: element?.testID,
+        ok: Boolean(element),
+        detail: element
+          ? `hit ${element.testID} @ (${x},${y}) stack=${stack.length}`
+          : `no target @ (${x},${y})`,
+        element,
+        count: stack.length,
+        route: getAgentUiRoute(),
+      });
+    }
+    return Boolean(element);
   }
 
   if (op === 'route') {

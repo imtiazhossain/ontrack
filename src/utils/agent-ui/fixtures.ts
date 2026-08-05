@@ -1,4 +1,5 @@
 import type { TravelPlan } from '@/features/travel/types';
+import type { TodoList, TodoRecipe, TodoTask } from '@/store/todos-types';
 
 /** Stable __DEV__ plan id — agents can deep-link without creating trips. */
 export const AGENT_UI_DEMO_TRIP_ID = 'trip-agent-ui-demo';
@@ -14,6 +15,47 @@ export const AGENT_UI_DEMO_CHASE_OUTBOUND_ID =
   'item-agent-ui-demo-chase-outbound';
 /** Chase round-trip fixture return (KEF → EWR) after importFlight=roundtrip submit. */
 export const AGENT_UI_DEMO_CHASE_RETURN_ID = 'item-agent-ui-demo-chase-return';
+
+/** Stable checklist list for agent deep-links. */
+export const AGENT_UI_DEMO_CHECKLIST_LIST_ID = 'list-agent-ui-demo-checklist';
+export const AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID = 'task-agent-ui-demo-plan';
+export const AGENT_UI_DEMO_CHECKLIST_TASK_PACK_ID = 'task-agent-ui-demo-pack';
+
+/** Stable grocery list + meal for agent deep-links. */
+export const AGENT_UI_DEMO_GROCERY_LIST_ID = 'list-agent-ui-demo-grocery';
+export const AGENT_UI_DEMO_GROCERY_RECIPE_ID = 'recipe-agent-ui-demo-pasta';
+export const AGENT_UI_DEMO_GROCERY_TASK_TOMATOES_ID =
+  'task-agent-ui-demo-pasta-tomatoes';
+export const AGENT_UI_DEMO_GROCERY_TASK_PASTA_ID =
+  'task-agent-ui-demo-pasta-noodles';
+
+/** Stable health Mind fixtures. */
+export const AGENT_UI_DEMO_HEALTH_FACTOR_ID = 'factor-agent-ui-demo-work';
+export const AGENT_UI_DEMO_HEALTH_MOOD_ID = 'mood-agent-ui-demo-calm';
+
+/** Stable vehicle for agent deep-links. */
+export const AGENT_UI_DEMO_VEHICLE_ID = 'vehicle-agent-ui-demo';
+
+/** Stable plant sample (matches `SAMPLE_PLANT_ID` in plants/sample). */
+export const AGENT_UI_DEMO_PLANT_ID = 'plant-sample-monstera';
+export const AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID =
+  'activity-agent-ui-demo-plant-watering';
+
+/** Stable Today activity for agent deep-links. */
+export const AGENT_UI_DEMO_ACTIVITY_ID = 'activity-agent-ui-demo-mindfulness';
+export const AGENT_UI_DEMO_FOOD_ACTIVITY_ID = 'activity-agent-ui-demo-meal';
+
+/** Stable gym activity for workouts Today’s Plan. */
+export const AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID = 'activity-agent-ui-demo-workout';
+export const AGENT_UI_DEMO_WORKOUT_EXERCISE_ID =
+  'exercise-agent-ui-demo-bench-press';
+export const AGENT_UI_DEMO_WORKOUT_SET_ID = 'set-agent-ui-demo-bench-press-1';
+/** Catalog exercise visible on the default Biceps explorer selection. */
+export const AGENT_UI_DEMO_WORKOUT_CATALOG_EXERCISE_ID = 'incline-curl';
+
+/** Stable vision-board sample category / canvas item. */
+export const AGENT_UI_DEMO_VISION_CATEGORY_ID = 'vision-mindset';
+export const AGENT_UI_DEMO_VISION_ITEM_ID = 'vision-sample-forest';
 
 /**
  * Prefer ordered __DEV__ fixture ids, then fall back (e.g. `newId('trip-item')`).
@@ -34,12 +76,34 @@ export function createIdFromAgentUiItemIds(
   };
 }
 
-export type AgentUiFixtureName = 'travel-demo';
+export type AgentUiFixtureName =
+  | 'travel-demo'
+  | 'checklist-demo'
+  | 'grocery-demo'
+  | 'health-demo'
+  | 'vehicle-demo'
+  | 'plants-demo'
+  | 'activity-demo'
+  | 'food-demo'
+  | 'workouts-demo'
+  | 'vision-board-demo';
 
 export type AgentUiSeedResult = {
   fixture: AgentUiFixtureName;
-  planId: string;
-  flightItemId: string;
+  /** Primary entity id for host status (`id` field). */
+  primaryId: string;
+  planId?: string;
+  flightItemId?: string;
+  listId?: string;
+  taskId?: string;
+  recipeId?: string;
+  factorId?: string;
+  moodEntryId?: string;
+  vehicleId?: string;
+  plantId?: string;
+  activityId?: string;
+  categoryId?: string;
+  itemId?: string;
 };
 
 export function buildAgentUiDemoTrip(
@@ -145,6 +209,134 @@ export function buildAgentUiDemoTrip(
   };
 }
 
+export function buildAgentUiDemoChecklist(nowIso = new Date().toISOString()): {
+  list: TodoList;
+  tasks: TodoTask[];
+} {
+  const list: TodoList = {
+    id: AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+    name: 'Agent UI Checklist',
+    kind: 'checklist',
+    mode: 'private',
+    role: 'owner',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: nowIso,
+  };
+  const tasks: TodoTask[] = [
+    {
+      id: AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID,
+      listId: list.id,
+      title: 'Plan the weekend',
+      completed: false,
+      important: true,
+      position: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: nowIso,
+      version: 1,
+    },
+    {
+      id: AGENT_UI_DEMO_CHECKLIST_TASK_PACK_ID,
+      listId: list.id,
+      title: 'Pack the bag',
+      completed: false,
+      important: false,
+      position: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: nowIso,
+      version: 1,
+    },
+  ];
+  return { list, tasks };
+}
+
+export function buildAgentUiDemoGrocery(nowIso = new Date().toISOString()): {
+  list: TodoList;
+  recipe: TodoRecipe;
+  tasks: TodoTask[];
+} {
+  const list: TodoList = {
+    id: AGENT_UI_DEMO_GROCERY_LIST_ID,
+    name: 'Agent UI Grocery',
+    kind: 'grocery',
+    mode: 'private',
+    role: 'owner',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: nowIso,
+  };
+  const recipe: TodoRecipe = {
+    id: AGENT_UI_DEMO_GROCERY_RECIPE_ID,
+    listId: list.id,
+    name: 'Demo Pasta',
+    sourceKind: 'url',
+    sourceUrl: 'https://example.com/demo-pasta',
+    targetServings: 2,
+    position: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: nowIso,
+  };
+  const tasks: TodoTask[] = [
+    {
+      id: AGENT_UI_DEMO_GROCERY_TASK_TOMATOES_ID,
+      listId: list.id,
+      recipeId: recipe.id,
+      ingredientPosition: 0,
+      ingredientName: 'Tomatoes',
+      title: 'Tomatoes',
+      quantityText: '4',
+      unit: 'whole',
+      completed: false,
+      important: false,
+      position: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: nowIso,
+      version: 1,
+    },
+    {
+      id: AGENT_UI_DEMO_GROCERY_TASK_PASTA_ID,
+      listId: list.id,
+      recipeId: recipe.id,
+      ingredientPosition: 1,
+      ingredientName: 'Pasta',
+      title: 'Pasta',
+      quantityText: '12',
+      unit: 'oz',
+      completed: false,
+      important: false,
+      position: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: nowIso,
+      version: 1,
+    },
+  ];
+  return { list, recipe, tasks };
+}
+
+function upsertTodoFixtureLists(input: {
+  lists: TodoList[];
+  tasks: TodoTask[];
+  recipes?: TodoRecipe[];
+}): void {
+  // Lazy require keeps agent-ui unit tests free of Zustand/AsyncStorage.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTodos } = require('@/store/todos') as typeof import('@/store/todos');
+  const listIds = new Set(input.lists.map((list) => list.id));
+  const recipes = input.recipes ?? [];
+  useTodos.setState((state) => ({
+    lists: [
+      ...state.lists.filter((list) => !listIds.has(list.id)),
+      ...input.lists,
+    ],
+    tasks: [
+      ...state.tasks.filter((task) => !listIds.has(task.listId)),
+      ...input.tasks,
+    ],
+    recipes: [
+      ...state.recipes.filter((recipe) => !listIds.has(recipe.listId)),
+      ...recipes,
+    ],
+  }));
+}
+
 export function seedAgentUiFixture(
   name: string | undefined,
 ): AgentUiSeedResult | null {
@@ -161,8 +353,269 @@ export function seedAgentUiFixture(
     useTravel.getState().recordPlanInteraction(plan.id);
     return {
       fixture,
+      primaryId: plan.id,
       planId: plan.id,
       flightItemId: AGENT_UI_DEMO_FLIGHT_ID,
+    };
+  }
+
+  if (fixture === 'checklist-demo') {
+    const built = buildAgentUiDemoChecklist();
+    upsertTodoFixtureLists({
+      lists: [built.list],
+      tasks: built.tasks,
+    });
+    return {
+      fixture,
+      primaryId: built.list.id,
+      listId: built.list.id,
+      taskId: AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID,
+    };
+  }
+
+  if (fixture === 'grocery-demo') {
+    const built = buildAgentUiDemoGrocery();
+    upsertTodoFixtureLists({
+      lists: [built.list],
+      tasks: built.tasks,
+      recipes: [built.recipe],
+    });
+    return {
+      fixture,
+      primaryId: built.list.id,
+      listId: built.list.id,
+      recipeId: built.recipe.id,
+      taskId: AGENT_UI_DEMO_GROCERY_TASK_TOMATOES_ID,
+    };
+  }
+
+  if (fixture === 'health-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useHealth } = require('@/store/health') as typeof import('@/store/health');
+    const health = useHealth.getState();
+    const factorId = health.saveFactor({
+      id: AGENT_UI_DEMO_HEALTH_FACTOR_ID,
+      name: 'Work deadlines',
+      category: 'situation',
+      emotionIds: ['stressed'],
+    });
+    const moodEntryId = health.saveMoodEntry({
+      id: AGENT_UI_DEMO_HEALTH_MOOD_ID,
+      occurredAt: '2026-08-01T12:00:00.000Z',
+      emotions: [{ emotionId: 'calm', intensity: 4 }],
+      factorIds: [factorId],
+      note: 'Stable agent fixture.',
+      source: 'ontrack',
+    });
+    return {
+      fixture,
+      primaryId: moodEntryId,
+      factorId,
+      moodEntryId,
+    };
+  }
+
+  if (fixture === 'vehicle-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const vehiclesMod =
+      require('@/store/vehicles') as typeof import('@/store/vehicles');
+    const vehicle = vehiclesMod.createEmptyVehicle({
+      id: AGENT_UI_DEMO_VEHICLE_ID,
+      nickname: 'Demo Car',
+      year: 2022,
+      make: 'Honda',
+      model: 'Civic',
+      odometerMiles: 12000,
+    });
+    vehiclesMod.useVehicles.getState().saveVehicle(vehicle);
+    return {
+      fixture,
+      primaryId: vehicle.id,
+      vehicleId: vehicle.id,
+    };
+  }
+
+  if (fixture === 'plants-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sample =
+      require('@/features/plants/sample') as typeof import('@/features/plants/sample');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { usePlants } = require('@/store/plants') as typeof import('@/store/plants');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { todayKey } = require('@/utils/date') as typeof import('@/utils/date');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useSchedule } =
+      require('@/store/schedule') as typeof import('@/store/schedule');
+    const plant = {
+      ...sample.createSamplePlant(),
+      wateringActivityId: AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+      // Fresh seed: no prior log so Undo appears only after Log Watering.
+      wateringLogs: [] as [],
+      lastWateredAt: undefined,
+    };
+    const reminderMinutes = plant.reminderMinutes ?? 9 * 60;
+    const minMl = plant.carePlan?.watering?.minMl ?? 250;
+    const maxMl = plant.carePlan?.watering?.maxMl ?? 400;
+    useSchedule.getState().saveEvent({
+      id: AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+      detailKind: 'plant',
+      activity: {
+        date: todayKey(),
+        title: `Water ${plant.nickname}`,
+        categoryId: 'plant',
+        startMinutes: reminderMinutes,
+        durationMinutes: 10,
+        status: 'upcoming',
+        photo: plant.photoUri,
+        summary: `${Math.round(minMl)}–${Math.round(maxMl)} mL · check soil`,
+        plantId: plant.id,
+        careKind: 'watering',
+      },
+    });
+    usePlants.setState((state) => ({
+      plants: [
+        plant,
+        ...state.plants.filter((item) => item.id !== sample.SAMPLE_PLANT_ID),
+      ],
+      sampleVersion: Math.max(state.sampleVersion, sample.PLANT_SAMPLE_VERSION),
+      sampleDismissed: false,
+    }));
+    return {
+      fixture,
+      primaryId: plant.id,
+      plantId: plant.id,
+      activityId: AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+    };
+  }
+
+  if (fixture === 'activity-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { todayKey } = require('@/utils/date') as typeof import('@/utils/date');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useSchedule } =
+      require('@/store/schedule') as typeof import('@/store/schedule');
+    const activity = useSchedule.getState().saveEvent({
+      id: AGENT_UI_DEMO_ACTIVITY_ID,
+      detailKind: 'generic',
+      activity: {
+        title: 'Agent UI Mindfulness',
+        categoryId: 'mindfulness',
+        date: todayKey(),
+        startMinutes: 9 * 60,
+        durationMinutes: 30,
+        status: 'upcoming',
+        notes: 'Stable agent fixture.',
+      },
+    });
+    return {
+      fixture,
+      primaryId: activity.id,
+      activityId: activity.id,
+    };
+  }
+
+  if (fixture === 'food-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { todayKey } = require('@/utils/date') as typeof import('@/utils/date');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useSchedule } =
+      require('@/store/schedule') as typeof import('@/store/schedule');
+    const activity = useSchedule.getState().saveEvent({
+      id: AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+      detailKind: 'food',
+      activity: {
+        title: 'Agent UI Meal',
+        categoryId: 'food',
+        date: todayKey(),
+        startMinutes: 12 * 60,
+        durationMinutes: 30,
+        status: 'upcoming',
+        notes: 'Stable agent meal fixture.',
+      },
+      meal: {
+        activityId: AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+        mealType: 'lunch',
+        name: 'Agent UI Meal',
+        items: [],
+      },
+    });
+    return {
+      fixture,
+      primaryId: activity.id,
+      activityId: activity.id,
+    };
+  }
+
+  if (fixture === 'workouts-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { todayKey } = require('@/utils/date') as typeof import('@/utils/date');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useSchedule } =
+      require('@/store/schedule') as typeof import('@/store/schedule');
+    const activity = useSchedule.getState().saveEvent({
+      id: AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+      detailKind: 'gym',
+      activity: {
+        title: 'Agent UI Bench Press',
+        categoryId: 'gym',
+        date: todayKey(),
+        startMinutes: 10 * 60,
+        durationMinutes: 30,
+        status: 'upcoming',
+        summary: '1 exercise · 30 min',
+        notes: 'Stable agent fixture.',
+      },
+      workout: {
+        activityId: 'draft',
+        type: 'strength',
+        name: 'Agent UI Bench Press',
+        exercises: [
+          {
+            id: AGENT_UI_DEMO_WORKOUT_EXERCISE_ID,
+            name: 'Bench Press',
+            icon: 'dumbbell.fill',
+            restSeconds: 120,
+            sets: [
+              {
+                id: AGENT_UI_DEMO_WORKOUT_SET_ID,
+                reps: 8,
+                weightKg: 0,
+                done: false,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    return {
+      fixture,
+      primaryId: activity.id,
+      activityId: activity.id,
+    };
+  }
+
+  if (fixture === 'vision-board-demo') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const defaults =
+      require('@/features/vision-board/defaults') as typeof import('@/features/vision-board/defaults');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sample =
+      require('@/features/vision-board/sample') as typeof import('@/features/vision-board/sample');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useVisionBoard } =
+      require('@/store/vision-board') as typeof import('@/store/vision-board');
+    const at = '2026-01-01T00:00:00.000Z';
+    useVisionBoard.getState().replaceVisionBoardData(
+      defaults.createDefaultVisionBoardCategories(at),
+      sample.createSampleVisionBoardItems(at),
+      at,
+      sample.VISION_BOARD_SAMPLE_VERSION,
+    );
+    return {
+      fixture,
+      primaryId: AGENT_UI_DEMO_VISION_CATEGORY_ID,
+      categoryId: AGENT_UI_DEMO_VISION_CATEGORY_ID,
+      itemId: AGENT_UI_DEMO_VISION_ITEM_ID,
     };
   }
 
@@ -182,7 +635,103 @@ export function normalizeFixtureName(
   ) {
     return 'travel-demo';
   }
+  if (
+    key === 'checklist-demo' ||
+    key === 'checklist' ||
+    key === AGENT_UI_DEMO_CHECKLIST_LIST_ID
+  ) {
+    return 'checklist-demo';
+  }
+  if (
+    key === 'grocery-demo' ||
+    key === 'grocery' ||
+    key === AGENT_UI_DEMO_GROCERY_LIST_ID
+  ) {
+    return 'grocery-demo';
+  }
+  if (
+    key === 'health-demo' ||
+    key === 'health' ||
+    key === AGENT_UI_DEMO_HEALTH_MOOD_ID
+  ) {
+    return 'health-demo';
+  }
+  if (
+    key === 'vehicle-demo' ||
+    key === 'vehicle' ||
+    key === AGENT_UI_DEMO_VEHICLE_ID
+  ) {
+    return 'vehicle-demo';
+  }
+  if (
+    key === 'plants-demo' ||
+    key === 'plants' ||
+    key === 'plant' ||
+    key === AGENT_UI_DEMO_PLANT_ID
+  ) {
+    return 'plants-demo';
+  }
+  if (
+    key === 'activity-demo' ||
+    key === 'activity' ||
+    key === AGENT_UI_DEMO_ACTIVITY_ID
+  ) {
+    return 'activity-demo';
+  }
+  if (
+    key === 'food-demo' ||
+    key === 'food' ||
+    key === 'meal' ||
+    key === AGENT_UI_DEMO_FOOD_ACTIVITY_ID
+  ) {
+    return 'food-demo';
+  }
+  if (
+    key === 'workouts-demo' ||
+    key === 'workouts' ||
+    key === 'workout' ||
+    key === AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID
+  ) {
+    return 'workouts-demo';
+  }
+  if (
+    key === 'vision-board-demo' ||
+    key === 'vision-board' ||
+    key === 'vision' ||
+    key === AGENT_UI_DEMO_VISION_CATEGORY_ID
+  ) {
+    return 'vision-board-demo';
+  }
   return null;
 }
 
-export const AGENT_UI_FIXTURE_NAMES = ['travel-demo'] as const;
+export const AGENT_UI_FIXTURE_NAMES = [
+  'travel-demo',
+  'checklist-demo',
+  'grocery-demo',
+  'health-demo',
+  'vehicle-demo',
+  'plants-demo',
+  'activity-demo',
+  'food-demo',
+  'workouts-demo',
+  'vision-board-demo',
+] as const;
+
+/** Compact host-status detail for a seed result. */
+export function formatAgentUiSeedDetail(seeded: AgentUiSeedResult): string {
+  const parts: string[] = [`seeded ${seeded.fixture}`];
+  if (seeded.planId) parts.push(`planId=${seeded.planId}`);
+  if (seeded.flightItemId) parts.push(`flightId=${seeded.flightItemId}`);
+  if (seeded.listId) parts.push(`listId=${seeded.listId}`);
+  if (seeded.recipeId) parts.push(`recipeId=${seeded.recipeId}`);
+  if (seeded.taskId) parts.push(`taskId=${seeded.taskId}`);
+  if (seeded.factorId) parts.push(`factorId=${seeded.factorId}`);
+  if (seeded.moodEntryId) parts.push(`moodEntryId=${seeded.moodEntryId}`);
+  if (seeded.vehicleId) parts.push(`vehicleId=${seeded.vehicleId}`);
+  if (seeded.plantId) parts.push(`plantId=${seeded.plantId}`);
+  if (seeded.activityId) parts.push(`activityId=${seeded.activityId}`);
+  if (seeded.categoryId) parts.push(`categoryId=${seeded.categoryId}`);
+  if (seeded.itemId) parts.push(`itemId=${seeded.itemId}`);
+  return parts.join(' ');
+}

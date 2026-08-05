@@ -16,6 +16,7 @@ import { PeoplePicker } from '@/features/social/people-picker';
 import { useTheme } from '@/hooks/use-theme';
 import type { FriendProfile } from '@/services/friends';
 import { useFriends } from '@/store/friends';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { balloonFill } from './balloon-pop/colors';
@@ -47,6 +48,7 @@ export function GamesHub() {
         <Button
           variant="secondary"
           icon="people"
+          testID={AgentUiIds.games.challengeFriend}
           style={styles.challenge}
           onPress={() => {
             void hydrateFriends().catch(() => undefined);
@@ -56,6 +58,7 @@ export function GamesHub() {
         </Button>
 
         <Card
+          testID={AgentUiIds.games.balloonPopCard}
           accessibilityLabel="Play Balloon Pop"
           onPress={() => {
             haptics.select();

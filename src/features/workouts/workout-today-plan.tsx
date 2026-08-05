@@ -6,6 +6,7 @@ import { AppText, Button, Card, SectionHeader, Symbol } from '@/components/primi
 import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { Activity, Workout } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { formatDuration, formatMinutes } from '@/utils/date';
 
 export function WorkoutTodayPlan({
@@ -43,6 +44,7 @@ export function WorkoutTodayPlan({
           {todaysWorkouts.map(({ activity, workout }) => (
             <Card
               key={activity.id}
+              testID={AgentUiIds.workouts.todayPlan(activity.id)}
               onPress={() =>
                 router.push({ pathname: '/detail/gym/[id]', params: { id: activity.id } })
               }
@@ -78,6 +80,7 @@ export function WorkoutTodayPlan({
       <Button
         variant="secondary"
         icon="filter"
+        testID={AgentUiIds.workouts.planFromScratch}
         onPress={onOpenCustomPlanner}
         accessibilityLabel="Open the custom workout editor">
         Plan from scratch

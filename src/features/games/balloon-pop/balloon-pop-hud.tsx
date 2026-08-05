@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { balloonColor, balloonFill } from './colors';
@@ -28,6 +29,13 @@ export function BalloonPopHud({
   onClose,
 }: BalloonPopHudProps) {
   const theme = useTheme();
+  const closeAgent = useAgentUiTarget(AgentUiIds.games.balloonPopClose, {
+    label: 'Close game',
+    onPress: () => {
+      haptics.select();
+      onClose();
+    },
+  });
   const fill = balloonFill(targetColorId, theme.name === 'dark');
   const label = balloonColor(targetColorId).label;
   const seconds = Math.ceil(remainingSec);
@@ -53,6 +61,9 @@ export function BalloonPopHud({
           {targetsLeft} left
         </AppText>
         <Pressable
+          ref={closeAgent.ref}
+          testID={closeAgent.testID}
+          onLayout={closeAgent.onLayout}
           accessibilityRole="button"
           accessibilityLabel="Close game"
           hitSlop={8}

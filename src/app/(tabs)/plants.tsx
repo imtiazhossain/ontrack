@@ -11,6 +11,7 @@ import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { usePlants } from '@/store/plants';
 import type { Plant } from '@/types/models';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { formatDueLabel, toDateKey, todayKey } from '@/utils/date';
 
 function PlantCard({ plant }: { plant: Plant }) {
@@ -21,6 +22,7 @@ function PlantCard({ plant }: { plant: Plant }) {
   return (
     <Card
       padded={false}
+      testID={AgentUiIds.plants.plant(plant.id)}
       onPress={() => router.push({ pathname: '/plants/[id]', params: { id: plant.id } })}
       accessibilityLabel={`${plant.nickname}, ${plant.identity.commonName}, ${dueLabel}`}>
       <View style={styles.cardRow}>
@@ -108,7 +110,12 @@ function PlantsScreenContent() {
               <AppText variant="title">Plants</AppText>
               <AppText variant="callout" color="secondary">Care plans that learn from your check-ins.</AppText>
             </View>
-            <Button onPress={() => router.push('/plants/new')} accessibilityLabel="Add a plant">Add</Button>
+            <Button
+              testID={AgentUiIds.plants.add}
+              onPress={() => router.push('/plants/new')}
+              accessibilityLabel="Add a plant">
+              Add
+            </Button>
           </View>
         }
         ListEmptyComponent={

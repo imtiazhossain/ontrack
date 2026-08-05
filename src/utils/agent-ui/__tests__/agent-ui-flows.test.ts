@@ -1,10 +1,29 @@
 import {
+    AGENT_UI_DEMO_ACTIVITY_ID,
     AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
     AGENT_UI_DEMO_CHASE_RETURN_ID,
+    AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+    AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID,
     AGENT_UI_DEMO_FLIGHT_ID,
+    AGENT_UI_DEMO_GROCERY_LIST_ID,
+    AGENT_UI_DEMO_GROCERY_RECIPE_ID,
+    AGENT_UI_DEMO_HEALTH_FACTOR_ID,
+    AGENT_UI_DEMO_HEALTH_MOOD_ID,
+    AGENT_UI_DEMO_PLANT_ID,
+    AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+    AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
     AGENT_UI_DEMO_TRIP_ID,
+    AGENT_UI_DEMO_VEHICLE_ID,
+    AGENT_UI_DEMO_VISION_CATEGORY_ID,
+    AGENT_UI_DEMO_VISION_ITEM_ID,
+    AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+    AGENT_UI_DEMO_WORKOUT_CATALOG_EXERCISE_ID,
+    AGENT_UI_FIXTURE_NAMES,
+    buildAgentUiDemoChecklist,
+    buildAgentUiDemoGrocery,
     buildAgentUiDemoTrip,
     createIdFromAgentUiItemIds,
+    formatAgentUiSeedDetail,
     normalizeFixtureName,
     seedAgentUiFixture,
 } from '../fixtures';
@@ -16,6 +35,15 @@ import {
 
 const mockSavePlan = jest.fn(() => true);
 const mockRecordPlanInteraction = jest.fn();
+const mockTodosSetState = jest.fn();
+const mockSaveFactor = jest.fn(() => AGENT_UI_DEMO_HEALTH_FACTOR_ID);
+const mockSaveMoodEntry = jest.fn(() => AGENT_UI_DEMO_HEALTH_MOOD_ID);
+const mockSaveVehicle = jest.fn();
+const mockPlantsSetState = jest.fn();
+const mockSaveEvent = jest.fn((payload: { id?: string }) => ({
+  id: payload.id ?? 'activity-random',
+}));
+const mockReplaceVisionBoardData = jest.fn();
 
 jest.mock('@/store/travel', () => ({
   useTravel: {
@@ -26,11 +54,90 @@ jest.mock('@/store/travel', () => ({
   },
 }));
 
+jest.mock('@/store/todos', () => ({
+  useTodos: {
+    setState: mockTodosSetState,
+  },
+}));
+
+jest.mock('@/store/health', () => ({
+  useHealth: {
+    getState: () => ({
+      saveFactor: mockSaveFactor,
+      saveMoodEntry: mockSaveMoodEntry,
+    }),
+  },
+}));
+
+jest.mock('@/store/vehicles', () => ({
+  createEmptyVehicle: (input: { id?: string; nickname: string }) => ({
+    id: input.id ?? 'vehicle-random',
+    nickname: input.nickname,
+  }),
+  useVehicles: {
+    getState: () => ({
+      saveVehicle: mockSaveVehicle,
+    }),
+  },
+}));
+
+jest.mock('@/features/plants/sample', () => ({
+  SAMPLE_PLANT_ID: 'plant-sample-monstera',
+  PLANT_SAMPLE_VERSION: 2,
+  createSamplePlant: () => ({ id: 'plant-sample-monstera', nickname: 'Monstera' }),
+}));
+
+jest.mock('@/store/plants', () => ({
+  usePlants: {
+    setState: mockPlantsSetState,
+  },
+}));
+
+jest.mock('@/utils/date', () => ({
+  todayKey: () => '2026-08-05',
+}));
+
+jest.mock('@/store/schedule', () => ({
+  useSchedule: {
+    getState: () => ({
+      saveEvent: mockSaveEvent,
+    }),
+  },
+}));
+
+jest.mock('@/features/vision-board/defaults', () => ({
+  createDefaultVisionBoardCategories: () => [
+    { id: 'vision-mindset', name: 'Mindset' },
+  ],
+}));
+
+jest.mock('@/features/vision-board/sample', () => ({
+  VISION_BOARD_SAMPLE_VERSION: 3,
+  createSampleVisionBoardItems: () => [
+    { id: 'vision-sample-forest', categoryId: 'vision-mindset' },
+  ],
+}));
+
+jest.mock('@/store/vision-board', () => ({
+  useVisionBoard: {
+    getState: () => ({
+      replaceVisionBoardData: mockReplaceVisionBoardData,
+    }),
+  },
+}));
+
 describe('agent-ui fixtures', () => {
   beforeEach(() => {
     mockSavePlan.mockClear();
     mockRecordPlanInteraction.mockClear();
     mockSavePlan.mockReturnValue(true);
+    mockTodosSetState.mockClear();
+    mockSaveFactor.mockClear();
+    mockSaveMoodEntry.mockClear();
+    mockSaveVehicle.mockClear();
+    mockPlantsSetState.mockClear();
+    mockSaveEvent.mockClear();
+    mockReplaceVisionBoardData.mockClear();
   });
 
   it('builds a stable demo trip', () => {
@@ -46,11 +153,131 @@ describe('agent-ui fixtures', () => {
     const result = seedAgentUiFixture('travel-demo');
     expect(result).toEqual({
       fixture: 'travel-demo',
+      primaryId: AGENT_UI_DEMO_TRIP_ID,
       planId: AGENT_UI_DEMO_TRIP_ID,
       flightItemId: AGENT_UI_DEMO_FLIGHT_ID,
     });
     expect(mockSavePlan).toHaveBeenCalledTimes(1);
     expect(mockRecordPlanInteraction).toHaveBeenCalledWith(AGENT_UI_DEMO_TRIP_ID);
+  });
+
+  it('builds and seeds checklist / grocery / health / vehicle fixtures', () => {
+    const checklist = buildAgentUiDemoChecklist();
+    expect(checklist.list.id).toBe(AGENT_UI_DEMO_CHECKLIST_LIST_ID);
+    expect(checklist.tasks[0]?.id).toBe(AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID);
+
+    const grocery = buildAgentUiDemoGrocery();
+    expect(grocery.list.id).toBe(AGENT_UI_DEMO_GROCERY_LIST_ID);
+    expect(grocery.recipe.id).toBe(AGENT_UI_DEMO_GROCERY_RECIPE_ID);
+
+    expect(normalizeFixtureName('checklist')).toBe('checklist-demo');
+    expect(normalizeFixtureName('grocery-demo')).toBe('grocery-demo');
+    expect(normalizeFixtureName('health')).toBe('health-demo');
+    expect(normalizeFixtureName('vehicle-demo')).toBe('vehicle-demo');
+    expect(AGENT_UI_FIXTURE_NAMES).toEqual(
+      expect.arrayContaining([
+        'travel-demo',
+        'checklist-demo',
+        'grocery-demo',
+        'health-demo',
+        'vehicle-demo',
+      ]),
+    );
+
+    expect(seedAgentUiFixture('checklist-demo')).toMatchObject({
+      fixture: 'checklist-demo',
+      listId: AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+      primaryId: AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+    });
+    expect(mockTodosSetState).toHaveBeenCalled();
+
+    expect(seedAgentUiFixture('grocery-demo')).toMatchObject({
+      fixture: 'grocery-demo',
+      recipeId: AGENT_UI_DEMO_GROCERY_RECIPE_ID,
+    });
+
+    expect(seedAgentUiFixture('health-demo')).toEqual({
+      fixture: 'health-demo',
+      primaryId: AGENT_UI_DEMO_HEALTH_MOOD_ID,
+      factorId: AGENT_UI_DEMO_HEALTH_FACTOR_ID,
+      moodEntryId: AGENT_UI_DEMO_HEALTH_MOOD_ID,
+    });
+    expect(mockSaveFactor).toHaveBeenCalledWith(
+      expect.objectContaining({ id: AGENT_UI_DEMO_HEALTH_FACTOR_ID }),
+    );
+
+    expect(seedAgentUiFixture('vehicle-demo')).toEqual({
+      fixture: 'vehicle-demo',
+      primaryId: AGENT_UI_DEMO_VEHICLE_ID,
+      vehicleId: AGENT_UI_DEMO_VEHICLE_ID,
+    });
+    expect(mockSaveVehicle).toHaveBeenCalledWith(
+      expect.objectContaining({ id: AGENT_UI_DEMO_VEHICLE_ID }),
+    );
+
+    expect(seedAgentUiFixture('plants-demo')).toEqual({
+      fixture: 'plants-demo',
+      primaryId: AGENT_UI_DEMO_PLANT_ID,
+      plantId: AGENT_UI_DEMO_PLANT_ID,
+      activityId: AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+    });
+    expect(mockPlantsSetState).toHaveBeenCalled();
+    expect(mockSaveEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+        detailKind: 'plant',
+      }),
+    );
+
+    expect(seedAgentUiFixture('activity-demo')).toEqual({
+      fixture: 'activity-demo',
+      primaryId: AGENT_UI_DEMO_ACTIVITY_ID,
+      activityId: AGENT_UI_DEMO_ACTIVITY_ID,
+    });
+    expect(mockSaveEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: AGENT_UI_DEMO_ACTIVITY_ID }),
+    );
+
+    expect(seedAgentUiFixture('food-demo')).toEqual({
+      fixture: 'food-demo',
+      primaryId: AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+      activityId: AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+    });
+    expect(mockSaveEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+        detailKind: 'food',
+      }),
+    );
+
+    expect(seedAgentUiFixture('workouts-demo')).toEqual({
+      fixture: 'workouts-demo',
+      primaryId: AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+      activityId: AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+    });
+    expect(mockSaveEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+        detailKind: 'gym',
+      }),
+    );
+
+    expect(seedAgentUiFixture('vision-board-demo')).toEqual({
+      fixture: 'vision-board-demo',
+      primaryId: AGENT_UI_DEMO_VISION_CATEGORY_ID,
+      categoryId: AGENT_UI_DEMO_VISION_CATEGORY_ID,
+      itemId: AGENT_UI_DEMO_VISION_ITEM_ID,
+    });
+    expect(mockReplaceVisionBoardData).toHaveBeenCalled();
+
+    expect(
+      formatAgentUiSeedDetail({
+        fixture: 'checklist-demo',
+        primaryId: AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+        listId: AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+        taskId: AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID,
+      }),
+    ).toContain('listId=');
   });
 });
 
@@ -75,6 +302,15 @@ describe('agent-ui flows', () => {
     expect(listAgentUiFlowNames()).toContain('travel-demo');
     expect(listAgentUiFlowNames()).toContain('open-new-trip');
     expect(listAgentUiFlowNames()).toContain('open-new-checklist');
+    expect(listAgentUiFlowNames()).toContain('checklist-demo');
+    expect(listAgentUiFlowNames()).toContain('grocery-demo');
+    expect(listAgentUiFlowNames()).toContain('health-demo');
+    expect(listAgentUiFlowNames()).toContain('vehicle-demo-detail');
+    expect(listAgentUiFlowNames()).toContain('plants-demo');
+    expect(listAgentUiFlowNames()).toContain('activity-demo-edit');
+    expect(listAgentUiFlowNames()).toContain('grocery-demo-recipe-import');
+    expect(listAgentUiFlowNames()).toContain('workouts-demo');
+    expect(listAgentUiFlowNames()).toContain('vision-board-demo-edit');
     expect(listAgentUiFlowNames()).toContain('profile');
     expect(listAgentUiFlowNames()).toContain('health-settings');
     expect(listAgentUiFlowNames()).toContain('vehicles-new');
@@ -90,9 +326,11 @@ describe('agent-ui flows', () => {
     ).toBe(true);
     expect(AGENT_UI_WAIT_TIMEOUT_MS).toBe(2000);
     const workouts = resolveAgentUiFlow('workouts');
-    expect(workouts?.some((s) => s.op === 'wait' && s.to === '/workouts')).toBe(
-      true,
-    );
+    expect(
+      workouts?.some(
+        (s) => s.op === 'wait' && s.prefix === 'ontrack.workouts.',
+      ),
+    ).toBe(true);
     expect(resolveAgentUiFlow('missing')).toBeNull();
   });
 
@@ -111,6 +349,186 @@ describe('agent-ui flows', () => {
         expect.objectContaining({
           op: 'wait',
           id: `ontrack.travel.flight.passenger.${AGENT_UI_DEMO_CHASE_OUTBOUND_ID}`,
+        }),
+      ]),
+    );
+  });
+
+  it('deep-lands non-travel demo surfaces', () => {
+    expect(resolveAgentUiFlow('checklist-demo')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: 'seed', to: 'checklist-demo' }),
+        expect.objectContaining({
+          op: 'wait',
+          id: `ontrack.checklists.detail.task.${AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID}`,
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('grocery-demo-combined')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.grocery.detail.view.combined',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.grocery.detail.copy',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('health-demo')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.health.section.mind',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: `ontrack.health.mind.entry.${AGENT_UI_DEMO_HEALTH_MOOD_ID}`,
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('vehicle-demo-detail')?.[1]).toMatchObject({
+      op: 'goto',
+      to: `vehicles/${AGENT_UI_DEMO_VEHICLE_ID}`,
+    });
+    expect(resolveAgentUiFlow('plants-demo')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.plants.detail.logWatering',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('grocery-demo-recipe-import')?.[1]).toMatchObject({
+      op: 'goto',
+      to: `checklists/${AGENT_UI_DEMO_GROCERY_LIST_ID}/recipe-import`,
+    });
+    expect(resolveAgentUiFlow('activity-demo-edit')?.[1]).toMatchObject({
+      op: 'goto',
+      to: `activityForm?id=${AGENT_UI_DEMO_ACTIVITY_ID}`,
+    });
+    expect(resolveAgentUiFlow('workouts-demo')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: `ontrack.workouts.todayPlan.${AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID}`,
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('workouts-demo-explore')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: `ontrack.workouts.exercise.${AGENT_UI_DEMO_WORKOUT_CATALOG_EXERCISE_ID}.add`,
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('vision-board-demo-edit')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.vision.category.addAffirmation',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: `ontrack.vision.category.canvasItem.${AGENT_UI_DEMO_VISION_ITEM_ID}`,
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('grocery-demo-settings')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.grocery.detail.settings',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.listSettings.name',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('workouts-demo-gym-active')?.[1]).toMatchObject({
+      op: 'goto',
+      to: `detail/gym-active/${AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID}`,
+    });
+    expect(resolveAgentUiFlow('workouts-demo-anatomy')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.workouts.explorer.anatomySex.female',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.workouts.explorer.muscle.chest',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('plants-demo-log-watering')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.plants.detail.logWatering',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.plants.detail.undoWatering',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('vision-board-demo-item-editor')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.vision.category.selection.edit',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.vision.itemEditor.primary',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('games-balloon-pop')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.games.hub.balloonPop',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.games.balloonPop.play',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('vehicles-new')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.vehicles.new.nickname',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('plants-new')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.plants.new.camera',
+        }),
+      ]),
+    );
+    expect(resolveAgentUiFlow('food-demo')?.[1]).toMatchObject({
+      op: 'goto',
+      to: `detail/food/${AGENT_UI_DEMO_FOOD_ACTIVITY_ID}`,
+    });
+    expect(resolveAgentUiFlow('vehicle-demo-expenses')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: 'tap',
+          id: 'ontrack.vehicles.detail.section.expenses',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.vehicles.expenses.amount',
         }),
       ]),
     );

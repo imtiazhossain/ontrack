@@ -384,6 +384,15 @@ def build_payload(args: argparse.Namespace) -> dict:
         if not isinstance(ops, list) or not ops:
             raise SystemExit("ops must be a non-empty JSON array")
         return {"op": "batch", "ops": ops}
+    if op == "overlay":
+        return {"op": "overlay", "to": args.to or "toggle"}
+    if op == "hit":
+        payload = {"op": "hit"}
+        if getattr(args, "x", None) is not None:
+            payload["x"] = args.x
+        if getattr(args, "y", None) is not None:
+            payload["y"] = args.y
+        return payload
     if op == "raw":
         payload = json.loads(args.payload_json)
         if not isinstance(payload, dict):
@@ -746,6 +755,8 @@ def main(argv: list[str] | None = None) -> int:
     p_send.add_argument("--id")
     p_send.add_argument("--prefix")
     p_send.add_argument("--to")
+    p_send.add_argument("--x", type=float)
+    p_send.add_argument("--y", type=float)
     p_send.add_argument("--contains")
     p_send.add_argument("--missing", action="store_true")
     p_send.add_argument(

@@ -97,7 +97,8 @@
     "ios:run": "bash ./scripts/ensure-ios-simulator-codesign.sh && expo run:ios --device \"${ONTRACK_IOS_SIMULATOR:-iPhone 17 Pro}\"",
     "build:testflight": "npm run optimize && npx eas-cli@latest build --platform ios --profile testflight --non-interactive --auto-submit",
     "packager:ensure": "bash ./scripts/ensure-packager.sh",
-    "packager:ensure:start": "bash ./scripts/ensure-packager.sh --start"
+    "packager:ensure:start": "bash ./scripts/ensure-packager.sh --start",
+    "agent-ui:sources": "bash ./scripts/agent-ui-sources.sh"
   },
   "jest": {
     "preset": "jest-expo",

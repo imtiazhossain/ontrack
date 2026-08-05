@@ -49,6 +49,7 @@ import {
     type TodoIngredientInput,
     type TodoRecipeSourceKind,
 } from '@/store/todos';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { newId } from '@/utils/id';
 import { asPositiveNumber } from '@/utils/parse';
@@ -400,7 +401,10 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
               : 'Use one public recipe URL, camera photo, or screenshot.'}
           </AppText>
         </View>
-        <Button variant="ghost" onPress={() => confirmDiscard()}>
+        <Button
+          variant="ghost"
+          testID={AgentUiIds.recipeImport.cancel}
+          onPress={() => confirmDiscard()}>
           Cancel
         </Button>
       </View>
@@ -416,6 +420,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
           </View>
           <Button
             variant="ghost"
+            testID={AgentUiIds.recipeImport.stop}
             onPress={() => {
               controllerRef.current?.abort();
               setWorking(false);
@@ -441,10 +446,12 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
                 onSubmitEditing={() => void runUrlAnalysis()}
                 placeholder="https://example.com/recipe"
                 value={url}
+                testID={AgentUiIds.recipeImport.url}
               />
             </View>
             <Button
               disabled={!url.trim() || working}
+              testID={AgentUiIds.recipeImport.analyze}
               onPress={() => void runUrlAnalysis()}>
               Analyze
             </Button>
@@ -455,6 +462,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
                 variant="secondary"
                 icon="camera"
                 disabled={working}
+                testID={AgentUiIds.recipeImport.camera}
                 onPress={() => void pickCamera()}>
                 Camera
               </Button>
@@ -463,6 +471,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
               variant="secondary"
               icon="photo"
               disabled={working}
+              testID={AgentUiIds.recipeImport.library}
               onPress={() => void pickLibrary()}>
               Photo or screenshot
             </Button>
@@ -478,6 +487,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
               value={name}
               maxLength={80}
               onChangeText={setName}
+              testID={AgentUiIds.recipeImport.mealName}
             />
             {draft.sourceKind === 'url' ? (
               <Input
@@ -488,6 +498,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
                 autoCorrect={false}
                 keyboardType="url"
                 onChangeText={setSourceUrl}
+                testID={AgentUiIds.recipeImport.sourceUrl}
               />
             ) : (
               <View style={styles.imageSource}>
@@ -503,6 +514,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
                   label="Source Servings"
                   value={sourceServings}
                   keyboardType="decimal-pad"
+                  testID={AgentUiIds.recipeImport.sourceServings}
                   onChangeText={(value) => {
                     setSourceServings(value);
                     if (targetServings) rescale(value, targetServings);
@@ -515,6 +527,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
                   label="Target Servings"
                   value={targetServings}
                   keyboardType="decimal-pad"
+                  testID={AgentUiIds.recipeImport.targetServings}
                   onChangeText={(value) => {
                     setTargetServings(value);
                     if (sourceServings) rescale(sourceServings, value);
@@ -564,6 +577,7 @@ export function RecipeImportScreen({ listId }: { listId: string }) {
           <Button
             size="lg"
             icon="groceries"
+            testID={AgentUiIds.recipeImport.save}
             disabled={
               working ||
               !name.trim() ||

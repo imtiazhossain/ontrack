@@ -4,6 +4,7 @@ import { AppText, SectionHeader, Symbol } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import {
@@ -107,108 +108,18 @@ export function MuscleFocusExercises({
       ) : null}
 
       <View style={styles.exerciseList}>
-        {visibleExercises.map((exercise, index) => {
-          const selected = selectedExerciseIds.includes(exercise.id);
-          return (
-            <View
-              key={exercise.id}
-              style={[
-                styles.exerciseCard,
-                {
-                  backgroundColor: selected ? accentTint : theme.backgroundElevated,
-                  borderColor: selected ? accentMain : theme.separator,
-                },
-              ]}>
-              <View style={styles.exerciseTopRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Watch ${exercise.name} anatomy animation`}
-                  onPress={() => onPreview(exercise)}
-                  style={({ pressed }) => [
-                    styles.exercisePreviewButton,
-                    { opacity: pressed ? 0.72 : 1 },
-                  ]}>
-                  <View
-                    style={[
-                      styles.exerciseIndex,
-                      { backgroundColor: selected ? accentMain : theme.backgroundSunken },
-                    ]}>
-                    {selected ? (
-                      <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
-                    ) : (
-                      <AppText variant="mono" color="secondary">
-                        0{index + 1}
-                      </AppText>
-                    )}
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="subheading">{exercise.name}</AppText>
-                    <AppText variant="caption" color="secondary">
-                      {exercise.equipment}
-                    </AppText>
-                  </View>
-                  <View
-                    style={[styles.previewControl, { backgroundColor: theme.backgroundSunken }]}>
-                    <Symbol name="play.fill" size={10} color={accentMain} />
-                  </View>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${exercise.name}`}
-                  accessibilityState={{ checked: selected }}
-                  hitSlop={6}
-                  onPress={() => onToggle(exercise.id)}
-                  style={({ pressed }) => [
-                    styles.addControl,
-                    {
-                      backgroundColor: selected ? accentMain : theme.backgroundPrimary,
-                      borderColor: selected ? accentMain : theme.separator,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <Symbol
-                    name={selected ? 'minus' : 'plus'}
-                    size="sm"
-                    color={selected ? theme.textOnAccent : theme.textPrimary}
-                  />
-                </Pressable>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`View muscles worked by ${exercise.name}`}
-                onPress={() => onPreview(exercise)}
-                style={({ pressed }) => [
-                  styles.exerciseMeta,
-                  { borderTopColor: theme.separator, opacity: pressed ? 0.72 : 1 },
-                ]}>
-                <View style={styles.metaItem}>
-                  <Symbol name="square.stack.3d.up" size="sm" color={theme.textTertiary} />
-                  <AppText variant="caption" color="secondary">
-                    {exercise.sets} sets
-                  </AppText>
-                </View>
-                <View style={styles.metaItem}>
-                  <Symbol name="repeat" size="sm" color={theme.textTertiary} />
-                  <AppText variant="caption" color="secondary">
-                    {exercise.reps} reps
-                  </AppText>
-                </View>
-                <View style={styles.metaItem}>
-                  <Symbol name="timer" size="sm" color={theme.textTertiary} />
-                  <AppText variant="caption" color="secondary">
-                    {exercise.restSeconds}s rest
-                  </AppText>
-                </View>
-                <View style={styles.watchHint}>
-                  <AppText variant="caption" color="accent">
-                    Watch Anatomy
-                  </AppText>
-                  <Symbol name="chevron.right" size={10} color={accentMain} />
-                </View>
-              </Pressable>
-            </View>
-          );
-        })}
+        {visibleExercises.map((exercise, index) => (
+          <MuscleFocusExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            index={index}
+            selected={selectedExerciseIds.includes(exercise.id)}
+            accentTint={accentTint}
+            accentMain={accentMain}
+            onPreview={onPreview}
+            onToggle={onToggle}
+          />
+        ))}
 
         {exercises.length === 0 ? (
           <AppText variant="callout" color="secondary">
@@ -223,6 +134,141 @@ export function MuscleFocusExercises({
           </AppText>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+function MuscleFocusExerciseCard({
+  exercise,
+  index,
+  selected,
+  accentTint,
+  accentMain,
+  onPreview,
+  onToggle,
+}: {
+  exercise: ExerciseTemplate;
+  index: number;
+  selected: boolean;
+  accentTint: string;
+  accentMain: string;
+  onPreview: (exercise: ExerciseTemplate) => void;
+  onToggle: (exerciseId: string) => void;
+}) {
+  const theme = useTheme();
+  const previewAgent = useAgentUiTarget(
+    AgentUiIds.workouts.exercisePreview(exercise.id),
+    {
+      label: `Watch ${exercise.name} anatomy animation`,
+      onPress: () => onPreview(exercise),
+    },
+  );
+  const addAgent = useAgentUiTarget(AgentUiIds.workouts.exerciseAdd(exercise.id), {
+    label: `${selected ? 'Remove' : 'Add'} ${exercise.name}`,
+    onPress: () => onToggle(exercise.id),
+  });
+
+  return (
+    <View
+      style={[
+        styles.exerciseCard,
+        {
+          backgroundColor: selected ? accentTint : theme.backgroundElevated,
+          borderColor: selected ? accentMain : theme.separator,
+        },
+      ]}>
+      <View style={styles.exerciseTopRow}>
+        <Pressable
+          ref={previewAgent.ref}
+          testID={previewAgent.testID}
+          onLayout={previewAgent.onLayout}
+          accessibilityRole="button"
+          accessibilityLabel={`Watch ${exercise.name} anatomy animation`}
+          onPress={() => onPreview(exercise)}
+          style={({ pressed }) => [
+            styles.exercisePreviewButton,
+            { opacity: pressed ? 0.72 : 1 },
+          ]}>
+          <View
+            style={[
+              styles.exerciseIndex,
+              { backgroundColor: selected ? accentMain : theme.backgroundSunken },
+            ]}>
+            {selected ? (
+              <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
+            ) : (
+              <AppText variant="mono" color="secondary">
+                0{index + 1}
+              </AppText>
+            )}
+          </View>
+          <View style={styles.flex}>
+            <AppText variant="subheading">{exercise.name}</AppText>
+            <AppText variant="caption" color="secondary">
+              {exercise.equipment}
+            </AppText>
+          </View>
+          <View style={[styles.previewControl, { backgroundColor: theme.backgroundSunken }]}>
+            <Symbol name="play.fill" size={10} color={accentMain} />
+          </View>
+        </Pressable>
+        <Pressable
+          ref={addAgent.ref}
+          testID={addAgent.testID}
+          onLayout={addAgent.onLayout}
+          accessibilityRole="checkbox"
+          accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${exercise.name}`}
+          accessibilityState={{ checked: selected }}
+          hitSlop={6}
+          onPress={() => onToggle(exercise.id)}
+          style={({ pressed }) => [
+            styles.addControl,
+            {
+              backgroundColor: selected ? accentMain : theme.backgroundPrimary,
+              borderColor: selected ? accentMain : theme.separator,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}>
+          <Symbol
+            name={selected ? 'minus' : 'plus'}
+            size="sm"
+            color={selected ? theme.textOnAccent : theme.textPrimary}
+          />
+        </Pressable>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`View muscles worked by ${exercise.name}`}
+        onPress={() => onPreview(exercise)}
+        style={({ pressed }) => [
+          styles.exerciseMeta,
+          { borderTopColor: theme.separator, opacity: pressed ? 0.72 : 1 },
+        ]}>
+        <View style={styles.metaItem}>
+          <Symbol name="square.stack.3d.up" size="sm" color={theme.textTertiary} />
+          <AppText variant="caption" color="secondary">
+            {exercise.sets} sets
+          </AppText>
+        </View>
+        <View style={styles.metaItem}>
+          <Symbol name="repeat" size="sm" color={theme.textTertiary} />
+          <AppText variant="caption" color="secondary">
+            {exercise.reps} reps
+          </AppText>
+        </View>
+        <View style={styles.metaItem}>
+          <Symbol name="timer" size="sm" color={theme.textTertiary} />
+          <AppText variant="caption" color="secondary">
+            {exercise.restSeconds}s rest
+          </AppText>
+        </View>
+        <View style={styles.watchHint}>
+          <AppText variant="caption" color="accent">
+            Watch Anatomy
+          </AppText>
+          <Symbol name="chevron.right" size={10} color={accentMain} />
+        </View>
+      </Pressable>
     </View>
   );
 }

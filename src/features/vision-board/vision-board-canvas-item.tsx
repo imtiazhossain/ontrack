@@ -11,6 +11,7 @@ import Animated, {
 
 import { radii } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { clampCanvasFrame } from './canvas';
 import type { CanvasFrame, VisionBoardCategory, VisionBoardItem } from './types';
@@ -40,6 +41,10 @@ export function VisionBoardCanvasItem({
   onGestureActive: (active: boolean) => void;
 }) {
   const theme = useTheme();
+  const agent = useAgentUiTarget(AgentUiIds.vision.canvasItem(item.id), {
+    label: `${item.kind} card on ${category.name} board`,
+    onPress: onSelect,
+  });
   const x = useSharedValue(item.frame.x * posterWidth);
   const y = useSharedValue(item.frame.y * posterHeight);
   const width = useSharedValue(item.frame.width * posterWidth);
@@ -152,6 +157,9 @@ export function VisionBoardCanvasItem({
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
+        ref={agent.ref}
+        testID={agent.testID}
+        onLayout={agent.onLayout}
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={`${item.kind} card on ${category.name} board`}

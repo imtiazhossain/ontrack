@@ -21,6 +21,7 @@ import {
   type FriendProfile,
 } from '@/services/friends';
 import { useFriends } from '@/store/friends';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 export function PeoplePicker({
   visible,
@@ -85,6 +86,10 @@ export function PeoplePicker({
     onClose();
   };
 
+  const searchAgent = useAgentUiTarget(AgentUiIds.peoplePicker.search, {
+    label: 'Search name or email',
+  });
+
   return (
     <Modal
       visible={visible}
@@ -109,12 +114,16 @@ export function PeoplePicker({
           </View>
           <IconButton
             icon="close"
+            testID={AgentUiIds.peoplePicker.close}
             accessibilityLabel="Close"
             onPress={onClose}
           />
         </View>
 
         <TextInput
+          ref={searchAgent.ref as never}
+          testID={searchAgent.testID}
+          onLayout={searchAgent.onLayout}
           value={query}
           onChangeText={setQuery}
           placeholder="Search name or email"
@@ -146,48 +155,27 @@ export function PeoplePicker({
                 : 'No matching friends.'}
             </AppText>
           ) : (
-            available.map((friend) => {
-              const isOn = selected.has(friend.userId);
-              return (
-                <Pressable
-                  key={friend.userId}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isOn }}
-                  onPress={() => toggle(friend.userId)}
-                  style={[
-                    styles.row,
-                    {
-                      minHeight: Math.max(52, s(56)),
-                      borderColor: isOn ? theme.accentPrimary : theme.separator,
-                      backgroundColor: isOn
-                        ? theme.accentFaint
-                        : theme.backgroundSecondary,
-                      paddingHorizontal: spacing.md,
-                      marginBottom: spacing.sm,
-                      gap: spacing.md,
-                    },
-                  ]}>
-                  <View style={styles.rowCopy}>
-                    <AppText variant="callout" fit>
-                      {friend.displayName}
-                    </AppText>
-                    <AppText variant="caption" color="secondary" fit>
-                      {friend.email}
-                    </AppText>
-                  </View>
-                  <AppText
-                    variant="caption"
-                    color={isOn ? 'accent' : 'tertiary'}
-                    fit>
-                    {isOn ? 'Selected' : 'Select'}
-                  </AppText>
-                </Pressable>
-              );
-            })
+            available.map((friend) => (
+              <PeoplePickerFriendRow
+                key={friend.userId}
+                friend={friend}
+                selected={selected.has(friend.userId)}
+                accentBorder={theme.accentPrimary}
+                idleBorder={theme.separator}
+                selectedBg={theme.accentFaint}
+                idleBg={theme.backgroundSecondary}
+                minHeight={Math.max(52, s(56))}
+                paddingHorizontal={spacing.md}
+                marginBottom={spacing.sm}
+                gap={spacing.md}
+                onPress={() => toggle(friend.userId)}
+              />
+            ))
           )}
         </ScrollView>
 
         <Button
+          testID={AgentUiIds.peoplePicker.confirm}
           disabled={selected.size === 0}
           onPress={confirm}
           style={{ marginTop: spacing.md }}>
@@ -195,6 +183,70 @@ export function PeoplePicker({
         </Button>
       </View>
     </Modal>
+  );
+}
+
+function PeoplePickerFriendRow({
+  friend,
+  selected,
+  accentBorder,
+  idleBorder,
+  selectedBg,
+  idleBg,
+  minHeight,
+  paddingHorizontal,
+  marginBottom,
+  gap,
+  onPress,
+}: {
+  friend: FriendProfile;
+  selected: boolean;
+  accentBorder: string;
+  idleBorder: string;
+  selectedBg: string;
+  idleBg: string;
+  minHeight: number;
+  paddingHorizontal: number;
+  marginBottom: number;
+  gap: number;
+  onPress: () => void;
+}) {
+  const agent = useAgentUiTarget(AgentUiIds.peoplePicker.friend(friend.userId), {
+    label: friend.displayName,
+    onPress,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={agent.testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={friend.displayName}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[
+        styles.row,
+        {
+          minHeight,
+          borderColor: selected ? accentBorder : idleBorder,
+          backgroundColor: selected ? selectedBg : idleBg,
+          paddingHorizontal,
+          marginBottom,
+          gap,
+        },
+      ]}>
+      <View style={styles.rowCopy}>
+        <AppText variant="callout" fit>
+          {friend.displayName}
+        </AppText>
+        <AppText variant="caption" color="secondary" fit>
+          {friend.email}
+        </AppText>
+      </View>
+      <AppText variant="caption" color={selected ? 'accent' : 'tertiary'} fit>
+        {selected ? 'Selected' : 'Select'}
+      </AppText>
+    </Pressable>
   );
 }
 

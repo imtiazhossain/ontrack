@@ -1,0 +1,119 @@
+import {
+  handleAgentUiRequest,
+  parseAgentUiUrl,
+} from '../handle-agent-ui-url';
+import {
+  agentUiOverlayShortLabel,
+  isAgentUiOverlayEnabled,
+  setAgentUiOverlayEnabled,
+} from '../overlay';
+import {
+  hitAgentUiTarget,
+  hitAgentUiTargets,
+  registerAgentUiTarget,
+  resetAgentUiRegistry,
+} from '../registry';
+
+const mockWrite = jest.fn();
+const mockCreate = jest.fn();
+
+jest.mock('expo-file-system', () => ({
+  Paths: { document: 'file:///documents' },
+  File: jest.fn().mockImplementation(() => ({
+    exists: false,
+    create: mockCreate,
+    write: mockWrite,
+  })),
+}));
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { hostUri: '127.0.0.1:8081' } },
+}));
+
+jest.mock('../http-bridge', () => ({
+  getAgentUiActiveNonce: jest.fn(() => undefined),
+  postAgentUiStatus: jest.fn(async () => undefined),
+  setAgentUiActiveNonce: jest.fn(),
+  fetchAgentUiCommand: jest.fn(async () => null),
+  probeAgentUiHttp: jest.fn(async () => false),
+  resolveAgentUiHttpBase: jest.fn(() => 'http://127.0.0.1:8191'),
+  resetAgentUiHttpBaseCache: jest.fn(),
+}));
+
+describe('agent-ui hit-test', () => {
+  beforeEach(() => {
+    resetAgentUiRegistry();
+    setAgentUiOverlayEnabled(false);
+    mockWrite.mockClear();
+  });
+
+  it('prefers the smallest containing frame', () => {
+    registerAgentUiTarget('ontrack.travel.planDetail.section.transport', {
+      label: 'Transport',
+      frame: { x: 0, y: 0, width: 300, height: 400 },
+    });
+    registerAgentUiTarget('ontrack.travel.planDetail.weather', {
+      label: 'Weather',
+      frame: { x: 20, y: 40, width: 80, height: 40 },
+      press: () => undefined,
+    });
+
+    const hit = hitAgentUiTarget(40, 50);
+    expect(hit?.testID).toBe('ontrack.travel.planDetail.weather');
+    expect(hitAgentUiTargets(40, 50).map((e) => e.testID)).toEqual([
+      'ontrack.travel.planDetail.weather',
+      'ontrack.travel.planDetail.section.transport',
+    ]);
+  });
+
+  it('handles op=hit via request', async () => {
+    registerAgentUiTarget('ontrack.tabs.travel', {
+      frame: { x: 100, y: 200, width: 50, height: 44 },
+      press: () => undefined,
+    });
+    const ok = await handleAgentUiRequest({ op: 'hit', x: 110, y: 210 });
+    expect(ok).toBe(true);
+    const status = mockWrite.mock.calls.at(-1)?.[0] as string;
+    expect(status).toContain('ontrack.tabs.travel');
+  });
+});
+
+describe('agent-ui overlay', () => {
+  beforeEach(() => {
+    setAgentUiOverlayEnabled(false);
+    mockWrite.mockClear();
+  });
+
+  it('shortens wire ids for chips', () => {
+    expect(
+      agentUiOverlayShortLabel('ontrack.travel.planDetail.section.transport'),
+    ).toBe('planDetail.section.transport');
+  });
+
+  it('toggles via op=overlay', async () => {
+    expect(isAgentUiOverlayEnabled()).toBe(false);
+    await handleAgentUiRequest({ op: 'overlay', to: 'on' });
+    expect(isAgentUiOverlayEnabled()).toBe(true);
+    const onStatus = mockWrite.mock.calls.at(-1)?.[0] as string;
+    expect(onStatus).toContain('overlay on');
+    await handleAgentUiRequest({ op: 'overlay', to: 'off' });
+    expect(isAgentUiOverlayEnabled()).toBe(false);
+    await handleAgentUiRequest({ op: 'overlay', to: 'toggle' });
+    expect(isAgentUiOverlayEnabled()).toBe(true);
+  });
+
+  it('parses hit/overlay urls', () => {
+    expect(parseAgentUiUrl('ontrack://agent/ui?op=overlay&to=on')).toEqual({
+      op: 'overlay',
+      to: 'on',
+    });
+    expect(
+      parseAgentUiUrl('ontrack://agent/ui?op=hit&x=12.5&y=80'),
+    ).toMatchObject({
+      op: 'hit',
+      x: '12.5',
+      y: '80',
+    });
+  });
+});
