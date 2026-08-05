@@ -7,6 +7,8 @@ export const AGENT_UI_DEMO_FLIGHT_ID = 'item-agent-ui-demo-flight';
 /** Stable connecting (multi-stop) flight so agents can verify both card shapes. */
 export const AGENT_UI_DEMO_CONNECTING_FLIGHT_ID =
   'item-agent-ui-demo-connecting-flight';
+/** Stable stay with an address so agents can exercise Open with… maps. */
+export const AGENT_UI_DEMO_STAY_ID = 'item-agent-ui-demo-stay';
 
 export type AgentUiFixtureName = 'travel-demo';
 
@@ -94,6 +96,20 @@ export function buildAgentUiDemoTrip(
               durationMinutes: 209,
             },
           ],
+        },
+      },
+      {
+        id: AGENT_UI_DEMO_STAY_ID,
+        kind: 'stay',
+        title: 'Demo Stay',
+        date: '2026-09-27',
+        startMinutes: 15 * 60,
+        durationMinutes: 2 * 24 * 60,
+        details: 'Rua Augusta 100, 1100-053 Lisboa, Portugal',
+        stay: {
+          checkoutDate: '2026-09-29',
+          checkoutMinutes: 11 * 60,
+          confirmationCode: 'STAYDEMO',
         },
       },
     ],

@@ -1,31 +1,42 @@
+import { CHASE_CONNECTING_CONFIRMATION } from '../fixtures/chase-connecting-confirmation';
+import { CHASE_ROUNDTRIP_CONFIRMATION } from '../fixtures/chase-roundtrip-confirmation';
 import { mergeFlightConfirmationDraftDetails } from '../flight-confirmation-draft';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import { emptyFlightDetailsDraft } from '../flight-details';
 
-const CHASE_CONNECTING = `
-  Flight details
-  Guatemala City (GUA) → New York (LGA)
-  Sun, Sep 27, 2026
-  1:30 am
-  Guatemala City, GT (GUA)
-  United Airlines
-  UA 1907
-  2h 51m
-  5:21 am
-  Houston, US (IAH)
-  1h 39m layover in Houston
-  7:00 am
-  Houston, US (IAH)
-  United Airlines
-  UA 1697
-  3h 29m
-  11:29 am
-  New York, US (LGA)
-`;
-
 describe('flight confirmation review draft', () => {
+  it('fills outbound-only fields for a round-trip confirmation', () => {
+    const imported = parseFlightConfirmation(CHASE_ROUNDTRIP_CONFIRMATION, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
+
+    expect(imported.segments).toHaveLength(2);
+    expect(
+      mergeFlightConfirmationDraftDetails(
+        {
+          ...emptyFlightDetailsDraft(),
+          connectionAirport: 'IAH',
+          layoverMinutesAfter: '1h 39m',
+        },
+        imported,
+      ),
+    ).toMatchObject({
+      airline: 'Icelandair',
+      flightNumber: 'FI 622',
+      departureAirport: 'EWR',
+      arrivalAirport: 'KEF',
+      connectionAirport: '',
+      layoverMinutesAfter: '',
+    });
+    expect(
+      mergeFlightConfirmationDraftDetails(emptyFlightDetailsDraft(), imported)
+        .legs,
+    ).toBeUndefined();
+  });
+
   it('fills the recognized connection and final destination', () => {
-    const imported = parseFlightConfirmation(CHASE_CONNECTING);
+    const imported = parseFlightConfirmation(CHASE_CONNECTING_CONFIRMATION);
 
     expect(
       mergeFlightConfirmationDraftDetails(emptyFlightDetailsDraft(), imported),
@@ -46,7 +57,7 @@ describe('flight confirmation review draft', () => {
   });
 
   it('keeps confirmation screenshot URIs on the review draft', () => {
-    const imported = parseFlightConfirmation(CHASE_CONNECTING);
+    const imported = parseFlightConfirmation(CHASE_CONNECTING_CONFIRMATION);
     const withUris = {
       ...imported,
       confirmationUris: [

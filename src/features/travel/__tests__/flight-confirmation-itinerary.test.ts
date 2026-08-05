@@ -112,14 +112,102 @@ describe('flight confirmation itinerary merge', () => {
   it('persists a layover on the connecting journey', () => {
     const result = mergeImportedFlights({
       itinerary: [],
-      segments: [{ ...SEGMENTS[0], layoverMinutesAfter: 99 }, SEGMENTS[1]],
-      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
+      segments: [
+        {
+          ...SEGMENTS[0],
+          date: '2026-09-27',
+          layoverMinutesAfter: 99,
+          flight: {
+            ...SEGMENTS[0].flight,
+            departureAirport: 'GUA',
+            arrivalAirport: 'IAH',
+          },
+        },
+        {
+          ...SEGMENTS[1],
+          date: '2026-09-27',
+          flight: {
+            ...SEGMENTS[1].flight,
+            departureAirport: 'IAH',
+            arrivalAirport: 'LGA',
+          },
+        },
+      ],
+      tripRange: { startDate: '2026-09-27', endDate: '2026-09-27' },
       createId: () => crypto.randomUUID(),
     });
 
     expect(result).toHaveLength(1);
     expect(result[0].flight?.layoverMinutesAfter).toBe(99);
     expect(result[0].flight?.legs).toHaveLength(2);
+  });
+
+  it('keeps multi-day outbound and return separate even if a layover sneaks in', () => {
+    const result = mergeImportedFlights({
+      itinerary: [],
+      segments: [{ ...SEGMENTS[0], layoverMinutesAfter: 99 }, SEGMENTS[1]],
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-13' },
+      createId: () => crypto.randomUUID(),
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0].flight?.arrivalAirport).toBe('KEF');
+    expect(result[0].flight?.layoverMinutesAfter).toBe(99);
+    expect(result[1].flight?.arrivalAirport).toBe('IAD');
+  });
+
+  it('collapses an outbound layover inside a round-trip into the departing journey', () => {
+    const result = mergeImportedFlights({
+      itinerary: [],
+      segments: [
+        {
+          ...SEGMENTS[0],
+          date: '2026-09-08',
+          layoverMinutesAfter: 99,
+          flight: {
+            ...SEGMENTS[0].flight,
+            flightNumber: 'UA 1907',
+            departureAirport: 'GUA',
+            arrivalAirport: 'IAH',
+          },
+        },
+        {
+          ...SEGMENTS[0],
+          date: '2026-09-08',
+          flight: {
+            ...SEGMENTS[0].flight,
+            flightNumber: 'UA 1697',
+            departureAirport: 'IAH',
+            arrivalAirport: 'LGA',
+          },
+        },
+        {
+          ...SEGMENTS[1],
+          date: '2026-09-14',
+          flight: {
+            ...SEGMENTS[1].flight,
+            flightNumber: 'UA 200',
+            departureAirport: 'LGA',
+            arrivalAirport: 'GUA',
+          },
+        },
+      ],
+      tripRange: { startDate: '2026-09-08', endDate: '2026-09-14' },
+      createId: () => crypto.randomUUID(),
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0].flight).toMatchObject({
+      departureAirport: 'GUA',
+      arrivalAirport: 'LGA',
+      connectionAirport: 'IAH',
+      layoverMinutesAfter: 99,
+    });
+    expect(result[0].flight?.legs).toHaveLength(2);
+    expect(result[1].flight).toMatchObject({
+      departureAirport: 'LGA',
+      arrivalAirport: 'GUA',
+    });
   });
 
   it('keeps each separately imported flight confirmation on its own item', () => {

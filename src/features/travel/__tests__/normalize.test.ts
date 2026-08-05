@@ -378,6 +378,20 @@ describe('travel plan normalization', () => {
           },
         },
       ],
+      expenses: [
+        {
+          id: 'exp-flight',
+          title: 'Flight EWR → KEF',
+          amount: 916.46,
+          currency: 'USD',
+          date: '2026-09-08',
+          category: 'flight',
+          paidById: 'self',
+          splitWithIds: ['self'],
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+      ],
     });
 
     expect(normalized).toMatchObject({
@@ -399,6 +413,7 @@ describe('travel plan normalization', () => {
           },
         },
       ],
+      expenses: [{ id: 'exp-flight', title: 'Flights EWR <-> KEF' }],
     });
   });
 

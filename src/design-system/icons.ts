@@ -101,6 +101,11 @@ export const appIcons = {
   'layer-back': { ios: 'rectangle.stack', android: 'flip_to_back', web: 'flip_to_back' },
   background: { ios: 'paintpalette.fill', android: 'palette', web: 'palette' },
   copy: { ios: 'doc.on.doc', android: 'content_copy', web: 'content_copy' },
+  sync: {
+    ios: 'arrow.triangle.2.circlepath',
+    android: 'sync',
+    web: 'sync',
+  },
   share: { ios: 'square.and.arrow.up', android: 'share', web: 'share' },
   settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
   smart: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },

@@ -1,3 +1,5 @@
+import { formatDuration } from '@/utils/date';
+
 import { normalizeConfirmationUris } from './confirmation-attachments';
 import { normalizeFlightLegs } from './flight-journey-model';
 import type { TravelFlightDetails, TravelFlightLeg } from './types';
@@ -31,12 +33,7 @@ export interface FlightDetailsDraft {
 
 export function formatLayoverDuration(totalMinutes: number): string {
   if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) return '';
-  const roundedMinutes = Math.round(totalMinutes);
-  const hours = Math.floor(roundedMinutes / 60);
-  const minutes = roundedMinutes % 60;
-  return [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '']
-    .filter(Boolean)
-    .join(' ');
+  return formatDuration(Math.round(totalMinutes));
 }
 
 function parseLayoverDuration(value: unknown): number | undefined {

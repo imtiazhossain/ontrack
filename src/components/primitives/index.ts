@@ -27,6 +27,8 @@ export { SegmentedControl } from './segmented-control';
 export { SectionHeader } from './section-header';
 export { SheetHeader, SheetScaffold } from './sheet-scaffold';
 export { SettingsActionRow, SettingsRow, SettingsToggleRow } from './settings-row';
+export { fieldTitleCase } from './field-title-case';
+export { StackedFieldLabel } from './stacked-field-label';
 export { Symbol } from './symbol';
 export type { SymbolSize } from './symbol';
 export { TimeField } from './time-field';

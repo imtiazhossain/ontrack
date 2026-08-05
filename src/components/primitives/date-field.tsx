@@ -21,6 +21,7 @@ import { IconButton } from './button';
 import { DateFieldCalendar } from './date-field-calendar';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
+import { StackedFieldLabel } from './stacked-field-label';
 
 interface DateFieldProps {
   label?: string;
@@ -163,17 +164,9 @@ export function DateField({
         />
         {stacked ? (
           <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' }}>
-            <AppText
-              variant="caption"
-              fit
-              numberOfLines={1}
-              style={{
-                flexShrink: 1,
-                minWidth: 0,
-                color: stackedLabelColor ?? theme.textPrimary,
-              }}>
-              {stackedLabel}
-            </AppText>
+            <StackedFieldLabel color={stackedLabelColor ?? theme.textPrimary}>
+              {stackedLabel!}
+            </StackedFieldLabel>
             <AppText
               variant="body"
               fit

@@ -1,37 +1,11 @@
 import { applyImportedFlightsToPlan } from './apply-imported-flights';
+import { CHASE_CONNECTING_CONFIRMATION } from './fixtures/chase-connecting-confirmation';
 import { parseFlightConfirmation } from './flight-confirmation-parser';
 import {
-  isConnectingFlightDetails,
-  reconstructConnectingLegs,
+    isConnectingFlightDetails,
+    reconstructConnectingLegs,
 } from './flight-journey-model';
 import type { TravelItineraryItem, TravelPlan } from './types';
-
-/**
- * Chase GUA→IAH→LGA confirmation text used in __DEV__ to upgrade the demo
- * collapsed connecting flight that was saved before per-leg `legs` existed.
- */
-const CHASE_CONNECTING_FIXTURE = `
-  Flight details
-  Guatemala City (GUA) → New York (LGA)
-  Sun, Sep 27, 2026
-  1:30 am
-  Guatemala City, GT (GUA)
-  United Airlines
-  UA 1907
-  Boeing 737-800 Passenger
-  2h 51m
-  5:21 am
-  Houston, US (IAH)
-  1h 39m layover in Houston
-  7:00 am
-  Houston, US (IAH)
-  United Airlines
-  UA 1697
-  Boeing 737 MAX 8
-  3h 29m
-  11:29 am
-  New York, US (LGA)
-`;
 
 function missingJourneyLegs(item: TravelItineraryItem): boolean {
   if (item.kind !== 'flight' || !item.flight) return false;
@@ -72,7 +46,7 @@ export function upgradeLegacyConnectingFlights(
 ): TravelPlan | null {
   const chaseTarget = plan.itinerary.find(needsDevChaseRepair);
   if (chaseTarget?.flight) {
-    const imported = parseFlightConfirmation(CHASE_CONNECTING_FIXTURE, {
+    const imported = parseFlightConfirmation(CHASE_CONNECTING_CONFIRMATION, {
       startDate: plan.startDate,
       endDate: plan.endDate,
     });

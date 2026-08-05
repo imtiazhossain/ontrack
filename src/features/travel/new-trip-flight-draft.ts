@@ -1,3 +1,4 @@
+import { isRoundTripSegmentGroup } from './flight-confirmation-itinerary';
 import type { ParsedFlightConfirmation } from './flight-confirmation-parser';
 import { flightConfirmationSchedule } from './flight-confirmation-schedule';
 
@@ -19,12 +20,15 @@ export function newTripDraftFromFlightConfirmation(
 ): NewTripFlightDraft {
   const segments = imported.segments.filter(
     (segment) =>
-      segment.flight.departureAirport || segment.flight.arrivalAirport || segment.date,
+      segment.flight.departureAirport ||
+      segment.flight.arrivalAirport ||
+      segment.date,
   );
   const first = segments[0];
   const last = segments[segments.length - 1];
   const origin = first?.flight.departureAirport || undefined;
-  let destination = last?.flight.arrivalAirport || first?.flight.arrivalAirport || undefined;
+  let destination =
+    last?.flight.arrivalAirport || first?.flight.arrivalAirport || undefined;
 
   if (origin && destination === origin && segments.length > 1) {
     let turnaroundIndex = Math.floor((segments.length - 1) / 2);
@@ -36,10 +40,15 @@ export function newTripDraftFromFlightConfirmation(
         turnaroundIndex = index;
       }
     }
-    destination = segments[turnaroundIndex]?.flight.arrivalAirport || destination;
+    destination =
+      segments[turnaroundIndex]?.flight.arrivalAirport || destination;
   }
 
   const schedule = flightConfirmationSchedule(imported);
+  // Round-trip editor schedule is outbound-only; trip end is the return date.
+  const endDate = isRoundTripSegmentGroup(segments)
+    ? (last?.arrivalDate ?? last?.date ?? schedule.arrivalDate ?? schedule.departureDate)
+    : (schedule.arrivalDate ?? schedule.departureDate);
 
   return {
     ...(destination ? { destination } : {}),
@@ -47,7 +56,7 @@ export function newTripDraftFromFlightConfirmation(
     ...(schedule.departureDate
       ? {
           startDate: schedule.departureDate,
-          endDate: schedule.arrivalDate ?? schedule.departureDate,
+          ...(endDate ? { endDate } : {}),
         }
       : {}),
   };

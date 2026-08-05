@@ -6,6 +6,11 @@ import { StyleSheet, View } from 'react-native';
 import { EmptyState, Screen } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
+import {
+    isConnectingSegmentGroup,
+    splitRoundTripDirections,
+} from '@/features/travel/flight-confirmation-itinerary';
 import {
     resolveStayBookingOpen,
     type StayBookingOpen,
@@ -13,28 +18,41 @@ import {
 import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
+    attachOrphanedFlightConfirmationUris,
+    mergeDuplicateItemConfirmationUris,
+} from '@/features/travel/confirmation-uri-attach';
+import {
     emptyExpenseForm,
     expenseFormFromExpense,
     type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
+import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
+import type { ImportedFlightConfirmation } from '@/features/travel/flight-confirmation-import';
+import { parseFlightConfirmation } from '@/features/travel/flight-confirmation-parser';
+import {
+    flightConfirmationSchedule,
+    flightDirectionSchedule,
+} from '@/features/travel/flight-confirmation-schedule';
 import {
     emptyFlightDetailsDraft,
     validateFlightDetails,
     type FlightDetailsDraft,
 } from '@/features/travel/flight-details';
-import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
-import type { ImportedFlightConfirmation } from '@/features/travel/flight-confirmation-import';
+import { CHASE_ROUNDTRIP_CONFIRMATION } from '@/features/travel/fixtures/chase-roundtrip-confirmation';
 import {
-  applyFlightTerminalPatches,
-  fetchFlightTerminalPatches,
+    emptyFlightLegScheduleDraft,
+    flightLegScheduleFromImported,
+    segmentsFromRoundTripForm,
+    returnFlightTitle as suggestReturnFlightTitle,
+    suggestReturnDraftFromOutbound,
+    type FlightTripType,
+} from '@/features/travel/flight-roundtrip-draft';
+import {
+    applyFlightTerminalPatches,
+    fetchFlightTerminalPatches,
 } from '@/features/travel/flight-terminal-enrichment';
-import {
-  attachOrphanedFlightConfirmationUris,
-  mergeDuplicateItemConfirmationUris,
-} from '@/features/travel/confirmation-uri-attach';
 import { isDuplicateItineraryItem, normalizeTravelPlan } from '@/features/travel/normalize';
-import { upgradeLegacyConnectingFlights } from '@/features/travel/upgrade-legacy-connecting-flights';
 import {
     emptyRentalDetailsDraft,
     validateRentalDetails,
@@ -45,31 +63,32 @@ import {
     validateStayDetails,
     type StayDetailsDraft,
 } from '@/features/travel/stay-details';
+import {
+    emptyTransportDetailsDraft,
+    validateTransportDetails,
+    type TransportDetailsDraft,
+} from '@/features/travel/transport-details';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
+import {
+    TravelImportResultModal,
+    type TravelImportResult,
+} from '@/features/travel/travel-import-result-modal';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
 import { ITEM_KINDS } from '@/features/travel/travel-itinerary-form';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
-import {
-  TravelImportResultModal,
-  type TravelImportResult,
-} from '@/features/travel/travel-import-result-modal';
 import { persistTravelMomentPhotos } from '@/features/travel/travel-moment-media';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
-import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
+import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import { validateTravelRangeSchedule } from '@/features/travel/travel-range-schedule';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
-import {
-  emptyTransportDetailsDraft,
-  validateTransportDetails,
-  type TransportDetailsDraft,
-} from '@/features/travel/transport-details';
-import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import { validateTravelRangeSchedule } from '@/features/travel/travel-range-schedule';
+import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
 import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
+import { upgradeLegacyConnectingFlights } from '@/features/travel/upgrade-legacy-connecting-flights';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
@@ -116,8 +135,12 @@ type TravelPlanDetailProps = {
   autoOpenStayBooking?: boolean;
   /** DEV: reservation email override when account email is unavailable. */
   autoOpenReservationEmail?: string;
+  /** DEV: open the Expenses sheet on mount for simulator QA. */
+  initialOpenExpenses?: boolean;
   /** DEV: open an import-result sheet on mount for simulator QA. */
   initialImportResult?: TravelImportResult;
+  /** DEV: prefill Add Flight from a known confirmation fixture (no document picker). */
+  initialFlightImportFixture?: 'roundtrip';
 };
 
 export function TravelPlanDetail(props: TravelPlanDetailProps) {
@@ -145,7 +168,9 @@ function TravelPlanDetailLoaded({
   initialOpenAddPicker = false,
   autoOpenStayBooking = false,
   autoOpenReservationEmail,
+  initialOpenExpenses = false,
   initialImportResult,
+  initialFlightImportFixture,
 }: TravelPlanDetailProps & { plan: TravelPlan }) {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
@@ -187,6 +212,14 @@ function TravelPlanDetailLoaded({
     () => emptyFlightDetailsDraft(),
   );
   const [flightDetailsError, setFlightDetailsError] = useState<string>();
+  const [flightTripType, setFlightTripType] = useState<FlightTripType>('one-way');
+  const [returnFlightTitle, setReturnFlightTitle] = useState('');
+  const [returnFlightDetails, setReturnFlightDetails] = useState<FlightDetailsDraft>(
+    () => emptyFlightDetailsDraft(),
+  );
+  const [returnFlightSchedule, setReturnFlightSchedule] = useState(
+    emptyFlightLegScheduleDraft,
+  );
   const [importedFlightFileName, setImportedFlightFileName] = useState<string>();
   const [pendingFlightImport, setPendingFlightImport] = useState<
     ImportedFlightConfirmation | undefined
@@ -257,11 +290,79 @@ function TravelPlanDetailLoaded({
       // Link confirmation files that were saved during import but never attached
       // (e.g. Add-to-Timeline hit a duplicate and discarded the new item).
       if (current) {
-        const repaired = attachOrphanedFlightConfirmationUris(current);
+        const repaired = attachOrphanedFlightConfirmationUris(current, {
+          allPlans: useTravel.getState().plans,
+        });
         if (repaired) useTravel.getState().savePlan(repaired);
       }
     }, [planId]),
   );
+
+  const appliedFlightImportFixture = useRef(false);
+  useEffect(() => {
+    if (!__DEV__ || initialFlightImportFixture !== 'roundtrip') return;
+    if (kind !== 'flight' || !isAddingItem || appliedFlightImportFixture.current) {
+      return;
+    }
+    appliedFlightImportFixture.current = true;
+    // Use the confirmation's own calendar window — the open trip may be unrelated.
+    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_CONFIRMATION, {
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+    });
+    const imported: ImportedFlightConfirmation = {
+      ...parsed,
+      fileName: 'FARHANA TASMIN has shared their trip details with you.pdf',
+      confirmationUris: [],
+    };
+    const directions = splitRoundTripDirections(imported.segments);
+    const roundTrip = Boolean(directions);
+    const outboundSegments = directions?.outbound ?? imported.segments;
+    const schedule = directions
+      ? flightDirectionSchedule(directions.outbound, imported)
+      : flightConfirmationSchedule(imported);
+    setPendingFlightImport(imported);
+    setFlightDetails((current) =>
+      mergeFlightConfirmationDraftDetails(current, {
+        ...imported,
+        segments: outboundSegments,
+      }),
+    );
+    setImportedFlightFileName(imported.fileName);
+    setFlightTripType(roundTrip ? 'round-trip' : 'one-way');
+    if (directions) {
+      const returnDetails = mergeFlightConfirmationDraftDetails(
+        emptyFlightDetailsDraft(),
+        { ...imported, segments: directions.returning },
+      );
+      setReturnFlightDetails(returnDetails);
+      setReturnFlightSchedule(
+        flightLegScheduleFromImported(
+          flightDirectionSchedule(directions.returning, imported),
+        ),
+      );
+      setReturnFlightTitle(
+        directions.returning[0]?.title?.trim() ||
+          suggestReturnFlightTitle(returnDetails),
+      );
+    }
+    setTitle(
+      roundTrip
+        ? outboundSegments[0]?.title || imported.title || ''
+        : imported.title || '',
+    );
+    if (schedule.departureDate) setDate(schedule.departureDate);
+    if (schedule.departureMinutes !== undefined) {
+      setStartMinutes(schedule.departureMinutes);
+    }
+    if (schedule.durationMinutes !== undefined) {
+      setDuration(String(schedule.durationMinutes));
+    }
+    if (schedule.arrivalDate) setEndDate(schedule.arrivalDate);
+    if (schedule.arrivalMinutes !== undefined) {
+      setEndMinutes(schedule.arrivalMinutes);
+    }
+  }, [initialFlightImportFixture, kind, isAddingItem]);
 
   useEffect(() => {
     if (!__DEV__ || !plan) return;
@@ -387,7 +488,7 @@ function TravelPlanDetailLoaded({
 
   const itemEdit = useTravelPlanItemDetailsEdit({ plan, itinerary, updatePlan });
   const itemMedia = useTravelPlanItemMedia({ planId, plan, itinerary, updatePlan });
-  const [openExpenseSheet, setOpenExpenseSheet] = useState(false);
+  const [openExpenseSheet, setOpenExpenseSheet] = useState(initialOpenExpenses);
   const [editingTripDates, setEditingTripDates] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState | undefined>();
   const [preparedExpenseDraft, setPreparedExpenseDraft] = useState<ExpenseFormState | undefined>();
@@ -456,6 +557,10 @@ function TravelPlanDetailLoaded({
       setFlightDetails,
       setFlightDetailsError,
       setImportedFlightFileName,
+      setFlightTripType,
+      setReturnFlightTitle,
+      setReturnFlightDetails,
+      setReturnFlightSchedule,
       setPendingFlightImport,
       setRentalDetails,
       setRentalDetailsError,
@@ -585,8 +690,16 @@ function TravelPlanDetailLoaded({
     if (!isMoment && !title.trim()) {
       return addItemError('Add a name for this itinerary item.');
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < plan.startDate || date > plan.endDate) {
-      return addItemError(`Choose a date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(plan.endDate, dateDisplayFormat)}.`);
+    // Flights may extend the trip on save (import / round-trip return).
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      (kind !== 'flight' && (date < plan.startDate || date > plan.endDate))
+    ) {
+      return addItemError(
+        kind === 'flight'
+          ? 'Choose a valid departure date.'
+          : `Choose a date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(plan.endDate, dateDisplayFormat)}.`,
+      );
     }
     if (startMinutes === null || startMinutes < 0 || startMinutes >= 24 * 60) {
       return addItemError(
@@ -605,10 +718,14 @@ function TravelPlanDetailLoaded({
       const maxEndDate = kind === 'stay' ? addDays(plan.endDate, 1) : plan.endDate;
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(endDate) ||
-        endDate < plan.startDate ||
-        endDate > maxEndDate
+        (kind !== 'flight' &&
+          (endDate < plan.startDate || endDate > maxEndDate))
       ) {
-        return addItemError(`Choose an end date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(maxEndDate, dateDisplayFormat)}.`);
+        return addItemError(
+          kind === 'flight'
+            ? 'Choose a valid arrival date.'
+            : `Choose an end date between ${formatDateKey(plan.startDate, dateDisplayFormat)} and ${formatDateKey(maxEndDate, dateDisplayFormat)}.`,
+        );
       }
       if (endMinutes === null || endMinutes < 0 || endMinutes >= 24 * 60) {
         return addItemError(
@@ -700,11 +817,64 @@ function TravelPlanDetailLoaded({
       return setStayDetailsError(validatedStayDetails.error);
     }
 
-    // Connecting confirmations expand into one itinerary leg per flight on submit.
+    // Round-trip form (imported or manual) expands to outbound + return on submit.
+    if (kind === 'flight' && flightTripType === 'round-trip') {
+      const roundTripSegments = segmentsFromRoundTripForm({
+        outboundDetails: flightDetails,
+        outboundSchedule: {
+          date,
+          startMinutes,
+          endDate,
+          endMinutes,
+        },
+        outboundTitle: title,
+        returnDetails: returnFlightDetails,
+        returnSchedule: returnFlightSchedule,
+        returnTitle: returnFlightTitle,
+      });
+      if (!roundTripSegments) {
+        stopAddItem();
+        return setFlightDetailsError(
+          'Add return departure and arrival dates and times.',
+        );
+      }
+      const planBeforeRoundTrip = useTravel
+        .getState()
+        .plans.find((entry) => entry.id === planId);
+      if (!planBeforeRoundTrip) {
+        stopAddItem();
+        return;
+      }
+      const confirmationUris =
+        validatedFlightDetails.value?.confirmationUris?.length
+          ? validatedFlightDetails.value.confirmationUris
+          : pendingFlightImport?.confirmationUris;
+      const nextPlan = applyImportedFlightsToPlan({
+        plan: planBeforeRoundTrip,
+        imported: {
+          ...(pendingFlightImport ?? {
+            ...roundTripSegments[0]!,
+            segments: roundTripSegments,
+            detectedFieldCount: 1,
+          }),
+          segments: roundTripSegments,
+          confirmationUris,
+        },
+        createId: () => newId('trip-item'),
+      });
+      updatePlan(nextPlan);
+      resetAddForm();
+      setIsAddingItem(false);
+      stopAddItem();
+      maybeShowImportedAddPrompt(nextPlan, false);
+      return;
+    }
+
+    // Connecting confirmations expand via the shared import merger on submit.
     const connectingImport =
       kind === 'flight' &&
       pendingFlightImport &&
-      pendingFlightImport.segments.length > 1
+      isConnectingSegmentGroup(pendingFlightImport.segments)
         ? pendingFlightImport
         : undefined;
     if (connectingImport) {
@@ -723,23 +893,7 @@ function TravelPlanDetailLoaded({
         createId: () => newId('trip-item'),
       });
       updatePlan(nextPlan);
-      setTitle('');
-      setDetails('');
-      setBookingUrl('');
-      setPhotoUris([]);
-      setFlightDetails(emptyFlightDetailsDraft());
-      setImportedFlightFileName(undefined);
-      setPendingFlightImport(undefined);
-      setFlightDetailsError(undefined);
-      setRentalDetails(emptyRentalDetailsDraft());
-      setImportedRentalFileName(undefined);
-      setStayDetails(
-        defaultStayDetails({
-          checkoutDate: plan.endDate,
-          checkoutMinutes: String(11 * 60),
-        }),
-      );
-      setImportedStayFileName(undefined);
+      resetAddForm();
       setIsAddingItem(false);
       stopAddItem();
       maybeShowImportedAddPrompt(nextPlan, false);
@@ -748,6 +902,19 @@ function TravelPlanDetailLoaded({
 
     const itemId = newId('trip-item');
     const now = new Date().toISOString();
+    const flightConfirmationUris =
+      validatedFlightDetails.value?.confirmationUris?.length
+        ? validatedFlightDetails.value.confirmationUris
+        : pendingFlightImport?.confirmationUris;
+    const flightDetailsForItem =
+      kind === 'flight' && validatedFlightDetails.value
+        ? {
+            ...validatedFlightDetails.value,
+            ...(flightConfirmationUris?.length
+              ? { confirmationUris: flightConfirmationUris }
+              : {}),
+          }
+        : validatedFlightDetails.value;
     const incomingItem: TravelItineraryItem = {
       id: itemId,
       kind,
@@ -758,7 +925,7 @@ function TravelPlanDetailLoaded({
       details: details.trim() || undefined,
       bookingUrl: isMoment ? undefined : bookingUrl.trim() || undefined,
       photoUris: photoUris.length ? photoUris : undefined,
-      flight: validatedFlightDetails.value,
+      flight: flightDetailsForItem,
       transport: validatedTransportDetails.value,
       rental: validatedRentalDetails.value,
       stay: validatedStayDetails.value,
@@ -951,6 +1118,25 @@ function TravelPlanDetailLoaded({
     });
   };
 
+  const handleFlightTripTypeChange = (next: FlightTripType) => {
+    setFlightTripType(next);
+    if (next !== 'round-trip') return;
+    const returnEmpty =
+      !returnFlightDetails.flightNumber.trim() &&
+      !returnFlightSchedule.date &&
+      !returnFlightDetails.departureAirport.trim();
+    if (!returnEmpty) return;
+    const suggested = suggestReturnDraftFromOutbound(flightDetails, {
+      date,
+      startMinutes,
+      endDate,
+      endMinutes,
+    });
+    setReturnFlightDetails(suggested.details);
+    setReturnFlightSchedule(suggested.schedule);
+    setReturnFlightTitle(suggestReturnFlightTitle(suggested.details));
+  };
+
   const resetAddForm = () => {
     setTitle('');
     setDetails('');
@@ -962,6 +1148,11 @@ function TravelPlanDetailLoaded({
     setEndDate(plan.endDate);
     setEndMinutes(11 * 60);
     setFlightDetails(emptyFlightDetailsDraft());
+    setFlightTripType('one-way');
+    setReturnFlightTitle('');
+    setReturnFlightDetails(emptyFlightDetailsDraft());
+    setReturnFlightSchedule(emptyFlightLegScheduleDraft());
+    appliedFlightImportFixture.current = false;
     setImportedFlightFileName(undefined);
     setPendingFlightImport(undefined);
     setFlightDetailsError(undefined);
@@ -1242,6 +1433,10 @@ function TravelPlanDetailLoaded({
         photoUris={photoUris}
         flightDetails={flightDetails}
         flightDetailsError={flightDetailsError}
+        flightTripType={flightTripType}
+        returnFlightTitle={returnFlightTitle}
+        returnFlightDetails={returnFlightDetails}
+        returnFlightSchedule={returnFlightSchedule}
         importedFlightFileName={importedFlightFileName}
         importingFlight={importingFlightTarget === 'new'}
         transportDetails={transportDetails}
@@ -1269,6 +1464,10 @@ function TravelPlanDetailLoaded({
         onBookingUrlChange={setBookingUrl}
         onPhotoUrisChange={setPhotoUris}
         onFlightDetailsChange={setFlightDetails}
+        onFlightTripTypeChange={handleFlightTripTypeChange}
+        onReturnFlightTitleChange={setReturnFlightTitle}
+        onReturnFlightDetailsChange={setReturnFlightDetails}
+        onReturnFlightScheduleChange={setReturnFlightSchedule}
         onImportFlight={(source) => void importConfirmation('new', source)}
         onTransportDetailsChange={setTransportDetails}
         onRentalDetailsChange={setRentalDetails}

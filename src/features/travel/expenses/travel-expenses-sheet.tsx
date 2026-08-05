@@ -160,13 +160,12 @@ export function TravelExpensesSheet({
       repairAppliedRef.current = null;
       return;
     }
-    if (repairAppliedRef.current === plan.id) return;
     const next = withRoundTripFlightExpenseTitles(plan);
-    if (next !== plan) {
-      repairAppliedRef.current = plan.id;
-      onSavePlan(next);
-    }
-  }, [visible, plan.id, onSavePlan]);
+    if (next === plan) return;
+    if (repairAppliedRef.current === plan.id) return;
+    repairAppliedRef.current = plan.id;
+    onSavePlan(next);
+  }, [visible, plan, onSavePlan]);
 
   useEffect(() => {
     if (!visible || !shouldSyncTravelExpenses(plan)) return;
@@ -230,7 +229,11 @@ export function TravelExpensesSheet({
   const beginEdit = (expense: TravelExpense) => {
     setFormError(undefined);
     setEditingExpenseId(expense.id);
-    setForm(expenseFormFromExpense(expense));
+    const form = expenseFormFromExpense(expense);
+    setForm({
+      ...form,
+      title: flightExpenseDisplayTitle(expense, plan),
+    });
   };
 
   const saveForm = () => {
@@ -363,7 +366,10 @@ export function TravelExpensesSheet({
                   onDelete={undefined}
                 />
               ) : (
-              <View style={styles.listBody}>
+              <AgentTestId
+                testID={AgentUiIds.travel.expenses.list}
+                label="Expenses list"
+                style={styles.listBody}>
                 <TravelSurfaceCard bodyStyle={styles.summaryCard} padding={rs.md}>
                   <AppText
                     variant="overline"
@@ -493,7 +499,7 @@ export function TravelExpensesSheet({
                   })
                 )}
 
-              </View>
+              </AgentTestId>
             )}
       </TravelSheetModal>
     </>

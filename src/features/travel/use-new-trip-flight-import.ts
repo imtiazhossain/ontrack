@@ -2,8 +2,9 @@ import { useState } from 'react';
 
 import { appPrompt } from '@/components/primitives';
 import {
-  importFlightConfirmation,
-  type FlightConfirmationImportSource,
+    importFlightConfirmation,
+    type FlightConfirmationImportSource,
+    type ImportedFlightConfirmation,
 } from '@/features/travel/flight-confirmation-import';
 import { newTripDraftFromFlightConfirmation } from '@/features/travel/new-trip-flight-draft';
 import type { TravelPlanMode } from '@/features/travel/types';
@@ -23,15 +24,16 @@ export function useNewTripFlightImport(setters: DraftSetters) {
   const theme = useTheme();
   const [importing, setImporting] = useState(false);
   const [fileName, setFileName] = useState<string>();
+  const [pendingImport, setPendingImport] = useState<
+    ImportedFlightConfirmation | undefined
+  >();
 
   const runImport = async (source: FlightConfirmationImportSource) => {
     if (importing) return;
     setters.setError(undefined);
     setImporting(true);
     try {
-      const imported = await importFlightConfirmation(undefined, source, {
-        persistAttachments: false,
-      });
+      const imported = await importFlightConfirmation(undefined, source);
       if (!imported) return;
       const draft = newTripDraftFromFlightConfirmation(imported);
       setters.setMode('flight');
@@ -40,6 +42,7 @@ export function useNewTripFlightImport(setters: DraftSetters) {
       if (draft.startDate) setters.setStartDate(draft.startDate);
       if (draft.endDate) setters.setEndDate(draft.endDate);
       setFileName(imported.fileName);
+      setPendingImport(imported);
     } catch (error) {
       setters.setError(
         error instanceof Error
@@ -73,5 +76,16 @@ export function useNewTripFlightImport(setters: DraftSetters) {
     );
   };
 
-  return { fileName, importing, importItinerary };
+  const clearPendingImport = () => {
+    setFileName(undefined);
+    setPendingImport(undefined);
+  };
+
+  return {
+    fileName,
+    importing,
+    pendingImport,
+    importItinerary,
+    clearPendingImport,
+  };
 }

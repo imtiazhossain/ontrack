@@ -1,5 +1,12 @@
 import { calculateFlightArrival } from './flight-arrival';
-import type { ParsedFlightConfirmation } from './flight-confirmation-parser';
+import {
+  isConnectingSegmentGroup,
+  splitRoundTripDirections,
+} from './flight-confirmation-itinerary';
+import type {
+  ParsedFlightConfirmation,
+  ParsedFlightSegment,
+} from './flight-confirmation-parser';
 
 export interface ImportedFlightSchedule {
   departureDate?: string;
@@ -9,15 +16,136 @@ export interface ImportedFlightSchedule {
   durationMinutes?: number;
 }
 
+/** Schedule for one confirmation segment (outbound, return, or connecting leg). */
+export function flightSegmentSchedule(
+  segment: ParsedFlightSegment | undefined,
+  imported: ParsedFlightConfirmation,
+  fallback?: { date?: string; startMinutes?: number },
+): ImportedFlightSchedule {
+  const recognizedDates = imported.itineraryDates ?? [];
+  const departureDate =
+    segment?.date || imported.date || recognizedDates[0] || fallback?.date;
+  const departureMinutes =
+    segment?.startMinutes ?? imported.startMinutes ?? fallback?.startMinutes;
+  const durationMinutes =
+    segment?.durationMinutes ?? imported.durationMinutes;
+
+  if (segment?.arrivalDate && segment.arrivalMinutes !== undefined) {
+    return {
+      departureDate,
+      departureMinutes,
+      arrivalDate: segment.arrivalDate,
+      arrivalMinutes: segment.arrivalMinutes,
+      durationMinutes,
+    };
+  }
+
+  if (
+    departureDate &&
+    departureMinutes !== undefined &&
+    durationMinutes !== undefined
+  ) {
+    const arrival = calculateFlightArrival({
+      date: departureDate,
+      startMinutes: departureMinutes,
+      durationMinutes,
+      departureAirport:
+        segment?.flight.departureAirport || imported.flight.departureAirport,
+      arrivalAirport:
+        segment?.flight.arrivalAirport || imported.flight.arrivalAirport,
+    });
+    return {
+      departureDate,
+      departureMinutes,
+      arrivalDate: arrival.date,
+      arrivalMinutes: arrival.startMinutes,
+      durationMinutes,
+    };
+  }
+
+  return {
+    departureDate,
+    departureMinutes,
+    arrivalDate: departureDate,
+    durationMinutes,
+  };
+}
+
+/** Door-to-door schedule for a direction that may include connecting legs. */
+export function flightDirectionSchedule(
+  direction: ParsedFlightSegment[],
+  imported: ParsedFlightConfirmation,
+  fallback?: { date?: string; startMinutes?: number },
+): ImportedFlightSchedule {
+  if (direction.length === 0) {
+    return flightSegmentSchedule(undefined, imported, fallback);
+  }
+  if (!isConnectingSegmentGroup(direction)) {
+    return flightSegmentSchedule(direction[0], imported, fallback);
+  }
+
+  const first = direction[0]!;
+  const last = direction.at(-1)!;
+  const departureDate =
+    first.date || imported.date || fallback?.date;
+  const departureMinutes =
+    first.startMinutes ?? imported.startMinutes ?? fallback?.startMinutes;
+
+  if (last.arrivalDate && last.arrivalMinutes !== undefined) {
+    return {
+      departureDate,
+      departureMinutes,
+      arrivalDate: last.arrivalDate,
+      arrivalMinutes: last.arrivalMinutes,
+      durationMinutes: first.durationMinutes,
+    };
+  }
+
+  if (
+    last.date &&
+    last.startMinutes !== undefined &&
+    last.durationMinutes !== undefined
+  ) {
+    const arrival = calculateFlightArrival({
+      date: last.date,
+      startMinutes: last.startMinutes,
+      durationMinutes: last.durationMinutes,
+      departureAirport: last.flight.departureAirport,
+      arrivalAirport: last.flight.arrivalAirport,
+    });
+    return {
+      departureDate,
+      departureMinutes,
+      arrivalDate: arrival.date,
+      arrivalMinutes: arrival.startMinutes,
+      durationMinutes: first.durationMinutes,
+    };
+  }
+
+  return flightSegmentSchedule(first, imported, fallback);
+}
+
 /** Dates/times for confirmation-driven editors, including connecting itineraries. */
 export function flightConfirmationSchedule(
   imported: ParsedFlightConfirmation,
   fallback?: { date?: string; startMinutes?: number },
 ): ImportedFlightSchedule {
+  const segments = imported.segments;
+  // Round-trips: review/edit the outbound direction only (may include layovers).
+  // Trip-level end dates use the return separately (newTripDraftFromFlightConfirmation).
+  if (segments.length > 0 && !isConnectingSegmentGroup(segments)) {
+    const directions = splitRoundTripDirections(segments);
+    return flightDirectionSchedule(
+      directions?.outbound ?? [segments[0]!],
+      imported,
+      fallback,
+    );
+  }
+
   const recognizedDates = imported.itineraryDates ?? [];
   const departureDate = imported.date || recognizedDates[0] || fallback?.date;
   const departureMinutes = imported.startMinutes ?? fallback?.startMinutes;
-  const lastSegment = imported.segments.at(-1);
+  const lastSegment = segments.at(-1);
   const finalLegDate =
     lastSegment?.date || recognizedDates.at(-1) || departureDate;
   const finalLegStart = lastSegment?.startMinutes;

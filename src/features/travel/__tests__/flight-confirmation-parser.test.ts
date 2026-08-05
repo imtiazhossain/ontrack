@@ -3,44 +3,12 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 import { applyImportedFlightsToPlan } from '../apply-imported-flights';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import { mergeImportedFlights } from '../flight-confirmation-itinerary';
+import { CHASE_ROUNDTRIP_CONFIRMATION } from '../fixtures/chase-roundtrip-confirmation';
 import type { TravelPlan } from '../types';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
-const FARHANA_CHASE_PDFKIT_TEXT = `
-Imtiaz Hossain <imtihoss@gmail.com>
-FARHANA TASMIN has shared their trip details with you
-Chase Travel <donotreply@chasetravel.com>
-Mon, Jul 27 at 10:33 AM
-Booked on Mon, Jul 27, 2026
-Flight $916.46
-Tue, Sep 08, 2026 - Mon, Sep 14, 2026
-2 travelers
-Airline confirmation: AB2ZQV
-Newark (EWR) Reykjavik (KEF)
-Depart : Tue, Sep 08, 2026 (arrive Wed, Sep 09, 2026)
-08:25 pm 06:15 am
-
-EWR KEF
-Next day arrival
-5h 50m
-Icelandair
-FI 622 Airbus A321neo
-Fare: Economy Light
-Not included: Seats, Refund, Exchange
-Return : Mon, Sep 14, 2026
-05:00 pm
-KEF
-07:15 pm
-EWR
-6h 15m
-Icelandair
-FI 623 Boeing 737 MAX 9
-Fare: Economy Light
-Not included: Seats, Refund, Exchange
-Due to the Real ID requirements, your driver's license or ID card may
-not be accepted for travel after certain dates.
-`;
+const FARHANA_CHASE_PDFKIT_TEXT = CHASE_ROUNDTRIP_CONFIRMATION;
 
 describe('flight confirmation parser', () => {
   it('extracts a labeled itinerary without shifting its calendar date', () => {
@@ -223,9 +191,12 @@ describe('flight confirmation parser', () => {
         seat: '',
       },
     });
+    // Footer "EWR KEF" payment/rules lines must not flip the return route.
+    expect(parsed.segments[1]?.flight.departureAirport).toBe('KEF');
+    expect(parsed.segments[1]?.flight.arrivalAirport).toBe('EWR');
     expect(parsed.amount).toBe(916.46);
     expect(parsed.currency).toBe('USD');
-    expect(parsed.title).toBe('Flights EWR ↔ KEF');
+    expect(parsed.title).toBe('Flights EWR <-> KEF');
 
     let nextId = 0;
     const imported = mergeImportedFlights({
@@ -406,7 +377,7 @@ describe('flight confirmation expense', () => {
       amount: 916.46,
       currency: 'USD',
       notes: 'Confirmation: AB2ZQV',
-      title: 'Flights EWR ↔ KEF',
+      title: 'Flights EWR <-> KEF',
     });
   });
 

@@ -139,7 +139,7 @@ export function FlightDetailsEditor({
         stackedLabel={DEPARTURE_TERMINAL_LABEL}
         value={value.departureTerminal}
         onChangeText={(nextValue) => update('departureTerminal', nextValue)}
-        placeholder="Terminal C"
+        placeholder="Terminal"
         autoCapitalize="characters"
         maxLength={24}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -151,7 +151,7 @@ export function FlightDetailsEditor({
         stackedLabel={DEPARTURE_GATE_LABEL}
         value={value.departureGate}
         onChangeText={(nextValue) => update('departureGate', nextValue)}
-        placeholder="C5"
+        placeholder="Gate"
         autoCapitalize="characters"
         maxLength={12}
         {...itinerarySheetFieldProps(chrome, 'flight')}
@@ -174,7 +174,7 @@ export function FlightDetailsEditor({
         stackedLabel="Arrival Terminal"
         value={value.arrivalTerminal}
         onChangeText={(nextValue) => update('arrivalTerminal', nextValue)}
-        placeholder="Terminal B"
+        placeholder="Terminal"
         autoCapitalize="characters"
         maxLength={24}
         {...itinerarySheetFieldProps(chrome, 'location')}
@@ -186,7 +186,7 @@ export function FlightDetailsEditor({
         stackedLabel="Arrival Gate"
         value={value.arrivalGate}
         onChangeText={(nextValue) => update('arrivalGate', nextValue)}
-        placeholder="B22"
+        placeholder="Gate"
         autoCapitalize="characters"
         maxLength={12}
         {...itinerarySheetFieldProps(chrome, 'flight')}
@@ -233,7 +233,7 @@ export function FlightDetailsEditor({
         helperText={airportHelper(value.connectionAirport ?? '')}
         value={value.connectionAirport ?? ''}
         onChangeText={(nextValue) => update('connectionAirport', nextValue)}
-        placeholder="IAH"
+        placeholder="Airport Code"
         autoCapitalize="characters"
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />

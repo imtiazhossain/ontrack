@@ -68,7 +68,8 @@ export function TravelItineraryAddSheet({
   const { spacing: rs } = useResponsive();
   const kindLabel =
     ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
-  const title = kind === 'moment' ? 'Add Moment' : `Add ${kindLabel}`;
+  const title =
+    kind === 'moment' ? 'Add Moment' : kind === 'flight' ? 'Add Flights' : `Add ${kindLabel}`;
   const submitLabel = kind === 'moment' ? 'Add Moment' : 'Add to Timeline';
   // Keep room for the status bar; sheet itself is always flush to the screen bottom.
   const sheetMaxHeight = Math.round(windowHeight * 0.92);

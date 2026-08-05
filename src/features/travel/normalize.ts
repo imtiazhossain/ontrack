@@ -1,5 +1,6 @@
 import { asPositiveNumber, asString } from '@/utils/parse';
 import { normalizeCurrencyCode } from './expenses/format-money';
+import { withRoundTripFlightExpenseTitles } from './flight-expense-title';
 import { normalizeFlightDetails } from './flight-details';
 import { normalizeRentalDetails } from './rental-details';
 import { normalizeStayDetails } from './stay-details';
@@ -524,7 +525,7 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
   );
   const itinerary = repairLegacyHertzRentalImport(repairedImport.itinerary);
   const participants = normalizeTravelParticipants(plan.participants);
-  return {
+  return withRoundTripFlightExpenseTitles({
     id: plan.id,
     ...(typeof plan.chatAccessCode === 'string' &&
     /^[a-f0-9]{20}$/.test(plan.chatAccessCode)
@@ -584,7 +585,7 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
     ),
     createdAt: asString(plan.createdAt) ?? asString(plan.updatedAt) ?? fallbackTimestamp,
     updatedAt: asString(plan.updatedAt) ?? asString(plan.createdAt) ?? fallbackTimestamp,
-  };
+  });
 }
 
 export function normalizeTravelPlans(value: unknown): TravelPlan[] {

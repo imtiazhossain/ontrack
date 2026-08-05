@@ -308,12 +308,13 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.travel.flight.arrivalTerminal`           | Set the arrival airport terminal                   |
 | `ontrack.travel.flight.departureGate`             | Set the departure airport gate                     |
 | `ontrack.travel.flight.arrivalGate`               | Set the arrival airport gate                       |
-| `ontrack.travel.flight.status.<itemId>`           | View current flight status on explicit tap         |
-| `ontrack.travel.flight.copyConfirmation.<itemId>` | Copy the flight confirmation number                |
+| `ontrack.travel.flight.status.<itemId>`           | Sync / check current flight status from booking panel |
+| `ontrack.travel.flight.openConfirmation.<itemId>` | Open the uploaded flight confirmation document     |
 | `ontrack.travel.confirmation.importAction.flight` | Import flight details from a confirmation          |
 | `ontrack.travel.confirmation.importAction.rental` | Import rental details from a confirmation          |
 | `ontrack.travel.confirmation.importAction.stay`   | Import stay details from a confirmation            |
 | `ontrack.travel.timelineItem.<itemId>.editFlight` | Edit a flight itinerary leg                        |
+| `ontrack.travel.timelineItem.<itemId>.openAddress` | Open a stay address via the system share / Open-with sheet |
 | `ontrack.travel.addPhotos.confirmRemovePhoto`     | Confirm photo removal                              |
 | `ontrack.travel.importResult.close`               | Close an import result and return to the itinerary |
 | `ontrack.travel.importResult.reviewExpense`       | Review the expense related to an import            |
@@ -397,8 +398,21 @@ Deep link: `ontrack://health` / Expo route `/(tabs)/health`
 | `ontrack.travel.itineraryAdd.title`            | Itinerary item name                                                      |
 | `ontrack.travel.itineraryAdd.importScreenshots`| Import a confirmation from photo screenshots                             |
 | `ontrack.travel.itineraryAdd.importDocument`   | Import a confirmation from a document or email                           |
+| `ontrack.travel.itineraryAdd.tripType.one-way` | Add Flight: one-way trip type                                            |
+| `ontrack.travel.itineraryAdd.tripType.round-trip` | Add Flight: roundtrip trip type                                       |
 | `ontrack.travel.itineraryAdd.date`             | Itinerary departure/start date                                           |
 | `ontrack.travel.itineraryAdd.time`             | Itinerary departure/start time                                           |
+| `ontrack.travel.itineraryAdd.returnDate`       | Roundtrip returning departure date                                       |
+| `ontrack.travel.itineraryAdd.returnTime`       | Roundtrip returning departure time                                       |
+| `ontrack.travel.itineraryAdd.returnEndDate`    | Roundtrip returning arrival date                                         |
+| `ontrack.travel.itineraryAdd.returnEndTime`    | Roundtrip returning arrival time                                         |
+| `ontrack.travel.itineraryAdd.returnTitle`      | Roundtrip returning name                                                 |
+| `ontrack.travel.itineraryAdd.returnAirline`    | Roundtrip returning airline                                              |
+| `ontrack.travel.itineraryAdd.returnFlightNumber` | Roundtrip returning flight number                                      |
+| `ontrack.travel.itineraryAdd.returnFrom`       | Roundtrip returning from airport                                         |
+| `ontrack.travel.itineraryAdd.returnTo`         | Roundtrip returning to airport                                           |
+| `ontrack.travel.itineraryAdd.returnLayoverDuration` | Roundtrip returning layover duration                                |
+| `ontrack.travel.itineraryAdd.returnConnectionAirport` | Roundtrip returning connection airport                            |
 | `ontrack.travel.itineraryAdd.submit`           | Save the itinerary item                                                  |
 | `ontrack.travel.tripMode.<mode>`               | Choose the trip's primary travel mode                                    |
 | `ontrack.travel.newTrip.origin`                | Optional new-trip starting point                                         |
@@ -456,6 +470,7 @@ Deep link: `ontrack://travel/<planId>` → `/travel/[id]`
 | `ontrack.travel.itineraryAdd.close`            | Close add-to-timeline sheet                           |
 | `ontrack.travel.expenses.paidBy.<personId>`    | Paid By person avatar (`self`, `host`, `member:…`, …) |
 | `ontrack.travel.expenses.splitWith.<personId>` | Split With person avatar                              |
+| `ontrack.travel.expenses.list`                 | Expenses list sheet body (wait target)                |
 | `ontrack.travel.expenses.addExpense`           | Add Expense (list footer)                             |
 | `ontrack.travel.expenses.submitExpense`        | Add Expense submit (editor)                           |
 | `ontrack.travel.expenses.saveExpense`          | Save Expense submit (editor)                          |

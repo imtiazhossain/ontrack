@@ -1,9 +1,10 @@
 import {
-  confirmationUrisForDisplay,
-  isImageConfirmationUri,
-  newestStoredConfirmationUris,
-  normalizeConfirmationUris,
-  resolveConfirmationUris,
+    asConfirmationFileUri,
+    confirmationUrisForDisplay,
+    isImageConfirmationUri,
+    newestStoredConfirmationUris,
+    normalizeConfirmationUris,
+    resolveConfirmationUris,
 } from '../confirmation-attachments';
 
 describe('confirmation attachments', () => {
@@ -12,6 +13,7 @@ describe('confirmation attachments', () => {
       normalizeConfirmationUris([
         'file:///documents/travel-confirmations/rental/a.jpg',
         ' content://media/123 ',
+        '/var/mobile/Containers/Data/Application/ABC/Documents/travel-confirmations/flight/a.jpg',
         'https://example.com/x.jpg',
         '',
         12,
@@ -19,7 +21,13 @@ describe('confirmation attachments', () => {
     ).toEqual([
       'file:///documents/travel-confirmations/rental/a.jpg',
       'content://media/123',
+      'file:///var/mobile/Containers/Data/Application/ABC/Documents/travel-confirmations/flight/a.jpg',
     ]);
+  });
+
+  it('coerces bare absolute paths to file URIs', () => {
+    expect(asConfirmationFileUri('/tmp/a.pdf')).toBe('file:///tmp/a.pdf');
+    expect(asConfirmationFileUri('file:///tmp/a.pdf')).toBe('file:///tmp/a.pdf');
   });
 
   it('detects image confirmation URIs', () => {

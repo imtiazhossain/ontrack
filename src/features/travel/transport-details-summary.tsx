@@ -3,13 +3,13 @@ import { View } from 'react-native';
 
 import { Button } from '@/components/primitives';
 import {
-  confirmationUrisForDisplay,
-  openConfirmationAttachments,
+    confirmationUrisForDisplay,
+    openConfirmationAttachments,
 } from '@/features/travel/confirmation-attachments';
 import { ConfirmationDocumentCue } from '@/features/travel/confirmation-document-cue';
+import { transportDirectionsUrl } from '@/features/travel/transport-details';
 import { TravelDetailsSummaryCard } from '@/features/travel/travel-details-summary-card';
 import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
-import { transportDirectionsUrl } from '@/features/travel/transport-details';
 import { transportModeIcon, transportModeLabel } from '@/features/travel/travel-mode';
 import type { TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -99,7 +99,6 @@ export function TransportDetailsSummary({
         <ConfirmationDocumentCue
           uris={details.confirmationUris}
           kind="transport"
-          accentColor={accent}
           accessibilityLabel="View uploaded transport ticket"
         />
       </View>

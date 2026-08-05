@@ -13,8 +13,25 @@ describe('canonical design-system contract', () => {
       'FormSection',
       'SheetScaffold',
       'DestructiveSection',
+      'StackedFieldLabel',
+      'fieldTitleCase',
     ]) {
       expect(barrel).toContain(name);
+    }
+  });
+
+  it('routes stacked field titles through StackedFieldLabel', () => {
+    for (const relative of [
+      'src/components/primitives/input.tsx',
+      'src/components/primitives/date-field.tsx',
+      'src/components/primitives/time-field.ios.tsx',
+      'src/components/android/material-time-field.tsx',
+    ]) {
+      const source = read(relative);
+      expect(source).toContain('StackedFieldLabel');
+      expect(source).not.toMatch(
+        /variant="caption"[\s\S]{0,120}\{stackedLabel\}/,
+      );
     }
   });
 
@@ -60,9 +77,9 @@ describe('canonical design-system contract', () => {
     const grid = read('src/features/travel/travel-trip-action-grid.tsx');
     expect(actions).toContain('variant="secondary"');
     expect(grid).toContain('label="Trip Itinerary"');
-    expect(grid).toContain('title="Book & organize"');
-    expect(grid).toContain('title="At your destination"');
-    expect(grid).toContain('title="Travel together"');
+    expect(grid).toContain('title="Book & Organize"');
+    expect(grid).toContain('title="At Your Destination"');
+    expect(grid).toContain('title="Travel Together"');
     expect(grid.indexOf('TravelSheetPrimaryAction')).toBeLessThan(
       grid.indexOf('<ActionGroup'),
     );

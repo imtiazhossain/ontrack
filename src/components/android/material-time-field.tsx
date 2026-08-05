@@ -8,6 +8,7 @@ import {
   fieldLeadingIconRowStyle,
 } from '@/components/primitives/field-leading-icon';
 import { stackedFieldMinHeight } from '@/components/primitives/field-leading-icon-style';
+import { StackedFieldLabel } from '@/components/primitives/stacked-field-label';
 import { Symbol } from '@/components/primitives/symbol';
 import {
   clampMinutesFromMidnight,
@@ -86,17 +87,9 @@ export function MaterialTimeField({
         />
         {stacked ? (
           <View style={styles.stackedCopy}>
-            <AppText
-              variant="caption"
-              fit
-              numberOfLines={1}
-              style={{
-                flexShrink: 1,
-                minWidth: 0,
-                color: stackedLabelColor ?? theme.textPrimary,
-              }}>
-              {stackedLabel}
-            </AppText>
+            <StackedFieldLabel color={stackedLabelColor ?? theme.textPrimary}>
+              {stackedLabel!}
+            </StackedFieldLabel>
             <AppText
               variant="body"
               fit

@@ -15,10 +15,13 @@ export function ConfirmationImportBanner({
   fileName,
   uris,
   kind,
+  note,
 }: {
   fileName: string;
   uris?: string[];
   kind: 'flight' | 'rental' | 'stay';
+  /** Extra review guidance (e.g. round-trip expands on save). */
+  note?: string;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
@@ -75,6 +78,11 @@ export function ConfirmationImportBanner({
           style={styles.fileName}>
           {fileName}
         </AppText>
+        {note ? (
+          <AppText variant="caption" color="secondary" style={styles.fileName}>
+            {note}
+          </AppText>
+        ) : null}
       </View>
       {canOpen ? (
         <View pointerEvents="none" style={styles.chevronSlot}>

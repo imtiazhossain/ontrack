@@ -14,9 +14,9 @@ describe('flight confirmation add-sheet import', () => {
     const branchEnd = source.indexOf("if (target !== 'new')", branchStart);
     const addSheetBranch = source.slice(branchStart, branchEnd);
 
-    expect(addSheetBranch).toContain(
-      'applyFlightScheduleToAddSheet(addSheet, importedSchedule);',
-    );
+    expect(addSheetBranch).toContain('applyFlightScheduleToAddSheet(');
+    expect(addSheetBranch).toContain('splitRoundTripDirections(imported.segments)');
+    expect(addSheetBranch).toContain('addSheet.setReturnFlightDetails');
     expect(addSheetBranch).toContain('addSheet.setFlightDetails');
     expect(addSheetBranch).toContain('addSheet.setPendingFlightImport(imported)');
     expect(addSheetBranch).not.toContain('updatePlan(');

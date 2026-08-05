@@ -2,6 +2,33 @@ import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import { flightConfirmationSchedule } from '../flight-confirmation-schedule';
 
 describe('flight confirmation editor schedule', () => {
+  it('schedules the outbound leg only for a round-trip confirmation', () => {
+    const parsed = parseFlightConfirmation(
+      `
+        OUTBOUND FLIGHT
+        Flight FI 622
+        Newark (EWR) → Reykjavik (KEF)
+        Departure: September 8, 2026 8:25 PM
+        Duration: 5h 50m
+
+        RETURN FLIGHT
+        Flight FI 623
+        Reykjavik (KEF) → Newark (EWR)
+        Departure: September 14, 2026 5:00 PM
+        Duration: 6h 15m
+      `,
+      { startDate: '2026-09-08', endDate: '2026-09-14' },
+    );
+
+    expect(flightConfirmationSchedule(parsed)).toMatchObject({
+      departureDate: '2026-09-08',
+      departureMinutes: 20 * 60 + 25,
+      arrivalDate: '2026-09-09',
+      arrivalMinutes: 6 * 60 + 15,
+      durationMinutes: 5 * 60 + 50,
+    });
+  });
+
   it('fills departure and final arrival for a connecting Chase screenshot', () => {
     const sourceText = `
       Flight details

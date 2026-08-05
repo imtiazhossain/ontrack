@@ -1,12 +1,12 @@
 import { airportTimeZone } from '@/features/travel/airport-timezones';
 import {
-  DAY_MS,
-  addDays,
-  formatDuration,
-  formatMinutes,
-  fromDateKey,
-  minutesBetween,
-  toDateKey,
+    DAY_MS,
+    addDays,
+    formatDuration,
+    formatMinutes,
+    fromDateKey,
+    minutesBetween,
+    toDateKey,
 } from '@/utils/date';
 
 export type FlightArrival = {
@@ -180,20 +180,6 @@ export function formatFlightLandingLabel(arrival: FlightArrival): string {
   if (arrival.dayOffset === 0) return time;
   const sign = arrival.dayOffset > 0 ? '+' : '';
   return `${time} (${sign}${arrival.dayOffset})`;
-}
-
-/** Compact local clock range, e.g. `5:21–7:00 AM` when both share a meridiem. */
-export function formatMinutesRange(startMinutes: number, endMinutes: number): string {
-  const startLabel = formatMinutes(startMinutes);
-  const endLabel = formatMinutes(endMinutes);
-  const meridiem = (label: string) =>
-    label.endsWith(' AM') ? ' AM' : label.endsWith(' PM') ? ' PM' : '';
-  const startMeridiem = meridiem(startLabel);
-  const endMeridiem = meridiem(endLabel);
-  if (startMeridiem && startMeridiem === endMeridiem) {
-    return `${startLabel.slice(0, -startMeridiem.length)}–${endLabel}`;
-  }
-  return `${startLabel}–${endLabel}`;
 }
 
 export type FlightItineraryCaptionInput = {

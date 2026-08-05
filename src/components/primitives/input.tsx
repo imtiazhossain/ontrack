@@ -17,6 +17,7 @@ import { formatNumericInput } from '@/utils/parse';
 import { AppText } from './app-text';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
+import { StackedFieldLabel } from './stacked-field-label';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -174,17 +175,12 @@ export function Input({
                 styles.stackedCopy,
                 stackedCentered ? styles.stackedCopyCentered : null,
               ]}>
-              <AppText
-                variant="caption"
-                fit
-                numberOfLines={1}
-                style={[
-                  styles.stackedLabel,
-                  stackedCentered ? styles.stackedLabelCentered : null,
-                  { color: stackedLabelColor ?? theme.textPrimary },
-                ]}>
-                {stackedLabel}
-              </AppText>
+              <StackedFieldLabel
+                color={stackedLabelColor ?? theme.textPrimary}
+                align={stackedCentered ? 'center' : 'start'}
+                style={styles.stackedLabel}>
+                {stackedLabel!}
+              </StackedFieldLabel>
               <TextInput
                 ref={inputRef}
                 testID={testID}
@@ -374,11 +370,6 @@ const styles = StyleSheet.create({
   stackedLabel: {
     flexShrink: 1,
     minWidth: 0,
-    zIndex: 1,
-  },
-  stackedLabelCentered: {
-    textAlign: 'center',
-    width: '100%',
   },
   chromeLabel: {
     flex: 1,

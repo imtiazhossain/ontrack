@@ -205,8 +205,8 @@ export const AgentUiIds = {
       departureGate: 'ontrack.travel.flight.departureGate',
       arrivalGate: 'ontrack.travel.flight.arrivalGate',
       status: (itemId: string) => `ontrack.travel.flight.status.${itemId}`,
-      copyConfirmation: (itemId: string) =>
-        `ontrack.travel.flight.copyConfirmation.${itemId}`,
+      openConfirmation: (itemId: string) =>
+        `ontrack.travel.flight.openConfirmation.${itemId}`,
     },
     transport: {
       mode: (mode: string) => `ontrack.travel.transport.mode.${mode}`,
@@ -359,6 +359,8 @@ export const AgentUiIds = {
         `ontrack.travel.timelineItem.${itemId}.${phase}`,
       editFlight: (itemId: string) =>
         `ontrack.travel.timelineItem.${itemId}.editFlight`,
+      openAddress: (itemId: string) =>
+        `ontrack.travel.timelineItem.${itemId}.openAddress`,
     },
     flightSearch: {
       back: 'ontrack.travel.flightSearch.back',
@@ -396,6 +398,8 @@ export const AgentUiIds = {
     expenses: {
       paidBy: 'ontrack.travel.expenses.paidBy',
       splitWith: 'ontrack.travel.expenses.splitWith',
+      /** Stable wait target when the Expenses list sheet is open. */
+      list: 'ontrack.travel.expenses.list',
       addExpense: 'ontrack.travel.expenses.addExpense',
       submitExpense: 'ontrack.travel.expenses.submitExpense',
       saveExpense: 'ontrack.travel.expenses.saveExpense',
@@ -416,11 +420,25 @@ export const AgentUiIds = {
       close: 'ontrack.travel.itineraryAdd.close',
       importScreenshots: 'ontrack.travel.itineraryAdd.importScreenshots',
       importDocument: 'ontrack.travel.itineraryAdd.importDocument',
+      tripType: (value: 'one-way' | 'round-trip') =>
+        `ontrack.travel.itineraryAdd.tripType.${value}`,
       title: 'ontrack.travel.itineraryAdd.title',
       date: 'ontrack.travel.itineraryAdd.date',
       time: 'ontrack.travel.itineraryAdd.time',
       endDate: 'ontrack.travel.itineraryAdd.endDate',
       endTime: 'ontrack.travel.itineraryAdd.endTime',
+      returnTitle: 'ontrack.travel.itineraryAdd.returnTitle',
+      returnDate: 'ontrack.travel.itineraryAdd.returnDate',
+      returnTime: 'ontrack.travel.itineraryAdd.returnTime',
+      returnEndDate: 'ontrack.travel.itineraryAdd.returnEndDate',
+      returnEndTime: 'ontrack.travel.itineraryAdd.returnEndTime',
+      returnAirline: 'ontrack.travel.itineraryAdd.returnAirline',
+      returnFlightNumber: 'ontrack.travel.itineraryAdd.returnFlightNumber',
+      returnFrom: 'ontrack.travel.itineraryAdd.returnFrom',
+      returnTo: 'ontrack.travel.itineraryAdd.returnTo',
+      returnLayoverDuration: 'ontrack.travel.itineraryAdd.returnLayoverDuration',
+      returnConnectionAirport:
+        'ontrack.travel.itineraryAdd.returnConnectionAirport',
       details: 'ontrack.travel.itineraryAdd.details',
       bookingUrl: 'ontrack.travel.itineraryAdd.bookingUrl',
       submit: 'ontrack.travel.itineraryAdd.submit',

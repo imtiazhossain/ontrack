@@ -78,6 +78,11 @@ export function expandAgentUiShortcuts(raw: string): string {
     return withQuery(`/travel/${importMatch[1]}?previewModal=import`);
   }
 
+  const expenseSavedMatch = /^travel\/([^/?#]+)\/expense-saved$/i.exec(path);
+  if (expenseSavedMatch) {
+    return withQuery(`/travel/${expenseSavedMatch[1]}?previewModal=expense-saved`);
+  }
+
   const expenseMatch = /^travel\/([^/?#]+)\/expense$/i.exec(path);
   if (expenseMatch) {
     return withQuery(`/travel/${expenseMatch[1]}?previewModal=expense`);

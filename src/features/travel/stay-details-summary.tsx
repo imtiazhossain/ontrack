@@ -1,14 +1,14 @@
 import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  formatDateKeyShort,
-  formatMinutes,
-  type DateDisplayFormat,
+    formatDateKeyShort,
+    formatMinutes,
+    type DateDisplayFormat,
 } from '@/utils/date';
 
 import {
-  confirmationUrisForDisplay,
-  openConfirmationAttachments,
+    confirmationUrisForDisplay,
+    openConfirmationAttachments,
 } from './confirmation-attachments';
 import { ConfirmationDocumentCue } from './confirmation-document-cue';
 import { TravelDetailsSummaryCard } from './travel-details-summary-card';
@@ -109,7 +109,6 @@ export function StayDetailsSummary({
       <ConfirmationDocumentCue
         uris={details.confirmationUris}
         kind="stay"
-        accentColor={accent}
         accessibilityLabel="View uploaded stay confirmation"
       />
     </TravelDetailsSummaryCard>

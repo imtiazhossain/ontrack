@@ -40,6 +40,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo` | Seed demo trip → open plan detail |
 | `travel-demo-list` | Seed → travel list with demo itinerary button |
 | `travel-demo-add-flight` | Seed → add-flight sheet |
+| `travel-demo-add-flight-roundtrip` | Seed → add-flight sheet prefilled from Chase round-trip fixture (`?importFlight=roundtrip`) |
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
 | `open-new-trip` | Travel list → New Trip sheet |
 | `travel-list` / `calendar` / `today` / `checklists` / `health` / `health-mood` / `activity-form` | Goto + settle |
@@ -103,7 +104,8 @@ Tap/goto no longer rewrite the dump by default.
 |----------|-------------|
 | `travel/<id>/add/flight` (also stay, rental, transport, activity, moment, timeline) | `/travel/<id>?add=<kind>` |
 | `travel/<id>/import` | `/travel/<id>?previewModal=import` |
-| `travel/<id>/expense` | `/travel/<id>?previewModal=expense` |
+| `travel/<id>/expense` | `/travel/<id>?previewModal=expense` (opens Expenses sheet) |
+| `travel/<id>/expense-saved` | `/travel/<id>?previewModal=expense-saved` (import success modal QA) |
 | `travel/<id>/stay-booking` | `/travel/<id>?openStayBooking=1` |
 | `travel/<id>/flights` / `stays` / `chat` | nested routes |
 | `health/mood` | `/health/mood-check-in` |

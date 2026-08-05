@@ -1,32 +1,30 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Symbol } from '@/components/primitives';
+import { AppText, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { formatFlightNumber } from '@/features/travel/airline-catalog';
 import {
-  flightPassengerLabel,
-  type FlightJourneyViewModel,
+    flightPassengerLabel,
+    type FlightJourneyViewModel,
 } from '@/features/travel/flight-journey-model';
 import {
-  travelCardBorder,
-  travelMainCardFill,
+    travelCardBorder,
+    travelMainCardFill,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { AgentUiIds } from '@/utils/agent-ui';
 import { formatDuration } from '@/utils/date';
 
-import { ConfirmationDocumentCue } from './confirmation-document-cue';
 import { formatFlightJourneyDate } from './flight-arrival';
 import { FlightBookingPanel } from './flight-booking-panel';
 import {
-  JourneyStrip,
-  LayoverBanner,
-  VerticalStop,
+    JourneyStrip,
+    LayoverBanner,
+    VerticalStop,
 } from './flight-journey-chrome';
 import {
-  useFlightStatus,
-  type FlightStatusRequest,
+    useFlightStatus,
+    type FlightStatusRequest,
 } from './use-flight-status';
 
 function JourneyHero({
@@ -123,7 +121,6 @@ export function FlightJourneyCard({
   const borderColor = travelCardBorder(theme);
   const fill = travelMainCardFill(theme);
   const passengerLabel = flightPassengerLabel({ passengerName, passengerCount });
-  const hasConfirmation = Boolean(confirmationUris?.length);
 
   return (
     <View
@@ -147,6 +144,7 @@ export function FlightJourneyCard({
       <FlightBookingPanel
         itemId={itemId}
         confirmationCode={confirmationCode}
+        confirmationUris={confirmationUris}
         passengerLabel={passengerLabel}
         status={status}
         accent={accentColor}
@@ -201,49 +199,6 @@ export function FlightJourneyCard({
         })}
       </View>
 
-      <View style={[styles.actions, { gap: rs.sm }]}>
-        {hasConfirmation ? (
-          <ConfirmationDocumentCue
-            uris={confirmationUris}
-            kind="flight"
-            size="md"
-            label="View Confirmation"
-            icon="note"
-            accessibilityLabel="View uploaded flight confirmation"
-            style={[styles.action, { backgroundColor: accentColor }]}
-          />
-        ) : null}
-        {status.available ? (
-          <Button
-            variant="secondary"
-            size="md"
-            leading={
-              status.loading ? undefined : (
-                <Symbol name="route" size="sm" color={accentColor} />
-              )
-            }
-            loading={status.loading}
-            testID={AgentUiIds.travel.flight.status(itemId)}
-            accessibilityLabel="View flight status"
-            onPress={status.check}
-            style={[
-              styles.action,
-              {
-                backgroundColor: fill,
-                borderWidth: StyleSheet.hairlineWidth * 2,
-                borderColor: accentColor,
-              },
-            ]}
-            textStyle={{ color: accentColor }}>
-            View Flight Status
-          </Button>
-        ) : null}
-      </View>
-      {status.error ? (
-        <AppText variant="caption" color="secondary" style={styles.centered}>
-          {status.error}
-        </AppText>
-      ) : null}
     </View>
   );
 }
@@ -269,12 +224,4 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     minHeight: 12,
   },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  action: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
-  centered: { textAlign: 'center' },
 });

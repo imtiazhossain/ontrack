@@ -4,6 +4,7 @@ import { appPrompt } from '@/components/primitives';
 import {
   expandedTripRangeForFlights,
   mergeImportedFlights,
+  splitRoundTripDirections,
 } from '@/features/travel/flight-confirmation-itinerary';
 import { applyImportedRentalToPlan } from '@/features/travel/apply-imported-rental';
 import {
@@ -13,13 +14,20 @@ import {
 } from '@/features/travel/flight-confirmation-import';
 import {
   flightConfirmationSchedule,
+  flightDirectionSchedule,
   type ImportedFlightSchedule,
 } from '@/features/travel/flight-confirmation-schedule';
 import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
 import { enrichFlightConfirmationTerminals } from '@/features/travel/flight-status-client';
 import type { ExpenseFormState } from '@/features/travel/expenses/expense-form';
 import { defaultSplitIds } from '@/features/travel/expenses/expense-math';
-import type { FlightDetailsDraft } from '@/features/travel/flight-details';
+import { emptyFlightDetailsDraft, type FlightDetailsDraft } from '@/features/travel/flight-details';
+import {
+  flightLegScheduleFromImported,
+  returnFlightTitle,
+  type FlightLegScheduleDraft,
+  type FlightTripType,
+} from '@/features/travel/flight-roundtrip-draft';
 import {
   importRentalConfirmation,
   type RentalConfirmationImportSource,
@@ -58,6 +66,10 @@ export type TravelPlanAddSheetImportBindings = {
   setFlightDetails: Dispatch<SetStateAction<FlightDetailsDraft>>;
   setFlightDetailsError: SetOptStr;
   setImportedFlightFileName: SetOptStr;
+  setFlightTripType: Dispatch<SetStateAction<FlightTripType>>;
+  setReturnFlightTitle: SetStr;
+  setReturnFlightDetails: Dispatch<SetStateAction<FlightDetailsDraft>>;
+  setReturnFlightSchedule: Dispatch<SetStateAction<FlightLegScheduleDraft>>;
   /** Full parsed confirmation so submit can expand connecting legs. */
   setPendingFlightImport: Dispatch<
     SetStateAction<ImportedFlightConfirmation | undefined>
@@ -240,12 +252,50 @@ export function useTravelPlanConfirmationImports({
         // Import only fills the draft. The user still owns the Add to Timeline action.
         // Keep the full parse so submit can expand connecting legs into the itinerary.
         addSheet.setPendingFlightImport(imported);
-        addSheet.setFlightDetails((current) =>
-          mergeFlightConfirmationDraftDetails(current, imported),
-        );
         addSheet.setImportedFlightFileName(imported.fileName);
-        if (imported.title) addSheet.setTitle(imported.title);
-        applyFlightScheduleToAddSheet(addSheet, importedSchedule);
+        const directions = splitRoundTripDirections(imported.segments);
+        const roundTrip = Boolean(directions);
+        addSheet.setFlightTripType(roundTrip ? 'round-trip' : 'one-way');
+        const outboundSegments = directions?.outbound ?? imported.segments;
+        addSheet.setFlightDetails((current) =>
+          mergeFlightConfirmationDraftDetails(current, {
+            ...imported,
+            segments: outboundSegments,
+          }),
+        );
+        if (directions) {
+          const returnDetails = mergeFlightConfirmationDraftDetails(
+            emptyFlightDetailsDraft(),
+            { ...imported, segments: directions.returning },
+          );
+          addSheet.setReturnFlightDetails(returnDetails);
+          addSheet.setReturnFlightSchedule(
+            flightLegScheduleFromImported(
+              flightDirectionSchedule(directions.returning, imported),
+            ),
+          );
+          addSheet.setReturnFlightTitle(
+            directions.returning[0]?.title?.trim() ||
+              returnFlightTitle(returnDetails),
+          );
+        }
+        // Round-trip review shows the outbound direction; title stays route-level when present.
+        if (imported.title) {
+          addSheet.setTitle(
+            roundTrip
+              ? outboundSegments[0]?.title || imported.title
+              : imported.title,
+          );
+        }
+        applyFlightScheduleToAddSheet(
+          addSheet,
+          directions
+            ? flightDirectionSchedule(directions.outbound, imported, {
+                date: addSheet.date,
+                startMinutes: addSheet.startMinutes ?? undefined,
+              })
+            : importedSchedule,
+        );
         if (imported.amount !== undefined && imported.amount > 0) {
           prepareImportedExpenseDraft(
             imported.amount,

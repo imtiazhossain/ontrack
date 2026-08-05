@@ -27,6 +27,7 @@ export default function TravelPlanScreen() {
     openStayBooking,
     reservationEmail,
     previewModal,
+    importFlight,
   } = useLocalSearchParams<{
     id: string;
     add?: string;
@@ -34,6 +35,7 @@ export default function TravelPlanScreen() {
     openStayBooking?: string;
     reservationEmail?: string;
     previewModal?: string;
+    importFlight?: string;
   }>();
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
@@ -50,12 +52,15 @@ export default function TravelPlanScreen() {
     __DEV__ && typeof reservationEmail === 'string'
       ? reservationEmail
       : undefined;
+  const initialOpenExpenses = __DEV__ && previewModal === 'expense';
   const initialImportResult: TravelImportResult | undefined =
     __DEV__ && previewModal === 'import'
       ? { stage: 'imported', kindLabel: 'Flight', duplicateItinerary: false }
-      : __DEV__ && previewModal === 'expense'
+      : __DEV__ && previewModal === 'expense-saved'
         ? { stage: 'expense-saved' }
         : undefined;
+  const initialFlightImportFixture =
+    __DEV__ && importFlight === 'roundtrip' ? ('roundtrip' as const) : undefined;
 
   // DEV-only: deep-link `?theme=dark|light|system` for simulator QA of themed sheets.
   useEffect(() => {
@@ -75,13 +80,15 @@ export default function TravelPlanScreen() {
         }}
       />
       <TravelPlanDetail
-        key={`${id}:${previewModal ?? ''}`}
+        key={`${id}:${previewModal ?? ''}:${importFlight ?? ''}`}
         planId={id}
         initialAddKind={initialAddKind}
         initialOpenAddPicker={initialOpenAddPicker}
         autoOpenStayBooking={autoOpenStayBooking}
         autoOpenReservationEmail={autoOpenReservationEmail}
+        initialOpenExpenses={initialOpenExpenses}
         initialImportResult={initialImportResult}
+        initialFlightImportFixture={initialFlightImportFixture}
       />
     </>
   );

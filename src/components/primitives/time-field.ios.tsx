@@ -13,6 +13,7 @@ import { AppText } from './app-text';
 import { IconButton } from './button';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
+import { StackedFieldLabel } from './stacked-field-label';
 import { Symbol } from './symbol';
 import {
   clampMinutesFromMidnight,
@@ -112,17 +113,9 @@ export function TimeField({
         />
         {stacked ? (
           <View style={styles.stackedCopy}>
-            <AppText
-              variant="caption"
-              fit
-              numberOfLines={1}
-              style={{
-                flexShrink: 1,
-                minWidth: 0,
-                color: stackedLabelColor ?? theme.textPrimary,
-              }}>
-              {stackedLabel}
-            </AppText>
+            <StackedFieldLabel color={stackedLabelColor ?? theme.textPrimary}>
+              {stackedLabel!}
+            </StackedFieldLabel>
             <AppText
               variant="body"
               fit

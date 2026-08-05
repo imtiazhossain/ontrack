@@ -17,6 +17,7 @@ KNOWN_FLOWS=(
   travel-demo
   travel-demo-list
   travel-demo-add-flight
+  travel-demo-add-flight-roundtrip
   travel-demo-edit-flight
   open-new-trip
   calendar

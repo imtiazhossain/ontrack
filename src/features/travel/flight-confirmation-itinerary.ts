@@ -1,6 +1,6 @@
 import {
-  calculateFlightArrival,
-  calculateFlightDuration,
+    calculateFlightArrival,
+    calculateFlightDuration,
 } from './flight-arrival';
 import type { ParsedFlightSegment } from './flight-confirmation-parser';
 import { flightLegsFromSegments } from './flight-journey-model';
@@ -59,7 +59,7 @@ function sameFlight(
   );
 }
 
-function connectionArrivalMinutesForSegment(
+export function connectionArrivalMinutesForSegment(
   segment: ParsedFlightSegment,
 ): number | undefined {
   if (segment.arrivalMinutes !== undefined) return segment.arrivalMinutes;
@@ -227,104 +227,154 @@ function importedItemValues(
   };
 }
 
-function isConnectingSegmentGroup(segments: ParsedFlightSegment[]): boolean {
+function segmentDateGapDays(
+  current?: ParsedFlightSegment,
+  next?: ParsedFlightSegment,
+): number | undefined {
+  if (!current?.date || !next?.date) return undefined;
+  const gapMs =
+    new Date(`${next.date}T12:00:00`).getTime() -
+    new Date(`${current.date}T12:00:00`).getTime();
+  return Math.round(gapMs / (24 * 60 * 60 * 1000));
+}
+
+/** True when segments are same-journey connections (not outbound + return). */
+export function isConnectingSegmentGroup(
+  segments: ParsedFlightSegment[],
+): boolean {
   if (segments.length < 2) return false;
-  if (
-    segments.some(
-      (segment, index) =>
-        index < segments.length - 1 && Boolean(segment.layoverMinutesAfter),
-    )
-  ) {
-    return true;
-  }
   for (let index = 0; index < segments.length - 1; index++) {
     const current = segments[index]!;
     const next = segments[index + 1]!;
+    const gapDays = segmentDateGapDays(current, next);
+    // Round-trips often leave days later; connections are same/next day.
+    if (gapDays !== undefined && gapDays > 1) return false;
+    if (current.layoverMinutesAfter) continue;
     const arrival = current.flight.arrivalAirport?.trim().toUpperCase();
     const departure = next.flight.departureAirport?.trim().toUpperCase();
     if (!arrival || !departure || arrival !== departure) return false;
-    if (current.date && next.date) {
-      const gapMs =
-        new Date(`${next.date}T12:00:00`).getTime() -
-        new Date(`${current.date}T12:00:00`).getTime();
-      const gapDays = Math.round(gapMs / (24 * 60 * 60 * 1000));
-      // Round-trips often leave days later; connections are same/next day.
-      if (gapDays > 1) return false;
-    }
   }
   return true;
 }
 
+/** Outbound + return (or other multi-day non-connection) segment groups. */
+export function isRoundTripSegmentGroup(
+  segments: ParsedFlightSegment[],
+): boolean {
+  return segments.length > 1 && !isConnectingSegmentGroup(segments);
+}
+
 /**
- * Merge parsed flights into the itinerary.
- * True connecting confirmations collapse to one journey item with `legs`.
- * Outbound + return (multi-day) stay as separate items.
+ * Split a round-trip confirmation into outbound vs returning directions at the
+ * largest calendar gap (turnaround). Connecting legs stay inside each side.
  */
-export function mergeImportedFlights({
-  itinerary,
-  segments,
-  tripRange,
-  createId,
-  targetItemId,
-  confirmationUris,
-}: MergeImportedFlightsOptions): TravelItineraryItem[] {
+export function splitRoundTripDirections(
+  segments: ParsedFlightSegment[],
+):
+  | { outbound: ParsedFlightSegment[]; returning: ParsedFlightSegment[] }
+  | undefined {
+  if (!isRoundTripSegmentGroup(segments)) return undefined;
+
+  let splitAfter = Math.floor((segments.length - 1) / 2);
+  let largestGap = -1;
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const gap = segmentDateGapDays(segments[index], segments[index + 1]);
+    if (gap !== undefined && gap > largestGap) {
+      largestGap = gap;
+      splitAfter = index;
+    }
+  }
+
+  const outbound = segments.slice(0, splitAfter + 1);
+  const returning = segments.slice(splitAfter + 1);
+  if (!outbound.length || !returning.length) return undefined;
+  return { outbound, returning };
+}
+
+function mergeConnectingJourney(
+  itinerary: TravelItineraryItem[],
+  segments: ParsedFlightSegment[],
+  tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
+  createId: () => string,
+  targetItemId: string | undefined,
+  confirmationUris?: string[],
+): TravelItineraryItem[] {
+  const values = connectingJourneyValues(
+    segments,
+    tripRange,
+    confirmationUris,
+  );
+  const merged = [...itinerary];
+  const segmentFlightNumbers = new Set(
+    segments
+      .map((segment) => segment.flight.flightNumber.trim().toUpperCase())
+      .filter(Boolean),
+  );
+  // Drop prior legs from the same connecting confirmation when re-importing.
+  const withoutPriorLegs = merged.filter((item) => {
+    if (item.id === targetItemId) return true;
+    if (item.kind !== 'flight') return true;
+    const number = item.flight?.flightNumber?.trim().toUpperCase();
+    return !number || !segmentFlightNumbers.has(number);
+  });
+
+  const targetIndex = targetItemId
+    ? withoutPriorLegs.findIndex((item) => item.id === targetItemId)
+    : withoutPriorLegs.findIndex((item) =>
+        sameFlight(item, segments[0]!, values.date),
+      );
+
+  if (targetIndex >= 0) {
+    const next = [...withoutPriorLegs];
+    next[targetIndex] = {
+      ...next[targetIndex],
+      kind: 'flight',
+      ...values,
+      flight: {
+        ...next[targetIndex].flight,
+        ...values.flight,
+      },
+    };
+    return next;
+  }
+
+  return [
+    ...withoutPriorLegs,
+    {
+      id: createId(),
+      kind: 'flight',
+      durationMinutes: 60,
+      ...values,
+    },
+  ];
+}
+
+function mergeDirectionSegments(
+  itinerary: TravelItineraryItem[],
+  segments: ParsedFlightSegment[],
+  tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
+  createId: () => string,
+  targetItemId: string | undefined,
+  confirmationUris: string[] | undefined,
+  directionIndex: number,
+): TravelItineraryItem[] {
+  if (segments.length === 0) return itinerary;
   if (isConnectingSegmentGroup(segments)) {
-    const values = connectingJourneyValues(
+    return mergeConnectingJourney(
+      itinerary,
       segments,
       tripRange,
+      createId,
+      targetItemId,
       confirmationUris,
     );
-    const merged = [...itinerary];
-    const segmentFlightNumbers = new Set(
-      segments
-        .map((segment) => segment.flight.flightNumber.trim().toUpperCase())
-        .filter(Boolean),
-    );
-    // Drop prior legs from the same connecting confirmation when re-importing.
-    const withoutPriorLegs = merged.filter((item) => {
-      if (item.id === targetItemId) return true;
-      if (item.kind !== 'flight') return true;
-      const number = item.flight?.flightNumber?.trim().toUpperCase();
-      return !number || !segmentFlightNumbers.has(number);
-    });
-
-    const targetIndex = targetItemId
-      ? withoutPriorLegs.findIndex((item) => item.id === targetItemId)
-      : withoutPriorLegs.findIndex((item) =>
-          sameFlight(item, segments[0]!, values.date),
-        );
-
-    if (targetIndex >= 0) {
-      const next = [...withoutPriorLegs];
-      next[targetIndex] = {
-        ...next[targetIndex],
-        kind: 'flight',
-        ...values,
-        flight: {
-          ...next[targetIndex].flight,
-          ...values.flight,
-        },
-      };
-      return next;
-    }
-
-    return [
-      ...withoutPriorLegs,
-      {
-        id: createId(),
-        kind: 'flight',
-        durationMinutes: 60,
-        ...values,
-      },
-    ];
   }
 
   const merged = [...itinerary];
-
   segments.forEach((segment, index) => {
     const values = importedItemValues(
       segment,
-      index,
+      directionIndex + index,
       tripRange,
       confirmationUris,
       segments[index + 1],
@@ -356,6 +406,63 @@ export function mergeImportedFlights({
       ...values,
     });
   });
-
   return merged;
+}
+
+/**
+ * Merge parsed flights into the itinerary.
+ * True connecting confirmations collapse to one journey item with `legs`.
+ * Outbound + return (multi-day) stay as separate items; layovers inside each
+ * direction still collapse to that direction’s journey.
+ */
+export function mergeImportedFlights({
+  itinerary,
+  segments,
+  tripRange,
+  createId,
+  targetItemId,
+  confirmationUris,
+}: MergeImportedFlightsOptions): TravelItineraryItem[] {
+  if (isConnectingSegmentGroup(segments)) {
+    return mergeConnectingJourney(
+      itinerary,
+      segments,
+      tripRange,
+      createId,
+      targetItemId,
+      confirmationUris,
+    );
+  }
+
+  const directions = splitRoundTripDirections(segments);
+  if (directions) {
+    const withOutbound = mergeDirectionSegments(
+      itinerary,
+      directions.outbound,
+      tripRange,
+      createId,
+      targetItemId,
+      confirmationUris,
+      0,
+    );
+    return mergeDirectionSegments(
+      withOutbound,
+      directions.returning,
+      tripRange,
+      createId,
+      undefined,
+      confirmationUris,
+      1,
+    );
+  }
+
+  return mergeDirectionSegments(
+    itinerary,
+    segments,
+    tripRange,
+    createId,
+    targetItemId,
+    confirmationUris,
+    0,
+  );
 }

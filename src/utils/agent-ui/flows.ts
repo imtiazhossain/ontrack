@@ -41,6 +41,15 @@ export const AGENT_UI_FLOWS = {
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/flight` },
     { op: 'wait', prefix: 'ontrack.travel.itineraryAdd.', timeoutMs: 5000 },
   ],
+  'travel-demo-add-flight-roundtrip': [
+    { op: 'seed', to: 'travel-demo' },
+    {
+      op: 'goto',
+      to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/flight?importFlight=roundtrip`,
+    },
+    { op: 'wait', prefix: 'ontrack.travel.itineraryAdd.', timeoutMs: 5000 },
+    { op: 'wait', ms: 400 },
+  ],
   'travel-demo-edit-flight': [
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },

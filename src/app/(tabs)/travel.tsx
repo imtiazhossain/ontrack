@@ -6,6 +6,7 @@ import { appPrompt, EmptyState, Screen, ScreenHeader, useSafeAreaChrome } from '
 import { spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
 import { isTravelPlanOnCalendar, travelCalendarDrafts } from '@/features/travel/calendar';
 import { tripDayCount, validateTravelDateRange } from '@/features/travel/date-range';
 import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
@@ -16,21 +17,21 @@ import { TravelCurrencySheet } from '@/features/travel/travel-currency-sheet';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
-import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import {
+    travelSafeAreaBackground,
     TravelSectionLabel,
     TravelSurfaceCard,
-    travelSafeAreaBackground,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
+import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import { TravelTripCardHeader } from '@/features/travel/travel-trip-card-header';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
 import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
-import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
+import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
 import { TravelWeatherSheet } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
@@ -241,7 +242,7 @@ function TravelScreenContent() {
     if (validation.error) return setError(validation.error);
     const now = new Date().toISOString();
     const planId = newId('trip');
-    const saved = savePlan({
+    const basePlan: TravelPlan = {
       id: planId,
       ...detailsValidation.value,
       mode,
@@ -254,7 +255,15 @@ function TravelScreenContent() {
       expenses: [],
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    const withFlights = flightImport.pendingImport
+      ? applyImportedFlightsToPlan({
+          plan: basePlan,
+          imported: flightImport.pendingImport,
+          createId: () => newId('trip-item'),
+        })
+      : basePlan;
+    const saved = savePlan(withFlights);
     if (!saved) {
       setError('Couldn’t create this trip. Your details are still here—please try again.');
       return;
@@ -267,6 +276,7 @@ function TravelScreenContent() {
     setStartDate('');
     setEndDate('');
     setNotes('');
+    flightImport.clearPendingImport();
     setPendingCreatedTripId(planId);
     setShowForm(false);
   };

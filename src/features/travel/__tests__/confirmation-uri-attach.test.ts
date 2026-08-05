@@ -1,13 +1,16 @@
 import {
-  attachOrphanedFlightConfirmationUris,
-  mergeDuplicateItemConfirmationUris,
+    attachOrphanedFlightConfirmationUris,
+    mergeDuplicateItemConfirmationUris,
 } from '../confirmation-uri-attach';
 import type { TravelPlan } from '../types';
 
+const mockNewestStoredConfirmationUris = jest.fn(() => [
+  'file:///Documents/travel-confirmations/flight/latest.jpg',
+]);
+
 jest.mock('../confirmation-attachments', () => ({
-  newestStoredConfirmationUris: jest.fn(() => [
-    'file:///Documents/travel-confirmations/flight/latest.jpg',
-  ]),
+  newestStoredConfirmationUris: (...args: unknown[]) =>
+    mockNewestStoredConfirmationUris(...args),
 }));
 
 const basePlan = (): TravelPlan => ({
@@ -40,6 +43,13 @@ const basePlan = (): TravelPlan => ({
 });
 
 describe('confirmation URI attach', () => {
+  beforeEach(() => {
+    mockNewestStoredConfirmationUris.mockReset();
+    mockNewestStoredConfirmationUris.mockReturnValue([
+      'file:///Documents/travel-confirmations/flight/latest.jpg',
+    ]);
+  });
+
   it('merges imported confirmation URIs onto a duplicate flight', () => {
     const plan = basePlan();
     const incoming = {
@@ -77,5 +87,106 @@ describe('confirmation URI attach', () => {
       },
     };
     expect(attachOrphanedFlightConfirmationUris(plan)).toBeNull();
+  });
+
+  it('links a code-named orphan onto round-trip flights sharing one PNR', () => {
+    mockNewestStoredConfirmationUris.mockReturnValue([
+      'file:///Documents/travel-confirmations/flight/other.jpg',
+      'file:///Documents/travel-confirmations/flight/AB2ZQV-iceland.pdf',
+    ]);
+    const plan = basePlan();
+    plan.itinerary = [
+      {
+        id: 'out',
+        kind: 'flight',
+        title: 'Flight EWR → KEF',
+        date: '2026-09-08',
+        startMinutes: 1020,
+        durationMinutes: 350,
+        flight: {
+          confirmationCode: 'AB2ZQV',
+          departureAirport: 'EWR',
+          arrivalAirport: 'KEF',
+        },
+      },
+      {
+        id: 'ret',
+        kind: 'flight',
+        title: 'Flight KEF → EWR',
+        date: '2026-09-14',
+        startMinutes: 1020,
+        durationMinutes: 375,
+        flight: {
+          confirmationCode: 'AB2ZQV',
+          departureAirport: 'KEF',
+          arrivalAirport: 'EWR',
+        },
+      },
+    ];
+    const next = attachOrphanedFlightConfirmationUris(plan);
+    expect(next?.itinerary[0]?.flight?.confirmationUris).toEqual([
+      'file:///Documents/travel-confirmations/flight/AB2ZQV-iceland.pdf',
+    ]);
+    expect(next?.itinerary[1]?.flight?.confirmationUris).toEqual([
+      'file:///Documents/travel-confirmations/flight/AB2ZQV-iceland.pdf',
+    ]);
+  });
+
+  it('does not guess an unlabelled orphan for multi-flight trips', () => {
+    mockNewestStoredConfirmationUris.mockReturnValue([
+      'file:///Documents/travel-confirmations/flight/unlabelled.jpg',
+    ]);
+    const plan = basePlan();
+    plan.itinerary = [
+      {
+        id: 'out',
+        kind: 'flight',
+        title: 'Outbound',
+        date: '2026-09-08',
+        startMinutes: 100,
+        durationMinutes: 120,
+        flight: { confirmationCode: 'AB2ZQV', departureAirport: 'EWR' },
+      },
+      {
+        id: 'ret',
+        kind: 'flight',
+        title: 'Return',
+        date: '2026-09-14',
+        startMinutes: 100,
+        durationMinutes: 120,
+        flight: { confirmationCode: 'AB2ZQV', departureAirport: 'KEF' },
+      },
+    ];
+    expect(attachOrphanedFlightConfirmationUris(plan)).toBeNull();
+  });
+
+  it('skips orphans already linked on another plan', () => {
+    mockNewestStoredConfirmationUris.mockReturnValue([
+      'file:///Documents/travel-confirmations/flight/shared.jpg',
+    ]);
+    const other: TravelPlan = {
+      ...basePlan(),
+      id: 'trip-other',
+      itinerary: [
+        {
+          id: 'other-flight',
+          kind: 'flight',
+          title: 'Other',
+          date: '2026-09-01',
+          startMinutes: 60,
+          durationMinutes: 60,
+          flight: {
+            confirmationUris: [
+              'file:///Documents/travel-confirmations/flight/shared.jpg',
+            ],
+          },
+        },
+      ],
+    };
+    expect(
+      attachOrphanedFlightConfirmationUris(basePlan(), {
+        allPlans: [basePlan(), other],
+      }),
+    ).toBeNull();
   });
 });

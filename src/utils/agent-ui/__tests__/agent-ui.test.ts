@@ -128,6 +128,9 @@ describe('agent-ui routes', () => {
     expect(expandAgentUiShortcuts('travel/abc/expense')).toBe(
       '/travel/abc?previewModal=expense',
     );
+    expect(expandAgentUiShortcuts('travel/abc/expense-saved')).toBe(
+      '/travel/abc?previewModal=expense-saved',
+    );
     expect(expandAgentUiShortcuts('travel/abc/stay-booking')).toBe(
       '/travel/abc?openStayBooking=1',
     );

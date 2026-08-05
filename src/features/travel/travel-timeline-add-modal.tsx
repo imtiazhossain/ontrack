@@ -17,9 +17,9 @@ type TimelineChoice = {
 const TIMELINE_CHOICES: TimelineChoice[] = [
   { kind: 'moment', label: 'Moment', description: 'Capture a memory or trip highlight.' },
   { kind: 'activity', label: 'Activity', description: 'Add a tour or something you plan to do.' },
-  { kind: 'flight', label: 'Flight', description: 'Add flight details and travel information.' },
+  { kind: 'flight', label: 'Flights', description: 'Add flight details and travel information.' },
   { kind: 'transport', label: 'Transport', description: 'Add driving, rail, transit, taxi, or ferry travel.' },
-  { kind: 'stay', label: 'Stay', description: 'Add a hotel, hostel, or accommodation.' },
+  { kind: 'stay', label: 'Stays', description: 'Add a hotel, hostel, or accommodation.' },
   { kind: 'rental', label: 'Rental', description: 'Add a rental car or transportation details.' },
 ];
 

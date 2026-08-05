@@ -296,46 +296,89 @@ function findRoute(text: string): {
     }
   }
 
-  const adjacentCodes = /^\s*([A-Z]{3})\s+([A-Z]{3})\s*$/m.exec(text);
-  if (
-    validAirportCode(adjacentCodes?.[1]) &&
-    validAirportCode(adjacentCodes?.[2])
-  ) {
-    return {
-      departureAirport: adjacentCodes[1],
-      arrivalAirport: adjacentCodes[2],
-    };
+  // Prefer the earliest route evidence so footer noise like a later "EWR KEF"
+  // payment line cannot override timed standalone codes (Chase return legs).
+  type RouteHit = {
+    index: number;
+    departureAirport: string;
+    arrivalAirport: string;
+  };
+  const routeHits: RouteHit[] = [];
+
+  for (const match of text.matchAll(/^\s*([A-Z]{3})\s+([A-Z]{3})\s*$/gm)) {
+    const departureAirport = match[1]?.toUpperCase();
+    const arrivalAirport = match[2]?.toUpperCase();
+    if (
+      match.index === undefined ||
+      !validAirportCode(departureAirport) ||
+      !validAirportCode(arrivalAirport)
+    ) {
+      continue;
+    }
+    routeHits.push({ index: match.index, departureAirport, arrivalAirport });
   }
 
-  const standaloneCodes = Array.from(text.matchAll(/^\s*([A-Z]{3})\s*$/gm))
-    .map((match) => match[1])
-    .filter(validAirportCode);
-  if (standaloneCodes.length >= 2) {
-    return {
-      departureAirport: standaloneCodes[0],
-      arrivalAirport: standaloneCodes[1],
-    };
+  const standaloneMatches = Array.from(text.matchAll(/^\s*([A-Z]{3})\s*$/gm)).filter(
+    (match) => validAirportCode(match[1]?.toUpperCase()),
+  );
+  if (standaloneMatches.length >= 2) {
+    const first = standaloneMatches[0]!;
+    const second = standaloneMatches[1]!;
+    if (first.index !== undefined && second.index !== undefined) {
+      routeHits.push({
+        index: first.index,
+        departureAirport: first[1]!.toUpperCase(),
+        arrivalAirport: second[1]!.toUpperCase(),
+      });
+    }
   }
 
-  const parenthesizedCodes = Array.from(text.matchAll(/\(([A-Z]{3})\)/g))
-    .map((match) => match[1])
-    .filter(validAirportCode);
+  const parenthesizedCodes = Array.from(text.matchAll(/\(([A-Z]{3})\)/g)).filter(
+    (match) => validAirportCode(match[1]?.toUpperCase()),
+  );
   if (parenthesizedCodes.length >= 2) {
+    const first = parenthesizedCodes[0]!;
+    const second = parenthesizedCodes[1]!;
+    if (first.index !== undefined && second.index !== undefined) {
+      routeHits.push({
+        index: first.index,
+        departureAirport: first[1]!.toUpperCase(),
+        arrivalAirport: second[1]!.toUpperCase(),
+      });
+    }
+  }
+
+  routeHits.sort((left, right) => left.index - right.index);
+  const earliest = routeHits[0];
+  if (earliest) {
     return {
-      departureAirport: parenthesizedCodes[0],
-      arrivalAirport: parenthesizedCodes[1],
+      departureAirport: earliest.departureAirport,
+      arrivalAirport: earliest.arrivalAirport,
     };
   }
 
   return { departureAirport: '', arrivalAirport: '' };
 }
 
+/** Chase/email footers that must not stay attached to the last Depart/Return block. */
+const LABELED_LEG_FOOTER =
+  /^\s*(?:traveler\s+\d|payment\s+summary|important\s+flight|rules,?\s+policies|real\s+id\s+requirements)\b/gim;
+
 function findLabeledLegBlocks(text: string): string[] {
   const markers = Array.from(text.matchAll(/^\s*(?:depart|return)\s*:/gim));
   if (markers.length < 2) return [];
-  return markers.map((marker, index) =>
-    text.slice(marker.index, markers[index + 1]?.index ?? text.length),
-  );
+  const footers = Array.from(text.matchAll(LABELED_LEG_FOOTER));
+  return markers.map((marker, index) => {
+    const nextMarkerIndex = markers[index + 1]?.index ?? text.length;
+    const footer = footers.find(
+      (entry) =>
+        entry.index !== undefined &&
+        marker.index !== undefined &&
+        entry.index > marker.index &&
+        entry.index < nextMarkerIndex,
+    );
+    return text.slice(marker.index, footer?.index ?? nextMarkerIndex);
+  });
 }
 
 function findFlightNumbers(text: string): FlightNumberMatch[] {
@@ -387,6 +430,19 @@ function findTimedAirportEvents(text: string): TimedAirportEvent[] {
         airportCode,
       });
     }
+    // Chase return legs print bare codes under each time ("05:00 pm\nKEF").
+    const bareLine = /^\s*([A-Z]{3})(?:\s+([A-Z]{3}))?\s*$/.exec(lineMatch[0]);
+    if (bareLine) {
+      for (const code of [bareLine[1], bareLine[2]]) {
+        const airportCode = code?.toUpperCase();
+        if (!airportCode || !validAirportCode(airportCode)) continue;
+        airports.push({
+          index: lineMatch.index + (lineMatch[0].indexOf(code!) ?? 0),
+          lineIndex,
+          airportCode,
+        });
+      }
+    }
   });
 
   const usedAirports = new Set<number>();
@@ -431,10 +487,19 @@ function findLayoverMinutes(text: string): number[] {
     .filter((minutes) => minutes > 0);
 }
 
+function segmentGapDays(left?: string, right?: string): number | undefined {
+  if (!left || !right) return undefined;
+  const gapMs =
+    new Date(`${right}T12:00:00`).getTime() -
+    new Date(`${left}T12:00:00`).getTime();
+  return Math.round(gapMs / (24 * 60 * 60 * 1000));
+}
+
 function hasConnectingTimedItinerary(
   events: TimedAirportEvent[],
   layovers: number[],
   legCount: number,
+  segments: ParsedFlightSegment[],
 ): boolean {
   if (legCount < 2 || events.length < legCount * 2) return false;
   if (layovers.length > 0) return true;
@@ -442,12 +507,19 @@ function hasConnectingTimedItinerary(
     const arrival = events[index * 2 + 1];
     const nextDeparture = events[index * 2 + 2];
     if (
-      arrival &&
-      nextDeparture &&
-      arrival.airportCode === nextDeparture.airportCode
+      !arrival ||
+      !nextDeparture ||
+      arrival.airportCode !== nextDeparture.airportCode
     ) {
-      return true;
+      continue;
     }
+    // Same airport can be a connection or a round-trip turnaround days later.
+    const gapDays = segmentGapDays(
+      segments[index]?.date,
+      segments[index + 1]?.date,
+    );
+    if (gapDays !== undefined && gapDays > 1) continue;
+    return true;
   }
   return false;
 }
@@ -498,7 +570,12 @@ function applyTimedAirportItinerary(
   const events = findTimedAirportEvents(text);
   const layovers = findLayoverMinutes(text);
   const eventLegs = Math.floor(events.length / 2);
-  const connecting = hasConnectingTimedItinerary(events, layovers, eventLegs);
+  const connecting = hasConnectingTimedItinerary(
+    events,
+    layovers,
+    eventLegs,
+    segments,
+  );
   // Only grow beyond recognized flight numbers when layover/connection evidence exists.
   const targetLegs = connecting
     ? Math.max(segments.length, eventLegs)
@@ -518,9 +595,14 @@ function applyTimedAirportItinerary(
     const departure = itineraryEvents[index * 2];
     const arrival = itineraryEvents[index * 2 + 1];
     const nextDeparture = itineraryEvents[index * 2 + 2];
+    const nextSegment = padded[index + 1];
+    const gapDays = segmentGapDays(segment.date ?? departureDate, nextSegment?.date);
     const directLayover = layovers[index];
     const computedLayover =
-      nextDeparture && arrival.airportCode === nextDeparture.airportCode
+      connecting &&
+      nextDeparture &&
+      arrival.airportCode === nextDeparture.airportCode &&
+      (gapDays === undefined || gapDays <= 1)
         ? (nextDeparture.minutes - arrival.minutes + 24 * 60) % (24 * 60)
         : undefined;
     const layoverMinutesAfter = directLayover ?? computedLayover;
@@ -528,9 +610,14 @@ function applyTimedAirportItinerary(
       departure && arrival
         ? (arrival.minutes - departure.minutes + 24 * 60) % (24 * 60)
         : undefined;
+    // Round-trips keep each leg's calendar date. Only connections cascade
+    // overnight from the prior arrival into the next departure day.
+    const legDate = connecting
+      ? (departureDate ?? segment.date)
+      : (segment.date ?? departureDate);
     const next = {
       ...segment,
-      date: departureDate ?? segment.date,
+      date: legDate,
       startMinutes: departure.minutes,
       title: `Flight ${departure.airportCode} → ${arrival.airportCode}`,
       durationMinutes:
@@ -547,6 +634,7 @@ function applyTimedAirportItinerary(
       ...(layoverMinutesAfter ? { layoverMinutesAfter } : {}),
     };
     if (
+      connecting &&
       departureDate &&
       nextDeparture &&
       nextDeparture.minutes < arrival.minutes

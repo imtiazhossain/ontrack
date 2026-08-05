@@ -102,7 +102,7 @@ export function TravelTripActionGrid({
         />
       </View>
 
-      <ActionGroup title="Book & organize">
+      <ActionGroup title="Book & Organize">
         <TravelSheetAction
           label="Calendar"
           icon="calendar"
@@ -153,7 +153,7 @@ export function TravelTripActionGrid({
         />
       </ActionGroup>
 
-      <ActionGroup title="At your destination">
+      <ActionGroup title="At Your Destination">
         <TravelSheetAction
           label="Trip Weather"
           icon="weather"
@@ -173,7 +173,7 @@ export function TravelTripActionGrid({
       </ActionGroup>
 
       <ActionGroup
-        title="Travel together"
+        title="Travel Together"
         trailing={
           coTravelers.length > 0 ? (
             <TravelCoTravelerStack

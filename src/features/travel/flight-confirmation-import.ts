@@ -1,17 +1,17 @@
 import * as DocumentPicker from 'expo-document-picker';
 
-import TravelDocumentReader from '../../../modules/travel-document-reader';
 import { pickLibraryImages } from '@/utils/pick-image';
+import TravelDocumentReader from '../../../modules/travel-document-reader';
 
 import { persistConfirmationAssets } from './confirmation-attachments';
 import {
-  runConfirmationPicker,
-  type ConfirmationImportOptions,
+    runConfirmationPicker,
+    type ConfirmationImportOptions,
 } from './confirmation-import-options';
-import {
-  type ParsedFlightConfirmation,
-} from './flight-confirmation-parser';
 import { parseFlightConfirmationWithFallback } from './flight-confirmation-enrichment';
+import {
+    type ParsedFlightConfirmation,
+} from './flight-confirmation-parser';
 
 const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_SCREENSHOTS = 6;
@@ -83,7 +83,9 @@ export async function importFlightConfirmation(
   const confirmationUris =
     options?.persistAttachments === false
       ? []
-      : await persistConfirmationAssets(assets, 'flight');
+      : await persistConfirmationAssets(assets, 'flight', {
+          nameHint: parsed.flight.confirmationCode || parsed.segments[0]?.flight.confirmationCode,
+        });
   const fileName =
     assets.length === 1
       ? assets[0].fileName

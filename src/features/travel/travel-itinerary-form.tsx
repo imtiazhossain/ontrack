@@ -3,30 +3,38 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
+  AppText,
   Button,
   DateField,
   ErrorMessage,
   Input,
+  SegmentedControl,
   Symbol,
   TimeField,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
+import { AddressAutofindField } from '@/features/travel/address-autofind-field';
+import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
+import { FlightReturnLegFields } from '@/features/travel/flight-return-leg-fields';
+import type {
+  FlightLegScheduleDraft,
+  FlightTripType,
+} from '@/features/travel/flight-roundtrip-draft';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
-import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
-import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetImportCard } from '@/features/travel/travel-itinerary-sheet-fields';
-import type { TravelItemKind } from '@/features/travel/types';
 import type { TransportDetailsDraft } from '@/features/travel/transport-details';
 import { TransportDetailsEditor } from '@/features/travel/transport-details-editor';
+import type { TravelItemKind } from '@/features/travel/types';
 import { useAutoGrowingNote } from '@/features/travel/use-auto-growing-note';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,7 +69,12 @@ export function TravelItineraryForm({
   photoUris,
   flightDetails,
   flightDetailsError,
+  flightTripType = 'one-way',
+  returnFlightTitle = '',
+  returnFlightDetails,
+  returnFlightSchedule,
   importedFlightFileName,
+  importedFlightNote,
   importingFlight,
   transportDetails,
   transportDetailsError,
@@ -87,6 +100,10 @@ export function TravelItineraryForm({
   onBookingUrlChange,
   onPhotoUrisChange,
   onFlightDetailsChange,
+  onFlightTripTypeChange,
+  onReturnFlightTitleChange,
+  onReturnFlightDetailsChange,
+  onReturnFlightScheduleChange,
   onImportFlight,
   onTransportDetailsChange,
   onRentalDetailsChange,
@@ -108,7 +125,12 @@ export function TravelItineraryForm({
   photoUris: string[];
   flightDetails: FlightDetailsDraft;
   flightDetailsError?: string;
+  flightTripType?: FlightTripType;
+  returnFlightTitle?: string;
+  returnFlightDetails?: FlightDetailsDraft;
+  returnFlightSchedule?: FlightLegScheduleDraft;
   importedFlightFileName?: string;
+  importedFlightNote?: string;
   importingFlight: boolean;
   transportDetails: TransportDetailsDraft;
   transportDetailsError?: string;
@@ -135,6 +157,10 @@ export function TravelItineraryForm({
   onBookingUrlChange: (value: string) => void;
   onPhotoUrisChange: (uris: string[]) => void;
   onFlightDetailsChange: (value: FlightDetailsDraft) => void;
+  onFlightTripTypeChange?: (value: FlightTripType) => void;
+  onReturnFlightTitleChange?: (value: string) => void;
+  onReturnFlightDetailsChange?: (value: FlightDetailsDraft) => void;
+  onReturnFlightScheduleChange?: (value: FlightLegScheduleDraft) => void;
   onImportFlight: (source: ConfirmationImportSource) => void;
   onTransportDetailsChange: (value: TransportDetailsDraft) => void;
   onRentalDetailsChange: (value: RentalDetailsDraft) => void;
@@ -194,6 +220,7 @@ export function TravelItineraryForm({
             importing: importingFlight,
             importingLabel: importStatusLabel,
             importedFileName: importedFlightFileName,
+            importedNote: importedFlightNote,
             confirmationUris: flightDetails.confirmationUris,
             kind: 'flight' as const,
             title: 'Import Flight Details',
@@ -257,9 +284,34 @@ export function TravelItineraryForm({
               fileName={confirmationImport.importedFileName}
               uris={confirmationImport.confirmationUris}
               kind={confirmationImport.kind}
+              note={
+                'importedNote' in confirmationImport
+                  ? confirmationImport.importedNote
+                  : undefined
+              }
             />
           ) : null}
         </View>
+      ) : null}
+
+      {kind === 'flight' && onFlightTripTypeChange ? (
+        <SegmentedControl
+          label="Trip type"
+          value={flightTripType}
+          options={[
+            {
+              value: 'one-way',
+              label: 'One-way',
+              testID: AgentUiIds.travel.itineraryAdd.tripType('one-way'),
+            },
+            {
+              value: 'round-trip',
+              label: 'Roundtrip',
+              testID: AgentUiIds.travel.itineraryAdd.tripType('round-trip'),
+            },
+          ]}
+          onChange={onFlightTripTypeChange}
+        />
       ) : null}
 
       <Input
@@ -268,7 +320,13 @@ export function TravelItineraryForm({
         onChangeText={onTitleChange}
         icon={nameIcon}
         stackedLabel={
-          isMoment ? 'Title' : kind === 'stay' ? 'Stay Name *' : 'Name *'
+          isMoment
+            ? 'Title'
+            : kind === 'stay'
+              ? 'Stay Name *'
+              : kind === 'flight' && flightTripType === 'round-trip'
+                ? 'Departing Name *'
+                : 'Name *'
         }
         placeholder={
           kind === 'flight'
@@ -284,7 +342,13 @@ export function TravelItineraryForm({
                   : 'e.g. Dinner in Alfama'
         }
         accessibilityLabel={
-          kind === 'stay' ? 'Stay Name, required' : isMoment ? 'Title' : 'Name, required'
+          kind === 'stay'
+            ? 'Stay Name, required'
+            : isMoment
+              ? 'Title'
+              : kind === 'flight' && flightTripType === 'round-trip'
+                ? 'Departing Name, required'
+                : 'Name, required'
         }
         {...itinerarySheetFieldProps(chrome, nameTone)}
       />
@@ -301,6 +365,11 @@ export function TravelItineraryForm({
       ) : null}
 
       <View style={[styles.schedule, { gap: rs.sm }]}>
+        {kind === 'flight' && flightTripType === 'round-trip' ? (
+          <AppText variant="overline" color="accent" fit style={travelOverlineStyle}>
+            Departing
+          </AppText>
+        ) : null}
         {usesRange && rangeStartLabel && rangeEndLabel ? (
           <>
             <View style={[styles.twoColumns, { gap: rs.sm }]}>
@@ -310,8 +379,8 @@ export function TravelItineraryForm({
                   value={date}
                   stackedLabel={`${rangeStartLabel} *`}
                   placeholder="Select date"
-                  minimumDate={planStartDate}
-                  maximumDate={planEndDate}
+                  minimumDate={kind === 'flight' ? undefined : planStartDate}
+                  maximumDate={kind === 'flight' ? undefined : planEndDate}
                   onChange={onDateChange}
                   accessibilityLabel={`${rangeStartLabel} date, required`}
                   {...itinerarySheetFieldProps(chrome, 'calendar')}
@@ -337,8 +406,8 @@ export function TravelItineraryForm({
                   value={endDate}
                   stackedLabel={`${rangeEndLabel} *`}
                   placeholder="Select date"
-                  minimumDate={date || planStartDate}
-                  maximumDate={planEndDate}
+                  minimumDate={date || (kind === 'flight' ? undefined : planStartDate)}
+                  maximumDate={kind === 'flight' ? undefined : planEndDate}
                   onChange={onEndDateChange}
                   accessibilityLabel={`${rangeEndLabel} date, required`}
                   {...itinerarySheetFieldProps(chrome, 'calendar')}
@@ -404,6 +473,24 @@ export function TravelItineraryForm({
           onChange={onFlightDetailsChange}
           error={flightDetailsError}
           hideHeader
+        />
+      ) : null}
+      {kind === 'flight' &&
+      flightTripType === 'round-trip' &&
+      returnFlightDetails &&
+      returnFlightSchedule &&
+      onReturnFlightTitleChange &&
+      onReturnFlightDetailsChange &&
+      onReturnFlightScheduleChange ? (
+        <FlightReturnLegFields
+          title={returnFlightTitle}
+          details={returnFlightDetails}
+          schedule={returnFlightSchedule}
+          planStartDate={planStartDate}
+          planEndDate={planEndDate}
+          onTitleChange={onReturnFlightTitleChange}
+          onDetailsChange={onReturnFlightDetailsChange}
+          onScheduleChange={onReturnFlightScheduleChange}
         />
       ) : null}
       {kind === 'rental' ? (

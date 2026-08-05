@@ -12,11 +12,28 @@ export function isImageConfirmationUri(uri: string): boolean {
   return IMAGE_EXT.test(path);
 }
 
+/** Coerce absolute filesystem paths into durable `file://` URIs. */
+export function asConfirmationFileUri(uri: string): string {
+  const trimmed = uri.trim();
+  if (!trimmed) return trimmed;
+  if (
+    trimmed.startsWith('file://') ||
+    trimmed.startsWith('content://') ||
+    trimmed.startsWith('ph://')
+  ) {
+    return trimmed;
+  }
+  // Expo File.uri is usually file://…; bare absolute paths still need a scheme
+  // or normalizeConfirmationUris will drop them on every savePlan.
+  if (trimmed.startsWith('/')) return `file://${trimmed}`;
+  return trimmed;
+}
+
 export function normalizeConfirmationUris(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const uris = value
     .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.trim())
+    .map((entry) => asConfirmationFileUri(entry))
     .filter((entry) => entry.startsWith('file://') || entry.startsWith('content://'));
   return uris.length ? uris : undefined;
 }
@@ -68,18 +85,28 @@ function extensionForAsset(fileName: string, uri: string): string {
 /**
  * Copy picker/cache confirmation files into durable app documents storage.
  * Temporary OS cache URIs must not be persisted in store state.
+ * When `nameHint` is a confirmation code, it is embedded in the filename so
+ * orphan-recovery can re-link the file to matching flights later.
  */
 export async function persistConfirmationAssets(
   assets: { uri: string; fileName: string }[],
   kind: 'flight' | 'rental' | 'stay' | 'transport',
+  options?: { nameHint?: string },
 ): Promise<string[]> {
   if (Platform.OS === 'web') {
-    return assets.map((asset) => asset.uri).filter(Boolean);
+    return assets
+      .map((asset) => asConfirmationFileUri(asset.uri))
+      .filter(Boolean);
   }
   const directory = new Directory(Paths.document, 'travel-confirmations', kind);
   directory.create({ idempotent: true, intermediates: true });
   const uris: string[] = [];
   const stamp = Date.now();
+  const hint = (options?.nameHint ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 12);
   for (let index = 0; index < assets.length; index += 1) {
     const asset = assets[index];
     if (!asset.uri) continue;
@@ -88,18 +115,20 @@ export async function persistConfirmationAssets(
       .replace(/\.[^.]+$/, '')
       .replace(/[^a-zA-Z0-9_-]/g, '-')
       .slice(0, 40);
+    const stem = [hint, safeStem || kind].filter(Boolean).join('-');
     const destination = new File(
       directory,
-      `${safeStem || kind}-${stamp}-${index}${extension}`,
+      `${stem}-${stamp}-${index}${extension}`,
     );
     try {
       const source = new File(asset.uri);
       await source.copy(destination);
-      uris.push(destination.uri);
+      uris.push(asConfirmationFileUri(destination.uri));
     } catch {
       // Fall back to the source URI when copy fails (e.g. content:// on some Android builds).
-      if (asset.uri.startsWith('file://') || asset.uri.startsWith('content://')) {
-        uris.push(asset.uri);
+      const fallback = asConfirmationFileUri(asset.uri);
+      if (fallback.startsWith('file://') || fallback.startsWith('content://')) {
+        uris.push(fallback);
       }
     }
   }

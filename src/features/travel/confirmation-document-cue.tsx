@@ -1,13 +1,13 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-  type StyleProp,
-  type ViewStyle,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
+    type StyleProp,
+    type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,10 +17,17 @@ import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 import {
-  confirmationUrisForDisplay,
-  isImageConfirmationUri,
-  openConfirmationAttachments,
+    confirmationUrisForDisplay,
+    isImageConfirmationUri,
+    openConfirmationAttachments,
 } from './confirmation-attachments';
+
+export type ConfirmationDocumentTrigger = (args: {
+  open: () => void;
+  loading: boolean;
+  accessibilityLabel: string;
+  testID: string;
+}) => ReactNode;
 
 export function ConfirmationDocumentCue({
   uris,
@@ -31,6 +38,8 @@ export function ConfirmationDocumentCue({
   icon,
   size = 'sm',
   style,
+  testID,
+  trigger,
 }: {
   uris?: string[];
   kind: 'flight' | 'rental' | 'stay' | 'transport';
@@ -42,34 +51,58 @@ export function ConfirmationDocumentCue({
   size?: 'sm' | 'md';
   /** Lets action rows stretch the button instead of centering it. */
   style?: StyleProp<ViewStyle>;
+  /** Override the default kind-scoped open control id. */
+  testID?: string;
+  /** Replace the default button with a custom open control. */
+  trigger?: ConfirmationDocumentTrigger;
 }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [opening, setOpening] = useState(false);
   const openableUris = confirmationUrisForDisplay(uris, kind);
   if (!openableUris.length) return null;
 
+  const resolvedTestID = testID ?? AgentUiIds.travel.confirmation.open(kind);
   const imageUris = openableUris.filter(isImageConfirmationUri);
   const open = () => {
+    if (opening) return;
     if (imageUris.length > 0 && imageUris.length === openableUris.length) {
       setViewerOpen(true);
       return;
     }
-    void openConfirmationAttachments(openableUris);
+    setOpening(true);
+    void openConfirmationAttachments(openableUris)
+      .catch((error) => {
+        if (__DEV__) console.warn('[ConfirmationDocumentCue] open failed', error);
+      })
+      .finally(() => {
+        setOpening(false);
+      });
   };
 
   return (
     <>
-      <Button
-        size={size}
-        icon={icon}
-        testID={AgentUiIds.travel.confirmation.open(kind)}
-        accessibilityLabel={accessibilityLabel}
-        onPress={open}
-        style={[styles.openButton, style]}>
-        {label}
-      </Button>
+      {trigger ? (
+        trigger({
+          open,
+          loading: opening,
+          accessibilityLabel,
+          testID: resolvedTestID,
+        })
+      ) : (
+        <Button
+          size={size}
+          icon={icon}
+          loading={opening}
+          testID={resolvedTestID}
+          accessibilityLabel={accessibilityLabel}
+          onPress={open}
+          style={[style ? null : styles.openButton, style]}>
+          {label}
+        </Button>
+      )}
 
       <Modal
         visible={viewerOpen}

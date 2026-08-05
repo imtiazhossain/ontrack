@@ -1,27 +1,26 @@
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
+    FadeIn,
+    FadeOut,
+    LinearTransition,
 } from 'react-native-reanimated';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
+import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
 import {
-  resolveStayBookingOpen,
-  type StayBookingOpen,
+    resolveStayBookingOpen,
+    type StayBookingOpen,
 } from '@/features/travel/booking-open';
-import { addressMapUrl } from '@/features/travel/address-map-link';
+import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
+import { flightItineraryCaptionParts } from '@/features/travel/flight-arrival';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsCardEditor } from '@/features/travel/flight-details-card-editor';
-import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
-import { flightItineraryCaptionParts } from '@/features/travel/flight-arrival';
 import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
+import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
 import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
@@ -31,39 +30,39 @@ import { StayDetailsSummary } from '@/features/travel/stay-details-summary';
 import { TransportDetailsCardEditor } from '@/features/travel/transport-details-card-editor';
 import { TransportDetailsSummary } from '@/features/travel/transport-details-summary';
 import { titleCaseTravelKind } from '@/features/travel/travel-chrome';
-import {
-  kindAccent,
-  kindIcon,
-  kindTint,
-} from '@/features/travel/travel-kind-chrome';
 import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import {
-  TRAVEL_CARD_SHADOW,
-  travelCardBorder,
-  travelCardFill,
-  travelMainCardFill,
-} from '@/features/travel/travel-surface';
+    kindAccent,
+    kindIcon,
+    kindTint,
+} from '@/features/travel/travel-kind-chrome';
 import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
-import {
-  PhotoStrip,
-  TimelineFlightCaption,
-  TimelineItemTitle,
-  TimelineItemToolbar,
-} from '@/features/travel/travel-timeline-node-chrome';
-import {
-  flightCaptionInput,
-  timelineEntryCaption,
-  type TravelTimelinePhase,
-} from '@/features/travel/travel-timeline-entries';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import {
+    TRAVEL_CARD_SHADOW,
+    travelCardBorder,
+    travelCardFill,
+    travelMainCardFill,
+} from '@/features/travel/travel-surface';
+import {
+    flightCaptionInput,
+    timelineEntryCaption,
+    type TravelTimelinePhase,
+} from '@/features/travel/travel-timeline-entries';
+import {
+    PhotoStrip,
+    TimelineFlightCaption,
+    TimelineItemTitle,
+    TimelineItemToolbar,
+} from '@/features/travel/travel-timeline-node-chrome';
 import type {
-  TravelItemNote,
-  TravelPlan,
-  TravelTransportDetails,
+    TravelItemNote,
+    TravelPlan,
+    TravelTransportDetails,
 } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
 import { useState } from 'react';
 
@@ -201,6 +200,25 @@ export function TravelTimelineNode({
     { mode: 'webview' }
   > | null>(null);
   const isExpanded = expanded;
+  const title =
+    displayTitle ??
+    (item.kind === 'flight' ? flightItemDisplayTitle(item) : item.title);
+  const toggleAgent = useAgentUiTarget(
+    AgentUiIds.travel.timelineItem.toggle(item.id, phase),
+    { label: title, onPress: onToggle },
+  );
+  const addressAgent = useAgentUiTarget(
+    item.kind === 'stay' && item.details
+      ? AgentUiIds.travel.timelineItem.openAddress(item.id)
+      : undefined,
+    {
+      label: item.details ? `Open ${item.details} with Maps` : undefined,
+      onPress: () => {
+        if (!item.details) return;
+        openAddressWithMapsChooser(item.details);
+      },
+    },
+  );
 
   const openBooking = () => {
     const resolved = resolveStayBookingOpen(item, {
@@ -227,9 +245,6 @@ export function TravelTimelineNode({
   const editingStructured =
     editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
-  const title =
-    displayTitle ??
-    (item.kind === 'flight' ? flightItemDisplayTitle(item) : item.title);
   const cardFill =
     item.kind === 'flight' ? travelMainCardFill(theme) : travelCardFill(theme);
   const caption = timelineEntryCaption(
@@ -324,25 +339,24 @@ export function TravelTimelineNode({
           },
         ]}
       >
-        <AgentTestId
-          testID={AgentUiIds.travel.timelineItem.toggle(item.id, phase)}
-          label={title}
+        <Pressable
+          ref={toggleAgent.ref}
+          testID={toggleAgent.testID}
+          onLayout={toggleAgent.onLayout}
+          accessibilityRole="button"
+          accessibilityLabel={title}
+          accessibilityState={{ expanded: isExpanded }}
           onPress={onToggle}
+          hitSlop={8}
+          style={[
+            styles.itemHeader,
+            {
+              gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
+              alignItems:
+                isCompactFlight || compact ? 'center' : 'flex-start',
+            },
+          ]}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: isExpanded }}
-            onPress={onToggle}
-            hitSlop={8}
-            style={[
-              styles.itemHeader,
-              {
-                gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
-                alignItems:
-                  isCompactFlight || compact ? 'center' : 'flex-start',
-              },
-            ]}
-          >
             {showKindBadgeResolved ? (
               <View
                 style={[
@@ -413,8 +427,7 @@ export function TravelTimelineNode({
                 color={isCompactFlight ? accent : theme.textTertiary}
               />
             </View>
-          </Pressable>
-        </AgentTestId>
+        </Pressable>
 
         {!isExpanded && photos.length > 0 ? (
           <PhotoStrip uris={photos.slice(0, 4)} />
@@ -435,12 +448,14 @@ export function TravelTimelineNode({
             (!isStructuredTravelKind || showStructuredDetails) ? (
               item.kind === 'stay' ? (
                 <Pressable
-                  accessibilityRole="link"
-                  accessibilityLabel={`Open ${item.details} in Maps`}
+                  ref={addressAgent.ref}
+                  testID={addressAgent.testID}
+                  onLayout={addressAgent.onLayout}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${item.details} with Maps`}
                   hitSlop={8}
                   onPress={() => {
-                    const url = addressMapUrl(item.details!);
-                    if (url) void Linking.openURL(url);
+                    openAddressWithMapsChooser(item.details!);
                   }}
                   style={({ pressed }) => [
                     styles.addressLink,

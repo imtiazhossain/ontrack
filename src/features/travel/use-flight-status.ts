@@ -92,8 +92,8 @@ function mostUrgent(
 
 /**
  * Shared per-leg flight-status lookup. The journey card owns this state so the
- * booking panel badge, the terminal/gate chips, and the single status control
- * all read the same result.
+ * booking panel badge / sync control and the terminal/gate chips all read the
+ * same result.
  */
 export function useFlightStatus(
   requests: (FlightStatusRequest | undefined)[],

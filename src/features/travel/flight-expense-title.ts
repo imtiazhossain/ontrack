@@ -17,7 +17,40 @@ function routeFromAirports(
   return { origin, destination };
 }
 
-/** Parse "Flight EWR → KEF" / "Flights EWR ↔ KEF" style titles. */
+function flightRoutesOnItem(item: TravelItineraryItem): RouteAirports[] {
+  if (item.kind !== 'flight') return [];
+  const routes: RouteAirports[] = [];
+  const top = routeFromAirports(
+    item.flight?.departureAirport,
+    item.flight?.arrivalAirport,
+  );
+  if (top) routes.push(top);
+  const titled = parseFlightRouteTitle(item.title);
+  if (
+    titled &&
+    !routes.some(
+      (route) =>
+        route.origin === titled.origin && route.destination === titled.destination,
+    )
+  ) {
+    routes.push(titled);
+  }
+  for (const leg of item.flight?.legs ?? []) {
+    const route = routeFromAirports(leg.departureAirport, leg.arrivalAirport);
+    if (
+      route &&
+      !routes.some(
+        (entry) =>
+          entry.origin === route.origin && entry.destination === route.destination,
+      )
+    ) {
+      routes.push(route);
+    }
+  }
+  return routes;
+}
+
+/** Parse "Flight EWR → KEF" / "Flights EWR <-> KEF" style titles. */
 export function parseFlightRouteTitle(title: string): RouteAirports | undefined {
   const match = title
     .trim()
@@ -30,12 +63,33 @@ export function hasReciprocalFlightRoute(
   items: TravelItineraryItem[],
   route: RouteAirports,
 ): boolean {
-  return items.some(
-    (item) =>
-      item.kind === 'flight' &&
-      airportCode(item.flight?.departureAirport) === route.destination &&
-      airportCode(item.flight?.arrivalAirport) === route.origin,
+  return items.some((item) =>
+    flightRoutesOnItem(item).some(
+      (entry) =>
+        entry.origin === route.destination && entry.destination === route.origin,
+    ),
   );
+}
+
+/** True when itinerary has a return (reciprocal airports) or multi-day pair on this route. */
+export function hasRoundTripFlightPair(
+  items: TravelItineraryItem[],
+  route: RouteAirports,
+): boolean {
+  if (hasReciprocalFlightRoute(items, route)) return true;
+  const dates = new Set<string>();
+  for (const item of items) {
+    if (item.kind !== 'flight' || !item.date) continue;
+    const touchesRoute = flightRoutesOnItem(item).some(
+      (entry) =>
+        (entry.origin === route.origin &&
+          entry.destination === route.destination) ||
+        (entry.origin === route.destination &&
+          entry.destination === route.origin),
+    );
+    if (touchesRoute) dates.add(item.date);
+  }
+  return dates.size >= 2;
 }
 
 export function roundTripRouteFromSegments(
@@ -67,10 +121,14 @@ export function formatOneWayFlightTitle(route: RouteAirports): string {
 }
 
 export function formatRoundTripFlightTitle(route: RouteAirports): string {
-  return `Flights ${route.origin} ↔ ${route.destination}`;
+  return `Flights ${route.origin} <-> ${route.destination}`;
 }
 
-/** Expense / confirmation title from imported segments (round-trip → plural + ↔). */
+function isCanonicalRoundTripTitle(title: string): boolean {
+  return /^Flights\s+[A-Z]{3}\s*<->\s*[A-Z]{3}$/i.test(title.trim());
+}
+
+/** Expense / confirmation title from imported segments (round-trip → plural + <->). */
 export function flightExpenseTitleFromSegments(
   segments: Array<{
     flight?: { departureAirport?: string; arrivalAirport?: string };
@@ -114,8 +172,10 @@ export function isRoundTripFlightExpense(
       plan.itinerary.filter((item) => item.kind === 'flight'),
     );
   if (!route) return false;
-  if (/\bFlights\b/.test(expense.title) && /↔|⇄/.test(expense.title)) return true;
-  return hasReciprocalFlightRoute(plan.itinerary, route);
+  if (/\bFlights\b/.test(expense.title) && /(?:<->|↔|⇄)/.test(expense.title)) {
+    return true;
+  }
+  return hasRoundTripFlightPair(plan.itinerary, route);
 }
 
 /** List / form title: upgrade one-way wording when the trip has a return leg. */
@@ -125,9 +185,15 @@ export function flightExpenseDisplayTitle(
 ): string {
   if (expense.category !== 'flight') return expense.title;
   const route = parseFlightRouteTitle(expense.title);
-  if (route && hasReciprocalFlightRoute(plan.itinerary, route)) {
+  if (!route) return expense.title;
+  if (hasRoundTripFlightPair(plan.itinerary, route)) {
     return formatRoundTripFlightTitle(route);
   }
+  // Already round-trip wording (any arrow) → canonicalize to Flights ORIG <-> DEST.
+  if (/\bFlights\b/i.test(expense.title) && /(?:<->|↔|⇄)/.test(expense.title)) {
+    return formatRoundTripFlightTitle(route);
+  }
+  if (isCanonicalRoundTripTitle(expense.title)) return expense.title;
   return expense.title;
 }
 
