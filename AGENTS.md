@@ -38,7 +38,7 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 ## Commands
 
 - `npm start` — Metro + Expo dev client on **Node 24** via `scripts/start-metro.sh` (`--lan` bind + advertise `127.0.0.1`; Fast Refresh). Requires Node `<25` (see `.nvmrc`). **Human terminals only** — agents must not run this (Cursor aborts agent shells and kills Metro).
-- `npm run packager:ensure` — check Metro, sync local API base URL, reconnect the iOS Simulator **only if** the app lost the packager (`scripts/ensure-packager.sh`; prefer `127.0.0.1` for Simulator)
+- `npm run packager:ensure` — check Metro, sync local API base URL, boot **iPhone 17 Pro** by default, reconnect the iOS Simulator **only if** the app lost the packager (`scripts/ensure-packager.sh`; prefer `127.0.0.1` for Simulator). Override device with `ONTRACK_IOS_SIMULATOR` / `ONTRACK_IOS_SIMULATOR_UDID`.
 - `npm run packager:ensure:start` — same; start Metro if down (detached session that survives agent-shell cleanup), or replace this repo’s IPv6-only Metro (`::1` up / `127.0.0.1` down)
 - `npm run start:clear` — Metro with cache clear (only when the bundle is stuck/stale)
 - `npm run ios` / `android` / `web` — Metro targeting that platform (no default cache clear)

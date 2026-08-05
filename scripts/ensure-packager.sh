@@ -27,6 +27,8 @@
 #   WAIT_SECS=8
 #   START_WAIT_SECS=20
 #   METRO_WATCHER_FS_PROBE=1   # also touch beacon + confirm Watchman sees it
+#   ONTRACK_IOS_SIMULATOR=iPhone 17 Pro   # default simulator device name
+#   ONTRACK_IOS_SIMULATOR_UDID=<udid>     # optional exact device
 
 set -euo pipefail
 
@@ -35,6 +37,8 @@ cd "$ROOT"
 
 # shellcheck source=lib/metro-watcher.sh
 source "$ROOT/scripts/lib/metro-watcher.sh"
+# shellcheck source=lib/ios-simulator.sh
+source "$ROOT/scripts/lib/ios-simulator.sh"
 
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 METRO_PORT="${METRO_PORT:-8081}"
@@ -240,7 +244,13 @@ print_packager_diagnostics() {
   [[ -z "$listen" ]] && listen="none"
 
   if simulator_booted; then
-    sim="booted"
+    local preferred_udid
+    preferred_udid="$(ios_sim_preferred_booted_udid || true)"
+    if [[ -n "$preferred_udid" ]]; then
+      sim="booted ($(ios_sim_preferred_name))"
+    else
+      sim="booted (not $(ios_sim_preferred_name))"
+    fi
     if app_installed; then
       if probe_connected; then
         app="installed + connected"
@@ -259,6 +269,7 @@ Listening:        ${listen}
 Watchman client:  $(metro_has_watchman_client && echo yes || echo NO)
 Node:             $(node_version_label)
 Simulator:        ${sim}
+Preferred sim:    $(ios_sim_preferred_name)
 App (${BUNDLE_ID}): ${app}
 Host expected:    ${host}:${METRO_PORT}
 ---------------------------
@@ -549,14 +560,12 @@ reconnect_dev_client() {
   encoded="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "http://${host}:${METRO_PORT}")"
   local url="exp+ontrack://expo-development-client/?url=${encoded}"
 
-  open -a Simulator >/dev/null 2>&1 || true
-  if ! simulator_booted; then
-    echo "error: no booted iOS Simulator" >&2
+  if ! ensure_preferred_ios_simulator; then
     print_packager_diagnostics "$host"
     exit 1
   fi
   if ! app_installed; then
-    echo "error: ${BUNDLE_ID} is not installed on the booted simulator" >&2
+    echo "error: ${BUNDLE_ID} is not installed on the preferred simulator ($(ios_sim_preferred_name))" >&2
     print_packager_diagnostics "$host"
     exit 1
   fi
@@ -624,13 +633,14 @@ if [[ "$DO_FORCE" == "1" ]]; then
   exit 0
 fi
 
-if ! simulator_booted; then
-  echo "note: no booted simulator — Metro is healthy; open Simulator to connect"
+# Always prefer iPhone 17 Pro (override via ONTRACK_IOS_SIMULATOR).
+if ! ensure_preferred_ios_simulator; then
+  echo "note: could not boot preferred simulator — Metro is healthy"
   exit 0
 fi
 
 if ! app_installed; then
-  echo "note: app not installed on booted simulator — Metro is healthy"
+  echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
   exit 0
 fi
 

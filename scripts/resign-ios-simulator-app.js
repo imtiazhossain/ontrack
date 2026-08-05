@@ -89,10 +89,12 @@ function main() {
   console.log(auth || 'Signed.');
 
   if (process.env.ONTRACK_SIM_INSTALL === '1') {
+    const helper = `${process.cwd()}/scripts/lib/ios-simulator.sh`;
     const udid =
+      process.env.ONTRACK_IOS_SIMULATOR_UDID ||
       process.env.SIMULATOR_DEVICE_UDID ||
       sh(
-        `xcrun simctl list devices booted -j | python3 -c "import json,sys; d=json.load(sys.stdin); print(next(x['udid'] for runtime in d['devices'].values() for x in runtime if x.get('state')=='Booted'))"`,
+        `bash -c 'source "${helper}"; ensure_preferred_ios_simulator >/dev/null; ios_sim_preferred_booted_udid || ios_sim_resolve_udid'`,
       );
     sh(`xcrun simctl terminate "${udid}" "${BUNDLE_ID}" || true`);
     sh(`xcrun simctl uninstall "${udid}" "${BUNDLE_ID}" || true`);
