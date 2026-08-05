@@ -11,10 +11,12 @@ After **any** code change that affects the running Expo app, do not end the turn
 
 Always use **iPhone 17 Pro** unless the user (or env) specifies another device.
 
-- `ensure-packager.sh` boots it via `scripts/lib/ios-simulator.sh` (shuts down other booted sims so `simctl … booted` is unambiguous).
+- Boot only when verification needs it (`agent-ui` / `ensure-packager` reconnect). Do **not** open Simulator on every chat — `sessionStart` runs `ensure-packager.sh --start --metro-only`.
+- **Headless by default:** `simctl boot` only — do **not** launch Simulator.app. Agent-ui dump/tap/assert and `simctl io` screenshots work without a window. Opt in to the GUI with `ONTRACK_IOS_SIMULATOR_WINDOW=1`.
+- `ensure-packager.sh` (without `--metro-only`) boots via `scripts/lib/ios-simulator.sh` (exact name match; shuts down peer sims so only iPhone 17 Pro stays up — never leave iPhone 17 beside it).
 - Override: `ONTRACK_IOS_SIMULATOR="iPhone 16 Pro"` or `ONTRACK_IOS_SIMULATOR_UDID=<udid>`.
 - `npm run ios:run` also targets this device by default.
-- Do not leave handoff on a different simulator (e.g. iPhone 16 Pro) when the preferred device is available.
+- Do not leave handoff on a different simulator (e.g. iPhone 17 / iPhone 16 Pro) when the preferred device is available.
 
 ## Live updates (Fast Refresh) — preferred path
 
@@ -46,8 +48,8 @@ JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killi
 2. **App must be up on the simulator before verification.** Prefer verification entry points (`once` / `verify` / `flow` / `assert` / `open`) — they call `agent_ui_ensure_app_up` (booted sim, app process, bridge). If you already know the app is dead/crashed/on the Expo launcher, run `./scripts/ensure-packager.sh --start` first; do not burn a full verify timeout guessing.
 3. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise the changed surface via the agent-ui **decision tree** (`verify` if already on route → else `once`/flow → open → known tap → dump only if unknown → assert). Fix failures before finishing. Do not re-flow a screen you are already on.
 4. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
-5. **Leave the simulator showing the change.** Boot/open Simulator with the onTrack app (`com.imtihoss.ontracknow`). Navigate to the changed surface and leave it fully loaded and usable — not splash, blank, error boundary, or an unrelated tab.
-6. **Show proof in the reply.** Prefer `agent-ui-assert.sh` / `once --assert-*` for route/id/label claims. Capture **one** final screenshot only for visual/layout claims; read it and apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. Mid-flow screenshots are not allowed. Tell the user Metro is running (URL/IP) and that the changed surface is usable.
+5. **Leave the booted device on the changed surface** (headless is fine — no Simulator.app window required). App `com.imtihoss.ontracknow` should be up on the preferred device at that route — not splash, blank, error boundary, or an unrelated tab.
+6. **Show proof in the reply.** Prefer `agent-ui-assert.sh` / `once --assert-*` for route/id/label claims. Capture **one** final screenshot only for visual/layout claims (`simctl io`, works headless); read it and apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. Mid-flow screenshots are not allowed. Tell the user Metro is running (URL/IP) and that the changed surface verified.
 
 ## Do not
 

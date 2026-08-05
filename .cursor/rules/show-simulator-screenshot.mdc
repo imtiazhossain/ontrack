@@ -1,11 +1,11 @@
 ---
-description: Always test UI changes in Simulator and leave it showing the change
+description: Always test UI changes on the booted simulator (headless OK) and prove the change
 alwaysApply: true
 ---
 
 # Show UI in Simulator
 
-After any change that affects the running Expo/iOS app UI, **always test in the iOS Simulator** and do not end the turn until the simulator is left in a **working state that shows the change**.
+After any change that affects the running Expo/iOS app UI, **always test on the booted iOS simulator** (headless `simctl` is fine — do not launch Simulator.app) and do not end the turn until the changed surface is verified.
 
 Metro / Node 24 / Fast Refresh / reconnect details live in `.cursor/rules/verify-working-app.mdc` — follow that; do not restate here.
 
@@ -22,7 +22,7 @@ Navigation speed rules live in `.cursor/rules/agent-ui-selectors.mdc` — follow
  - **Structural** (route, testID present/absent, prefix, label contains) → `./scripts/agent-ui-assert.sh` / `once --assert-*` is sufficient proof. Include the assert output in the reply.
  - **Accent / chrome color** on a known testID → `--color <id> <hex>` (or `verify … --color`) is sufficient; no vision read.
  - **Visual / layout / pixel copy** → capture **one** final `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below. Prefer `agent-ui.sh verify` when already on the surface.
-7. Leave the simulator on that working screen.
+7. Leave the booted device on that working screen (no Simulator.app window required).
 
 Run typecheck/tests **in parallel** with the UI once-chain.
 

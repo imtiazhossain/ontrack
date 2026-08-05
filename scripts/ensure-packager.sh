@@ -14,6 +14,7 @@
 # Usage:
 #   ./scripts/ensure-packager.sh
 #   ./scripts/ensure-packager.sh --start          # start Metro if down / fix IPv6-only / dead watcher
+#   ./scripts/ensure-packager.sh --metro-only     # Metro/watcher/env only — do not boot or open Simulator
 #   ./scripts/ensure-packager.sh --clear          # replace Metro and clear a poisoned cache
 #   ./scripts/ensure-packager.sh --lan            # use en0 LAN IP (physical device)
 #   ./scripts/ensure-packager.sh --force-reconnect
@@ -29,6 +30,7 @@
 #   METRO_WATCHER_FS_PROBE=1   # also touch beacon + confirm Watchman sees it
 #   ONTRACK_IOS_SIMULATOR=iPhone 17 Pro   # default simulator device name
 #   ONTRACK_IOS_SIMULATOR_UDID=<udid>     # optional exact device
+#   ONTRACK_IOS_SIMULATOR_WINDOW=1        # open Simulator.app (default: headless)
 
 set -euo pipefail
 
@@ -58,6 +60,7 @@ DO_START=0
 DO_CLEAR=0
 DO_FORCE=0
 CHECK_ONLY=0
+METRO_ONLY=0
 SYNC_ENV=1
 HOST_MODE="${PACKAGER_HOST:-localhost}"
 # Set when this run launches a new Metro process. A new Metro orphans the dev
@@ -66,7 +69,7 @@ HOST_MODE="${PACKAGER_HOST:-localhost}"
 METRO_RELAUNCHED=0
 
 usage() {
-  sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -74,6 +77,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --start) DO_START=1 ;;
     --clear) DO_START=1; DO_CLEAR=1 ;;
+    --metro-only) METRO_ONLY=1 ;;
     --force-reconnect) DO_FORCE=1 ;;
     --check-only) CHECK_ONLY=1 ;;
     --no-env) SYNC_ENV=0 ;;
@@ -614,6 +618,13 @@ ensure_metro_watcher "$HOST"
 
 sync_env_local "$HOST"
 
+# SessionStart / Metro keep-alive: never open Simulator. Agents boot the
+# preferred device only when verification (agent-ui / reconnect) needs it.
+if [[ "$METRO_ONLY" == "1" ]]; then
+  echo "Metro-only: skipping simulator boot/reconnect"
+  exit 0
+fi
+
 if [[ "$CHECK_ONLY" == "1" ]]; then
   if simulator_booted && app_installed && probe_connected; then
     echo "App probe: connected"
@@ -633,7 +644,7 @@ if [[ "$DO_FORCE" == "1" ]]; then
   exit 0
 fi
 
-# Always prefer iPhone 17 Pro (override via ONTRACK_IOS_SIMULATOR).
+# Boot preferred device only (default iPhone 17 Pro). Never leave peer sims up.
 if ! ensure_preferred_ios_simulator; then
   echo "note: could not boot preferred simulator — Metro is healthy"
   exit 0

@@ -4,11 +4,27 @@
 # Default device: iPhone 17 Pro
 # Override with ONTRACK_IOS_SIMULATOR="iPhone 16 Pro" (or any simctl device name),
 # or ONTRACK_IOS_SIMULATOR_UDID=<udid> for an exact device.
+#
+# Headless by default: `simctl boot` runs the device without Simulator.app.
+# Agent-ui dump/tap/assert/screenshot (`simctl io`) all work without a window.
+# Set ONTRACK_IOS_SIMULATOR_WINDOW=1 to also open Simulator.app for a visual view.
+#
+# If opening the GUI: never bare `open -a Simulator` before the preferred device
+# is the only Booted sim — that restores a multi-device layout (e.g. iPhone 17
+# beside iPhone 17 Pro).
 
 : "${ONTRACK_IOS_SIMULATOR:=iPhone 17 Pro}"
+: "${ONTRACK_IOS_SIMULATOR_WINDOW:=0}"
 
 ios_sim_preferred_name() {
   printf '%s' "${ONTRACK_IOS_SIMULATOR}"
+}
+
+ios_sim_want_window() {
+  case "${ONTRACK_IOS_SIMULATOR_WINDOW:-0}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # Print UDID of the preferred device if it is already Booted; else empty.
@@ -89,35 +105,68 @@ for devices in data.get("devices", {}).values():
 ' 2>/dev/null || true)
 }
 
-# Boot the preferred simulator (default: iPhone 17 Pro). Shutdown other booted
-# devices so `simctl … booted` is unambiguous. No-op when already on preferred.
-ensure_preferred_ios_simulator() {
-  local name udid already
-  name="$(ios_sim_preferred_name)"
-  already="$(ios_sim_preferred_booted_udid || true)"
-  open -a Simulator >/dev/null 2>&1 || true
-
-  if [[ -n "$already" ]]; then
-    ios_sim_shutdown_others "$already"
+# Opt-in: open Simulator.app focused on one UDID (not used for headless verify).
+ios_sim_open_focused() {
+  local udid="$1"
+  defaults write com.apple.iphonesimulator CurrentDeviceUDID "$udid" >/dev/null 2>&1 || true
+  # Already running: do not re-open — that restores peer device windows.
+  if pgrep -x Simulator >/dev/null 2>&1; then
     return 0
   fi
+  open -a Simulator --args -CurrentDeviceUDID "$udid" >/dev/null 2>&1 \
+    || open -a Simulator >/dev/null 2>&1 \
+    || true
+}
+
+# After Simulator.app opens it may briefly re-boot peers from saved windows.
+ios_sim_prune_peers_briefly() {
+  local keep_udid="$1"
+  local settle=$((SECONDS + 3))
+  while (( SECONDS < settle )); do
+    ios_sim_shutdown_others "$keep_udid"
+    sleep 0.35
+  done
+  ios_sim_shutdown_others "$keep_udid"
+}
+
+# Boot the preferred simulator (default: iPhone 17 Pro) via simctl — headless.
+# Does not open Simulator.app unless ONTRACK_IOS_SIMULATOR_WINDOW=1.
+# Shutdown other booted devices so `simctl … booted` is unambiguous.
+ensure_preferred_ios_simulator() {
+  local name udid already opened=0
+  name="$(ios_sim_preferred_name)"
 
   if ! udid="$(ios_sim_resolve_udid)"; then
     echo "error: no available simulator named '${name}' (set ONTRACK_IOS_SIMULATOR or ONTRACK_IOS_SIMULATOR_UDID)" >&2
     return 1
   fi
 
-  echo "Booting preferred simulator: ${name} (${udid})"
   ios_sim_shutdown_others "$udid"
-  xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-  open -a Simulator >/dev/null 2>&1 || true
+
+  already="$(ios_sim_preferred_booted_udid || true)"
+  if [[ -z "$already" ]]; then
+    echo "Booting preferred simulator (headless): ${name} (${udid})"
+    xcrun simctl boot "$udid" >/dev/null 2>&1 || true
+  fi
+
+  if ios_sim_want_window; then
+    if ! pgrep -x Simulator >/dev/null 2>&1; then
+      opened=1
+    fi
+    echo "Opening Simulator.app window (ONTRACK_IOS_SIMULATOR_WINDOW=1)"
+    ios_sim_open_focused "$udid"
+  fi
 
   local deadline=$((SECONDS + 60))
   while (( SECONDS < deadline )); do
     if xcrun simctl list devices booted 2>/dev/null | grep -q "$udid"; then
-      # Simulator.app sometimes auto-boots another device when opening — prune again.
       ios_sim_shutdown_others "$udid"
-      echo "Simulator ready: ${name}"
+      if [[ "$opened" == "1" ]]; then
+        ios_sim_prune_peers_briefly "$udid"
+      else
+        ios_sim_shutdown_others "$udid"
+      fi
+      echo "Simulator ready: ${name}$(ios_sim_want_window && echo '' || echo ' (headless)')"
       return 0
     fi
     sleep 0.5

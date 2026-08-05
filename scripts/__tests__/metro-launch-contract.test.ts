@@ -125,11 +125,32 @@ describe('metro launch command contract', () => {
     expect(hooks.hooks.sessionStart?.[0]?.command).toContain('ensure-packager-session.sh');
     expect(hooks.hooks.beforeShellExecution?.[0]?.command).toContain('block-shell-tied-metro.sh');
 
+    // sessionStart must not open Simulator — only Metro keep-alive.
+    const sessionHook = read('.cursor/hooks/ensure-packager-session.sh');
+    expect(sessionHook).toContain('--metro-only');
+    expect(sessionHook).not.toMatch(/ensure-packager\.sh" --start\s*$/);
+
+    const ensure = read('scripts/ensure-packager.sh');
+    expect(ensure).toContain('--metro-only');
+    expect(ensure).toContain('Metro-only: skipping simulator boot/reconnect');
+
     const host = read('scripts/lib/agent-ui-host.sh');
     expect(host).toContain('agent_ui_heal_packager');
     expect(host).toContain('AGENT_UI_SKIP_HEAL');
 
     const open = read('scripts/agent-ui-open.sh');
     expect(open).toContain('agent_ui_heal_packager');
+  });
+
+  it('boots preferred simulator headless; GUI window is opt-in only', () => {
+    const sim = read('scripts/lib/ios-simulator.sh');
+    expect(sim).toContain('ONTRACK_IOS_SIMULATOR:=iPhone 17 Pro');
+    expect(sim).toContain('ONTRACK_IOS_SIMULATOR_WINDOW:=0');
+    expect(sim).toContain('ios_sim_want_window');
+    expect(sim).toContain('Booting preferred simulator (headless)');
+    // Window open is gated — never unconditional open in ensure_preferred.
+    expect(sim).toMatch(/if ios_sim_want_window; then[\s\S]*?ios_sim_open_focused/);
+    expect(sim).toContain('-CurrentDeviceUDID');
+    expect(sim).toContain('ios_sim_prune_peers_briefly');
   });
 });
