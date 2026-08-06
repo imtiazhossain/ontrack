@@ -112,6 +112,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `open-new-checklist` | Checklists → new-list name field ready |
 | `checklist-demo` | Seed demo checklist → open list detail (task ready) |
 | `checklist-demo-list` | Seed → checklists overview with demo list card |
+| `checklist-demo-settings` | Seed → checklist settings (add editors) |
 | `grocery-demo` | Seed demo grocery list → open meal view (recipe ready) |
 | `grocery-demo-combined` | Seed → grocery detail → Combined tab (copy ready) |
 | `grocery-demo-recipe-import` | Seed → recipe import URL field ready |

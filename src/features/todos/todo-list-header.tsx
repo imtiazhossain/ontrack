@@ -26,6 +26,7 @@ export function TodoListHeader({
   tasks,
   members,
   owner,
+  canEdit,
   dateLabel,
   heroCopy,
   completedCount,
@@ -53,6 +54,7 @@ export function TodoListHeader({
   tasks: TodoTask[];
   members: TodoMember[];
   owner: boolean;
+  canEdit: boolean;
   dateLabel: string;
   heroCopy: string;
   completedCount: number;
@@ -159,7 +161,7 @@ export function TodoListHeader({
                   />
                 </View>
 
-                {owner ? <View
+                {canEdit ? <View
                   style={[
                     styles.composer,
                     {
@@ -297,7 +299,7 @@ export function TodoListHeader({
                     </AppText>
                   </Pressable>
                   <View style={styles.toolbarMenus}>
-                    {owner && tasks.length > 0 ? (
+                    {canEdit && tasks.length > 0 ? (
                       <Pressable
                         ref={editModeAgent.ref}
                         accessibilityRole="button"
@@ -407,7 +409,7 @@ export function TodoListHeader({
                             : 'View people with access',
                           icon: 'settings',
                         },
-                        ...(owner && completedCount > 0
+                        ...(canEdit && completedCount > 0
                           ? [
                               {
                                 id: 'clear',

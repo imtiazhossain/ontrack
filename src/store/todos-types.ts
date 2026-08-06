@@ -1,7 +1,7 @@
 /** Todo domain types — kept separate from the Zustand store for agent locality. */
 
 export type TodoListMode = 'private' | 'shared';
-export type TodoListRole = 'owner' | 'member';
+export type TodoListRole = 'owner' | 'editor' | 'member';
 export type TodoListKind = 'checklist' | 'grocery';
 export type TodoRecipeSourceKind = 'url' | 'image';
 

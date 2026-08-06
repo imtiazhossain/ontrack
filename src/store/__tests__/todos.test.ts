@@ -2,6 +2,7 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 
 import {
     canCompleteTodo,
+    canEditTodoContent,
     normalizeTodoState,
     privateTodoPayload,
     useTodos,
@@ -249,6 +250,32 @@ describe('to-do store', () => {
     expect(
       canCompleteTodo(list, { ...baseTask, assigneeUserId: 'member-b' }, 'member-a'),
     ).toBe(false);
+  });
+
+  it('lets editors complete any item and edit content', () => {
+    const state = normalizeTodoState(undefined);
+    const editorList = {
+      ...state.lists[0],
+      mode: 'shared' as const,
+      role: 'editor' as const,
+    };
+    const memberList = { ...editorList, role: 'member' as const };
+    const baseTask = {
+      id: 'task',
+      listId: editorList.id,
+      title: 'Task',
+      completed: false,
+      important: false,
+      assigneeUserId: 'someone-else',
+      createdAt: '2026-07-01T10:00:00.000Z',
+      updatedAt: '2026-07-01T10:00:00.000Z',
+      version: 0,
+    };
+
+    expect(canEditTodoContent(editorList)).toBe(true);
+    expect(canEditTodoContent(memberList)).toBe(false);
+    expect(canCompleteTodo(editorList, baseTask, 'editor-a')).toBe(true);
+    expect(canCompleteTodo(memberList, baseTask, 'member-a')).toBe(false);
   });
 
   it('migrates recognized grocery names but preserves explicit checklist kinds', () => {

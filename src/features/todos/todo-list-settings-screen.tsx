@@ -22,6 +22,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { FriendProfile } from '@/services/friends';
 import {
+  addTodoFriendEditors,
   createTodoEmailInvite,
   createTodoShareLink,
   deleteSharedTodoList,
@@ -31,13 +32,14 @@ import {
   removeTodoMember,
   revokeTodoEmailInvite,
   revokeTodoShareLink,
+  setTodoMemberRole,
   transferTodoListOwnership,
   type PendingTodoEmailInvite,
 } from '@/services/todos/collaboration';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import { useFriends } from '@/store/friends';
 import { useTodos, type TodoMember } from '@/store/todos';
-import { AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds, AgentTestId } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
@@ -52,7 +54,11 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     [allMembers, listId],
   );
   const otherMembers = useMemo(
-    () => members.filter((member) => member.role === 'member'),
+    () => members.filter((member) => member.role !== 'owner'),
+    [members],
+  );
+  const memberExcludeIds = useMemo(
+    () => members.map((member) => member.userId),
     [members],
   );
   const renameList = useTodos((state) => state.renameList);
@@ -74,9 +80,11 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     loadTodoListPendingInvites(listId).then(setPendingInvites);
 
   useEffect(() => {
-    if (!user || list?.mode !== 'shared' || list.role !== 'owner') return;
-    void refreshPending().catch(() => undefined);
+    if (!user || list?.role !== 'owner') return;
     void hydrateFriends().catch(() => undefined);
+    if (list.mode === 'shared') {
+      void refreshPending().catch(() => undefined);
+    }
   }, [list?.mode, list?.role, listId, user, hydrateFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!list) {
@@ -104,19 +112,27 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     }
   };
 
-  const inviteFriendsToList = (friends: FriendProfile[]) => {
+  const addFriendEditors = (friends: FriendProfile[]) => {
     if (!friends.length) return;
     void run('friends', async () => {
       if (list.mode === 'private') await publishTodoList(list.id);
-      for (const friend of friends) {
-        await createTodoEmailInvite(list.id, friend.email);
-      }
-      await refreshPending();
+      await addTodoFriendEditors(
+        list.id,
+        friends.map((friend) => friend.userId),
+      );
       appPrompt.alert(
-        'Invitations Ready',
-        'Selected friends will see these in their onTrack invitation inbox.',
+        'Editors Added',
+        friends.length === 1
+          ? `${friends[0].displayName} can now edit this list.`
+          : `${friends.length} friends can now edit this list.`,
       );
     });
+  };
+
+  const roleLabel = (role: TodoMember['role']) => {
+    if (role === 'owner') return 'Owner';
+    if (role === 'editor') return 'Editor';
+    return 'Member';
   };
 
   const requireSignIn = () => {
@@ -310,7 +326,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
         <Card variant="sunken" style={{ gap: spacing.md }}>
           <AppText variant="heading">Shared with You</AppText>
           <AppText variant="body" color="secondary">
-            {list.ownerName ?? 'The owner'} manages items, assignments, and membership.
+            {list.role === 'editor'
+              ? 'You can add, edit, assign, and complete items. The owner manages membership and list settings.'
+              : `${list.ownerName ?? 'The owner'} manages items, assignments, and membership. You can complete items assigned to you or Anyone.`}
           </AppText>
         </Card>
       )}
@@ -318,6 +336,25 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
       {owner ? (
         <>
           <SectionHeader title="Sharing" />
+          <Card style={{ gap: spacing.md }}>
+            <AppText variant="subheading">Editors</AppText>
+            <AppText variant="body" color="secondary">
+              Friends you add can edit items live. You stay the owner.
+              {list.mode === 'private'
+                ? ' Adding an editor moves this list into its collaborative space.'
+                : ''}
+            </AppText>
+            <Button
+              testID={AgentUiIds.listSettings.addEditors}
+              icon="people"
+              disabled={Boolean(working)}
+              onPress={() => {
+                if (!user) return requireSignIn();
+                setPickingFriends(true);
+              }}>
+              {working === 'friends' ? 'Adding…' : 'Add Editors from Friends'}
+            </Button>
+          </Card>
           {list.mode === 'private' ? (
             <Card style={{ gap: spacing.md }}>
               <AppText variant="subheading">Work Together Live</AppText>
@@ -328,7 +365,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                 icon="people"
                 disabled={Boolean(working)}
                 onPress={beginSharing}>
-                {working === 'publish' ? 'Preparing…' : 'Share This List'}
+                {working === 'publish' ? 'Preparing…' : 'Share Join Link'}
               </Button>
             </Card>
           ) : (
@@ -336,7 +373,7 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
               <Card style={{ gap: spacing.md }}>
                 <AppText variant="subheading">Secure Join Link</AppText>
                 <AppText variant="body" color="secondary">
-                  Any signed-in onTrack user with the link can join until you revoke it.
+                  Any signed-in onTrack user with the link can join as a member until you revoke it.
                 </AppText>
                 <Button disabled={Boolean(working)} onPress={shareLink} icon="send">
                   {working === 'link' ? 'Preparing…' : 'Share Join Link'}
@@ -355,13 +392,9 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
 
               <Card style={{ gap: spacing.md }}>
                 <AppText variant="subheading">Invite an Account</AppText>
-                <Button
-                  icon="people"
-                  variant="secondary"
-                  disabled={Boolean(working)}
-                  onPress={() => setPickingFriends(true)}>
-                  Invite from Friends
-                </Button>
+                <AppText variant="body" color="secondary">
+                  Email invites join as members. Promote them to editor after they accept.
+                </AppText>
                 <Input
                   label="onTrack account email"
                   value={email}
@@ -449,11 +482,60 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
                     {member.displayName}
                   </AppText>
                   <AppText variant="caption" color="secondary" fit>
-                    {member.role === 'owner' ? 'Owner' : 'Member'}
+                    {roleLabel(member.role)}
                   </AppText>
                 </View>
-                {owner && member.role === 'member' ? (
+                {owner && member.role !== 'owner' ? (
                   <View style={[styles.memberActions, { gap: spacing.sm }]}>
+                    {member.role === 'member' ? (
+                      <AgentTestId
+                        testID={AgentUiIds.listSettings.makeEditor(member.userId)}
+                        label={`Make ${member.displayName} an editor`}
+                        onPress={() =>
+                          void run(`role-${member.userId}`, () =>
+                            setTodoMemberRole(list.id, member.userId, 'editor'),
+                          )
+                        }>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Make ${member.displayName} an editor`}
+                          disabled={Boolean(working)}
+                          hitSlop={8}
+                          onPress={() =>
+                            void run(`role-${member.userId}`, () =>
+                              setTodoMemberRole(list.id, member.userId, 'editor'),
+                            )
+                          }>
+                          <AppText variant="caption" color="accent" fit>
+                            Make editor
+                          </AppText>
+                        </Pressable>
+                      </AgentTestId>
+                    ) : (
+                      <AgentTestId
+                        testID={AgentUiIds.listSettings.makeMember(member.userId)}
+                        label={`Make ${member.displayName} a member`}
+                        onPress={() =>
+                          void run(`role-${member.userId}`, () =>
+                            setTodoMemberRole(list.id, member.userId, 'member'),
+                          )
+                        }>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Make ${member.displayName} a member`}
+                          disabled={Boolean(working)}
+                          hitSlop={8}
+                          onPress={() =>
+                            void run(`role-${member.userId}`, () =>
+                              setTodoMemberRole(list.id, member.userId, 'member'),
+                            )
+                          }>
+                          <AppText variant="caption" color="accent" fit>
+                            Make member
+                          </AppText>
+                        </Pressable>
+                      </AgentTestId>
+                    )}
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Make ${member.displayName} the owner`}
@@ -526,11 +608,11 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
     </Screen>
     <PeoplePicker
       visible={pickingFriends}
-      title="Invite Friends"
-      confirmLabel="Invite"
-      excludeIds={pendingInvites.map((invite) => invite.email)}
+      title="Add Editors"
+      confirmLabel="Add Editors"
+      excludeIds={memberExcludeIds}
       onClose={() => setPickingFriends(false)}
-      onConfirm={inviteFriendsToList}
+      onConfirm={addFriendEditors}
     />
     </>
   );

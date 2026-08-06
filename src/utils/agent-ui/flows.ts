@@ -267,6 +267,18 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
+  'checklist-demo-settings': [
+    { op: 'seed', to: 'checklist-demo' },
+    {
+      op: 'goto',
+      to: `checklists/${AGENT_UI_DEMO_CHECKLIST_LIST_ID}/settings`,
+    },
+    {
+      op: 'wait',
+      id: 'ontrack.listSettings.addEditors',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
   'grocery-demo': [
     { op: 'seed', to: 'grocery-demo' },
     { op: 'goto', to: `checklists/${AGENT_UI_DEMO_GROCERY_LIST_ID}` },

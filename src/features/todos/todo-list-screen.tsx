@@ -35,6 +35,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import {
     canCompleteTodo,
+    canEditTodoContent,
     useTodos,
 } from '@/store/todos';
 import { useUI } from '@/store/ui';
@@ -188,6 +189,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
   }
 
   const owner = list.role === 'owner';
+  const canEdit = canEditTodoContent(list);
 
   return (
     <Screen
@@ -239,6 +241,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                 tasks={tasks}
                 members={members}
                 owner={owner}
+                canEdit={canEdit}
                 dateLabel={dateLabel}
                 heroCopy={heroCopy}
                 completedCount={completedCount}
@@ -313,7 +316,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
                   editing={inlineEditingTaskId === item.id}
                   expanded={expandedTaskId === item.id}
                   isActive={isActive}
-                  listOwner={owner}
+                  listOwner={canEdit}
                   members={members}
                   testID={AgentUiIds.checklists.detail.task(item.id)}
                   onCollapseTitle={() => setExpandedTaskId(null)}

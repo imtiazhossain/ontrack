@@ -37,6 +37,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { deletePersistedRecipeImage } from '@/services/recipes';
 import {
     canCompleteTodo,
+    canEditTodoContent,
     useTodos,
     type TodoRecipe,
     type TodoTask,
@@ -150,6 +151,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
   );
 
   const owner = list?.role === 'owner';
+  const canEdit = list ? canEditTodoContent(list) : false;
   const completedCount = tasks.filter((task) => task.completed).length;
   const progress = tasks.length ? completedCount / tasks.length : 0;
 
@@ -184,11 +186,11 @@ export function GroceryListScreen({ listId }: { listId: string }) {
       rows.push({ type: 'empty-recipes', key: 'empty-recipes' });
     }
     rows.push({ type: 'other-items', key: 'other-items' });
-    if (owner && completedCount > 0) {
+    if (canEdit && completedCount > 0) {
       rows.push({ type: 'clear', key: 'clear' });
     }
     return rows;
-  }, [completedCount, ingredients, owner, recipes]);
+  }, [canEdit, completedCount, ingredients, recipes]);
 
   const combinedRows = useMemo(() => {
     const rows: GroceryListRow[] = [{ type: 'combined-heading', key: 'combined-heading' }];
@@ -198,11 +200,11 @@ export function GroceryListScreen({ listId }: { listId: string }) {
       rows.push({ type: 'empty-combined', key: 'empty-combined' });
     }
     rows.push({ type: 'other-items', key: 'other-items' });
-    if (owner && completedCount > 0) {
+    if (canEdit && completedCount > 0) {
       rows.push({ type: 'clear', key: 'clear' });
     }
     return rows;
-  }, [combined, completedCount, owner]);
+  }, [canEdit, combined, completedCount]);
 
   const listData = view === 'meal' ? mealRows : combinedRows;
 
@@ -322,7 +324,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
             <View style={styles.row}>
               <OtherItems
                 tasks={standalone}
-                owner={owner}
+                owner={canEdit}
                 draft={draft}
                 onDraftChange={setDraft}
                 onAdd={addOther}
@@ -378,6 +380,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
       deleteTask,
       draft,
       ingredients,
+      canEdit,
       list,
       listId,
       members,
@@ -470,13 +473,13 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                   }>
                   Add Recipe
                 </Button>
-              ) : (
+              ) : !canEdit ? (
                 <Card variant="sunken" style={styles.memberNotice}>
                   <AppText variant="caption" color="secondary">
                     You can check ingredients assigned to you or Anyone.
                   </AppText>
                 </Card>
-              )}
+              ) : null}
               <Pressable
                 ref={settingsAgent.ref}
                 testID={settingsAgent.testID}

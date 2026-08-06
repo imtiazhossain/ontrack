@@ -67,7 +67,7 @@ export function TodoListCard({
   });
   const collaboratorNames = collaborators?.map((person) => person.displayName);
   const collaboratorLabel = collaboratorNames?.join(', ');
-  const leaving = list.mode === 'shared' && list.role === 'member';
+  const leaving = list.mode === 'shared' && list.role !== 'owner';
   const canRename = editMode && list.role === 'owner';
   const cardContents = (
     <>

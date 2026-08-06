@@ -28,12 +28,21 @@ export function privateTodoPayload(state: TodoPersistedState) {
   };
 }
 
+/** Owner or editor may change list items; members may only complete assigned/open tasks. */
+export function canEditTodoContent(list: TodoList): boolean {
+  return (
+    list.mode === 'private' ||
+    list.role === 'owner' ||
+    list.role === 'editor'
+  );
+}
+
 export function canCompleteTodo(
   list: TodoList,
   task: TodoTask,
   actorUserId?: string,
 ): boolean {
-  if (list.role === 'owner' || list.mode === 'private') return true;
+  if (canEditTodoContent(list)) return true;
   return Boolean(actorUserId && (!task.assigneeUserId || task.assigneeUserId === actorUserId));
 }
 

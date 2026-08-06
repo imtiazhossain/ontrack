@@ -254,6 +254,11 @@ export const AgentUiIds = {
   listSettings: {
     name: 'ontrack.listSettings.name',
     saveName: 'ontrack.listSettings.saveName',
+    addEditors: 'ontrack.listSettings.addEditors',
+    makeEditor: (userId: string) =>
+      `ontrack.listSettings.makeEditor.${userId}`,
+    makeMember: (userId: string) =>
+      `ontrack.listSettings.makeMember.${userId}`,
   },
   profile: {
     avatar: 'ontrack.profile.avatar',

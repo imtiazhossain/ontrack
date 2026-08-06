@@ -203,7 +203,7 @@ export async function publishTodoList(listId: string): Promise<TodoSharedSnapsho
 }
 
 function permanentMutationError(message: string) {
-  return /no longer have access|only the list owner|assigned to someone else|not a member|Recipes can only be added to Grocery lists/i.test(
+  return /no longer have access|only the list owner|only an editor or owner|assigned to someone else|not a member|Recipes can only be added to Grocery lists/i.test(
     message,
   );
 }
@@ -631,6 +631,42 @@ export async function removeTodoMember(listId: string, userId: string) {
     requested_user_id: userId,
   });
   if (error) throw new TodoCollaborationError(error.message);
+  await loadTodoListSnapshot(listId);
+}
+
+export async function setTodoMemberRole(
+  listId: string,
+  userId: string,
+  role: 'editor' | 'member',
+) {
+  const client = await authenticatedClient();
+  const { error } = await client.rpc('set_todo_member_role', {
+    requested_list_id: listId,
+    requested_user_id: userId,
+    requested_role: role,
+  });
+  if (error) {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'That member role could not be updated.'),
+    );
+  }
+  await loadTodoListSnapshot(listId);
+}
+
+export async function addTodoFriendEditors(
+  listId: string,
+  userIds: string[],
+) {
+  const client = await authenticatedClient();
+  const { error } = await client.rpc('add_todo_friend_editors', {
+    requested_list_id: listId,
+    requested_user_ids: userIds,
+  });
+  if (error) {
+    throw new TodoCollaborationError(
+      messageFrom(error, 'Friends could not be added as editors.'),
+    );
+  }
   await loadTodoListSnapshot(listId);
 }
 

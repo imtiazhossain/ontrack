@@ -308,6 +308,9 @@ Demo fixture: `list-agent-ui-demo-grocery` / `recipe-agent-ui-demo-pasta` via `.
 | ------------------------------ | ------------ |
 | `ontrack.listSettings.name`    | List name    |
 | `ontrack.listSettings.saveName`| Save name    |
+| `ontrack.listSettings.addEditors` | Add editors from friends |
+| `ontrack.listSettings.makeEditor.<userId>` | Promote member to editor |
+| `ontrack.listSettings.makeMember.<userId>` | Demote editor to member |
 
 ## Recipe import (`/todos/<listId>/recipe-import`)
 

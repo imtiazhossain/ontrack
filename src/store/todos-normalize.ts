@@ -98,7 +98,12 @@ export function normalizeList(
         ? 'grocery'
         : 'checklist',
     mode: candidate.mode === 'shared' ? 'shared' : 'private',
-    role: candidate.role === 'member' ? 'member' : 'owner',
+    role:
+      candidate.role === 'member'
+        ? 'member'
+        : candidate.role === 'editor'
+          ? 'editor'
+          : 'owner',
     ownerUserId: asNonEmptyString(candidate.ownerUserId),
     ownerName: asNonEmptyString(candidate.ownerName),
     shareCode: asNonEmptyString(candidate.shareCode),
@@ -202,7 +207,12 @@ export function normalizeMember(value: unknown): TodoMember | undefined {
     listId,
     userId,
     displayName,
-    role: candidate.role === 'owner' ? 'owner' : 'member',
+    role:
+      candidate.role === 'owner'
+        ? 'owner'
+        : candidate.role === 'editor'
+          ? 'editor'
+          : 'member',
     joinedAt: asNonEmptyString(candidate.joinedAt) ?? nowIso(),
   };
 }

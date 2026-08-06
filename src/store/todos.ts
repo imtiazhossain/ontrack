@@ -5,6 +5,7 @@ import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { newUuid } from '@/utils/id';
 import {
     canCompleteTodo,
+    canEditTodoContent,
     markGuestEdit,
     queuedMutation,
 } from './todos-helpers';
@@ -42,6 +43,7 @@ export {
 
 export {
     canCompleteTodo,
+    canEditTodoContent,
     privateTodoPayload
 } from './todos-helpers';
 
@@ -147,7 +149,7 @@ export const useTodos = create<TodoState>()(
 
       reorderTasks: (listId, orderedIds) => {
         const list = get().lists.find((item) => item.id === listId);
-        if (!list || list.role !== 'owner') return;
+        if (!list || !canEditTodoContent(list)) return;
         const positions = new Map(orderedIds.map((id, index) => [id, index]));
         if (positions.size === 0) return;
         markGuestEdit();
@@ -246,7 +248,7 @@ export const useTodos = create<TodoState>()(
         const legacyCall = maybeTitle === undefined;
         const list = legacyCall ? get().lists[0] : get().lists.find((item) => item.id === listId);
         const clean = cleanTitle(legacyCall ? listId : maybeTitle);
-        if (!list || list.role !== 'owner' || !clean) return undefined;
+        if (!list || !canEditTodoContent(list) || !clean) return undefined;
         const now = nowIso();
         const positions = get().tasks
           .filter((task) => task.listId === list.id)
@@ -284,7 +286,7 @@ export const useTodos = create<TodoState>()(
         const clean = cleanTitle(title);
         const task = get().tasks.find((item) => item.id === id);
         const list = task ? get().lists.find((item) => item.id === task.listId) : undefined;
-        if (!clean || !task || !list || list.role !== 'owner') return;
+        if (!clean || !task || !list || !canEditTodoContent(list)) return;
         const updatedAt = nowIso();
         markGuestEdit();
         set((state) => ({
@@ -391,7 +393,7 @@ export const useTodos = create<TodoState>()(
       toggleImportant: (id) => {
         const task = get().tasks.find((item) => item.id === id);
         const list = task ? get().lists.find((item) => item.id === task.listId) : undefined;
-        if (!task || !list || list.role !== 'owner') return;
+        if (!task || !list || !canEditTodoContent(list)) return;
         const important = !task.important;
         const updatedAt = nowIso();
         markGuestEdit();
@@ -412,7 +414,7 @@ export const useTodos = create<TodoState>()(
       setAssignee: (id, assigneeUserId) => {
         const task = get().tasks.find((item) => item.id === id);
         const list = task ? get().lists.find((item) => item.id === task.listId) : undefined;
-        if (!task || !list || list.role !== 'owner') return;
+        if (!task || !list || !canEditTodoContent(list)) return;
         const updatedAt = nowIso();
         set((state) => ({
           tasks: state.tasks.map((item) =>
@@ -434,7 +436,7 @@ export const useTodos = create<TodoState>()(
       deleteTask: (id) => {
         const task = get().tasks.find((item) => item.id === id);
         const list = task ? get().lists.find((item) => item.id === task.listId) : undefined;
-        if (!task || !list || list.role !== 'owner') return;
+        if (!task || !list || !canEditTodoContent(list)) return;
         const updatedAt = nowIso();
         const deleteRecipeId =
           task.recipeId &&
@@ -473,7 +475,7 @@ export const useTodos = create<TodoState>()(
         const list = listId
           ? get().lists.find((item) => item.id === listId)
           : get().lists[0];
-        if (!list || list.role !== 'owner') return;
+        if (!list || !canEditTodoContent(list)) return;
         const completedIds = get().tasks
           .filter((task) => task.listId === list.id && task.completed)
           .map((task) => task.id);

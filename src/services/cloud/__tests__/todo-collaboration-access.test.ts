@@ -37,6 +37,13 @@ describe('collaborative to-do access contract', () => {
     ),
     'utf8',
   );
+  const editorMigration = readFileSync(
+    join(
+      process.cwd(),
+      'supabase/migrations/202608060003_todo_list_editors.sql',
+    ),
+    'utf8',
+  );
 
   it('keeps shared tables behind RLS and authenticated RPCs', () => {
     for (const table of [
@@ -71,6 +78,26 @@ describe('collaborative to-do access contract', () => {
     expect(migration).toContain('existing_item.assignee_user_id <> actor');
     expect(migration).toContain('if not public.is_todo_owner(requested_list_id) then');
     expect(migration).toContain("raise exception 'Only the list owner can make that change.'");
+  });
+
+  it('adds editor role helpers and lets editors mutate list items', () => {
+    expect(editorMigration).toContain("check (role in ('owner', 'editor', 'member'))");
+    expect(editorMigration).toContain(
+      'create or replace function public.is_todo_editor',
+    );
+    expect(editorMigration).toContain(
+      'create or replace function public.add_todo_friend_editors',
+    );
+    expect(editorMigration).toContain(
+      'create or replace function public.set_todo_member_role',
+    );
+    expect(editorMigration).toContain('public.is_todo_editor(requested_list_id)');
+    expect(editorMigration).toContain(
+      "raise exception 'Only an editor or owner can make that change.'",
+    );
+    expect(editorMigration).not.toMatch(
+      /grant execute on function public\.(add_todo_friend_editors|set_todo_member_role)[\s\S]*?to anon/,
+    );
   });
 
   it('adds todos to the account-domain constraint', () => {

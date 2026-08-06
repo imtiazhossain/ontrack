@@ -186,7 +186,7 @@ export function TodoListsOverview() {
 
   const removeList = useCallback(
     (list: TodoList) => {
-      const leaving = list.mode === 'shared' && list.role === 'member';
+      const leaving = list.mode === 'shared' && list.role !== 'owner';
       const title = leaving
         ? `Leave “${list.name}”?`
         : `Delete “${list.name}”?`;
