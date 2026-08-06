@@ -72,3 +72,6 @@ __pycache__/
 # Simulator verification scratch screenshots
 .tmp/
 .tmp-*.png
+
+# Local one-off SQL scratch (ops / verify queries)
+/tmp-*.sql
