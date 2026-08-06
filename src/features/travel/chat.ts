@@ -21,8 +21,23 @@ export interface TravelChatMessage {
   id: string;
   senderName: string;
   senderDeviceId: string;
+  /** Signed-in account that sent the message; missing on older rows. */
+  senderUserId?: string;
   body: string;
   createdAt: string;
+}
+
+/** Prefer account identity so the same user looks like "me" across devices. */
+export function isTravelChatMessageMine(
+  message: Pick<TravelChatMessage, 'senderDeviceId' | 'senderUserId'>,
+  identity: { userId?: string | null; deviceId?: string | null },
+): boolean {
+  const userId = identity.userId?.trim();
+  if (userId && message.senderUserId) {
+    return message.senderUserId === userId;
+  }
+  const deviceId = identity.deviceId?.trim();
+  return Boolean(deviceId && message.senderDeviceId === deviceId);
 }
 
 export type TravelChatListItem =
@@ -138,10 +153,15 @@ function mapMessage(value: unknown): TravelChatMessage | undefined {
   ) {
     return undefined;
   }
+  const senderUserId =
+    typeof row.sender_user_id === 'string' && row.sender_user_id
+      ? row.sender_user_id
+      : undefined;
   return {
     id: row.id,
     senderName: row.sender_name,
     senderDeviceId: row.sender_device_id,
+    senderUserId,
     body: row.body,
     createdAt: row.created_at,
   };

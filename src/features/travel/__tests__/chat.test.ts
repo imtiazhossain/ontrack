@@ -1,5 +1,6 @@
 import {
   buildTravelChatListItems,
+  isTravelChatMessageMine,
   travelChatAccessCode,
   travelChatDayLabel,
   type TravelChatMessage,
@@ -133,6 +134,59 @@ describe('travel chat day labels', () => {
     expect(travelChatDayLabel('2025-12-25', now)).toBe(
       'Thursday, December 25, 2025',
     );
+  });
+});
+
+describe('isTravelChatMessageMine', () => {
+  it('matches by signed-in user across different devices', () => {
+    expect(
+      isTravelChatMessageMine(
+        message({
+          id: 'm1',
+          createdAt: '2026-08-06T12:00:00.000Z',
+          senderDeviceId: 'iphone',
+          senderUserId: 'user-1',
+        }),
+        { userId: 'user-1', deviceId: 'simulator' },
+      ),
+    ).toBe(true);
+  });
+
+  it('does not treat another account as mine when device ids match', () => {
+    expect(
+      isTravelChatMessageMine(
+        message({
+          id: 'm1',
+          createdAt: '2026-08-06T12:00:00.000Z',
+          senderDeviceId: 'shared-device',
+          senderUserId: 'user-a',
+        }),
+        { userId: 'user-b', deviceId: 'shared-device' },
+      ),
+    ).toBe(false);
+  });
+
+  it('falls back to device id when sender_user_id is missing', () => {
+    expect(
+      isTravelChatMessageMine(
+        message({
+          id: 'm1',
+          createdAt: '2026-08-06T12:00:00.000Z',
+          senderDeviceId: 'device-1',
+        }),
+        { userId: 'user-1', deviceId: 'device-1' },
+      ),
+    ).toBe(true);
+    expect(
+      isTravelChatMessageMine(
+        message({
+          id: 'm2',
+          createdAt: '2026-08-06T12:00:00.000Z',
+          senderDeviceId: 'device-1',
+        }),
+        { userId: 'user-1', deviceId: 'other' },
+      ),
+    ).toBe(false);
   });
 });
 

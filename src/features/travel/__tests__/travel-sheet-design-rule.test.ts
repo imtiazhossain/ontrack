@@ -48,6 +48,8 @@ describe('canonical travel sheet design', () => {
     const layout = readFileSync(join(process.cwd(), 'src/app/_layout.tsx'), 'utf8');
 
     expect(chat).toContain('<TravelSheetHeader');
+    expect(chat).toContain('goBackOrReplace');
+    expect(chat).not.toContain('router.back()');
     expect(layout).toMatch(
       /name="travel"[\s\S]*?headerShown: false/,
     );

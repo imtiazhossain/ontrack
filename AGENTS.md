@@ -27,6 +27,7 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 
 - Metro: `npm run packager:ensure` / `packager:ensure:start` — **never** `npm start` in agent shells (Cursor kills it). Node 24 (`.nvmrc`).
 - Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
+- Sideload APK → Drive replace: `npm run android:release-to-drive` → **android-release-apk** skill.
 - Dual verify: `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route)
 - `npm run typecheck` · `npm test` · `npm run lint`
 
@@ -47,7 +48,7 @@ App-affecting change → typecheck/tests + **dual iOS/Android** verify via agent
 
 ## Feature entry points
 
-Domain depth → `.cursor/skills/` (**travel**, **todos**, **workouts**, **vision-board**, **health**, **agent-ui**).
+Domain depth → `.cursor/skills/` (**travel**, **todos**, **workouts**, **vision-board**, **health**, **agent-ui**, **android-release-apk**).
 
 | Change | Start here |
 |--------|------------|

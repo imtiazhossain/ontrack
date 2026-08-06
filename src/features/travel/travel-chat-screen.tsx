@@ -27,6 +27,7 @@ import {
     chatNotificationsAreEnabled,
     enableTravelChatNotifications,
     getTravelChatDeviceId,
+    isTravelChatMessageMine,
     loadTravelChatMessages,
     sendTravelChatMessage,
     travelChatAccessCode,
@@ -66,6 +67,10 @@ import { newId } from '@/utils/id';
 import { goBackOrReplace } from '@/utils/navigation';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
+
+function TravelChatItemSeparator() {
+  return <View style={styles.itemSeparator} />;
+}
 
 export function TravelChatScreen({ planId }: { planId: string }) {
   const theme = useTheme();
@@ -297,12 +302,6 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   }, [accessCode, deviceId]);
 
   useEffect(() => {
-    if (listItems.length === 0) return;
-    const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
-    return () => clearTimeout(timer);
-  }, [listItems.length]);
-
-  useEffect(() => {
     const showEvent =
       Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
     const hideEvent =
@@ -331,6 +330,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
       id: optimisticId,
       senderName,
       senderDeviceId: deviceId,
+      senderUserId: user?.id,
       body,
       createdAt: new Date().toISOString(),
       pending: true,
@@ -539,12 +539,26 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           contentInsetAdjustmentBehavior="never"
           contentContainerStyle={[
             styles.messages,
-            listItems.length === 0 ? styles.emptyMessages : undefined,
-            { paddingBottom: rs.xl, flexGrow: 1 },
+            listItems.length === 0 ? styles.emptyMessages : { paddingBottom: rs.xl },
           ]}
           style={styles.list}
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
+          // Do not use contentContainerStyle gap/flexGrow here — FlashList v2
+          // measures rows for startRenderingFromBottom; gap/flexGrow undershoot
+          // the end and leave the newest messages below the fold.
+          ItemSeparatorComponent={TravelChatItemSeparator}
+          maintainVisibleContentPosition={{
+            // Chat: open on the newest message; keep pinned when sending/receiving
+            // while the user is already near the bottom.
+            startRenderingFromBottom: true,
+            autoscrollToBottomThreshold: 0.2,
+            animateAutoScrollToBottom: true,
+          }}
+          onLoad={() => {
+            if (listItems.length === 0) return;
+            listRef.current?.scrollToEnd({ animated: false });
+          }}
           ListEmptyComponent={
             <EmptyState
               icon="chat"
@@ -558,7 +572,10 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             }
 
             const message = item.message as OptimisticTravelChatMessage;
-            const mine = message.senderDeviceId === deviceId;
+            const mine = isTravelChatMessageMine(message, {
+              userId: user?.id,
+              deviceId,
+            });
             return (
               <View style={[styles.messageRow, mine ? styles.myMessageRow : undefined]}>
                 {!mine ? (
@@ -694,8 +711,9 @@ const styles = StyleSheet.create({
   bannerCopy: { flex: 1, gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
   error: { paddingHorizontal: layout.screenPadding, paddingTop: spacing.sm },
   list: { flex: 1, zIndex: 1 },
-  messages: { flexGrow: 1, gap: spacing.md, padding: layout.screenPadding },
-  emptyMessages: { justifyContent: 'center' },
+  messages: { padding: layout.screenPadding },
+  emptyMessages: { flexGrow: 1, justifyContent: 'center' },
+  itemSeparator: { height: spacing.md },
   messageRow: { alignItems: 'flex-start', maxWidth: '84%' },
   myMessageRow: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   sender: { paddingHorizontal: spacing.sm, paddingBottom: spacing.xs },
