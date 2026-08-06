@@ -149,7 +149,10 @@ export function AgentUiRouteSync() {
     return () => {
       cancelled = true;
       clearInterval(fileTimer);
-      pending.length = 0;
+      const dropped = pending.splice(0, pending.length);
+      for (const request of dropped) {
+        void requeueAgentUiCommand(request);
+      }
     };
   }, []);
 

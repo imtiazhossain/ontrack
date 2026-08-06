@@ -182,6 +182,23 @@ describe('agent-ui request handler', () => {
     mockCreate.mockClear();
   });
 
+  it('skips Documents dump/status mirrors on Android', async () => {
+    const Platform = require('react-native').Platform as { OS: string };
+    const previous = Platform.OS;
+    Platform.OS = 'android';
+    try {
+      setAgentUiRoute('/travel');
+      registerAgentUiTarget('ontrack.tabs.travel', {
+        label: 'Travel',
+        frame: { x: 1, y: 2, width: 3, height: 4 },
+      });
+      await expect(handleAgentUiRequest({ op: 'dump' })).resolves.toBe(true);
+      expect(mockWrite).not.toHaveBeenCalled();
+    } finally {
+      Platform.OS = previous;
+    }
+  });
+
   it('dumps registered elements and taps by id without rewriting dump', async () => {
     const press = jest.fn();
     setAgentUiRoute('/travel');

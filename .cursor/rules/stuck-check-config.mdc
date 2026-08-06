@@ -1,5 +1,5 @@
 ---
-description: Timeouts/wrong screen → check AGENT_UI_PLATFORM and device pins before deep debug
+description: Slow/stuck debug or verify → fix root cause (often config) instead of retrying
 globs:
   - scripts/agent-ui*
   - scripts/ensure-packager.sh
@@ -9,7 +9,9 @@ alwaysApply: false
 
 # Stuck? Check config first
 
-Do not force-reconnect or rewrite bridge code before config triage:
+If a step is slow, unclear, or needs multiple retries — **stop and fix the hang-up**. Do not keep re-running verify/flows hoping it clears. Prefer simple causes (config, pins, Metro/daemon) before deep debug or bridge rewrites.
+
+Agent-ui triage:
 
 1. Sticky pins — `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, serials/sim overrides.
 2. `route` with pin: iOS ~402×874, Android ~384×832. Width mismatch → fix env/device.

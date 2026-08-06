@@ -1,3 +1,4 @@
+import { normalizeAirportCode } from '@/features/travel/airport-timezones';
 import {
   calculateFlightArrival,
   formatFlightItineraryCaption,
@@ -12,6 +13,12 @@ import {
   formatMinutes,
   type DateDisplayFormat,
 } from '@/utils/date';
+
+/** Prefer IATA in tight timeline captions; keep free-text when no code is present. */
+function timelineLocationLabel(location?: string): string | undefined {
+  if (!location?.trim()) return undefined;
+  return normalizeAirportCode(location) ?? location.trim();
+}
 
 /** Action phase shown as a distinct timeline marker. */
 export type TravelTimelinePhase =
@@ -251,12 +258,14 @@ export function timelineEntryCaption(
   }
 
   if (phase === 'pickup') {
-    const location = item.rental?.pickupLocation;
+    const location = timelineLocationLabel(item.rental?.pickupLocation);
     return [dateLabel, time, location].filter(Boolean).join(' · ');
   }
 
   if (phase === 'dropoff') {
-    const location = item.rental?.dropoffLocation || item.rental?.pickupLocation;
+    const location = timelineLocationLabel(
+      item.rental?.dropoffLocation || item.rental?.pickupLocation,
+    );
     return [dateLabel, time, location].filter(Boolean).join(' · ');
   }
 

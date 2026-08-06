@@ -3,13 +3,15 @@ import type { View } from 'react-native';
 import {
   getAgentUiTargetNode,
   isAgentUiEnabled,
-  listAgentUiTargets,
   registerAgentUiTarget,
+  remeasureAllAgentUiFrames,
 } from './registry';
 import { getAgentUiScrollContainer } from './scroll-container';
 
 const EDGE_PAD = 24;
 const SETTLE_MS = 48;
+/** Android can drop measureInWindow callbacks; never block the host op on them. */
+const MEASURE_TIMEOUT_MS = 250;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,33 +19,36 @@ function sleep(ms: number): Promise<void> {
 
 function measureInWindow(
   view: Pick<View, 'measureInWindow'>,
+  timeoutMs: number = MEASURE_TIMEOUT_MS,
 ): Promise<{ x: number; y: number; width: number; height: number } | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (
+      value: { x: number; y: number; width: number; height: number } | null,
+    ) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), timeoutMs);
     try {
       view.measureInWindow((x, y, width, height) => {
+        clearTimeout(timer);
         if (
-          ![x, y, width, height].every((n) => typeof n === 'number' && Number.isFinite(n))
+          ![x, y, width, height].every(
+            (n) => typeof n === 'number' && Number.isFinite(n),
+          )
         ) {
-          resolve(null);
+          finish(null);
           return;
         }
-        resolve({ x, y, width, height });
+        finish({ x, y, width, height });
       });
     } catch {
-      resolve(null);
+      clearTimeout(timer);
+      finish(null);
     }
   });
-}
-
-async function refreshRegisteredFrames(): Promise<void> {
-  await Promise.all(
-    listAgentUiTargets().map(async (entry) => {
-      const node = getAgentUiTargetNode(entry.testID);
-      if (!node) return;
-      const frame = await measureInWindow(node);
-      if (frame) registerAgentUiTarget(entry.testID, { frame });
-    }),
-  );
 }
 
 /**
@@ -81,6 +86,10 @@ export async function scrollAgentUiTargetIntoView(testID: string): Promise<boole
     await sleep(SETTLE_MS);
   }
 
-  await refreshRegisteredFrames();
+  // Remeasure only the target for an updated frame; full registry refresh is
+  // fire-and-forget so a stuck Android measure callback cannot hang the op.
+  const after = await measureInWindow(node);
+  if (after) registerAgentUiTarget(testID, { frame: after });
+  remeasureAllAgentUiFrames();
   return true;
 }

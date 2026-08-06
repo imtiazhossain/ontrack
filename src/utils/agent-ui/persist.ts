@@ -1,9 +1,14 @@
 import { File, Paths } from 'expo-file-system';
-import { Dimensions, PixelRatio } from 'react-native';
+import { Dimensions, PixelRatio, Platform } from 'react-native';
 
 import { getAgentUiActiveNonce, postAgentUiStatus } from './http-bridge';
 import { listAgentUiTargets, type AgentUiEntry } from './registry';
 import { getAgentUiRoute } from './route';
+
+/** iOS hosts poll Documents; Android materializes dumps from HTTP status only. */
+function shouldMirrorDocuments(): boolean {
+  return Platform.OS !== 'android';
+}
 
 export const AGENT_UI_DUMP_FILENAME = 'agent-ui-dump.json';
 export const AGENT_UI_STATUS_FILENAME = 'agent-ui-status.json';
@@ -81,13 +86,17 @@ export function writeAgentUiDump(): AgentUiDumpPayload {
     screen: agentUiScreenMetrics(),
     elements,
   };
-  writeJson(AGENT_UI_DUMP_FILENAME, payload);
+  // Android hosts never read Documents dumps — skip sync file I/O that can
+  // stall the JS thread before the HTTP status POST runs.
+  if (shouldMirrorDocuments()) {
+    writeJson(AGENT_UI_DUMP_FILENAME, payload);
+  }
   return payload;
 }
 
-export function writeAgentUiStatus(
+export async function writeAgentUiStatus(
   payload: Omit<AgentUiStatusPayload, 'generatedAt'>,
-): AgentUiStatusPayload {
+): Promise<AgentUiStatusPayload> {
   const nonce = payload.nonce ?? getAgentUiActiveNonce();
   const full: AgentUiStatusPayload = {
     generatedAt: new Date().toISOString(),
@@ -96,16 +105,18 @@ export function writeAgentUiStatus(
     screen: payload.screen ?? agentUiScreenMetrics(),
     ...(nonce !== undefined ? { nonce } : {}),
   };
-  // HTTP first — daemon hosts wait on it. After goto/reset, Documents I/O can
-  // stall on Android while the navigator remounts; posting before writeJson
-  // keeps solo ops from timing out.
+  // Await HTTP status so the host sees completion before the app accepts the
+  // next /next command. Fire-and-forget raced on Android (every-other timeout).
+  // Skip Documents mirror on Android — hosts materialize dumps from status.
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    void postAgentUiStatus(full);
+    await postAgentUiStatus(full);
   }
-  try {
-    writeJson(AGENT_UI_STATUS_FILENAME, full);
-  } catch {
-    /* File mirror is best-effort; HTTP status already left. */
+  if (shouldMirrorDocuments()) {
+    try {
+      writeJson(AGENT_UI_STATUS_FILENAME, full);
+    } catch {
+      /* File mirror is best-effort; HTTP status already left. */
+    }
   }
   return full;
 }

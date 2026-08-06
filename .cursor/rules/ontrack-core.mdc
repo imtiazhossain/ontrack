@@ -20,6 +20,8 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **No personal identifiers** in source — see `no-personal-identifiers.mdc`.
 - **App-affecting JS/UI** → dual iOS + Android close-out (`agent-ui-verify-both`); assert/`--color` then stop. Docs/rules/host-only → skip simulator.
 - **New/edited interactive controls** → `ontrack.*` `testID` + `ids.ts` + `docs/agent-ui-map.md` in the same change.
+- **Dump = debt** → ≤1 dump to discover; same turn stamp id/map and/or named flow so that dump is never needed again (agent-ui skill).
 - **Metro** → `npm run packager:ensure:start` (never `npm start` in agent shells). Prefer Fast Refresh; do not kill Metro / `--clear` after routine edits. Node 24.
+- **Stuck / slow step** → stop grinding. Prefer fixing the cause (often config/env/device pin) over long debug or repeated verify retries — see `stuck-check-config.mdc`.
 - **Locality** → smallest entry file first; extract if touched file would stay >700 lines; prefer Shared patterns in `AGENTS.md`.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).

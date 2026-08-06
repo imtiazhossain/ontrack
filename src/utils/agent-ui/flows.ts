@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import {
     AGENT_UI_DEMO_ACTIVITY_ID,
     AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
@@ -34,6 +36,14 @@ export type AgentUiFlowStep = {
  */
 /** Default in-app wait ceiling — fail fast; polls every 16ms and returns early. */
 export const AGENT_UI_WAIT_TIMEOUT_MS = 2000;
+/** Android mount/hydration after seed+goto is slower than iOS Simulator. */
+export const AGENT_UI_ANDROID_WAIT_TIMEOUT_MS = 4000;
+
+function flowWaitTimeoutMs(): number {
+  return Platform.OS === 'android'
+    ? AGENT_UI_ANDROID_WAIT_TIMEOUT_MS
+    : AGENT_UI_WAIT_TIMEOUT_MS;
+}
 
 export const AGENT_UI_FLOWS = {
   'travel-list': [
@@ -587,5 +597,16 @@ export function resolveAgentUiFlow(
   const key = name.trim() as AgentUiFlowName;
   const steps = AGENT_UI_FLOWS[key];
   if (!steps) return null;
-  return steps.map((step) => ({ ...step }));
+  const waitMs = flowWaitTimeoutMs();
+  return steps.map((step) => {
+    const next: AgentUiFlowStep = { ...step };
+    if (
+      next.op === 'wait' &&
+      next.timeoutMs != null &&
+      next.timeoutMs === AGENT_UI_WAIT_TIMEOUT_MS
+    ) {
+      next.timeoutMs = waitMs;
+    }
+    return next;
+  });
 }

@@ -23,3 +23,4 @@ Paste both assert outputs. Exceptions: pure docs/rules, host-only scripts, or us
 - Reuse Metro when healthy; agents use `packager:ensure:start` — never `npm start` in agent shells.
 - Assert/`--color` then **STOP** — no ritual handoff screenshot.
 - Leave devices on the changed surface (not splash/blank/error/unrelated tab).
+- Verify slow or flaky after a retry or two → fix the blocker ([`stuck-check-config.mdc`](./stuck-check-config.mdc)); do not loop retries.

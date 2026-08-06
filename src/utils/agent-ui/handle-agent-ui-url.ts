@@ -1,5 +1,11 @@
+import { Platform } from 'react-native';
+
 import { formatAgentUiSeedDetail, seedAgentUiFixture } from './fixtures';
-import { resolveAgentUiFlow } from './flows';
+import {
+  AGENT_UI_ANDROID_WAIT_TIMEOUT_MS,
+  AGENT_UI_WAIT_TIMEOUT_MS,
+  resolveAgentUiFlow,
+} from './flows';
 import {
     isAgentUiOverlayEnabled,
     setAgentUiOverlayEnabled,
@@ -54,7 +60,7 @@ export type AgentUiRequest = {
   y?: number | string | string[];
   /** Pure settle delay (ms) before wait polling / as standalone delay. */
   ms?: number | string | string[];
-  /** Max poll window for wait (ms). Default 2000. */
+  /** Max poll window for wait (ms). Default 2000 iOS / 4000 Android. */
   timeoutMs?: number | string | string[];
   /** Assert: label must contain this substring (case-insensitive). */
   contains?: string | string[];
@@ -186,7 +192,7 @@ export async function handleAgentUiRequest(
 
   if (!isAgentUiEnabled()) {
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: String(asSingle(request.op) ?? 'dump'),
         id: asSingle(request.id),
         ok: false,
@@ -207,7 +213,7 @@ export async function handleAgentUiRequest(
     const steps = resolveAgentUiFlow(flowName);
     if (!steps) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op: 'flow',
           ok: false,
           detail: `Unknown flow: ${flowName ?? '(missing)'}`,
@@ -236,7 +242,7 @@ export async function handleAgentUiRequest(
       }
     }
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'flow',
         id: flowName,
         ok: allOk,
@@ -252,7 +258,7 @@ export async function handleAgentUiRequest(
     const ops = Array.isArray(request.ops) ? request.ops : [];
     if (ops.length === 0) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op: 'batch',
           ok: false,
           detail: 'Missing ops array for batch.',
@@ -281,7 +287,7 @@ export async function handleAgentUiRequest(
       }
     }
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'batch',
         ok: allOk,
         detail: `${results.filter((r) => r.ok).length}/${ops.length} ok`,
@@ -295,7 +301,7 @@ export async function handleAgentUiRequest(
   if (op === 'seed') {
     const seeded = seedAgentUiFixture(to ?? id);
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'seed',
         ok: Boolean(seeded),
         detail: seeded
@@ -309,14 +315,19 @@ export async function handleAgentUiRequest(
   }
 
   if (op === 'assert') {
-    return runAssert(request, { id, prefix, to, emitStatus });
+    return await runAssert(request, { id, prefix, to, emitStatus });
   }
 
   if (op === 'wait') {
     const settleMs = Math.max(0, asNumber(request.ms) ?? 0);
+    const defaultWaitMs =
+      Platform.OS === 'android'
+        ? AGENT_UI_ANDROID_WAIT_TIMEOUT_MS
+        : AGENT_UI_WAIT_TIMEOUT_MS;
     const timeoutMs = Math.max(
       settleMs,
-      asNumber(request.timeoutMs) ?? (hasWaitTarget(id, prefix, to) ? 2000 : settleMs || 0),
+      asNumber(request.timeoutMs) ??
+        (hasWaitTarget(id, prefix, to) ? defaultWaitMs : settleMs || 0),
     );
     if (settleMs > 0) await sleep(settleMs);
 
@@ -338,7 +349,7 @@ export async function handleAgentUiRequest(
 
     if (!hasWaitTarget(id, prefix, routeTarget)) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op: 'wait',
           ok: true,
           detail: `delayed ${settleMs}ms`,
@@ -357,7 +368,7 @@ export async function handleAgentUiRequest(
       ? listAgentUiTargets().filter((e) => e.testID.startsWith(prefix)).length
       : undefined;
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'wait',
         id: id ?? prefix ?? routeTarget,
         ok,
@@ -374,7 +385,7 @@ export async function handleAgentUiRequest(
   if (op === 'dump') {
     const dump = writeAgentUiDump();
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'dump',
         ok: true,
         detail: `Wrote ${dump.count} elements.`,
@@ -407,7 +418,7 @@ export async function handleAgentUiRequest(
       enabled = toggleAgentUiOverlay();
     }
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'overlay',
         ok: true,
         detail: enabled ? 'overlay on' : 'overlay off',
@@ -426,7 +437,7 @@ export async function handleAgentUiRequest(
       asNumber(to);
     if (x === undefined || y === undefined) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op: 'hit',
           ok: false,
           detail: 'Missing x/y (logical window points).',
@@ -438,7 +449,7 @@ export async function handleAgentUiRequest(
     const element = hitAgentUiTarget(x, y);
     const stack = hitAgentUiTargets(x, y);
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'hit',
         id: element?.testID,
         ok: Boolean(element),
@@ -456,7 +467,7 @@ export async function handleAgentUiRequest(
   if (op === 'route') {
     const route = getAgentUiRoute();
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'route',
         ok: Boolean(route),
         detail: route ?? 'unknown',
@@ -469,7 +480,7 @@ export async function handleAgentUiRequest(
   if (op === 'prefix') {
     if (!prefix) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op: 'prefix',
           ok: false,
           detail: 'Missing prefix.',
@@ -482,7 +493,7 @@ export async function handleAgentUiRequest(
       e.testID.startsWith(prefix),
     ).length;
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'prefix',
         id: prefix,
         ok: count > 0,
@@ -500,7 +511,7 @@ export async function handleAgentUiRequest(
     );
     if (!destination) {
       if (emitStatus) {
-        writeAgentUiStatus({
+        await writeAgentUiStatus({
           op,
           ok: false,
           detail: 'Missing to/path destination for goto.',
@@ -512,7 +523,7 @@ export async function handleAgentUiRequest(
     // can stall inside navigate/Documents I/O and never post a post-nav status
     // (batch steps skip emitStatus and still succeed). Re-post if navigate fails.
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op,
         ok: true,
         detail: `Navigated to ${destination}`,
@@ -521,7 +532,7 @@ export async function handleAgentUiRequest(
     }
     const ok = Boolean(agentUiNavigate(destination));
     if (emitStatus && !ok) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op,
         ok: false,
         detail: 'Navigator not ready (wait for app mount).',
@@ -540,7 +551,7 @@ export async function handleAgentUiRequest(
 
   if (!id) {
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op,
         ok: false,
         detail: 'Missing id query parameter.',
@@ -552,7 +563,7 @@ export async function handleAgentUiRequest(
   if (op === 'exists') {
     const element = getAgentUiTarget(id);
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'exists',
         id,
         ok: Boolean(element),
@@ -567,7 +578,7 @@ export async function handleAgentUiRequest(
   if (op === 'scroll') {
     const scrolled = await scrollAgentUiTargetIntoView(id);
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op: 'scroll',
         id,
         ok: scrolled,
@@ -584,7 +595,7 @@ export async function handleAgentUiRequest(
 
   if (op !== 'tap') {
     if (emitStatus) {
-      writeAgentUiStatus({
+      await writeAgentUiStatus({
         op,
         id,
         ok: false,
@@ -597,7 +608,7 @@ export async function handleAgentUiRequest(
 
   const tapped = tapAgentUiTarget(id);
   if (emitStatus) {
-    writeAgentUiStatus({
+    await writeAgentUiStatus({
       op: 'tap',
       id,
       ok: tapped,
@@ -628,7 +639,7 @@ function asTruthyFlag(value: unknown): boolean {
   return false;
 }
 
-function runAssert(
+async function runAssert(
   request: AgentUiRequest,
   opts: {
     id?: string;
@@ -636,7 +647,7 @@ function runAssert(
     to?: string;
     emitStatus: boolean;
   },
-): boolean {
+): Promise<boolean> {
   const { id, prefix, to, emitStatus } = opts;
   const contains = asSingle(request.contains);
   const wantMissing = asTruthyFlag(request.missing);
@@ -730,7 +741,7 @@ function runAssert(
 
   const ok = checks.length > 0 && checks.every((c) => c.ok);
   if (emitStatus) {
-    writeAgentUiStatus({
+    await writeAgentUiStatus({
       op: 'assert',
       id: id ?? prefix ?? to,
       ok,

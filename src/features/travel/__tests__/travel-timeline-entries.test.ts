@@ -98,8 +98,11 @@ describe('travel timeline entries', () => {
     expect(timelineEntryCaption(land, 'mdy')).not.toMatch(/8:25 PM/);
 
     const [pickup, dropoff] = expandTimelineEntries([rental]);
-    expect(timelineEntryCaption(pickup, 'mdy')).toMatch(/6:30 AM/);
-    expect(timelineEntryCaption(dropoff, 'mdy')).toMatch(/3:00 PM/);
+    expect(timelineEntryCaption(pickup, 'mdy')).toBe('Sep 9 · 6:30 AM · KEF');
+    expect(timelineEntryCaption(dropoff, 'mdy')).toBe('Sep 14 · 3:00 PM · KEF');
+    expect(timelineEntryCaption(pickup, 'mdy')).not.toContain(
+      'Keflavik International Airport',
+    );
   });
 
   it('uses medium month dates on board captions', () => {

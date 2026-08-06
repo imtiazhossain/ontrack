@@ -60,7 +60,7 @@ Each map row below is a stable id; use `agent-ui-source.sh` for the **file** col
 ./scripts/agent-ui-wait.sh --prefix ontrack.checklists.
 ./scripts/agent-ui-wait.sh --route /calendar
 
-# Full dump only when discovering unknown ids
+# Full dump only when discovering unknown ids (debt: retire same turn with id/map/flow)
 ./scripts/agent-ui-dump.sh
 ./scripts/agent-ui-dump.sh --prefix ontrack.today
 

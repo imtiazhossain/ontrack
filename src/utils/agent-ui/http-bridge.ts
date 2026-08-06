@@ -95,7 +95,14 @@ export async function fetchAgentUiCommand(
   waitMs = DEFAULT_WAIT_MS,
 ): Promise<AgentUiRequest | null> {
   const platform = agentUiPlatformParam();
-  for (const base of candidateBases()) {
+  // Prefer the cached working base first so we do not open parallel /next
+  // waits against Metro proxy + daemon (was a source of dropped commands).
+  const bases = candidateBases();
+  if (cachedBase) {
+    const rest = bases.filter((b) => b !== cachedBase);
+    bases.splice(0, bases.length, cachedBase, ...rest);
+  }
+  for (const base of bases) {
     const url = `${base}/next?waitMs=${Math.max(0, waitMs)}&platform=${platform}`;
     try {
       const res = await fetch(url, {
@@ -109,17 +116,20 @@ export async function fetchAgentUiCommand(
       if (!res.ok) continue;
       const body = await parseJson(res);
       if (!body || typeof body !== 'object') continue;
-      const pinned = (body as { platform?: string }).platform;
-      // Defensive: never run a command stamped for the other OS.
+      const request = body as AgentUiRequest;
+      const pinned = (request as { platform?: string }).platform;
+      // Defensive: never run a command stamped for the other OS — but put it
+      // back on the queue so the peer platform can still take it.
       if (
         typeof pinned === 'string' &&
         pinned.length > 0 &&
         pinned !== platform
       ) {
+        void requeueAgentUiCommand(request);
         continue;
       }
       cachedBase = base;
-      return body as AgentUiRequest;
+      return request;
     } catch {
       /* try next base */
     }
