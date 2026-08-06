@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, ScreenHeader } from '@/components/primitives';
+import { AppText, Button } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { TravelScreenHeader } from '@/features/travel/travel-screen-header';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
@@ -118,7 +119,7 @@ export function ConfirmationDocumentCue({
               paddingBottom: insets.bottom,
             },
           ]}>
-          <ScreenHeader
+          <TravelScreenHeader
             title="Confirmation"
             onClose={() => setViewerOpen(false)}
             closeAccessibilityLabel="Close confirmation"

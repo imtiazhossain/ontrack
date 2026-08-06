@@ -17,6 +17,18 @@ describe('fieldTitleCase', () => {
     expect(fieldTitleCase('FROM')).toBe('From');
     expect(fieldTitleCase('Duration (minutes) *')).toBe('Duration (Minutes) *');
     expect(fieldTitleCase('Pick-up *')).toBe('Pick-Up *');
-    expect(fieldTitleCase('What for?')).toBe('What For?');
+    expect(fieldTitleCase('What for?')).toBe('What for?');
+  });
+
+  it('preserves short all-caps acronyms', () => {
+    expect(fieldTitleCase('UI font')).toBe('UI Font');
+    expect(fieldTitleCase('FX rate')).toBe('FX Rate');
+    expect(fieldTitleCase('API key')).toBe('API Key');
+  });
+
+  it('keeps short prepositions lowercase unless first', () => {
+    expect(fieldTitleCase('Starts in 34 days')).toBe('Starts in 34 Days');
+    expect(fieldTitleCase('Day 3 of 4')).toBe('Day 3 of 4');
+    expect(fieldTitleCase('What for?')).toBe('What for?');
   });
 });

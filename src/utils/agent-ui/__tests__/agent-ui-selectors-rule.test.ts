@@ -43,6 +43,9 @@ describe('agent-ui selector rule', () => {
     expect(rule).toContain('agent-ui-source.sh');
     expect(rule).toContain('agent-ui-hit.sh');
     expect(rule).toContain('hit|overlay');
+    expect(rule).toContain('scroll');
+    expect(rule).toContain('agent-ui-scroll');
+    expect(rule).toMatch(/Never.*host cursor|Never.*CGEvent|in-app/i);
 
     const screenshotRule = readFileSync(
       join(process.cwd(), '.cursor/rules/show-simulator-screenshot.mdc'),
@@ -51,6 +54,9 @@ describe('agent-ui selector rule', () => {
     expect(screenshotRule).toMatch(/Screenshot budget/i);
     expect(screenshotRule).toMatch(/Forbidden:\*\* mid-flow screenshots/i);
     expect(screenshotRule).toMatch(/agent-ui-assert\.sh/i);
+    expect(screenshotRule).toMatch(/STOP after assert/i);
+    expect(screenshotRule).toMatch(/ritual handoff screenshot/i);
+    expect(rule).toMatch(/No ritual screenshot/i);
 
     const triage = readFileSync(
       join(process.cwd(), '.cursor/rules/screenshot-triage.mdc'),

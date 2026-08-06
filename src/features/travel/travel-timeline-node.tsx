@@ -9,6 +9,7 @@ import Animated, {
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { AirlineLogo } from '@/features/travel/airline-logo';
 import {
     resolveStayBookingOpen,
     type StayBookingOpen,
@@ -21,15 +22,20 @@ import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
 import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
+import { RentalCompanyLogo } from '@/features/travel/rental-company-logo';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
 import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { StayDetailsCardEditor } from '@/features/travel/stay-details-card-editor';
 import { StayDetailsSummary } from '@/features/travel/stay-details-summary';
+import { StayLocationThumbnail } from '@/features/travel/stay-location-thumbnail';
 import { TransportDetailsCardEditor } from '@/features/travel/transport-details-card-editor';
 import { TransportDetailsSummary } from '@/features/travel/transport-details-summary';
-import { titleCaseTravelKind } from '@/features/travel/travel-chrome';
+import {
+    titleCaseTravelKind,
+    TRAVEL_TITLE_ICON_GAP,
+} from '@/features/travel/travel-chrome';
 import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
 import {
     kindAccent,
@@ -82,9 +88,9 @@ export function TravelTimelineNode({
   showKindBadge = true,
   compact = false,
   dense = false,
+  leadingTimeLabel,
   allowStructuredEditing = true,
   showStructuredDetails = true,
-  collapsedChevron = 'down',
   accentColor,
   tintColor,
   editingFlightItemId,
@@ -141,11 +147,12 @@ export function TravelTimelineNode({
   compact?: boolean;
   /** Extra-tight timeline presentation; transport cards use regular compact density. */
   dense?: boolean;
+  /** Hour label rendered in the dense title row (keeps time · icon · title vertically aligned). */
+  leadingTimeLabel?: string;
   /** Structured flight/stay/rental editors belong only in the transport section. */
   allowStructuredEditing?: boolean;
   /** Structured summaries and transport actions belong only in the transport section. */
   showStructuredDetails?: boolean;
-  collapsedChevron?: 'down' | 'right';
   accentColor?: string;
   tintColor?: string;
   editingFlightItemId?: string;
@@ -203,9 +210,35 @@ export function TravelTimelineNode({
   const title =
     displayTitle ??
     (item.kind === 'flight' ? flightItemDisplayTitle(item) : item.title);
+  const caption = timelineEntryCaption(
+    {
+      key: item.id,
+      item,
+      phase,
+      date: entryDate ?? item.date,
+      startMinutes: entryStartMinutes ?? item.startMinutes,
+      title,
+    },
+    dateDisplayFormat,
+  );
+  const flightCaption =
+    item.kind === 'flight'
+      ? flightItineraryCaptionParts(flightCaptionInput(item, dateDisplayFormat))
+      : undefined;
+  const boardCardScheduleLabel = flightCaption
+    ? [flightCaption.dateLabel, flightCaption.durationLabel, flightCaption.stopsLabel]
+        .filter(Boolean)
+        .join(' · ')
+    : caption;
+  const toggleLabel =
+    dense && leadingTimeLabel
+      ? `${leadingTimeLabel}. ${title}`
+      : compact && !dense && boardCardScheduleLabel
+        ? `${title}. ${boardCardScheduleLabel}`
+        : title;
   const toggleAgent = useAgentUiTarget(
     AgentUiIds.travel.timelineItem.toggle(item.id, phase),
-    { label: title, onPress: onToggle },
+    { label: toggleLabel, onPress: onToggle },
   );
   const addressAgent = useAgentUiTarget(
     item.kind === 'stay' && item.details
@@ -245,46 +278,49 @@ export function TravelTimelineNode({
   const editingStructured =
     editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
-  const cardFill =
-    item.kind === 'flight' ? travelMainCardFill(theme) : travelCardFill(theme);
-  const caption = timelineEntryCaption(
-    {
-      key: item.id,
-      item,
-      phase,
-      date: entryDate ?? item.date,
-      startMinutes: entryStartMinutes ?? item.startMinutes,
-      title,
-    },
-    dateDisplayFormat,
-  );
-  const flightCaption =
-    item.kind === 'flight'
-      ? flightItineraryCaptionParts(flightCaptionInput(item, dateDisplayFormat))
-      : undefined;
   const accent = accentColor ?? kindAccent(item.kind, theme);
   const tint = tintColor ?? kindTint(item.kind, theme);
-  const stripeColor = dense ? kindTint(item.kind, theme) : accent;
   const icon = kindIcon(item.kind);
-  // Transport FLIGHTS section only — timeline day markers also pass `compact`
-  // (with `dense`) and keep their smaller board/land chrome.
-  const isCompactFlight = compact && !dense && item.kind === 'flight';
+  // Transport board cards (flights/ground/stays/rentals) share one compact chrome.
+  // Timeline day markers also pass `compact` with `dense` and keep smaller chrome.
+  const isCompactBoardCard = compact && !dense && isStructuredTravelKind;
+  const isCompactFlight = isCompactBoardCard && item.kind === 'flight';
   const showKindBadgeResolved = showKindBadge;
-  const showHeaderCaption =
-    isCompactFlight ||
-    (compact && isStructuredTravelKind && isExpanded && Boolean(caption));
-  const stripeWidth = dense
-    ? Math.max(2, s(2))
-    : compact
-      ? Math.max(3, s(3))
-      : Math.max(4, s(4));
+  // Board cards always surface schedule meta under the title (including after a
+  // “Company · Location” split) so pickup/drop-off / check-in/out dates stay visible.
+  // Dense timeline keeps the title row single-line; caption stacks under the icon+title.
+  const showHeaderCaption = isCompactBoardCard
+    ? Boolean(flightCaption) || Boolean(caption)
+    : compact &&
+      !dense &&
+      isStructuredTravelKind &&
+      isExpanded &&
+      Boolean(caption);
+  const showDenseMeta = dense && isExpanded && Boolean(caption);
   const toolbarActionSize = Math.max(28, s(28));
   const compactActionSize = Math.max(32, s(34));
-  const kindPillSize = isCompactFlight
-    ? compactActionSize
-    : compact
-      ? Math.max(28, s(30))
-      : Math.max(28, s(28));
+  const kindPillSize = dense
+    ? Math.max(22, s(22))
+    : isCompactBoardCard
+      ? compactActionSize
+      : compact
+        ? Math.max(28, s(30))
+        : Math.max(28, s(28));
+  const boardIconSize = isCompactBoardCard ? 12 : compact ? 10 : 12;
+  const denseIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
+  const hasDenseTimeSlot = dense && leadingTimeLabel !== undefined;
+  const denseTimeWidth = hasDenseTimeSlot ? Math.max(58, s(60)) : 0;
+  /** Dense timeline: caption/actions stack under the title, indented past time + icon. */
+  const denseDetailsInset =
+    denseTimeWidth +
+    (hasDenseTimeSlot ? denseIconGap : 0) +
+    (showKindBadgeResolved ? kindPillSize + denseIconGap : 0);
+  const cardFill = dense
+    ? 'transparent'
+    : isCompactBoardCard
+      ? travelMainCardFill(theme)
+      : travelCardFill(theme);
+  const collapsedBoardMinHeight = Math.max(64, s(68));
 
   return (
     <Animated.View
@@ -294,48 +330,55 @@ export function TravelTimelineNode({
         {
           backgroundColor: cardFill,
           borderRadius: dense
-            ? Math.max(8, s(9))
-            : isCompactFlight
+            ? 0
+            : isCompactBoardCard
               ? Math.max(16, s(18))
               : compact
                 ? Math.max(10, s(11))
                 : 13,
           borderCurve: 'continuous',
-          borderWidth:
-            dense || isCompactFlight ? StyleSheet.hairlineWidth : 0,
-          borderColor:
-            dense || isCompactFlight ? travelCardBorder(theme) : 'transparent',
-          boxShadow: dense
-            ? '0 2px 8px rgba(51, 39, 28, 0.08)'
-            : isCompactFlight
-              ? undefined
-              : TRAVEL_CARD_SHADOW,
+          borderWidth: isCompactBoardCard ? StyleSheet.hairlineWidth : 0,
+          borderColor: isCompactBoardCard
+            ? travelCardBorder(theme)
+            : 'transparent',
+          boxShadow: dense || isCompactBoardCard ? undefined : TRAVEL_CARD_SHADOW,
           overflow: 'hidden',
         },
       ]}
     >
-      {isCompactFlight ? null : (
-        <View
-          style={[
-            styles.stripe,
-            { width: stripeWidth, backgroundColor: stripeColor },
-          ]}
-        />
-      )}
       <View
         style={[
           styles.nodeBody,
           {
-            padding: isExpanded || isCompactFlight ? rs.md : compact ? undefined : rs.sm,
+            padding:
+              isExpanded && !dense
+                ? rs.md
+                : isCompactBoardCard
+                  ? rs.md
+                  : compact && !dense
+                    ? undefined
+                    : dense
+                      ? undefined
+                      : rs.sm,
             paddingHorizontal:
-              !isExpanded && compact && !isCompactFlight ? rs.sm : undefined,
+              !isExpanded && compact && !dense && !isCompactBoardCard
+                ? rs.sm
+                : dense
+                  ? 0
+                  : undefined,
             paddingVertical:
               !isExpanded && dense
-                ? Math.max(1, s(1))
-                : !isExpanded && compact && !isCompactFlight
+                ? 0
+                : !isExpanded && compact && !isCompactBoardCard
                   ? rs.xxs
                   : undefined,
-            gap: dense ? rs.xxs : compact ? rs.xs : rs.sm,
+            gap: dense ? rs.xs : compact ? rs.xs : rs.sm,
+            minHeight:
+              !isExpanded && isCompactBoardCard
+                ? collapsedBoardMinHeight
+                : undefined,
+            justifyContent:
+              !isExpanded && (isCompactBoardCard || dense) ? 'center' : undefined,
           },
         ]}
       >
@@ -351,42 +394,120 @@ export function TravelTimelineNode({
           style={[
             styles.itemHeader,
             {
-              gap: dense ? rs.xxs : compact ? rs.md : rs.sm,
-              alignItems:
-                isCompactFlight || compact ? 'center' : 'flex-start',
+              gap: dense
+                ? denseIconGap
+                : isCompactBoardCard || compact
+                  ? Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP))
+                  : rs.sm,
+              alignItems: dense
+                ? 'center'
+                : isCompactBoardCard || compact
+                  ? 'center'
+                  : 'flex-start',
+              minHeight:
+                !isExpanded && isCompactBoardCard
+                  ? collapsedBoardMinHeight - rs.md * 2
+                  : undefined,
             },
           ]}
         >
+            {hasDenseTimeSlot ? (
+              <View style={[styles.denseTime, { width: denseTimeWidth }]}>
+                {leadingTimeLabel ? (
+                  <AppText
+                    variant="caption"
+                    color="tertiary"
+                    fit
+                    style={styles.denseTimeLabel}>
+                    {leadingTimeLabel}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
             {showKindBadgeResolved ? (
               <View
                 style={[
                   styles.kindPill,
                   {
-                    backgroundColor: tint,
+                    backgroundColor: dense ? accent : tint,
                     width: kindPillSize,
                     height: kindPillSize,
+                    overflow: 'hidden',
                   },
                 ]}
                 accessibilityLabel={titleCaseTravelKind(item.kind)}
               >
-                <Symbol
-                  name={icon}
-                  size={isCompactFlight ? 12 : compact ? 10 : 12}
-                  color={accent}
-                />
+                {dense ? (
+                  <Symbol
+                    name={icon}
+                    size={11}
+                    color={theme.textOnAccent}
+                  />
+                ) : item.kind === 'flight' ? (
+                  <AirlineLogo
+                    airline={item.flight?.airline}
+                    flightNumber={item.flight?.flightNumber}
+                    fallbackIconSize={boardIconSize}
+                    fallbackColor={accent}
+                  />
+                ) : item.kind === 'rental' && item.rental?.company ? (
+                  <RentalCompanyLogo
+                    company={item.rental.company}
+                    fallbackIconSize={boardIconSize}
+                    fallbackColor={accent}
+                  />
+                ) : item.kind === 'stay' ? (
+                  <StayLocationThumbnail
+                    title={item.title}
+                    address={item.details}
+                    bookingUrl={item.bookingUrl}
+                    photoUris={item.photoUris}
+                    fallbackIconSize={boardIconSize}
+                    fallbackColor={accent}
+                  />
+                ) : (
+                  <Symbol
+                    name={icon}
+                    size={boardIconSize}
+                    color={accent}
+                  />
+                )}
               </View>
             ) : null}
-            <View style={[styles.flex, isCompactFlight ? { gap: rs.xxs } : null]}>
+            <View
+              style={[
+                styles.flex,
+                isCompactBoardCard
+                  ? {
+                      gap: rs.xxs,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }
+                  : null,
+              ]}>
               <TimelineItemTitle
                 title={title}
                 compact={compact}
                 dense={dense}
+                align={isCompactBoardCard ? 'center' : 'left'}
               />
               {showHeaderCaption ? (
                 flightCaption ? (
-                  <TimelineFlightCaption {...flightCaption} />
+                  <TimelineFlightCaption
+                    {...flightCaption}
+                    align={isCompactBoardCard ? 'center' : 'left'}
+                  />
                 ) : (
-                  <AppText variant="caption" color="secondary" fit>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    fit
+                    align={isCompactBoardCard ? 'center' : undefined}
+                    style={
+                      isCompactBoardCard
+                        ? styles.centeredCaption
+                        : undefined
+                    }>
                     {caption}
                   </AppText>
                 )
@@ -410,15 +531,9 @@ export function TravelTimelineNode({
               ]}
             >
               <Symbol
-                name={
-                  isExpanded
-                    ? 'chevron-up'
-                    : collapsedChevron === 'right'
-                      ? 'chevron-right'
-                      : 'chevron-down'
-                }
+                name={isExpanded ? 'chevron-up' : 'chevron-right'}
                 size={dense || compact ? 10 : 12}
-                color={isCompactFlight ? accent : theme.textTertiary}
+                color={isCompactBoardCard ? accent : theme.textTertiary}
               />
             </View>
         </Pressable>
@@ -431,9 +546,21 @@ export function TravelTimelineNode({
           <Animated.View
             entering={FadeIn.duration(150)}
             exiting={FadeOut.duration(120)}
-            style={[styles.itemDetails, { gap: rs.md }]}
+            style={[
+              styles.itemDetails,
+              {
+                gap: dense ? rs.xs : rs.md,
+                paddingLeft: dense ? denseDetailsInset : undefined,
+                paddingBottom: dense ? rs.xs : undefined,
+              },
+            ]}
           >
-            {caption && !showHeaderCaption ? (
+            {showDenseMeta ? (
+              <AppText variant="caption" color="secondary" fit>
+                {caption}
+              </AppText>
+            ) : null}
+            {caption && !showHeaderCaption && !showDenseMeta ? (
               <AppText variant="caption" color="accent">
                 {caption}
               </AppText>
@@ -523,6 +650,10 @@ export function TravelTimelineNode({
             !editingStay ? (
               <StayDetailsSummary
                 details={item.stay}
+                title={item.title}
+                address={item.details}
+                bookingUrl={item.bookingUrl}
+                photoUris={item.photoUris}
                 checkinDate={item.date}
                 checkinMinutes={item.startMinutes}
                 dateDisplayFormat={dateDisplayFormat}
@@ -596,6 +727,7 @@ export function TravelTimelineNode({
                 allowStructuredEditing={allowStructuredEditing}
                 showStructuredDetails={showStructuredDetails}
                 isMoment={isMoment}
+                align={dense ? 'left' : 'center'}
                 onOpenNotes={() => setNotesOpen(true)}
                 onAddPhotos={onAddPhotos}
                 onBeginFlightEdit={onBeginFlightEdit}
@@ -630,10 +762,6 @@ const styles = StyleSheet.create({
   nodeCard: {
     flex: 1,
     minWidth: 0,
-    flexDirection: 'row',
-  },
-  stripe: {
-    alignSelf: 'stretch',
   },
   nodeBody: {
     flex: 1,
@@ -670,6 +798,17 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   itemHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  denseTime: {
+    flexShrink: 0,
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  denseTimeLabel: {
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'left',
+  },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
+  centeredCaption: { textAlign: 'center', width: '100%' },
 });

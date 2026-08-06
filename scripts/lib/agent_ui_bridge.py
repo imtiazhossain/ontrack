@@ -23,7 +23,51 @@ STATUS_NAME = os.environ.get("STATUS_NAME", "agent-ui-status.json")
 COMMAND_NAME = os.environ.get("COMMAND_NAME", "agent-ui-command.json")
 POLL_SLEEP = float(os.environ.get("POLL_SLEEP", "0.016"))
 CACHE_REL = Path(".cursor") / "agent-ui-data-dir"
+ANDROID_DUMP_REL = Path(".cursor") / "agent-ui-android-dump.json"
 TRANSPORT = os.environ.get("AGENT_UI_TRANSPORT", "auto")  # auto|daemon|file
+
+
+def agent_ui_platform() -> str:
+    """Host pin for dual-device runs. Default ios (backcompat)."""
+    raw = (os.environ.get("AGENT_UI_PLATFORM") or "ios").strip().lower()
+    if raw in {"android", "ios"}:
+        return raw
+    return "ios"
+
+
+def agent_ui_device() -> str | None:
+    """Optional device pin (adb serial / sim UDID)."""
+    for key in ("AGENT_UI_DEVICE", "ONTRACK_ANDROID_SERIAL", "ANDROID_SERIAL"):
+        raw = (os.environ.get(key) or "").strip()
+        if raw:
+            return raw
+    if agent_ui_platform() != "android":
+        return None
+    try:
+        cached = repo_root() / ".cursor" / "android-emulator.serial"
+        if cached.is_file():
+            text = cached.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+    except OSError:
+        pass
+    return None
+
+
+def stamp_platform(payload: dict) -> dict:
+    body = dict(payload)
+    body["platform"] = agent_ui_platform()
+    device = agent_ui_device()
+    if device and agent_ui_platform() == "android":
+        body["device"] = device
+        # Keep adb helpers aligned even when only AGENT_UI_DEVICE was set.
+        os.environ.setdefault("ONTRACK_ANDROID_SERIAL", device)
+        os.environ.setdefault("ANDROID_SERIAL", device)
+    return body
+
+
+def android_host_dump_path(root: Path | None = None) -> Path:
+    return (root or repo_root()) / ANDROID_DUMP_REL
 
 
 def repo_root() -> Path:
@@ -114,7 +158,7 @@ def send_via_file(
         pass
 
     started = time.time()
-    body = dict(payload)
+    body = stamp_platform(payload)
     # Safe for JS Number — daemon path uses the same constraint.
     body["nonce"] = int(time.time() * 1000) % 9_007_199_254_740_991
     expected_op = str(body.get("op") or "dump")
@@ -196,6 +240,22 @@ def _http_json(
         return exc.code, payload if isinstance(payload, dict) else None
 
 
+def _write_host_dump_from_status(status: dict, dump_path: Path) -> None:
+    """Materialize a dump file from HTTP status (Android has no simctl container)."""
+    elements = status.get("elements")
+    if not isinstance(elements, list):
+        return
+    payload = {
+        "generatedAt": status.get("generatedAt"),
+        "count": status.get("count", len(elements)),
+        "route": status.get("route"),
+        "screen": status.get("screen"),
+        "elements": elements,
+    }
+    dump_path.parent.mkdir(parents=True, exist_ok=True)
+    dump_path.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+
+
 def send_via_daemon(
     payload: dict,
     *,
@@ -208,20 +268,40 @@ def send_via_daemon(
     if not daemon.ensure_daemon(root):
         raise RuntimeError("daemon not healthy")
 
-    body = dict(payload)
+    body = stamp_platform(payload)
     body.pop("nonce", None)  # daemon assigns a JS-safe nonce
+    # Solo nav/seed/flow: wrap as a 1-op batch so the app uses the proven
+    # batch status path (solo goto has timed out on Android after remount).
+    op_name = str(body.get("op") or "dump")
+    if op_name in {"goto", "reset", "seed", "flow"} and not isinstance(
+        body.get("ops"), list
+    ):
+        wrapped = {
+            "op": "batch",
+            "ops": [{k: v for k, v in body.items() if k not in {"platform", "device"}}],
+            "platform": body.get("platform"),
+        }
+        if body.get("device"):
+            wrapped["device"] = body["device"]
+        body = wrapped
     expected_op = str(body.get("op") or "dump")
+    platform = agent_ui_platform()
 
     dump_path = None
-    try:
-        dump_path, status_path, command_path = paths(root)
-        status_path.unlink(missing_ok=True)
-        # Clear stale file-command so a cold file poll cannot steal the op.
-        command_path.unlink(missing_ok=True)
+    if platform == "android":
+        dump_path = android_host_dump_path(root)
         if expect_dump:
             dump_path.unlink(missing_ok=True)
-    except Exception:
-        dump_path = None
+    else:
+        try:
+            dump_path, status_path, command_path = paths(root)
+            status_path.unlink(missing_ok=True)
+            # Clear stale file-command so a cold file poll cannot steal the op.
+            command_path.unlink(missing_ok=True)
+            if expect_dump:
+                dump_path.unlink(missing_ok=True)
+        except Exception:
+            dump_path = None
 
     try:
         code, queued = _http_json("POST", "/command", body=body, timeout=0.75)
@@ -249,12 +329,25 @@ def send_via_daemon(
                 "nonce": nonce,
             }
 
-    if expect_dump and dump_path is not None:
+    if expect_dump and status.get("ok") and isinstance(status.get("elements"), list):
+        out = dump_path if dump_path is not None else android_host_dump_path(root)
+        _write_host_dump_from_status(status, out)
+        dump_path = out
+    elif expect_dump and dump_path is not None and platform != "android":
         deadline = time.time() + max(0.5, wait_secs)
         while time.time() < deadline and not dump_path.is_file():
             time.sleep(POLL_SLEEP)
         if not dump_path.is_file() and status.get("ok"):
             print("error: agent-ui dump file missing after ok status", file=sys.stderr)
+            raise SystemExit(1)
+
+    if expect_dump and platform == "android" and status.get("ok"):
+        out = dump_path if dump_path is not None else android_host_dump_path(root)
+        if not out.is_file() and not isinstance(status.get("elements"), list):
+            print(
+                "error: agent-ui android dump missing elements in status",
+                file=sys.stderr,
+            )
             raise SystemExit(1)
 
     ok = bool(status.get("ok"))
@@ -280,8 +373,11 @@ def send(
     if not isinstance(payload, dict):
         raise SystemExit("payload must be a JSON object")
 
-    payload = resolve_payload_ids(payload)
+    payload = stamp_platform(resolve_payload_ids(payload))
     transport = TRANSPORT.lower().strip()
+    # Android has no simctl Documents file transport — daemon only.
+    if agent_ui_platform() == "android" and transport != "daemon":
+        transport = "daemon"
     if transport in {"auto", "daemon"}:
         try:
             return send_via_daemon(
@@ -291,7 +387,7 @@ def send(
                 expect_dump=expect_dump,
             )
         except Exception as exc:
-            if transport == "daemon":
+            if transport == "daemon" or agent_ui_platform() == "android":
                 print(f"error: daemon transport failed: {exc}", file=sys.stderr)
                 raise SystemExit(1) from exc
             # Fall through to file.
@@ -345,6 +441,8 @@ def build_payload(args: argparse.Namespace) -> dict:
         return {"op": "reset"}
     if op == "tap":
         return {"op": "tap", "id": args.id}
+    if op == "scroll":
+        return {"op": "scroll", "id": args.id}
     if op == "exists":
         return {"op": "exists", "id": args.id}
     if op == "prefix":
@@ -435,6 +533,13 @@ def parse_batch_args(
             ops.append(
                 {
                     "op": "tap",
+                    "id": ids.resolve_test_id(args.pop(0) if args else "", root=root),
+                }
+            )
+        elif flag == "--scroll":
+            ops.append(
+                {
+                    "op": "scroll",
                     "id": ids.resolve_test_id(args.pop(0) if args else "", root=root),
                 }
             )

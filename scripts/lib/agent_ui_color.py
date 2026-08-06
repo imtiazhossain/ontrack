@@ -85,8 +85,61 @@ def sample_frame_accent(
     )
 
 
+def _agent_ui_platform() -> str:
+    import os
+
+    raw = (os.environ.get("AGENT_UI_PLATFORM") or "ios").strip().lower()
+    return "android" if raw == "android" else "ios"
+
+
+def _android_serial() -> str | None:
+    import os
+
+    serial = (os.environ.get("ONTRACK_ANDROID_SERIAL") or os.environ.get("ANDROID_SERIAL") or "").strip()
+    if serial:
+        return serial
+    # Prefer serial written by ensure-android-emulator / ensure-packager --android.
+    try:
+        from pathlib import Path as _Path
+
+        root = os.environ.get("AGENT_UI_ROOT") or os.environ.get("ROOT")
+        if not root:
+            root = str(_Path(__file__).resolve().parents[2])
+        cached = _Path(root) / ".cursor" / "android-emulator.serial"
+        if cached.is_file():
+            text = cached.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+    except OSError:
+        pass
+    return None
+
+
 def capture_screenshot(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if _agent_ui_platform() == "android":
+        import os
+        import shutil
+
+        adb = shutil.which("adb") or os.path.expanduser(
+            "~/Library/Android/sdk/platform-tools/adb"
+        )
+        if not os.path.isfile(adb) and not shutil.which("adb"):
+            raise SystemExit("error: adb not found for Android screenshot")
+        if not os.path.isfile(adb):
+            adb = shutil.which("adb") or "adb"
+        cmd = [adb]
+        serial = _android_serial()
+        if serial:
+            cmd += ["-s", serial]
+        cmd += ["exec-out", "screencap", "-p"]
+        proc = subprocess.run(cmd, check=False, capture_output=True)
+        if proc.returncode != 0 or not proc.stdout:
+            detail = (proc.stderr or b"").decode("utf-8", errors="replace").strip()
+            raise SystemExit(f"error: android screenshot failed: {detail or proc.returncode}")
+        path.write_bytes(proc.stdout)
+        return path
+
     proc = subprocess.run(
         ["xcrun", "simctl", "io", "booted", "screenshot", str(path)],
         check=False,

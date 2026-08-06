@@ -22,11 +22,12 @@ describe('current-device sign-out invariants', () => {
     expect(provider).toContain('useAuthAccess.getState().resetAccess()');
   });
 
-  it('cleans every synced domain, nutrition memory, notifications, and app-owned media', () => {
+  it('cleans every synced domain, nutrition memory, health, notifications, and app-owned media', () => {
     for (const domain of ['addons', 'agents', 'preferences', 'schedule', 'plants', 'travel', 'todos']) {
       expect(sync).toContain(`name: '${domain}'`);
     }
     expect(sync).toContain('useNutrition.getState().reset()');
+    expect(sync).toContain('useHealth.getState().reset()');
     expect(sync).toContain('deletePlant(plant.id)');
     expect(sync).toContain("'plants'");
     expect(sync).toContain("'meal-images'");
@@ -36,5 +37,10 @@ describe('current-device sign-out invariants', () => {
     const cleanup = sync.slice(sync.indexOf('export async function clearLocalAccountData'));
     expect(cleanup).not.toContain(".from('app_state').delete()");
     expect(cleanup).not.toContain('MediaLibrary');
+  });
+
+  it('preserves device-only preference fields when applying remote account state', () => {
+    expect(sync).toContain("domain.name !== 'preferences'");
+    expect(sync).toContain('homeLocation / avatar');
   });
 });

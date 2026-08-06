@@ -1,69 +1,66 @@
-import { createWithEqualityFn as create } from 'zustand/traditional';
 import { persist } from 'zustand/middleware';
+import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { newUuid } from '@/utils/id';
 import {
-  cleanName,
-  cleanTitle,
-  normalizeInvite,
-  normalizeList,
-  normalizeMember,
-  normalizeRecipe,
-  normalizeTask,
-  normalizeTodoState,
-  nowIso,
-} from './todos-normalize';
-import {
-  canCompleteTodo,
-  markGuestEdit,
-  queuedMutation,
+    canCompleteTodo,
+    markGuestEdit,
+    queuedMutation,
 } from './todos-helpers';
+import {
+    cleanName,
+    cleanTitle,
+    normalizeInvite,
+    normalizeList,
+    normalizeMember,
+    normalizeRecipe,
+    normalizeTask,
+    normalizeTodoState,
+    nowIso,
+} from './todos-normalize';
 import { createTodoRecipeActions } from './todos-recipe-actions';
+import type {
+    TodoIngredientInput,
+    TodoInvite,
+    TodoList,
+    TodoListKind,
+    TodoPersistedState,
+    TodoRecipe,
+    TodoRecipeInput,
+    TodoSharedSnapshot,
+    TodoTask
+} from './todos-types';
 
 export {
-  canonicalIngredientKey,
-  formatIngredientTitle,
-  isGroceryListName,
-  normalizeTodoState,
-  normalizeTodoTasks,
+    canonicalIngredientKey,
+    formatIngredientTitle,
+    isGroceryListName,
+    normalizeTodoState,
+    normalizeTodoTasks
 } from './todos-normalize';
 
 export {
-  canCompleteTodo,
-  privateTodoPayload,
+    canCompleteTodo,
+    privateTodoPayload
 } from './todos-helpers';
 
 export type {
-  PendingTodoMutation,
-  TodoIngredientInput,
-  TodoInvite,
-  TodoList,
-  TodoListKind,
-  TodoListMode,
-  TodoListRole,
-  TodoMember,
-  TodoMutationOperation,
-  TodoPersistedState,
-  TodoRecipe,
-  TodoRecipeInput,
-  TodoRecipeSourceKind,
-  TodoSharedSnapshot,
-  TodoTask,
-} from './todos-types';
-import type {
-  PendingTodoMutation,
-  TodoIngredientInput,
-  TodoInvite,
-  TodoList,
-  TodoListKind,
-  TodoMember,
-  TodoMutationOperation,
-  TodoPersistedState,
-  TodoRecipe,
-  TodoRecipeInput,
-  TodoSharedSnapshot,
-  TodoTask,
+    PendingTodoMutation,
+    TodoIngredientInput,
+    TodoInvite,
+    TodoList,
+    TodoListKind,
+    TodoListMode,
+    TodoListRole,
+    TodoMember,
+    TodoMutationOperation,
+    TodoPersistedState,
+    TodoRecipe,
+    TodoRecipeInput,
+    TodoRecipeSourceKind,
+    TodoSharedSnapshot,
+    TodoTask
 } from './todos-types';
 
 interface TodoState extends TodoPersistedState {
@@ -446,6 +443,10 @@ export const useTodos = create<TodoState>()(
           )
             ? task.recipeId
             : undefined;
+        const deleteRecipeImagePath = deleteRecipeId
+          ? get().recipes.find((recipe) => recipe.id === deleteRecipeId)
+              ?.sourceImagePath
+          : undefined;
         markGuestEdit();
         set((state) => ({
           tasks: state.tasks.filter((item) => item.id !== id),
@@ -460,6 +461,9 @@ export const useTodos = create<TodoState>()(
             ...queuedMutation(list, 'delete_task', {
               taskId: id,
               deleteRecipeId,
+              ...(deleteRecipeImagePath
+                ? { sourceImagePath: deleteRecipeImagePath }
+                : {}),
             }),
           ],
         }));
@@ -573,17 +577,11 @@ export const useTodos = create<TodoState>()(
           return member ? [member] : [];
         });
         set((state) => {
-          const existingPositions = new Map(
-            state.tasks
-              .filter((task) => task.listId === list.id)
-              .map((task) => [task.id, task.position]),
-          );
+          // Prefer server positions so collaborator reorders propagate. Pending
+          // local mutations skip snapshot apply until flushed.
           const orderedTasks = tasks.map((task, index) => ({
             ...task,
-            position:
-              existingPositions.get(task.id) ??
-              task.position ??
-              index,
+            position: task.position ?? index,
           }));
           const existingIndex = state.lists.findIndex((item) => item.id === list.id);
           const nextList = {

@@ -6,6 +6,7 @@ import {
 import {
     emptyFlightLegScheduleDraft,
     flightDetailsFromSegment,
+    segmentsFromDirectionForm,
     segmentsFromRoundTripForm,
     suggestReturnDraftFromOutbound,
 } from '../flight-roundtrip-draft';
@@ -152,6 +153,62 @@ describe('flight round-trip draft helpers', () => {
         departureAirport: 'BOS',
         arrivalAirport: 'KEF',
       },
+    });
+  });
+
+  it('shifts connecting leg clocks when the direction departure moves', () => {
+    const segments = segmentsFromDirectionForm(
+      {
+        ...outboundDetails(),
+        departureAirport: 'EWR',
+        arrivalAirport: 'KEF',
+        layoverMinutesAfter: '1h 39m',
+        connectionAirport: 'BOS',
+        legs: [
+          {
+            airline: 'Icelandair',
+            flightNumber: 'FI 622',
+            departureAirport: 'EWR',
+            arrivalAirport: 'BOS',
+            date: '2026-09-08',
+            departureMinutes: 20 * 60 + 25,
+            arrivalDate: '2026-09-08',
+            arrivalMinutes: 22 * 60,
+            durationMinutes: 95,
+            layoverMinutesAfter: 99,
+          },
+          {
+            airline: 'Icelandair',
+            flightNumber: 'FI 700',
+            departureAirport: 'BOS',
+            arrivalAirport: 'KEF',
+            date: '2026-09-08',
+            departureMinutes: 23 * 60 + 40,
+            arrivalDate: '2026-09-09',
+            arrivalMinutes: 6 * 60 + 15,
+            durationMinutes: 275,
+          },
+        ],
+      },
+      {
+        date: '2026-09-08',
+        startMinutes: 21 * 60 + 25,
+        endDate: '2026-09-09',
+        endMinutes: 7 * 60 + 15,
+      },
+      { fallback: 'Departure flight' },
+    );
+
+    expect(segments?.[0]).toMatchObject({
+      date: '2026-09-08',
+      startMinutes: 21 * 60 + 25,
+      arrivalMinutes: 23 * 60,
+    });
+    expect(segments?.[1]).toMatchObject({
+      date: '2026-09-09',
+      startMinutes: 40,
+      arrivalDate: '2026-09-09',
+      arrivalMinutes: 7 * 60 + 15,
     });
   });
 

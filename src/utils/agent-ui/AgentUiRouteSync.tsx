@@ -6,11 +6,14 @@ import { handleAgentUiRequest, type AgentUiRequest } from './handle-agent-ui-url
 import {
   fetchAgentUiCommand,
   probeAgentUiHttp,
+  requeueAgentUiCommand,
   setAgentUiActiveNonce,
 } from './http-bridge';
 import { AGENT_UI_COMMAND_FILENAME } from './persist';
 import { isAgentUiEnabled } from './registry';
 import { setAgentUiNavigator, setAgentUiRoute } from './route';
+
+const MAX_QUEUED_COMMANDS = 16;
 
 function asNonce(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -59,10 +62,18 @@ export function AgentUiRouteSync() {
     let cancelled = false;
     let processing = false;
     let httpEnabled = false;
+    const pending: AgentUiRequest[] = [];
     const command = new File(Paths.document, AGENT_UI_COMMAND_FILENAME);
 
+    const enqueue = (request: AgentUiRequest) => {
+      if (pending.length >= MAX_QUEUED_COMMANDS) {
+        pending.shift();
+      }
+      pending.push(request);
+    };
+
     const takeFileCommand = (): AgentUiRequest | null => {
-      if (processing || !command.exists) return null;
+      if (!command.exists) return null;
       try {
         const request = JSON.parse(command.textSync()) as AgentUiRequest;
         command.delete();
@@ -77,21 +88,32 @@ export function AgentUiRouteSync() {
       }
     };
 
-    const process = async (request: AgentUiRequest) => {
+    const drain = async () => {
       if (processing) return;
       processing = true;
       try {
-        await runCommand(request);
+        while (!cancelled && pending.length > 0) {
+          const next = pending.shift();
+          if (next) await runCommand(next);
+        }
       } finally {
         processing = false;
+        if (!cancelled && pending.length > 0) {
+          void drain();
+        }
       }
+    };
+
+    const accept = (request: AgentUiRequest) => {
+      enqueue(request);
+      void drain();
     };
 
     // File fallback for hosts that skip the daemon (slower when HTTP is up).
     const fileTimer = setInterval(() => {
-      if (cancelled || processing) return;
+      if (cancelled) return;
       const request = takeFileCommand();
-      if (request) void process(request);
+      if (request) accept(request);
     }, 50);
 
     const httpLoop = async () => {
@@ -102,10 +124,20 @@ export function AgentUiRouteSync() {
           httpEnabled = await probeAgentUiHttp();
           continue;
         }
+        // Do not long-poll while draining — avoids taking a daemon command that
+        // would sit behind a long seed/flow and cause host timeouts.
+        if (processing || pending.length > 0) {
+          await new Promise((r) => setTimeout(r, 40));
+          continue;
+        }
         try {
           const request = await fetchAgentUiCommand(5000);
-          if (cancelled) break;
-          if (request) await process(request);
+          if (cancelled) {
+            // Remount/Strict Mode must not drop a dequeued command.
+            if (request) void requeueAgentUiCommand(request);
+            break;
+          }
+          if (request) accept(request);
         } catch {
           httpEnabled = false;
         }
@@ -117,6 +149,7 @@ export function AgentUiRouteSync() {
     return () => {
       cancelled = true;
       clearInterval(fileTimer);
+      pending.length = 0;
     };
   }, []);
 

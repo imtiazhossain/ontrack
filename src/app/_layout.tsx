@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { NavigationSessionSync } from '@/components/navigation/navigation-session-sync';
 import {
     AppPromptHost,
     AppSafeArea,
@@ -15,6 +16,7 @@ import {
     RouteErrorBoundary,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { UsageAnalyticsTracker } from '@/features/analytics/usage-analytics-tracker';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
 import {
@@ -78,11 +80,13 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
-  const { phase, isGuest } = useAuthSession();
+  const { phase } = useAuthSession();
   const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
   const aiEnabled = usePreferences((state) => state.aiEnabled);
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
-  const appAccess = isGuest || phase === 'authenticated';
+  // Guest upgrade (`authenticating`) must not keep the full app shell open —
+  // only settled guest / authenticated phases get app routes.
+  const appAccess = phase === 'authenticated' || phase === 'guest';
   const welcomeAccess = phase === 'welcome' || phase === 'authenticating' || phase === 'error';
   useTodoCollaboration(hydrated && phase === 'authenticated');
   useVehicleCollaboration(hydrated && phase === 'authenticated');
@@ -117,6 +121,8 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
   return (
     <View style={{ flex: 1 }}>
         <AgentUiRouteSync />
+        <NavigationSessionSync />
+        <UsageAnalyticsTracker />
         <Stack
           screenOptions={{
             headerShown: true,
@@ -207,6 +213,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         />
         <Stack.Screen name="agents" />
         <Stack.Screen name="design-system" options={{ headerShown: false }} />
+        <Stack.Screen name="api-usage" options={{ headerShown: false }} />
+        <Stack.Screen name="integrations" options={{ headerShown: false }} />
+        <Stack.Screen name="developer" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]/settings" />
         <Stack.Screen name="todos/[id]/recipe-import" />

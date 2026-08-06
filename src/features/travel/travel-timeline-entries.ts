@@ -6,7 +6,12 @@ import {
 import { formatFlightRouteLabel } from '@/features/travel/flight-route-label';
 import type { TravelItineraryItem, TravelRouteStop } from '@/features/travel/types';
 import { transportModeLabel } from '@/features/travel/travel-mode';
-import { formatDateKeyShort, formatDuration, formatMinutes, type DateDisplayFormat } from '@/utils/date';
+import {
+  formatDateKeyMedium,
+  formatDuration,
+  formatMinutes,
+  type DateDisplayFormat,
+} from '@/utils/date';
 
 /** Action phase shown as a distinct timeline marker. */
 export type TravelTimelinePhase =
@@ -51,12 +56,13 @@ function flightRoute(item: TravelItineraryItem): string | undefined {
 /** Caption inputs for a flight, shared by string and header renderers. */
 export function flightCaptionInput(
   item: TravelItineraryItem,
-  dateDisplayFormat: DateDisplayFormat,
+  _dateDisplayFormat?: DateDisplayFormat,
 ): FlightItineraryCaptionInput {
   const legCount = item.flight?.legs?.length;
   return {
     date: item.date,
-    dateLabel: formatDateKeyShort(item.date, dateDisplayFormat),
+    // Board chrome matches journey cards: `Sep 8` (not `9/8`).
+    dateLabel: formatDateKeyMedium(item.date),
     startMinutes: item.startMinutes,
     durationMinutes: item.durationMinutes,
     departureAirport: item.flight?.departureAirport,
@@ -230,7 +236,7 @@ export function timelineEntryCaption(
   dateDisplayFormat: DateDisplayFormat,
 ): string {
   const { item, phase } = entry;
-  const dateLabel = formatDateKeyShort(entry.date, dateDisplayFormat);
+  const dateLabel = formatDateKeyMedium(entry.date);
   const time = formatMinutes(entry.startMinutes);
 
   if (phase === 'board') {
@@ -285,12 +291,12 @@ export function timelineEntryCaption(
     );
   }
   if (item.kind === 'rental') {
-    const pickup = `${formatDateKeyShort(item.date, dateDisplayFormat)} · ${formatMinutes(item.startMinutes)}`;
+    const pickup = `${formatDateKeyMedium(item.date)} · ${formatMinutes(item.startMinutes)}`;
     if (!item.rental?.dropoffDate && item.rental?.dropoffMinutes === undefined) {
       return pickup;
     }
     const dropoffDate = item.rental.dropoffDate
-      ? formatDateKeyShort(item.rental.dropoffDate, dateDisplayFormat)
+      ? formatDateKeyMedium(item.rental.dropoffDate)
       : undefined;
     const dropoffTime =
       item.rental.dropoffMinutes !== undefined
@@ -300,12 +306,12 @@ export function timelineEntryCaption(
     return dropoff ? `${pickup} → ${dropoff}` : pickup;
   }
   if (item.kind === 'stay') {
-    const checkin = `${formatDateKeyShort(item.date, dateDisplayFormat)} · ${formatMinutes(item.startMinutes)}`;
+    const checkin = `${formatDateKeyMedium(item.date)} · ${formatMinutes(item.startMinutes)}`;
     if (!item.stay?.checkoutDate && item.stay?.checkoutMinutes === undefined) {
       return checkin;
     }
     const checkoutDate = item.stay.checkoutDate
-      ? formatDateKeyShort(item.stay.checkoutDate, dateDisplayFormat)
+      ? formatDateKeyMedium(item.stay.checkoutDate)
       : undefined;
     const checkoutTime =
       item.stay.checkoutMinutes !== undefined

@@ -1,3 +1,5 @@
+import { fromDateKey, isDateKey, minutesBetween, toDateKey } from '@/utils/date';
+
 import { calculateFlightDuration } from './flight-arrival';
 import type { ParsedFlightSegment } from './flight-confirmation-parser';
 import type { ImportedFlightSchedule } from './flight-confirmation-schedule';
@@ -9,6 +11,22 @@ import {
 } from './flight-details';
 import { formatFlightRouteLabel } from './flight-route-label';
 import type { TravelFlightLeg } from './types';
+
+function shiftLocalDateMinutes(
+  date: string,
+  minutes: number,
+  deltaMinutes: number,
+): { date: string; minutes: number } {
+  const base = fromDateKey(date);
+  base.setHours(0, 0, 0, 0);
+  const next = new Date(base.getTime() + (minutes + deltaMinutes) * 60_000);
+  return {
+    date: toDateKey(
+      new Date(next.getFullYear(), next.getMonth(), next.getDate(), 12),
+    ),
+    minutes: next.getHours() * 60 + next.getMinutes(),
+  };
+}
 
 export type FlightTripType = 'one-way' | 'round-trip';
 
@@ -109,6 +127,8 @@ function titleForLeg(details: FlightDetailsDraft, fallback: string): string {
   const route = formatFlightRouteLabel({
     departureAirport: details.departureAirport || undefined,
     arrivalAirport: details.arrivalAirport || undefined,
+    connectionAirport: details.connectionAirport || undefined,
+    legs: details.legs,
   });
   return route ? `Flight ${route}` : fallback;
 }
@@ -249,31 +269,75 @@ function segmentsFromStoredLegs(
   const patchedLegs = applyDirectionDraftToLegs(legs, details);
   const confirmationCode = details.confirmationCode;
   const normalized = normalizeFlightDetails(details);
+  const firstLeg = patchedLegs[0]!;
+  const originalDate = firstLeg.date;
+  const originalDeparture = firstLeg.departureMinutes;
+  const departureDelta =
+    originalDate &&
+    originalDeparture !== undefined &&
+    isDateKey(originalDate) &&
+    isDateKey(schedule.date)
+      ? minutesBetween(
+          originalDate,
+          originalDeparture,
+          schedule.date,
+          schedule.startMinutes!,
+        )
+      : 0;
+
   const segments: ParsedFlightSegment[] = patchedLegs.map((leg, index) => {
     const isFirst = index === 0;
     const isLast = index === patchedLegs.length - 1;
-    const date = isFirst ? schedule.date : (leg.date ?? schedule.date);
-    const startMinutes = isFirst
-      ? schedule.startMinutes!
-      : (leg.departureMinutes ?? schedule.startMinutes!);
-    const arrivalDate = isLast
-      ? schedule.endDate
-      : (leg.arrivalDate ?? leg.date ?? schedule.endDate);
-    const arrivalMinutes = isLast
-      ? schedule.endMinutes!
-      : (leg.arrivalMinutes ?? schedule.endMinutes!);
-    const durationMinutes =
-      leg.durationMinutes ??
-      durationForLegSchedule(
-        {
-          date,
-          startMinutes,
-          endDate: arrivalDate,
-          endMinutes: arrivalMinutes,
-        },
-        leg.departureAirport,
-        leg.arrivalAirport,
-      );
+
+    let date = leg.date ?? schedule.date;
+    let startMinutes = leg.departureMinutes ?? schedule.startMinutes!;
+    let arrivalDate = leg.arrivalDate ?? leg.date ?? schedule.endDate;
+    let arrivalMinutes = leg.arrivalMinutes ?? schedule.endMinutes!;
+
+    if (departureDelta !== 0) {
+      if (leg.date !== undefined && leg.departureMinutes !== undefined) {
+        const shiftedDep = shiftLocalDateMinutes(
+          leg.date,
+          leg.departureMinutes,
+          departureDelta,
+        );
+        date = shiftedDep.date;
+        startMinutes = shiftedDep.minutes;
+      }
+      const arrivalSourceDate = leg.arrivalDate ?? leg.date;
+      if (
+        arrivalSourceDate !== undefined &&
+        leg.arrivalMinutes !== undefined
+      ) {
+        const shiftedArr = shiftLocalDateMinutes(
+          arrivalSourceDate,
+          leg.arrivalMinutes,
+          departureDelta,
+        );
+        arrivalDate = shiftedArr.date;
+        arrivalMinutes = shiftedArr.minutes;
+      }
+    }
+
+    if (isFirst) {
+      date = schedule.date;
+      startMinutes = schedule.startMinutes!;
+    }
+    if (isLast) {
+      arrivalDate = schedule.endDate;
+      arrivalMinutes = schedule.endMinutes!;
+    }
+
+    const durationMinutes = durationForLegSchedule(
+      {
+        date,
+        startMinutes,
+        endDate: arrivalDate,
+        endMinutes: arrivalMinutes,
+      },
+      leg.departureAirport,
+      leg.arrivalAirport,
+    );
     const layoverMinutesAfter = isFirst
       ? (normalized?.layoverMinutesAfter ?? leg.layoverMinutesAfter)
       : leg.layoverMinutesAfter;

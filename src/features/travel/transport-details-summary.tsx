@@ -15,19 +15,20 @@ import type { TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
-import { formatDateKeyShort, formatMinutes, type DateDisplayFormat } from '@/utils/date';
+import { formatDateKeyMedium, formatMinutes, type DateDisplayFormat } from '@/utils/date';
 
 export function TransportDetailsSummary({
   itemId,
   details,
   departureDate,
   departureMinutes,
-  dateDisplayFormat,
+  dateDisplayFormat: _dateDisplayFormat,
 }: {
   itemId: string;
   details: TravelTransportDetails;
   departureDate: string;
   departureMinutes: number;
+  /** Kept for call-site compatibility; board chrome always uses medium dates. */
   dateDisplayFormat: DateDisplayFormat;
 }) {
   const theme = useTheme();
@@ -39,13 +40,13 @@ export function TransportDetailsSummary({
   const rows = [
     {
       label: 'Depart',
-      value: `${formatDateKeyShort(departureDate, dateDisplayFormat)} · ${formatMinutes(departureMinutes)}`,
+      value: `${formatDateKeyMedium(departureDate)} · ${formatMinutes(departureMinutes)}`,
       detail: details.origin,
       icon: 'location' as const,
     },
     {
       label: 'Arrive',
-      value: `${formatDateKeyShort(details.arrivalDate, dateDisplayFormat)} · ${formatMinutes(details.arrivalMinutes)}`,
+      value: `${formatDateKeyMedium(details.arrivalDate)} · ${formatMinutes(details.arrivalMinutes)}`,
       detail: details.destination,
       icon: 'location' as const,
     },
@@ -68,7 +69,7 @@ export function TransportDetailsSummary({
       value: stop.name,
       detail: [
         stop.arrivalDate && stop.arrivalMinutes !== undefined
-          ? `${formatDateKeyShort(stop.arrivalDate, dateDisplayFormat)} · ${formatMinutes(stop.arrivalMinutes)}`
+          ? `${formatDateKeyMedium(stop.arrivalDate)} · ${formatMinutes(stop.arrivalMinutes)}`
           : undefined,
         stop.address,
       ].filter(Boolean).join(' · ') || undefined,

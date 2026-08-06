@@ -5,7 +5,16 @@
 
 export type PaidApiBucket = 'nutrition' | 'recipe' | 'plant' | 'movies' | 'flights' | 'health';
 
-const LIMITS: Record<PaidApiBucket, { max: number; windowMs: number }> = {
+export const PAID_API_BUCKETS: readonly PaidApiBucket[] = [
+  'nutrition',
+  'recipe',
+  'plant',
+  'movies',
+  'flights',
+  'health',
+] as const;
+
+export const PAID_API_LIMITS: Record<PaidApiBucket, { max: number; windowMs: number }> = {
   nutrition: { max: 40, windowMs: 60 * 60 * 1000 },
   recipe: { max: 25, windowMs: 60 * 60 * 1000 },
   plant: { max: 40, windowMs: 60 * 60 * 1000 },
@@ -14,26 +23,71 @@ const LIMITS: Record<PaidApiBucket, { max: number; windowMs: number }> = {
   health: { max: 20, windowMs: 60 * 60 * 1000 },
 };
 
+export type ApiRateLimitPeek = {
+  bucket: PaidApiBucket;
+  used: number;
+  max: number;
+  remaining: number;
+  windowMs: number;
+};
+
 const hitsByKey = new Map<string, number[]>();
+
+function recentHits(bucket: PaidApiBucket, subject: string, now: number): number[] {
+  const { windowMs } = PAID_API_LIMITS[bucket];
+  const key = `${bucket}:${subject}`;
+  const windowStart = now - windowMs;
+  const recent = (hitsByKey.get(key) ?? []).filter((stamp) => stamp > windowStart);
+  hitsByKey.set(key, recent);
+  return recent;
+}
 
 export function checkApiRateLimit(
   bucket: PaidApiBucket,
   subject: string,
   now = Date.now(),
 ): 'ok' | 'limited' {
-  const { max, windowMs } = LIMITS[bucket];
-  const key = `${bucket}:${subject}`;
-  const windowStart = now - windowMs;
-  const recent = (hitsByKey.get(key) ?? []).filter((stamp) => stamp > windowStart);
-  if (recent.length >= max) {
-    hitsByKey.set(key, recent);
-    return 'limited';
-  }
+  const { max } = PAID_API_LIMITS[bucket];
+  const recent = recentHits(bucket, subject, now);
+  if (recent.length >= max) return 'limited';
   recent.push(now);
-  hitsByKey.set(key, recent);
+  hitsByKey.set(`${bucket}:${subject}`, recent);
   return 'ok';
+}
+
+/** Read current window usage without recording a hit. */
+export function peekApiRateLimit(
+  bucket: PaidApiBucket,
+  subject: string,
+  now = Date.now(),
+): ApiRateLimitPeek {
+  const { max, windowMs } = PAID_API_LIMITS[bucket];
+  const used = recentHits(bucket, subject, now).length;
+  return {
+    bucket,
+    used,
+    max,
+    remaining: Math.max(0, max - used),
+    windowMs,
+  };
+}
+
+export function peekAllApiRateLimits(
+  subject: string,
+  now = Date.now(),
+): Record<PaidApiBucket, ApiRateLimitPeek> {
+  return Object.fromEntries(
+    PAID_API_BUCKETS.map((bucket) => [bucket, peekApiRateLimit(bucket, subject, now)]),
+  ) as Record<PaidApiBucket, ApiRateLimitPeek>;
 }
 
 export function resetApiRateLimitsForTests() {
   hitsByKey.clear();
+}
+
+/** Clear all buckets for one subject (Developer Tools). */
+export function resetApiRateLimitsForSubject(subject: string) {
+  for (const bucket of PAID_API_BUCKETS) {
+    hitsByKey.delete(`${bucket}:${subject}`);
+  }
 }

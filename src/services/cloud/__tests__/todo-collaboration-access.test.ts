@@ -23,6 +23,20 @@ describe('collaborative to-do access contract', () => {
     ),
     'utf8',
   );
+  const transferHardeningMigration = readFileSync(
+    join(
+      process.cwd(),
+      'supabase/migrations/202608050005_todo_ownership_transfer_hardening.sql',
+    ),
+    'utf8',
+  );
+  const transferShareLinkMigration = readFileSync(
+    join(
+      process.cwd(),
+      'supabase/migrations/202608050007_todo_transfer_revoke_share_links.sql',
+    ),
+    'utf8',
+  );
 
   it('keeps shared tables behind RLS and authenticated RPCs', () => {
     for (const table of [
@@ -81,6 +95,33 @@ describe('collaborative to-do access contract', () => {
     expect(transferOwnershipMigration).not.toMatch(
       /grant execute on function public\.transfer_todo_list_ownership[\s\S]*?to anon/,
     );
+  });
+
+  it('serializes ownership transfer and hands invite/link control to the new owner', () => {
+    expect(transferHardeningMigration).toContain('pg_advisory_xact_lock');
+    expect(transferHardeningMigration).toContain(
+      'set inviter_user_id = new_owner_user_id',
+    );
+    expect(transferHardeningMigration).toContain(
+      'todo_collaborator_links as link',
+    );
+    expect(transferHardeningMigration).toContain(
+      'public.is_todo_owner(linked.list_id)',
+    );
+    expect(transferHardeningMigration).toContain(
+      'public.is_todo_owner(invite.list_id)',
+    );
+  });
+
+  it('revokes active share links when ownership transfers', () => {
+    expect(transferShareLinkMigration).toContain(
+      'create or replace function public.transfer_todo_list_ownership',
+    );
+    expect(transferShareLinkMigration).toContain('update public.todo_share_links');
+    expect(transferShareLinkMigration).toContain(
+      'where list_id = requested_list_id',
+    );
+    expect(transferShareLinkMigration).toContain('and revoked_at is null');
   });
 
   it('protects multi-checklist collaborator links and stores only token digests', () => {

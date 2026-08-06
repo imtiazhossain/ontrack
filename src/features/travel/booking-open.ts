@@ -20,30 +20,37 @@ export function isTrivagoDealsMyTripsUrl(url: string): boolean {
   return TRIVAGO_MY_TRIPS.test(url.trim());
 }
 
+/**
+ * Resolve how to open a stay booking link.
+ *
+ * Trivago my-trips autofill requires injecting into a WebView. The current open
+ * path uses `expo-web-browser` (SFSafariViewController / Chrome Custom Tabs),
+ * which cannot run inject scripts — so we always return browser mode. Keep
+ * `trivagoFindBookingInjectScript` for a future in-app WebView.
+ */
 export function resolveStayBookingOpen(
   item: Pick<TravelItineraryItem, 'bookingUrl' | 'stay'>,
-  options?: { fallbackEmail?: string },
+  _options?: { fallbackEmail?: string },
 ): StayBookingOpen | undefined {
   const url = item.bookingUrl?.trim();
   if (!url || !isHttpsUrl(url)) return undefined;
+  return { mode: 'browser', url };
+}
 
+/** True when we have trivago credentials that a future WebView could autofill. */
+export function canAutofillTrivagoStayBooking(
+  item: Pick<TravelItineraryItem, 'bookingUrl' | 'stay'>,
+  options?: { fallbackEmail?: string },
+): boolean {
+  const url = item.bookingUrl?.trim();
+  if (!url || !isTrivagoDealsMyTripsUrl(url)) return false;
   const bookingNumber = item.stay?.confirmationCode?.trim();
   const email = (
     item.stay?.reservationEmail?.trim() ||
     options?.fallbackEmail?.trim() ||
     ''
   ).toLowerCase();
-
-  if (
-    isTrivagoDealsMyTripsUrl(url) &&
-    bookingNumber &&
-    email &&
-    EMAIL_PATTERN.test(email)
-  ) {
-    return { mode: 'webview', url, email, bookingNumber };
-  }
-
-  return { mode: 'browser', url };
+  return Boolean(bookingNumber && email && EMAIL_PATTERN.test(email));
 }
 
 /** Injected into the trivago find-booking page to submit weak-auth credentials. */

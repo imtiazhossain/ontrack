@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton, Symbol } from '@/components/primitives';
 import {
-  fetchDestinationCoverUri,
-  localTripCoverUri,
+    fetchDestinationCoverUri,
+    localTripCoverUri,
 } from '@/features/travel/destination-cover';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import type { TravelPlan } from '@/features/travel/types';
 import { travelPlanModeIcon } from '@/features/travel/travel-mode';
+import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
@@ -46,9 +46,13 @@ export function TravelTripCover({
 
   useEffect(() => {
     let active = true;
-    if (localUri) return () => {
-      active = false;
-    };
+    if (localUri) {
+      // Custom/persisted cover must replace any previously fetched destination image.
+      setUri(localUri);
+      return () => {
+        active = false;
+      };
+    }
     // Key on destination fields only — `plan` identity churn (weather/sync) must not abort.
     void fetchDestinationCoverUri(plan).then((next) => {
       if (active) setUri(next);

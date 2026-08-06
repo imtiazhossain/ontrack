@@ -5,25 +5,44 @@ alwaysApply: true
 
 # Verify and hand off a working app
 
-After **any** code change that affects the running Expo app, do not end the turn until you have **tested the change** and left the iOS Simulator in a **working state that visibly shows the change**.
+After **any** code change that affects the running Expo app, do not end the turn until you have **tested the change on both iOS and Android** and left each platform on the changed surface in a working state (not splash, blank, error, or an unrelated tab).
 
-## Default simulator device
+onTrack ships to Android users as well as iOS — **dual-platform UI close-out is mandatory** for app-affecting changes (not Android-only optional).
 
-Always use **iPhone 17 Pro** unless the user (or env) specifies another device.
+## Dual-platform close-out (mandatory)
 
-- Boot only when verification needs it (`agent-ui` / `ensure-packager` reconnect). Do **not** open Simulator on every chat — `sessionStart` runs `ensure-packager.sh --start --metro-only`.
-- **Headless by default:** `simctl boot` only — do **not** launch Simulator.app. Agent-ui dump/tap/assert and `simctl io` screenshots work without a window. Opt in to the GUI with `ONTRACK_IOS_SIMULATOR_WINDOW=1`.
-- `ensure-packager.sh` (without `--metro-only`) boots via `scripts/lib/ios-simulator.sh` (exact name match; shuts down peer sims so only iPhone 17 Pro stays up — never leave iPhone 17 beside it).
-- Override: `ONTRACK_IOS_SIMULATOR="iPhone 16 Pro"` or `ONTRACK_IOS_SIMULATOR_UDID=<udid>`.
-- `npm run ios:run` also targets this device by default.
-- Do not leave handoff on a different simulator (e.g. iPhone 17 / iPhone 16 Pro) when the preferred device is available.
+For JS/TS/UI/app changes, prove the changed surface on **both**:
+
+1. **iOS** — `AGENT_UI_PLATFORM=ios` (or unset; default ios). Preferred device: **iPhone 17 Pro**.
+2. **Android** — `AGENT_UI_PLATFORM=android`. Preferred AVD: **Galaxy_S26**.
+
+Prefer one helper:
+
+```bash
+./scripts/agent-ui-verify-both.sh --route <path> [--flow <name>] --exists <id> …
+# or: npm run agent-ui:verify-both -- --route … --exists …
+```
+
+It runs iOS first (clears sticky android pin), then Android. Paste **both** assert outputs in the reply.
+
+- Pin every Android command; `unset AGENT_UI_PLATFORM` (or pass `AGENT_UI_PLATFORM=ios`) before iOS chains — sticky `android` breaks default iOS work. See `stuck-check-config.mdc`.
+- Confirm screen width matches the pin (~402 iOS / ~384 Android) before trusting a pass.
+- Android after reconnect often lands on `/` — land (`--flow` / `--open`) before `verify --route …`.
+- Exceptions (document in the reply): pure docs/rules, host-only scripts with no app UI, or the user explicitly scoped one platform.
+
+## Default devices
+
+- **iOS:** iPhone 17 Pro. Boot only when verification needs it. Headless by default (`simctl boot`; no Simulator.app unless `ONTRACK_IOS_SIMULATOR_WINDOW=1`). Override: `ONTRACK_IOS_SIMULATOR` / `_UDID`.
+- **Android:** Galaxy_S26 (`ONTRACK_ANDROID_AVD`). Headless by default; window: `ONTRACK_ANDROID_EMULATOR_WINDOW=1`. Boot/reconnect: `npm run android:ensure:start` or `ensure-packager.sh --start --android`.
+- `sessionStart` keeps Metro with `--metro-only` — devices boot on first verify.
+- Do not leave handoff on a peer iOS sim or a non-preferred AVD when the preferred device is available.
 
 ## Live updates (Fast Refresh) — preferred path
 
 JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killing Metro or relaunching the app.
 
 1. If Metro `/status` is already 200 **and** `ensure-packager` reports a Watchman client, **leave it running**. Do not restart with `--clear`. `/status` alone is not enough — a dead file watcher looks healthy while saves do nothing.
-2. Save the edit, wait briefly for Metro to rebundle / Fast Refresh, then exercise the changed surface: **`verify`** if already on `--route`, else `once` / `flow` / `open` / known `tap`. **Assert** structural claims; take **one** final screenshot only for visual/layout claims — not mid-flow shots (see `.cursor/rules/agent-ui-selectors.mdc`).
+2. Save the edit, wait briefly for Metro to rebundle / Fast Refresh, then exercise the changed surface: **`verify`** if already on `--route`, else `once` / `flow` / `open` / known `tap`. **Assert** (or `--color`) and **STOP** — screenshot only when `.cursor/rules/show-simulator-screenshot.mdc` requires it.
 3. Before reconnecting, run `./scripts/ensure-packager.sh` (or `npm run packager:ensure`) **only if** the bridge looks dead **or Fast Refresh is clearly not applying**. It checks Metro + Watchman client attachment, syncs local API base URL, re-enables a persisted **Fast Refresh: Off** dev-client toggle (`RCTDevMenu.hotLoadingEnabled`), and reconnects if the probe fails **or if it (re)launched Metro this run** (a new Metro always orphans the app's HMR socket even though agent-ui still answers). With `--start`, it auto-replaces dead-watcher Metro. Do not run it prophylactically when watcher+bridge are already healthy.
 4. Manual reconnect (only if the script is unavailable):  
    `xcrun simctl openurl booted "exp+ontrack://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"`  
@@ -45,18 +64,20 @@ JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killi
 ## Required close-out
 
 1. **Metro must be up** (prefer reuse over restart).
-2. **App must be up on the simulator before verification.** Prefer verification entry points (`once` / `verify` / `flow` / `assert` / `open`) — they call `agent_ui_ensure_app_up` (booted sim, app process, bridge). If you already know the app is dead/crashed/on the Expo launcher, run `./scripts/ensure-packager.sh --start` first; do not burn a full verify timeout guessing.
-3. **Test the change.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise the changed surface via the agent-ui **decision tree** (`verify` if already on route → else `once`/flow → open → known tap → dump only if unknown → assert). Fix failures before finishing. Do not re-flow a screen you are already on.
-4. **Watch for white screens / LoadBundleFromServerError.** Reconnect the dev client or restart Metro (without `--clear` first) and confirm status before handing off.
-5. **Leave the booted device on the changed surface** (headless is fine — no Simulator.app window required). App `com.imtihoss.ontracknow` should be up on the preferred device at that route — not splash, blank, error boundary, or an unrelated tab.
-6. **Show proof in the reply.** Prefer `agent-ui-assert.sh` / `once --assert-*` for route/id/label claims. Capture **one** final screenshot only for visual/layout claims (`simctl io`, works headless); read it and apply the evidence gate in `.cursor/rules/show-simulator-screenshot.mdc`. Mid-flow screenshots are not allowed. Tell the user Metro is running (URL/IP) and that the changed surface verified.
+2. **Apps up on iOS and Android** before their respective verifies. Prefer `once` / `verify` / `flow` / `agent-ui-verify-both.sh` (they call `agent_ui_ensure_app_up`). If a side is dead, `ensure-packager.sh --start` (add `--android` for the emu) — do not burn a full verify timeout guessing.
+3. **Test the change on both platforms.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise via the agent-ui decision tree on each pin. Fix failures before finishing. Do not re-flow a screen you are already on.
+4. **Watch for white screens / LoadBundleFromServerError.** Reconnect the affected platform’s dev client or restart Metro (without `--clear` first) and confirm status before handing off.
+5. **Leave both preferred devices on the changed surface** when practical (headless OK). At minimum, end with a passing Android assert on the surface after iOS passed (or the reverse if Android was verified first) — not splash, blank, error boundary, or an unrelated tab on the platform you last touched.
+6. **Prove and stop.** Paste **iOS and Android** assert/`--color` output in the reply. Do **not** add a ritual handoff screenshot after passing asserts. Screenshot only when `.cursor/rules/show-simulator-screenshot.mdc` requires it. Mention Metro is up and both platforms verified.
 
 ## Do not
 
 - Kill Metro or run `--clear` after routine JS/UI edits.
 - Terminate/relaunch the app just to pick up JS changes — use Fast Refresh / reconnect instead.
-- End without testing the change in the simulator.
+- End after verifying **only** iOS (or only Android) for an app-affecting UI change.
+- Leave `AGENT_UI_PLATFORM=android` exported when starting an iOS chain (sticky pin).
 - End on “reload the app” while Metro is down or unverified.
 - Leave Fast Refresh / HMR errors as the final state — recover to a clean connected bundle first.
 - Assume a background `npm start` is healthy without checking `/status`.
-- Hand off a splash, blank, error, or unrelated screen — the simulator must show the change.
+- Hand off a splash, blank, error, or unrelated screen.
+- Add a ritual handoff screenshot after a passing assert/`--color`.

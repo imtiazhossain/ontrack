@@ -29,7 +29,7 @@ export type CoTravelerAvatarPerson = {
   userId?: string;
 };
 
-/** Initials for stacked co-traveler chips (e.g. "Farhana Tasmin" → "FT"). */
+/** Initials for stacked co-traveler chips (e.g. "Jordan Lee" → "JL"). */
 export function coTravelerInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';

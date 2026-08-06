@@ -3,6 +3,7 @@ import {
   emptyRentalDetailsDraft,
   type RentalDetailsDraft,
 } from './rental-details';
+import { minutesBetween } from '@/utils/date';
 
 export interface ParsedRentalConfirmation {
   rental: RentalDetailsDraft;
@@ -246,16 +247,23 @@ function rentalDurationMinutes(
   dropoffMinutes: number | undefined,
 ): number | undefined {
   if (
-    pickupDate &&
-    dropoffDate &&
-    pickupMinutes !== undefined &&
-    dropoffMinutes !== undefined &&
-    pickupDate === dropoffDate &&
-    dropoffMinutes > pickupMinutes
+    !pickupDate ||
+    !dropoffDate ||
+    pickupMinutes === undefined ||
+    dropoffMinutes === undefined
   ) {
-    return Math.min(1440, dropoffMinutes - pickupMinutes);
+    return undefined;
   }
-  return undefined;
+  const span = minutesBetween(
+    pickupDate,
+    pickupMinutes,
+    dropoffDate,
+    dropoffMinutes,
+  );
+  // Itinerary items use a short pick-up window; multi-day rentals keep the
+  // default 60m event and store drop-off on rental details instead.
+  if (!Number.isFinite(span) || span <= 0 || span > 1440) return undefined;
+  return Math.round(span);
 }
 
 export function parseRentalConfirmation(

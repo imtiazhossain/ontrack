@@ -57,7 +57,8 @@ describe('flight confirmation editor schedule', () => {
       departureMinutes: 90,
       arrivalDate: '2026-09-27',
       arrivalMinutes: 11 * 60 + 29,
-      durationMinutes: 9 * 60 + 59,
+      // Zone-aware GUA→LGA block time (not same-day wall-clock span).
+      durationMinutes: 7 * 60 + 59,
     });
 
     expect(

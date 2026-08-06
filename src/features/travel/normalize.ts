@@ -1,19 +1,20 @@
+import { isDateKey } from '@/utils/date';
 import { asPositiveNumber, asString } from '@/utils/parse';
 import { normalizeCurrencyCode } from './expenses/format-money';
-import { withRoundTripFlightExpenseTitles } from './flight-expense-title';
 import { normalizeFlightDetails } from './flight-details';
+import { withRoundTripFlightExpenseTitles } from './flight-expense-title';
 import { normalizeRentalDetails } from './rental-details';
 import { normalizeStayDetails } from './stay-details';
 import { normalizeTransportDetails } from './transport-details';
 import { TRAVEL_PLAN_MODE_VALUES } from './travel-mode';
 import { normalizeTravelPhotoUris } from './travel-moment-media';
 import type {
-  TravelExpense,
-  TravelExpenseCategory,
-  TravelItineraryItem,
-  TravelItemNote,
-  TravelParticipant,
-  TravelPlan,
+    TravelExpense,
+    TravelExpenseCategory,
+    TravelItemNote,
+    TravelItineraryItem,
+    TravelParticipant,
+    TravelPlan,
 } from './types';
 import { TRAVEL_EXPENSE_HOST_ID, TRAVEL_EXPENSE_SELF_ID } from './types';
 
@@ -46,6 +47,7 @@ export function normalizeTravelItineraryItem(
     typeof item.id !== 'string' ||
     !ITEM_KINDS.has(item.kind as string) ||
     typeof item.date !== 'string' ||
+    !isDateKey(item.date) ||
     typeof item.startMinutes !== 'number' ||
     !Number.isFinite(item.startMinutes) ||
     item.startMinutes < 0 ||
@@ -418,6 +420,7 @@ export function normalizeTravelExpense(
     amount === undefined ||
     !currency ||
     typeof expense.date !== 'string' ||
+    !isDateKey(expense.date) ||
     !category ||
     typeof expense.paidById !== 'string'
   ) {
@@ -515,7 +518,9 @@ export function normalizeTravelPlan(value: unknown): TravelPlan | undefined {
     typeof plan.title !== 'string' ||
     typeof plan.destination !== 'string' ||
     typeof plan.startDate !== 'string' ||
-    typeof plan.endDate !== 'string'
+    typeof plan.endDate !== 'string' ||
+    !isDateKey(plan.startDate) ||
+    !isDateKey(plan.endDate)
   ) {
     return undefined;
   }

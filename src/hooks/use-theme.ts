@@ -2,19 +2,15 @@ import { createContext, createElement, type PropsWithChildren, useContext } from
 import { useColorScheme } from 'react-native';
 
 import {
-  darkPlantTheme,
-  darkTheme,
-  darkTravelTheme,
-  darkVehicleTheme,
-  lightPlantTheme,
-  lightTheme,
-  lightTravelTheme,
-  lightVehicleTheme,
-  type Theme,
+    applyThemeOverrides,
+    resolveBaseTheme,
+    type Theme,
+    type ThemeScope,
 } from '@/design-system';
 import { usePreferences } from '@/store/preferences';
+import { useThemeOverrides } from '@/store/theme-overrides';
 
-type FeatureTheme = 'default' | 'travel' | 'plants' | 'vehicles';
+type FeatureTheme = ThemeScope;
 
 const FeatureThemeContext = createContext<FeatureTheme>('default');
 
@@ -30,14 +26,6 @@ export function useTheme(): Theme {
   const preference = usePreferences((s) => s.themePreference);
   const resolved = preference === 'system' ? (system === 'dark' ? 'dark' : 'light') : preference;
   const feature = useContext(FeatureThemeContext);
-  if (feature === 'travel') {
-    return resolved === 'dark' ? darkTravelTheme : lightTravelTheme;
-  }
-  if (feature === 'plants') {
-    return resolved === 'dark' ? darkPlantTheme : lightPlantTheme;
-  }
-  if (feature === 'vehicles') {
-    return resolved === 'dark' ? darkVehicleTheme : lightVehicleTheme;
-  }
-  return resolved === 'dark' ? darkTheme : lightTheme;
+  const overrides = useThemeOverrides((s) => s.overrides[feature]);
+  return applyThemeOverrides(resolveBaseTheme(feature, resolved), overrides);
 }

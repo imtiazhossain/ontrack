@@ -12,6 +12,7 @@ Keep this repo optimized for future AI-agent token usage. When a change is in sc
 - Update the feature entry table (one-line pointer) when you add a new top-level entry module; update the domain skill/reference for fat domains.
 - Follow `.cursor/rules/token-optimization.mdc` on every session.
 - Follow `.cursor/rules/responsive-layout.mdc` on every UI change (mandatory for all agents).
+- Follow `.cursor/rules/no-personal-identifiers.mdc` always — never hardcode personal emails/names; use `account_flags` / env for privileges and support contact.
 
 ## Stack
 
@@ -42,6 +43,11 @@ Read Expo docs for **v57.0.0** only: https://docs.expo.dev/versions/v57.0.0/
 - `npm run packager:ensure:start` — same; start Metro if down (detached session that survives agent-shell cleanup), or replace this repo’s IPv6-only Metro (`::1` up / `127.0.0.1` down)
 - `npm run start:clear` — Metro with cache clear (only when the bundle is stuck/stale)
 - `npm run ios` / `android` / `web` — Metro targeting that platform (no default cache clear)
+- `npm run android:ensure` / `android:ensure:window` — boot preferred Android AVD (`Galaxy_S26`, headless by default; window opt-in like iOS). Override with `ONTRACK_ANDROID_AVD` / `ONTRACK_ANDROID_EMULATOR_WINDOW=1`
+- `npm run android:ensure:start` / `packager:ensure:android` — Metro + Galaxy_S26 + Android reconnect (`AGENT_UI_PLATFORM=android`)
+- `npm run android:run` — ensure Galaxy_S26 (window) + `expo run:android`
+- Android agent-ui: export `AGENT_UI_PLATFORM=android` (or use `android:ensure:start` / `npm run android:travel-demo`) so commands pin to the emulator when iOS is also up. Optional `AGENT_UI_DEVICE=<adb-serial>`. Push photos with `npm run android:push-fixture -- path/to.png`. Prefer `verify`/`once` batches over solo ops.
+- Dual close-out: `npm run agent-ui:verify-both -- --route <path> [--flow <name>] --exists <id> …` (iOS then Android).
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — Jest (`**/__tests__/**/*.test.ts`)
 - `npm run lint` — ESLint
@@ -50,9 +56,9 @@ Prefer leaving Metro running so Fast Refresh updates the simulator without app r
 
 ## Agent close-out (required)
 
-After **any** app-affecting change: run typecheck/tests for touched domains, verify Metro (`/status` 200 on LAN + localhost), **test the change in the iOS Simulator via Fast Refresh when possible**, and leave the simulator in a **working state that shows the change** (with a fully loaded screenshot in the reply). See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
+After **any** app-affecting change: run typecheck/tests for touched domains, keep Metro healthy, and **verify the changed surface on both iOS and Android** (dual-platform close-out — Android users are first-class). Prefer `./scripts/agent-ui-verify-both.sh` / `npm run agent-ui:verify-both`. See `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`.
 
-When exercising UI in the simulator, follow the **navigation decision tree** in `.cursor/rules/agent-ui-selectors.mdc`: app-up gate (`agent_ui_ensure_app_up` via `once`/`verify`/`flow`/…) → **`agent-ui.sh verify`** (skips land when already on `--route`) → else `once` / named `agent-ui-flow.sh` → `agent-ui-open.sh` / batch → tap known ids from `docs/agent-ui-map.md` → dump only if unknown → **assert** structural claims (`agent-ui-assert.sh`) and **one** screenshot only for visual/layout proof. Never re-run a flow just to re-check a screen you’re already on; never screenshot coordinates; never dump/screenshot mid-path “just to be sure.” Run typecheck/tests in parallel with the UI once-chain. **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change.
+When exercising UI, follow the **navigation decision tree** in `.cursor/rules/agent-ui-selectors.mdc`: stuck → config triage → app-up gate → **`agent-ui.sh verify`** (skips land when already on `--route`) → else `once` / named `agent-ui-flow.sh` → `agent-ui-open.sh` / batch → tap known ids → dump only if unknown → **assert** / `--color` and **STOP**. Pin Android with `AGENT_UI_PLATFORM=android`; clear sticky pins before iOS. Screenshot only when assert/`--color` cannot prove the claim — never a ritual handoff shot. Run typecheck/tests in parallel with the UI once-chain. **Every interactive control you create or edit must get an `ontrack.*` testID** in the same change.
 
 If the change touches `supabase/migrations/` (or other DB schema), **auto-apply** with `supabase db push` in the same turn — never leave migrations pending. See `.cursor/rules/auto-apply-migrations.mdc` and the parent **Database Updates and Migrations Rule**.
 
@@ -89,6 +95,7 @@ Short pointers only. For domain depth, use skills under `.cursor/skills/` (**tra
 | Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |
 | Profile avatar | `features/account/profile-avatar.tsx` |
+| Dev Mode / developer access | `account_flags` (Supabase) → `services/cloud/account-flags.ts`, `dev-access.ts`, Developer Tools hub |
 | Cloud sync | `services/cloud/sync.ts` |
 | Design tokens / prompts / DateField | `design-system/`, `components/primitives/` |
 
@@ -106,9 +113,14 @@ Short pointers only. For domain depth, use skills under `.cursor/skills/` (**tra
 - **Pick camera/library:** `@/utils/pick-image` — `pickCameraImage`, `pickLibraryImage`, `pickLibraryImages` (multi-select). Use `onDenied` when the screen shows its own error UI.
 - **Destructive confirms:** `@/utils/confirm-destructive` (`confirmDestructiveAction`). Activity delete wraps it via `confirmDeleteActivity`.
 - **Loading:** `LoadingBlock` in `components/primitives` for centered/inline spinners; prefer `EmptyState` for empty screens.
+- **Dropdown menus:** `@/components/primitives` `Dropdown` — overlay Modal menu (never push layout). Use for selects; travel `CurrencyDropdown` / `ScrollableDropdown` wrap it.
+- **Settings lists:** `SettingsGroup` + `SettingsRow` / `SettingsToggleRow` / `SettingsActionRow` (`grouped`) for dense iOS-style panels; use `SectionHeader flush` with `Screen contentStyle` gap.
+- **Danger zone:** `DangerZone` + `DestructiveSection flush` for GitHub-style red-bordered irreversible actions (Profile reset/delete).
+- **Status / meta chrome:** `StatusBadge`, `MetaList`, `ToolbarRow`, `ActionChip` / `ActionChipRow`, `PanelTitle` for diagnostic and card chrome.
+
 - **Responsive sizing:** `@/hooks/use-responsive` (`useResponsive`) + `@/design-system/responsive` (`scaleSize` / `moderateScale`). Prefer `AppText` with `fit` for chrome labels; Button/Input/Screen/DateField already scale.
 - **Field leading icons:** `@/components/primitives/field-leading-icon` — `FieldLeadingIcon` + `fieldLeadingIconRowStyle` (`field-leading-icon-style.ts`) so icon plates stay vertically centered in every field (see `.cursor/rules/field-icon-centering.mdc`).
-- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui.sh once` / `agent-ui-flow.sh` / `agent-ui-assert.sh` / `agent-ui-seed.sh` / `agent-ui-open.sh` / `agent-ui-batch.sh` / `agent-ui-tap.sh` / `agent-ui-wait.sh` (+ dump only to discover) + `docs/agent-ui-map.md` + `docs/agent-routes.md`. **Screenshot → code:** `agent-ui-source.sh` / `agent-ui-hit.sh` / `agent-ui-overlay.sh` + `docs/agent-ui-sources.json` (see `.cursor/rules/screenshot-triage.mdc`). **Always stamp `testID` on interactive controls you add or edit** (and `AgentTestId` anchors on major sections); prefer `once`/flows + assert-first over screenshots/tab-hopping; never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
+- **Agent UI selectors:** `@/utils/agent-ui` (`AgentUiIds`, `useAgentUiTarget`, `testID` on Button/Input/DateField/…) + `scripts/agent-ui.sh once` / `agent-ui-flow.sh` / `agent-ui-assert.sh` / `agent-ui-seed.sh` / `agent-ui-open.sh` / `agent-ui-batch.sh` / `agent-ui-tap.sh` / `agent-ui-scroll.sh` / `agent-ui-wait.sh` (+ dump only to discover) + `docs/agent-ui-map.md` + `docs/agent-routes.md`. **Off-screen:** `once --scroll <id>` scrolls the in-app `ScrollView` — never host mouse / CGEvent swipes on the Simulator window. **Screenshot → code:** `agent-ui-source.sh` / `agent-ui-hit.sh` / `agent-ui-overlay.sh` + `docs/agent-ui-sources.json` (see `.cursor/rules/screenshot-triage.mdc`). **Always stamp `testID` on interactive controls you add or edit** (and `AgentTestId` anchors on major sections); prefer `once`/flows + assert-first over screenshots/tab-hopping; never screenshot coordinates (see `.cursor/rules/agent-ui-selectors.mdc`).
 - **Status-bar wash:** `@/components/primitives` `useSafeAreaChrome(color)` (or `<SafeAreaChrome color={…} />`) so a page header wash continues behind the clock / Dynamic Island. `AppSafeArea` paints the focused route’s chrome color; default is `theme.backgroundPrimary`. Travel uses `travelSafeAreaBackground`; Today uses `timeOfDaySafeAreaBackground`.
 - **Typography:** `@/design-system` `typeConfig` + `appTextStyle(variant, { bold? })`. One UI font app-wide; default weight is regular — only pass `bold` / `{ bold: true }` when emphasis is explicit. Prefer `AppText` (optional `bold` prop) over raw `Text` / ad-hoc `fontFamily` / `fontWeight`.
 - **Pull-to-refresh:** Scrollable `Screen`s refresh by default via `usePullToRefresh` / `refreshAppData` (cloud pull + shared todos/vehicles + friends). List screens that use `scroll={false}` should attach `refreshControl` from `usePullToRefresh()`. Set `refresh={false}` on dense editors/forms.
@@ -124,7 +136,7 @@ Short pointers only. For domain depth, use skills under `.cursor/skills/` (**tra
 
 - Prefer focused unit tests next to the module (`__tests__/`).
 - Existing rule tests encode safe-area, DateField, appPrompt, keyboard, and auth navigation constraints — keep them green when touching those surfaces.
-- Always test after changes: typecheck/tests for touched domains, then verify in the iOS Simulator. Leave the simulator in a working state that shows the change, with a fully loaded screenshot in the reply (see `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`).
+- Always test after changes: typecheck/tests for touched domains, then verify in the iOS Simulator. Leave the sim on the changed surface; prove with assert/`--color` by default (screenshot only for visual claims — see `.cursor/rules/verify-working-app.mdc` and `.cursor/rules/show-simulator-screenshot.mdc`).
 
 ## Pitfalls
 

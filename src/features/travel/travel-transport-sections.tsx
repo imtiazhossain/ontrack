@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/primitives';
+import { AppText, Button } from '@/components/primitives';
+import type { AppIconName } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
@@ -8,9 +9,16 @@ import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import { TRAVEL_EDITORIAL_ACCENT } from '@/features/travel/travel-surface';
+import {
+  TRAVEL_EDITORIAL_ACCENT,
+  travelCardFill,
+} from '@/features/travel/travel-surface';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
-import type { TravelPlan, TravelTransportDetails } from '@/features/travel/types';
+import type {
+  TravelItemKind,
+  TravelPlan,
+  TravelTransportDetails,
+} from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -82,21 +90,67 @@ type TransportHandlers = {
   ) => void;
 };
 
+type EmptyAction = {
+  message: string;
+  actionLabel: string;
+  actionIcon: AppIconName;
+  actionTestID: string;
+  onAction: () => void;
+};
+
+function TransportEmptyState({
+  message,
+  actionLabel,
+  actionIcon,
+  actionTestID,
+  onAction,
+}: EmptyAction) {
+  const theme = useTheme();
+  const { spacing: rs, s } = useResponsive();
+  return (
+    <View
+      style={[
+        styles.empty,
+        {
+          gap: rs.sm,
+          paddingVertical: rs.md,
+          paddingHorizontal: rs.md,
+          borderRadius: Math.max(10, s(12)),
+          backgroundColor: travelCardFill(theme),
+        },
+      ]}>
+      <AppText
+        variant="callout"
+        color="secondary"
+        align="center"
+        style={styles.emptyMessage}>
+        {message}
+      </AppText>
+      <Button
+        variant="secondary"
+        size="sm"
+        icon={actionIcon}
+        onPress={onAction}
+        testID={actionTestID}
+        accessibilityLabel={actionLabel}
+        style={styles.emptyAction}>
+        {actionLabel}
+      </Button>
+    </View>
+  );
+}
+
 function TransportItemList({
   items,
-  emptyMessage,
+  empty,
   ...handlers
 }: TransportHandlers & {
   items: TravelItineraryItemModel[];
-  emptyMessage: string;
+  empty: EmptyAction;
 }) {
   const { spacing: rs } = useResponsive();
   if (items.length === 0) {
-    return (
-      <AppText variant="body" color="secondary">
-        {emptyMessage}
-      </AppText>
-    );
+    return <TransportEmptyState {...empty} />;
   }
 
   return (
@@ -177,6 +231,7 @@ export function TravelTransportSections({
   onToggleGround,
   onToggleStays,
   onToggleRentals,
+  onAddKind,
   ...handlers
 }: TransportHandlers & {
   items: TravelItineraryItemModel[];
@@ -190,6 +245,7 @@ export function TravelTransportSections({
   onToggleGround: () => void;
   onToggleStays: () => void;
   onToggleRentals: () => void;
+  onAddKind: (kind: TravelItemKind) => void;
 }) {
   const { spacing: rs } = useResponsive();
   const theme = useTheme();
@@ -205,14 +261,15 @@ export function TravelTransportSections({
   return (
     <TravelCollapsibleSection
       title="Transport, Stays & Rentals"
-      icon="itinerary"
+      icon="suitcase"
       accentColor={TRAVEL_EDITORIAL_ACCENT}
       card
       compact
+      tightHeader
       expanded={transportExpanded}
       onToggle={onToggleTransport}
       toggleTestID={AgentUiIds.travel.planDetail.transportSection}
-      titleVariant="caption">
+      titleVariant="callout">
       <View
         style={[
           styles.stack,
@@ -230,7 +287,13 @@ export function TravelTransportSections({
           nested>
           <TransportItemList
             items={flights}
-            emptyMessage="No flights on this trip yet."
+            empty={{
+              message: 'Track flights, confirmations, and airport details here.',
+              actionLabel: 'Add Flight',
+              actionIcon: 'flight',
+              actionTestID: AgentUiIds.travel.planDetail.addFlight,
+              onAction: () => onAddKind('flight'),
+            }}
             {...handlers}
           />
         </TravelCollapsibleSection>
@@ -245,7 +308,14 @@ export function TravelTransportSections({
           nested>
           <TransportItemList
             items={ground}
-            emptyMessage="No ground or public transport on this trip yet."
+            empty={{
+              message:
+                'Train, bus, ferry, taxi, or drive — keep ground travel with the trip.',
+              actionLabel: 'Add Transport',
+              actionIcon: 'route',
+              actionTestID: AgentUiIds.travel.planDetail.addTransport,
+              onAction: () => onAddKind('transport'),
+            }}
             {...handlers}
           />
         </TravelCollapsibleSection>
@@ -260,7 +330,13 @@ export function TravelTransportSections({
           nested>
           <TransportItemList
             items={stays}
-            emptyMessage="No stays on this trip yet."
+            empty={{
+              message: 'Hotels, hostels, and other lodging for this trip.',
+              actionLabel: 'Add Stay',
+              actionIcon: 'lodging',
+              actionTestID: AgentUiIds.travel.planDetail.addStay,
+              onAction: () => onAddKind('stay'),
+            }}
             {...handlers}
           />
         </TravelCollapsibleSection>
@@ -275,7 +351,13 @@ export function TravelTransportSections({
           nested>
           <TransportItemList
             items={rentals}
-            emptyMessage="No car rentals on this trip yet."
+            empty={{
+              message: 'Car rentals with pickup, drop-off, and confirmation details.',
+              actionLabel: 'Add Rental',
+              actionIcon: 'vehicles',
+              actionTestID: AgentUiIds.travel.planDetail.addRental,
+              onAction: () => onAddKind('rental'),
+            }}
             {...handlers}
           />
         </TravelCollapsibleSection>
@@ -286,4 +368,16 @@ export function TravelTransportSections({
 
 const styles = StyleSheet.create({
   stack: {},
+  empty: {
+    alignItems: 'center',
+  },
+  emptyMessage: {
+    flexShrink: 1,
+    minWidth: 0,
+    width: '100%',
+    textAlign: 'center',
+  },
+  emptyAction: {
+    alignSelf: 'center',
+  },
 });

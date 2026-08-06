@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import { EmptyState, Screen } from '@/components/primitives';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import type { StayBookingOpen } from '@/features/travel/booking-open';
-import { travelCalendarDrafts } from '@/features/travel/calendar';
+import {
+    isTravelPlanOnCalendar,
+    travelCalendarDrafts,
+} from '@/features/travel/calendar';
 import {
     type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
@@ -22,6 +25,11 @@ import {
 } from '@/features/travel/travel-plan-detail-sections';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
+import {
+    autoCollapsedTimelineDates,
+    resolveCollapsedTimelineDates,
+    timelineDaysFromItems,
+} from '@/features/travel/travel-timeline-progress';
 import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanDetailAddForm } from '@/features/travel/use-travel-plan-detail-add-form';
@@ -49,7 +57,7 @@ type TravelPlanDetailProps = {
   /** DEV: open an import-result sheet on mount for simulator QA. */
   initialImportResult?: TravelImportResult;
   /** DEV: prefill Add Flight from a known confirmation fixture (no document picker). */
-  initialFlightImportFixture?: 'roundtrip';
+  initialFlightImportFixture?: 'roundtrip' | 'connecting';
 };
 
 export function TravelPlanDetail(props: TravelPlanDetailProps) {
@@ -89,6 +97,7 @@ function TravelPlanDetailLoaded({
   const replaceTravelActivities = useSchedule(
     (state) => state.replaceTravelActivities,
   );
+  const activities = useSchedule((state) => state.activities);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const { user } = useAuthSession();
   const accountEmail = user?.email?.trim().toLowerCase() || undefined;
@@ -97,7 +106,11 @@ function TravelPlanDetailLoaded({
   const updatePlan = (next: TravelPlan) => {
     const saved = savePlan(next);
     if (!saved) return;
-    replaceTravelActivities(next.id, travelCalendarDrafts(next));
+    // Calendar membership is opt-in from the Travel tab — never auto-create
+    // events when editing itinerary, expenses, or notes on plan detail.
+    if (isTravelPlanOnCalendar(activities, next.id)) {
+      replaceTravelActivities(next.id, travelCalendarDrafts(next));
+    }
   };
   const form = useTravelPlanDetailAddForm({
     plan,
@@ -230,11 +243,47 @@ function TravelPlanDetailLoaded({
   const [collapsedDayDates, setCollapsedDayDates] = useState<Set<string>>(
     () => new Set(),
   );
-  const sortedItinerary = [...itinerary].sort(
-    (left, right) =>
-      left.date.localeCompare(right.date) ||
-      left.startMinutes - right.startMinutes,
+  const [dayCollapseTouched, setDayCollapseTouched] = useState<Set<string>>(
+    () => new Set(),
   );
+  const [timelineNow, setTimelineNow] = useState(() => new Date());
+  const sortedItinerary = useMemo(
+    () =>
+      [...itinerary].sort(
+        (left, right) =>
+          left.date.localeCompare(right.date) ||
+          left.startMinutes - right.startMinutes,
+      ),
+    [itinerary],
+  );
+  const timelineDays = useMemo(
+    () => timelineDaysFromItems(sortedItinerary),
+    [sortedItinerary],
+  );
+
+  useEffect(() => {
+    const tick = () => setTimelineNow(new Date());
+    const interval = setInterval(tick, 60_000);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const autoCollapsed = autoCollapsedTimelineDates(timelineDays, timelineNow);
+    setCollapsedDayDates((current) =>
+      resolveCollapsedTimelineDates({
+        days: timelineDays,
+        autoCollapsed,
+        currentCollapsed: current,
+        userTouched: dayCollapseTouched,
+      }),
+    );
+  }, [timelineDays, timelineNow, dayCollapseTouched]);
   const transportCounts = {
     flights: sortedItinerary.filter((item) => item.kind === 'flight').length,
     ground: sortedItinerary.filter((item) => item.kind === 'transport').length,
@@ -264,6 +313,11 @@ function TravelPlanDetailLoaded({
     });
   };
   const toggleDay = (date: string) => {
+    setDayCollapseTouched((current) => {
+      const next = new Set(current);
+      next.add(date);
+      return next;
+    });
     setCollapsedDayDates((current) => {
       const next = new Set(current);
       if (next.has(date)) next.delete(date);
@@ -298,7 +352,6 @@ function TravelPlanDetailLoaded({
       <TravelPlanDetailBody
         plan={plan}
         travelStyle={travelStyle}
-        dateDisplayFormat={dateDisplayFormat}
         sortedItinerary={sortedItinerary}
         itemEditHandlers={itemEditHandlers}
         collapsedDayDates={collapsedDayDates}
@@ -306,6 +359,7 @@ function TravelPlanDetailLoaded({
         toggleSection={toggleSection}
         onToggleDay={toggleDay}
         onAddPress={() => form.setIsChoosingAddKind(true)}
+        onAddKind={chooseAddKind}
         onEditDates={() => setEditingTripDates(true)}
       />
       <TravelPlanDetailOverlays

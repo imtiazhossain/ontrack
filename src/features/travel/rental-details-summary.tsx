@@ -1,7 +1,8 @@
+import { RentalCompanyLogo } from '@/features/travel/rental-company-logo';
 import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
-    formatDateKeyShort,
+    formatDateKeyMedium,
     formatMinutes,
     type DateDisplayFormat,
 } from '@/utils/date';
@@ -17,10 +18,9 @@ import type { TravelRentalDetails } from './types';
 function formatStamp(
   date: string | undefined,
   minutes: number | undefined,
-  dateDisplayFormat: DateDisplayFormat,
 ): string | undefined {
   const parts = [
-    date ? formatDateKeyShort(date, dateDisplayFormat) : undefined,
+    date ? formatDateKeyMedium(date) : undefined,
     minutes !== undefined ? formatMinutes(minutes) : undefined,
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : undefined;
@@ -30,24 +30,21 @@ export function RentalDetailsSummary({
   details,
   pickupDate,
   pickupMinutes,
-  dateDisplayFormat = 'mdy',
+  dateDisplayFormat: _dateDisplayFormat = 'mdy',
 }: {
   details: TravelRentalDetails;
   /** Itinerary pick-up day (YYYY-MM-DD). */
   pickupDate?: string;
   /** Minutes from midnight for pick-up. */
   pickupMinutes?: number;
+  /** Kept for call-site compatibility; board chrome always uses medium dates. */
   dateDisplayFormat?: DateDisplayFormat;
 }) {
   const theme = useTheme();
   const accent = kindAccent('rental', theme);
   const tint = kindTint('rental', theme);
-  const pickupStamp = formatStamp(pickupDate, pickupMinutes, dateDisplayFormat);
-  const dropoffStamp = formatStamp(
-    details.dropoffDate,
-    details.dropoffMinutes,
-    dateDisplayFormat,
-  );
+  const pickupStamp = formatStamp(pickupDate, pickupMinutes);
+  const dropoffStamp = formatStamp(details.dropoffDate, details.dropoffMinutes);
   const confirmationUris = confirmationUrisForDisplay(
     details.confirmationUris,
     'rental',
@@ -87,6 +84,12 @@ export function RentalDetailsSummary({
       title={details.company || 'Rental'}
       subtitle={details.company ? 'Car Rental' : undefined}
       icon="vehicles"
+      mark={
+        <RentalCompanyLogo
+          company={details.company}
+          fallbackColor={accent}
+        />
+      }
       accentColor={accent}
       tintColor={tint}
       confirmationCode={details.confirmationCode}

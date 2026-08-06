@@ -1,7 +1,8 @@
 import {
-  destinationCoverCandidates,
-  enlargeWikimediaThumb,
-  isUsableDestinationPhotoUrl,
+    destinationCoverCandidates,
+    enlargeWikimediaThumb,
+    isUsableDestinationPhotoUrl,
+    stayCoverCandidates,
 } from '../destination-cover';
 import type { TravelPlan } from '../types';
 
@@ -41,6 +42,30 @@ describe('destinationCoverCandidates', () => {
     expect(
       destinationCoverCandidates(plan({ title: 'paris', destination: 'Paris' })),
     ).toEqual(['Paris']);
+  });
+});
+
+describe('stayCoverCandidates', () => {
+  it('prefers the hotel title then geographic address parts', () => {
+    expect(
+      stayCoverCandidates(
+        'Hotel Avenida Palace',
+        'Rua 1.º Dezembro 123, Lisboa, Portugal',
+      ),
+    ).toEqual([
+      'Hotel Avenida Palace',
+      'Lisboa',
+      'Portugal',
+      'Rua 1.º Dezembro 123, Lisboa, Portugal',
+    ]);
+  });
+
+  it('skips generic stay titles and still uses the address', () => {
+    expect(stayCoverCandidates('Demo Stay', 'Lisbon, Portugal')).toEqual([
+      'Lisbon',
+      'Portugal',
+      'Lisbon, Portugal',
+    ]);
   });
 });
 

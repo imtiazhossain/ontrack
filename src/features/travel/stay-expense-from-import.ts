@@ -1,15 +1,16 @@
 import {
-  createExpenseDraft,
-  defaultSplitIds,
-  upsertTravelExpense,
+    createExpenseDraft,
+    defaultSplitIds,
+    upsertTravelExpense,
 } from '@/features/travel/expenses/expense-math';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import type { ParsedStayConfirmation } from '@/features/travel/stay-confirmation-parser';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
-  TRAVEL_EXPENSE_SELF_ID,
-  type TravelExpense,
-  type TravelPlan,
-  type TravelStayDetails,
+    TRAVEL_EXPENSE_SELF_ID,
+    type TravelExpense,
+    type TravelPlan,
+    type TravelStayDetails,
 } from '@/features/travel/types';
 
 function confirmationNote(code?: string): string | undefined {
@@ -57,7 +58,10 @@ export function applyStayExpenseFromImport(
     category: 'stay',
     notes: confirmationNote(confirmationCode),
     paidById: TRAVEL_EXPENSE_SELF_ID,
-    splitWithIds: defaultSplitIds(plan.participants),
+    splitWithIds: defaultSplitIds(
+      plan.participants,
+      isTravelMemberPlan(plan),
+    ),
     existing,
   });
   return upsertTravelExpense(plan, expense);

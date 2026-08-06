@@ -80,10 +80,13 @@ function requireClient() {
 }
 
 export function travelChatAccessCode(plan: TravelPlan): string | undefined {
-  return (
-    plan.chatAccessCode ??
-    plan.participants.find((participant) => participant.acceptedAt)?.inviteCode
-  );
+  if (plan.chatAccessCode) return plan.chatAccessCode;
+  // Prefer the most recently accepted invite. Older invitees may have left
+  // (revoked server-side) while still lingering first in the local array.
+  const accepted = plan.participants
+    .filter((participant) => participant.acceptedAt && participant.inviteCode)
+    .sort((a, b) => (b.acceptedAt ?? '').localeCompare(a.acceptedAt ?? ''));
+  return accepted[0]?.inviteCode;
 }
 
 function randomDeviceId(): string {
@@ -92,12 +95,34 @@ function randomDeviceId(): string {
   return Crypto.randomUUID();
 }
 
+async function readStoredChatDeviceId(): Promise<string | null> {
+  if (process.env.EXPO_OS === 'web') {
+    try {
+      return globalThis.localStorage?.getItem(CHAT_DEVICE_ID_KEY) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  return SecureStore.getItemAsync(CHAT_DEVICE_ID_KEY);
+}
+
+async function writeStoredChatDeviceId(value: string): Promise<void> {
+  if (process.env.EXPO_OS === 'web') {
+    try {
+      globalThis.localStorage?.setItem(CHAT_DEVICE_ID_KEY, value);
+    } catch {
+      // Private mode / blocked storage — still return an in-memory id below.
+    }
+    return;
+  }
+  await SecureStore.setItemAsync(CHAT_DEVICE_ID_KEY, value);
+}
+
 export async function getTravelChatDeviceId(): Promise<string> {
-  if (process.env.EXPO_OS === 'web') return '00000000-0000-4000-8000-000000000000';
-  const existing = await SecureStore.getItemAsync(CHAT_DEVICE_ID_KEY);
+  const existing = await readStoredChatDeviceId();
   if (existing) return existing;
   const created = randomDeviceId();
-  await SecureStore.setItemAsync(CHAT_DEVICE_ID_KEY, created);
+  await writeStoredChatDeviceId(created);
   return created;
 }
 

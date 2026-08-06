@@ -1,14 +1,17 @@
 import {
-  dateDisplayFormatForLocale,
-  formatDateKey,
-  formatDateKeyShort,
-  formatDatePickerTitle,
-  formatMonthTitle,
-  formatTimePickerTitle,
-  fromDateKey,
-  isDateKey,
-  nativeDatePickerLocale,
-  toDateKey,
+    dateDisplayFormatForLocale,
+    formatDateKey,
+    formatDateKeyMedium,
+    formatDateKeyShort,
+    formatDatePickerTitle,
+    formatMonthTitle,
+    formatTimePickerTitle,
+    formatTripDateRangeLabel,
+    formatTripWeekdayRangeLabel,
+    fromDateKey,
+    isDateKey,
+    nativeDatePickerLocale,
+    toDateKey,
 } from '@/utils/date';
 
 describe('date keys', () => {
@@ -44,6 +47,19 @@ describe('date keys', () => {
     expect(formatDateKeyShort('2026-09-08', 'mdy')).toBe('9/8');
     expect(formatDateKeyShort('2026-09-08', 'iso')).toBe('8/9');
     expect(formatDateKeyShort('2026-12-31', 'mdy')).toBe('12/31');
+  });
+
+  it('formats medium and trip-range chrome dates', () => {
+    expect(formatDateKeyMedium('2026-09-08')).toBe('Sep 8');
+    expect(formatTripDateRangeLabel('2026-09-08', '2026-09-14')).toBe(
+      'Sep 8 – Sep 14, 2026',
+    );
+    expect(formatTripWeekdayRangeLabel('2026-09-08', '2026-09-14')).toBe(
+      'Tuesday – Monday',
+    );
+    expect(formatTripDateRangeLabel('2025-12-30', '2026-01-02')).toBe(
+      'Dec 30, 2025 – Jan 2, 2026',
+    );
   });
 
   it('handles legacy preferences without a native picker locale', () => {

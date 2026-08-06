@@ -25,6 +25,7 @@ SOCK_NAME = "agent-ui.sock"
 PID_NAME = "agent-ui-daemon.pid"
 LOG_NAME = "agent-ui-daemon.log"
 LAST_OK_NAME = "agent-ui-last-ok"
+CODE_HASH_NAME = "agent-ui-daemon.code-hash"
 
 
 def repo_root() -> Path:
@@ -42,14 +43,38 @@ def cursor_dir(root: Path | None = None) -> Path:
     return d
 
 
+def normalize_platform(raw: Any) -> str:
+    """Host/app platform pin: ios | android (default ios)."""
+    if raw is None:
+        return "ios"
+    text = str(raw).strip().lower()
+    if text in {"android", "ios"}:
+        return text
+    # RN sometimes reports "macos"/"web" — treat non-android as ios for pin.
+    if text in {"macos", "web", "windows"}:
+        return "ios"
+    return "ios"
+
+
+# Cap in-flight commands per platform so a runaway host cannot OOM the daemon.
+MAX_PENDING_PER_PLATFORM = 32
+# Retain completed statuses briefly so late waiters / retries can still match.
+MAX_STATUS_BY_NONCE = 64
+
+
 class BridgeState:
     def __init__(self) -> None:
         # RLock: enqueue notifies both command + status waiters without deadlock.
         self._lock = threading.RLock()
-        self.pending: dict[str, Any] | None = None
+        # FIFO per platform — never overwrite an in-flight command.
+        self.pending_by_platform: dict[str, list[dict[str, Any]]] = {}
         self.command_seq = 0
         self.command_cv = threading.Condition(self._lock)
-        self.status: dict[str, Any] | None = None
+        # Status keyed by nonce so iOS + Android (or back-to-back ops) do not
+        # clobber each other's waiters.
+        self.status_by_nonce: dict[int, dict[str, Any]] = {}
+        self.status_order: list[int] = []
+        self.last_status: dict[str, Any] | None = None
         self.status_nonce: int | None = None
         self.status_cv = threading.Condition(self._lock)
         self._nonce_seq = 0
@@ -62,6 +87,8 @@ class BridgeState:
     def enqueue(self, payload: dict[str, Any]) -> int:
         with self.command_cv:
             body = dict(payload)
+            platform = normalize_platform(body.get("platform"))
+            body["platform"] = platform
             raw = body.get("nonce")
             try:
                 nonce = int(raw) if raw is not None else self._next_nonce()
@@ -70,45 +97,75 @@ class BridgeState:
             if nonce >= 9_007_199_254_740_991:  # Number.MAX_SAFE_INTEGER
                 nonce = self._next_nonce()
             body["nonce"] = nonce
-            self.pending = body
+            queue = self.pending_by_platform.setdefault(platform, [])
+            if len(queue) >= MAX_PENDING_PER_PLATFORM:
+                # Drop oldest — host will time out; prefer fresh commands.
+                queue.pop(0)
+            queue.append(body)
             self.command_seq += 1
-            self.status = None
             self.status_nonce = nonce
             self.command_cv.notify_all()
             with self.status_cv:
                 self.status_cv.notify_all()
             return nonce
 
-    def take_command(self, wait_ms: int) -> dict[str, Any] | None:
+    def take_command(
+        self, wait_ms: int, platform: str | None = None
+    ) -> dict[str, Any] | None:
+        pin = normalize_platform(platform)
         deadline = time.time() + max(0, wait_ms) / 1000.0
         with self.command_cv:
-            while self.pending is None:
+            while True:
+                queue = self.pending_by_platform.get(pin) or []
+                if queue:
+                    cmd = queue.pop(0)
+                    if not queue:
+                        self.pending_by_platform.pop(pin, None)
+                    return cmd
                 remaining = deadline - time.time()
                 if remaining <= 0:
                     return None
                 self.command_cv.wait(timeout=remaining)
-            cmd = self.pending
-            self.pending = None
-            return cmd
 
     def publish_status(self, status: dict[str, Any]) -> None:
         with self.status_cv:
-            self.status = status
+            self.last_status = status
+            raw = status.get("nonce")
+            try:
+                nonce = int(raw) if raw is not None else None
+            except (TypeError, ValueError):
+                nonce = None
+            if nonce is not None:
+                if nonce not in self.status_by_nonce:
+                    self.status_order.append(nonce)
+                self.status_by_nonce[nonce] = status
+                self.status_nonce = nonce
+                while len(self.status_order) > MAX_STATUS_BY_NONCE:
+                    old = self.status_order.pop(0)
+                    self.status_by_nonce.pop(old, None)
             self.status_cv.notify_all()
 
     def wait_status(self, nonce: int | None, wait_secs: float) -> dict[str, Any] | None:
         deadline = time.time() + max(0.05, wait_secs)
         with self.status_cv:
             while True:
-                if self.status is not None:
-                    status_nonce = self.status.get("nonce")
-                    if nonce is None or status_nonce is None or int(status_nonce) == int(nonce):
-                        return self.status
-                    # Status for a different op — keep waiting until timeout.
+                if nonce is not None:
+                    hit = self.status_by_nonce.get(int(nonce))
+                    if hit is not None:
+                        return hit
+                elif self.last_status is not None:
+                    return self.last_status
                 remaining = deadline - time.time()
                 if remaining <= 0:
-                    return self.status if self.status is not None else None
+                    if nonce is not None:
+                        return self.status_by_nonce.get(int(nonce))
+                    return self.last_status
                 self.status_cv.wait(timeout=remaining)
+
+    # Back-compat for handlers that still read STATE.status.
+    @property
+    def status(self) -> dict[str, Any] | None:
+        return self.last_status
 
 
 STATE = BridgeState()
@@ -171,7 +228,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in {"/next", "/__agent_ui/next"}:
             wait_ms = int((qs.get("waitMs") or ["5000"])[0])
-            cmd = STATE.take_command(wait_ms)
+            platform = (qs.get("platform") or [None])[0]
+            cmd = STATE.take_command(wait_ms, platform=platform)
             if cmd is None:
                 self._send(204)
                 return
@@ -186,7 +244,10 @@ class Handler(BaseHTTPRequestHandler):
                 status = STATE.wait_status(nonce, wait_ms / 1000.0)
             else:
                 with STATE.status_cv:
-                    status = STATE.status
+                    if nonce is not None:
+                        status = STATE.status_by_nonce.get(nonce)
+                    else:
+                        status = STATE.last_status
             if status is None:
                 self._send(204)
                 return
@@ -378,24 +439,95 @@ def health_http(port: int = DEFAULT_HTTP_PORT, timeout: float = 0.25) -> bool:
         return False
 
 
+def daemon_code_fingerprint() -> str:
+    """Short hash of host bridge modules — used to auto-restart stale daemons."""
+    import hashlib
+
+    digest = hashlib.sha256()
+    lib = Path(__file__).resolve().parent
+    for name in ("agent_ui_daemon.py", "agent_ui_bridge.py", "agent_ui_color.py"):
+        path = lib / name
+        if path.is_file():
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+    return digest.hexdigest()[:20]
+
+
+def write_code_hash(root: Path | None = None, fingerprint: str | None = None) -> None:
+    path = cursor_dir(root) / CODE_HASH_NAME
+    path.write_text(f"{fingerprint or daemon_code_fingerprint()}\n", encoding="utf-8")
+
+
+def read_code_hash(root: Path | None = None) -> str | None:
+    path = cursor_dir(root) / CODE_HASH_NAME
+    if not path.is_file():
+        return None
+    try:
+        return path.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def stop_daemon(root: Path | None = None) -> None:
+    """Best-effort stop of a previously ensure'd daemon (code upgrades)."""
+    root = root or repo_root()
+    pid_path = cursor_dir(root) / PID_NAME
+    if not pid_path.is_file():
+        return
+    try:
+        pid = int(pid_path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        pid_path.unlink(missing_ok=True)
+        return
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        pass
+    pid_path.unlink(missing_ok=True)
+    # Give the port a moment to free.
+    for _ in range(30):
+        if not health_http():
+            break
+        time.sleep(0.02)
+
+
 def ensure_daemon(
     root: Path | None = None,
     port: int = DEFAULT_HTTP_PORT,
+    *,
+    restart: bool = False,
 ) -> bool:
-    if health_http(port):
-        return True
     root = root or repo_root()
+    fingerprint = daemon_code_fingerprint()
+    cached = read_code_hash(root)
+    stale = cached is not None and cached != fingerprint
+    if restart or stale:
+        if stale and not restart:
+            print(
+                "agent-ui: daemon code changed — restarting bridge daemon",
+                file=sys.stderr,
+            )
+        stop_daemon(root)
+    elif health_http(port):
+        if cached is None:
+            write_code_hash(root, fingerprint)
+        return True
     daemon_py = Path(__file__).resolve()
     log_path = cursor_dir(root) / LOG_NAME
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log:
         proc = subprocess_popen_daemon(daemon_py, port, root, log)
+    _ = proc
     # Wait briefly for listen.
     for _ in range(50):
         if health_http(port):
+            write_code_hash(root, fingerprint)
             return True
         time.sleep(0.02)
-    return health_http(port)
+    ok = health_http(port)
+    if ok:
+        write_code_hash(root, fingerprint)
+    return ok
 
 
 def subprocess_popen_daemon(
@@ -461,8 +593,14 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("health")
     p_ensure = sub.add_parser("ensure")
     p_ensure.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT)
+    p_ensure.add_argument(
+        "--restart",
+        action="store_true",
+        help="Kill any existing daemon before starting (after host code changes).",
+    )
     p_warm = sub.add_parser("warm")
     p_warm.add_argument("--max-age", type=float, default=30.0)
+    sub.add_parser("stop")
 
     args = parser.parse_args(argv)
     if args.cmd == "serve":
@@ -472,8 +610,12 @@ def main(argv: list[str] | None = None) -> int:
         ok = health_http()
         print(json.dumps({"ok": ok}))
         return 0 if ok else 1
+    if args.cmd == "stop":
+        stop_daemon()
+        print(json.dumps({"ok": True, "stopped": True}))
+        return 0
     if args.cmd == "ensure":
-        ok = ensure_daemon(port=args.port)
+        ok = ensure_daemon(port=args.port, restart=bool(args.restart))
         print(json.dumps({"ok": ok}))
         return 0 if ok else 1
     if args.cmd == "warm":

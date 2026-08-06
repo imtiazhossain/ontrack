@@ -1,36 +1,29 @@
 import type { PropsWithChildren } from 'react';
 import {
-  StyleSheet,
-  View,
-  type LayoutChangeEvent,
-  type StyleProp,
-  type ViewStyle,
+    StyleSheet,
+    View,
+    type LayoutChangeEvent,
+    type StyleProp,
+    type ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText, Card, Symbol } from '@/components/primitives';
 import {
-  darkTheme,
-  darkTravelTheme,
-  lightTheme,
-  lightTravelTheme,
-  type AppIconName,
-  type Theme,
+    darkTravelTheme,
+    lightTravelTheme,
+    type AppIconName,
+    type Theme,
 } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
 import {
-  travelAtmosphereScheme,
-  type TravelAtmosphere,
+    travelAtmosphereScheme,
+    type TravelAtmosphere,
 } from './travel-atmosphere-model';
 
 /** Travel's open-sky accent. Shared control semantics remain unchanged. */
 export const TRAVEL_EDITORIAL_ACCENT = '#2474A8';
-
-/** Multicolor route rail: sky, lagoon, and twilight. */
-const TRAVEL_RAIL_LIGHT = ['#2F80ED', '#21B6A8', '#8B5CF6'] as const;
-const TRAVEL_RAIL_DARK = ['#78BCE8', '#4FD1C5', '#B69CFF'] as const;
 
 /** Cool shadow that sits naturally on Travel's sky wash. */
 export const TRAVEL_CARD_SHADOW = '0 3px 12px rgba(17, 74, 110, 0.16)';
@@ -46,18 +39,15 @@ const FALLBACK_ATMOSPHERE: TravelAtmosphere = {
   timeOfDay: 'day',
 };
 
-function todayTheme(theme: Theme): Theme {
-  return theme.name === 'dark' ? darkTheme : lightTheme;
-}
-
-function todayPageBackground(theme: Theme): string {
-  return todayTheme(theme).backgroundPrimary;
-}
-
 function travelTopWash(theme: Theme): string {
   return theme.name === 'dark'
-    ? darkTravelTheme.backgroundSecondary
+    ? darkTravelTheme.backgroundPrimary
     : lightTravelTheme.backgroundPrimary;
+}
+
+/** Page paper under the Travel wash — cool gray (light) / deep navy (dark). */
+function travelPagePaper(theme: Theme): string {
+  return theme.name === 'dark' ? darkTravelTheme.backgroundPrimary : '#F8F9FA';
 }
 
 export function travelSafeAreaBackground(theme: Theme): string {
@@ -66,15 +56,15 @@ export function travelSafeAreaBackground(theme: Theme): string {
 
 function travelBluePageGradient(theme: Theme): string {
   const wash = travelTopWash(theme);
-  const paper = todayPageBackground(theme);
-  return `linear-gradient(to bottom, ${wash} 0%, ${paper} 38%, ${paper} 100%)`;
+  const paper = travelPagePaper(theme);
+  return `linear-gradient(to bottom, ${wash} 0%, ${paper} 42%, ${paper} 100%)`;
 }
 
 export function travelPageBg(
   theme: Theme,
   _atmosphere: TravelAtmosphere = FALLBACK_ATMOSPHERE,
 ): string {
-  return todayPageBackground(theme);
+  return travelPagePaper(theme);
 }
 
 /** Blue-to-neutral page style shared by every Travel route. */
@@ -166,53 +156,24 @@ export function TravelSkyBackdrop(_props?: { variant?: 'wash' | 'sky' }) {
 /** Elevated travel card — continuous radius + warm shadow like Add Stay panels. */
 export function TravelSurfaceCard({
   children,
-  stripeColor,
-  stripe = Boolean(stripeColor),
   style,
   bodyStyle,
   padding,
   onLayout,
 }: PropsWithChildren<{
-  /** @deprecated Prefer `stripe` — solid override when a non-gold accent is needed. */
-  stripeColor?: string;
-  /** Multicolor Travel rail (default when `stripeColor` is not supplied). */
-  stripe?: boolean;
   style?: StyleProp<ViewStyle>;
   bodyStyle?: StyleProp<ViewStyle>;
   padding?: number;
   onLayout?: (event: LayoutChangeEvent) => void;
 }>) {
   const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
+  const { spacing: rs } = useResponsive();
   const pad = padding ?? rs.md;
-  const stripeW = Math.max(3, s(3));
-  const showStripe = stripe || Boolean(stripeColor);
-  const railColors =
-    theme.name === 'dark' ? TRAVEL_RAIL_DARK : TRAVEL_RAIL_LIGHT;
   return (
     <Card
       padded={false}
       onLayout={onLayout}
-      style={[
-        styles.card,
-        { backgroundColor: travelMainCardFill(theme) },
-        style,
-      ]}>
-      {showStripe ? (
-        <View style={[styles.stripe, { width: stripeW }]}>
-          {stripeColor ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: stripeColor }]} />
-          ) : (
-            <LinearGradient
-              colors={[...railColors]}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-        </View>
-      ) : null}
+      style={[{ backgroundColor: travelMainCardFill(theme) }, style]}>
       <View style={[styles.cardBody, { padding: pad, gap: rs.md }, bodyStyle]}>{children}</View>
     </Card>
   );
@@ -277,14 +238,7 @@ export function TravelSectionLabel({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-  },
-  stripe: {
-    alignSelf: 'stretch',
-  },
   cardBody: {
-    flex: 1,
     minWidth: 0,
   },
   sectionLabel: {

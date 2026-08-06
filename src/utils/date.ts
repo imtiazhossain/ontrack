@@ -84,6 +84,51 @@ export function formatDateKeyShort(value: string, format: DateDisplayFormat): st
     : `${normalized.month}/${normalized.day}`;
 }
 
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+/** Medium calendar chrome: `Sep 27`. */
+export function formatDateKeyMedium(value: string): string {
+  if (!isDateKey(value)) return value;
+  const d = fromDateKey(value);
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * Trip date-range chrome: `Sep 8 – Sep 14, 2026` (en dash; year once when shared).
+ */
+export function formatTripDateRangeLabel(startDate: string, endDate: string): string {
+  if (!isDateKey(startDate) || !isDateKey(endDate)) {
+    return `${startDate} – ${endDate}`;
+  }
+  const start = fromDateKey(startDate);
+  const end = fromDateKey(endDate);
+  const startLabel = formatDateKeyMedium(startDate);
+  const endLabel = formatDateKeyMedium(endDate);
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${startLabel} – ${endLabel}, ${end.getFullYear()}`;
+  }
+  return `${startLabel}, ${start.getFullYear()} – ${endLabel}, ${end.getFullYear()}`;
+}
+
+/** Weekday range chrome: `Tuesday – Monday`. */
+export function formatTripWeekdayRangeLabel(startDate: string, endDate: string): string {
+  if (!isDateKey(startDate) || !isDateKey(endDate)) return '';
+  return `${formatWeekday(startDate)} – ${formatWeekday(endDate)}`;
+}
+
 function normalizeDateParts(
   day: string,
   month: string,

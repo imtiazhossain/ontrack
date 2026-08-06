@@ -10,6 +10,8 @@ export const AGENT_UI_DEMO_CONNECTING_FLIGHT_ID =
   'item-agent-ui-demo-connecting-flight';
 /** Stable stay with an address so agents can exercise Open with… maps. */
 export const AGENT_UI_DEMO_STAY_ID = 'item-agent-ui-demo-stay';
+
+export const AGENT_UI_DEMO_RENTAL_ID = 'item-agent-ui-demo-rental';
 /** Chase round-trip fixture outbound (EWR → KEF) after importFlight=roundtrip submit. */
 export const AGENT_UI_DEMO_CHASE_OUTBOUND_ID =
   'item-agent-ui-demo-chase-outbound';
@@ -117,7 +119,7 @@ export function buildAgentUiDemoTrip(
     destination: 'Lisbon, Portugal',
     startDate: '2026-09-27',
     endDate: '2026-09-30',
-    notes: 'Stable __DEV__ fixture for agent navigation. Safe to overwrite.',
+    notes: 'Demo trip for agent navigation. Safe to overwrite.',
     itinerary: [
       {
         id: AGENT_UI_DEMO_FLIGHT_ID,
@@ -189,15 +191,33 @@ export function buildAgentUiDemoTrip(
       {
         id: AGENT_UI_DEMO_STAY_ID,
         kind: 'stay',
-        title: 'Demo Stay',
+        title: 'Centerhotel Miðgarður',
         date: '2026-09-27',
         startMinutes: 15 * 60,
         durationMinutes: 2 * 24 * 60,
-        details: 'Rua Augusta 100, 1100-053 Lisboa, Portugal',
+        details: 'Laugavegur 120, 105 Reykjavík, Iceland',
+        // No OTA booking URL — brand logo resolves dynamically from the hotel name.
         stay: {
           checkoutDate: '2026-09-29',
           checkoutMinutes: 11 * 60,
           confirmationCode: 'STAYDEMO',
+        },
+      },
+      {
+        id: AGENT_UI_DEMO_RENTAL_ID,
+        kind: 'rental',
+        title: 'Hertz Rental · Lisbon Airport (LIS)',
+        date: '2026-09-27',
+        startMinutes: 10 * 60 + 30,
+        durationMinutes: 2 * 24 * 60 + 6 * 60,
+        rental: {
+          company: 'Hertz',
+          confirmationCode: 'RENTALDEMO',
+          pickupLocation: 'Lisbon Airport (LIS)',
+          dropoffLocation: 'Lisbon Airport (LIS)',
+          dropoffDate: '2026-09-29',
+          dropoffMinutes: 16 * 60 + 30,
+          vehicleClass: 'Compact',
         },
       },
     ],
@@ -342,6 +362,13 @@ export function seedAgentUiFixture(
 ): AgentUiSeedResult | null {
   const fixture = normalizeFixtureName(name);
   if (!fixture) return null;
+
+  // Snapshot + pause cloud push so demo data never lands on the live account.
+  // Lazy require keeps pure fixture unit tests free of the controller graph.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { ensureDevModeSandboxSync } =
+    require('@/features/account/dev-mode-controller') as typeof import('@/features/account/dev-mode-controller');
+  ensureDevModeSandboxSync();
 
   if (fixture === 'travel-demo') {
     // Lazy require keeps agent-ui unit tests free of Zustand/AsyncStorage.

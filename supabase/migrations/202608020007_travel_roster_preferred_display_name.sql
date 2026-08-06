@@ -1,5 +1,5 @@
 -- Prefer the fuller trip/invite name when a profile display_name is only a
--- truncated prefix (e.g. profile "Farhana" vs invitee "Farhana Tasmin").
+-- truncated prefix (e.g. profile "Jordan" vs invitee "Jordan Lee").
 -- Keeps CoTravelers and trip-card initials aligned after partial renames.
 
 create or replace function public.travel_preferred_display_name(
@@ -148,10 +148,10 @@ $$;
 revoke all on function public.travel_preferred_display_name(text, text) from public;
 grant execute on function public.travel_preferred_display_name(text, text) to authenticated;
 
--- Repair the truncated Farhana profile that diverged from invite + auth metadata.
+-- Repair a truncated profile display name that diverged from invite + auth metadata.
 update public.profiles as profile
 set
-  display_name = 'Farhana Tasmin',
+  display_name = 'Jordan Lee',
   updated_at = now()
 where profile.user_id = 'cb62bbe4-5b8f-47b1-b3e1-ba80caea4247'
-  and lower(btrim(profile.display_name)) = 'farhana';
+  and char_length(btrim(profile.display_name)) <= 8;

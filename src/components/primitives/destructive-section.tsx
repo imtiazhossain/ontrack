@@ -13,6 +13,11 @@ export interface DestructiveSectionProps {
   testID: string;
   accessibilityLabel?: string;
   style?: ViewStyle;
+  /**
+   * Drop the standalone top rule / padding when nested in `DangerZone`
+   * (or another parent that owns the chrome).
+   */
+  flush?: boolean;
 }
 
 /** Canonical placement and presentation for an already-confirmed destructive intent. */
@@ -23,6 +28,7 @@ export function DestructiveSection({
   testID,
   accessibilityLabel = label,
   style,
+  flush = false,
 }: DestructiveSectionProps) {
   const theme = useTheme();
   const { spacing } = useResponsive();
@@ -30,7 +36,14 @@ export function DestructiveSection({
     <View
       style={[
         styles.root,
-        { gap: spacing.md, paddingTop: spacing.lg, borderTopColor: theme.separator },
+        flush
+          ? { gap: spacing.sm }
+          : {
+              gap: spacing.md,
+              paddingTop: spacing.lg,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: theme.separator,
+            },
         style,
       ]}>
       {description ? (
@@ -51,5 +64,5 @@ export function DestructiveSection({
 }
 
 const styles = StyleSheet.create({
-  root: { width: '100%', borderTopWidth: StyleSheet.hairlineWidth },
+  root: { width: '100%' },
 });

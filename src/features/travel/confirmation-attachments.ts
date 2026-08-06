@@ -50,17 +50,21 @@ export function resolveConfirmationUris(uris?: string[]): string[] {
 }
 
 function resolveConfirmationUri(uri: string): string | undefined {
+  const trimmed = uri.trim();
+  // Android SAF / picker fallbacks stay openable via the system viewer.
+  if (trimmed.startsWith('content://')) return trimmed;
+
   try {
-    if (new File(uri).exists) return uri;
+    if (new File(trimmed).exists) return trimmed;
   } catch {
     // Fall through to Documents-relative remap.
   }
 
-  if (Platform.OS === 'web' || !uri.startsWith('file://')) return undefined;
+  if (Platform.OS === 'web' || !trimmed.startsWith('file://')) return undefined;
 
-  const markerIndex = uri.indexOf(CONFIRMATIONS_MARKER);
+  const markerIndex = trimmed.indexOf(CONFIRMATIONS_MARKER);
   if (markerIndex < 0) return undefined;
-  const relative = uri
+  const relative = trimmed
     .slice(markerIndex + '/Documents/'.length)
     .split('?')[0]
     ?.replace(/^\/+/, '');
@@ -185,7 +189,11 @@ export function newestStoredConfirmationUris(
 /** Open confirmations in the system document preview (Quick Look / viewer). */
 export async function openConfirmationAttachments(uris: string[]): Promise<void> {
   const existing = resolveConfirmationUris(uris);
-  const openable = existing.length ? existing : uris.filter((uri) => uri.startsWith('file://'));
+  const openable = existing.length
+    ? existing
+    : uris.filter(
+        (uri) => uri.startsWith('file://') || uri.startsWith('content://'),
+      );
   if (!openable.length) return;
 
   try {

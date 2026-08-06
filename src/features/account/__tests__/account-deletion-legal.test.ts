@@ -32,11 +32,13 @@ describe('account deletion and legal release gates', () => {
 
   it('wires client deletion through auth session and profile UI', () => {
     expect(account).toContain("rpc('delete_own_account')");
+    expect(account).toContain('signOutLocalSession');
     expect(provider).toContain('deleteOwnCloudAccount');
     expect(provider).toContain('deleteAccount');
-    expect(card).toContain('Delete Account');
-    expect(card).toContain('confirmDestructiveAction');
-    expect(card).toContain('AgentUiIds.profile.deleteAccount');
+    expect(profile).toContain('Delete Account');
+    expect(profile).toContain('handleDeleteAccount');
+    expect(profile).toContain('AgentUiIds.profile.deleteAccount');
+    expect(card).not.toContain('AgentUiIds.profile.deleteAccount');
   });
 
   it('ships privacy and terms surfaces without tester or TestFlight copy', () => {

@@ -54,7 +54,7 @@ export function TravelTripCardHeader({
               onPress={onEdit}
             />
             <TravelSheetIconControl
-              icon={collapsed ? "chevron-down" : "chevron-up"}
+              icon={collapsed ? "chevron-right" : "chevron-up"}
               size={controlSize}
               iconSize={controlIconSize}
               testID={AgentUiIds.travel.list.collapse(plan.id)}

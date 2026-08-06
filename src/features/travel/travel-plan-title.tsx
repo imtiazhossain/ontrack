@@ -1,11 +1,13 @@
 import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
 import { fontFamilies } from '@/design-system';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * Trip title for card + hero headers.
  * Stays at the authored size (keeps hierarchy over the destination caption),
  * wraps to at most two lines, then truncates with an ellipsis.
+ * Defaults to theme text so dark mode never inherits RN’s black Text color.
  */
 export function TravelPlanTitle({
   title,
@@ -16,6 +18,7 @@ export function TravelPlanTitle({
   fontSize: number;
   style?: StyleProp<TextStyle>;
 }) {
+  const theme = useTheme();
   const lineHeight = fontSize * 1.08;
 
   return (
@@ -27,6 +30,7 @@ export function TravelPlanTitle({
         ellipsizeMode="tail"
         style={[
           styles.title,
+          { color: theme.textPrimary },
           style,
           {
             fontSize,

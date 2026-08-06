@@ -2,25 +2,37 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, appPrompt, Button, ErrorMessage } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import {
+  AppText,
+  appPrompt,
+  Button,
+  ErrorMessage,
+  StatusBadge,
+} from '@/components/primitives';
+import { radii } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useCloudSyncStatus } from '@/services/cloud/sync';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
-import { AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds } from '@/utils/agent-ui';;
 
 export function CloudAccountCard() {
   const router = useRouter();
   const theme = useTheme();
+  const { spacing } = useResponsive();
   const sync = useCloudSyncStatus();
-  const { isGuest, user, signOutCurrentDevice, deleteAccount } = useAuthSession();
+  const { isGuest, user, signOutCurrentDevice } = useAuthSession();
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string>();
 
   const provider = String(user?.app_metadata.provider ?? 'account');
   const providerLabel =
     provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'Existing account';
+
+  const syncTone =
+    sync.state === 'syncing' ? 'neutral' : sync.state === 'error' ? 'warning' : 'success';
+  const syncLabel =
+    sync.state === 'syncing' ? 'Syncing' : sync.state === 'error' ? 'Attention' : 'Synced';
 
   const signOut = async (force = false) => {
     setWorking(true);
@@ -42,6 +54,9 @@ export function CloudAccountCard() {
             },
           ],
         );
+      } else if (result.status === 'cleanup-failed') {
+        // Device is already signed out; do not offer "Stay Signed In".
+        setMessage(result.message);
       }
     } catch (signOutError) {
       setMessage(signOutError instanceof Error ? signOutError.message : 'Sign out failed.');
@@ -50,47 +65,32 @@ export function CloudAccountCard() {
     }
   };
 
-  const confirmDeleteAccount = () => {
-    confirmDestructiveAction({
-      title: 'Delete Account?',
-      message:
-        'This permanently deletes your onTrack account, synced cloud data, and app-owned cloud photos. Shared trips or lists you host become unavailable to others. This cannot be undone.',
-      actionLabel: 'Delete Account',
-      onConfirm: () => {
-        void (async () => {
-          setWorking(true);
-          setMessage(undefined);
-          try {
-            const result = await deleteAccount();
-            if (result.status === 'failed') {
-              setMessage(result.message ?? 'Account deletion failed.');
-            }
-          } catch (deleteError) {
-            setMessage(
-              deleteError instanceof Error ? deleteError.message : 'Account deletion failed.',
-            );
-          } finally {
-            setWorking(false);
-          }
-        })();
-      },
-    });
-  };
-
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          gap: spacing.sm,
+          padding: spacing.sm,
+          backgroundColor: theme.backgroundElevated,
+          borderColor: theme.separator,
+        },
+      ]}>
       {isGuest ? (
         <>
-          <View style={styles.heading}>
-            <AppText variant="bodyMedium">You’re using guest mode</AppText>
-            <View style={[styles.pill, { backgroundColor: theme.accentFaint }]}>
-              <AppText variant="overline" color="accent">This device</AppText>
+          <View style={[styles.heading, { gap: spacing.sm }]}>
+            <View style={[styles.flex, { gap: spacing.xxs, minWidth: 0 }]}>
+              <AppText variant="callout" fit>
+                Guest mode
+              </AppText>
+              <AppText variant="caption" color="secondary" numberOfLines={2}>
+                Sign in to back up plans and continue on other devices.
+              </AppText>
             </View>
+            <StatusBadge label="This device" tone="neutral" showDot={false} />
           </View>
-          <AppText variant="caption" color="secondary">
-            Create or sign in to back up your plans, protect app-owned photos, and continue on another device.
-          </AppText>
           <Button
+            size="sm"
             onPress={() => router.push('/account' as never)}
             accessibilityLabel="Create or Sign In to an account">
             Create or Sign In
@@ -98,39 +98,28 @@ export function CloudAccountCard() {
         </>
       ) : (
         <>
-          <View style={styles.heading}>
-            <View style={styles.flex}>
-              <AppText variant="bodyMedium">{user?.email ?? 'Signed in'}</AppText>
-              <AppText variant="caption" color="secondary">{providerLabel}</AppText>
-            </View>
-            <View style={[styles.pill, { backgroundColor: theme.accentFaint }]}>
-              <AppText variant="overline" color="accent">
-                {sync.state === 'syncing' ? 'Syncing' : sync.state === 'error' ? 'Attention' : 'Synced'}
+          <View style={[styles.heading, { gap: spacing.sm }]}>
+            <View style={[styles.flex, { gap: spacing.xxs, minWidth: 0 }]}>
+              <AppText variant="callout" fit numberOfLines={1}>
+                {user?.email ?? 'Signed in'}
+              </AppText>
+              <AppText variant="caption" color="secondary" fit>
+                {providerLabel}
               </AppText>
             </View>
+            <StatusBadge label={syncLabel} tone={syncTone} />
           </View>
           {sync.state === 'error' ? (
             <ErrorMessage message={sync.message ?? 'Cloud sync needs attention.'} variant="caption" />
-          ) : (
-            <AppText variant="caption" color="secondary">
-              Your account data follows you across signed-in devices and remains available between syncs.
-            </AppText>
-          )}
+          ) : null}
           <Button
+            size="sm"
             variant="secondary"
             disabled={working}
             testID={AgentUiIds.profile.signOut}
             onPress={() => void signOut()}
             accessibilityLabel="Sign Out of This Device">
-            {working ? 'Working…' : 'Sign Out of This Device'}
-          </Button>
-          <Button
-            variant="danger"
-            disabled={working}
-            testID={AgentUiIds.profile.deleteAccount}
-            onPress={confirmDeleteAccount}
-            accessibilityLabel="Delete Account">
-            Delete Account
+            {working ? 'Working…' : 'Sign Out'}
           </Button>
         </>
       )}
@@ -140,8 +129,14 @@ export function CloudAccountCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.md },
-  heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    borderCurve: 'continuous',
+  },
+  heading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   flex: { flex: 1 },
-  pill: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.pill },
 });

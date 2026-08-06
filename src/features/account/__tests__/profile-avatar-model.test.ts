@@ -1,10 +1,10 @@
 import {
-  emptyAvatarMeta,
-  initialsFromName,
-  iconifySvgUrl,
-  normalizeAvatarMeta,
-  normalizeIconifyId,
-  normalizeAvatarColor,
+    emptyAvatarMeta,
+    iconifySvgUrl,
+    initialsFromName,
+    normalizeAvatarColor,
+    normalizeAvatarMeta,
+    normalizeIconifyId,
 } from '@/features/account/profile-avatar-model';
 
 describe('profile-avatar-model', () => {
@@ -28,8 +28,8 @@ describe('profile-avatar-model', () => {
   });
 
   it('creates initials from names', () => {
-    expect(initialsFromName('Imtiaz Hossain')).toBe('IH');
-    expect(initialsFromName('Farhana')).toBe('F');
+    expect(initialsFromName('Alex Rivera')).toBe('AR');
+    expect(initialsFromName('Jordan')).toBe('J');
     expect(initialsFromName('')).toBe('?');
   });
 

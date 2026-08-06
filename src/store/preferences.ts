@@ -27,6 +27,11 @@ interface PreferencesState {
   themePreference: ThemePreference;
   aiEnabled: boolean;
   hapticsEnabled: boolean;
+  /**
+   * First-party product usage (time on surfaces). Local always when on;
+   * cloud rollups only when signed in. Never includes Health note text.
+   */
+  usageAnalyticsEnabled: boolean;
   dateLocale: string;
   dateDisplayFormat: DateDisplayFormat;
   completeOnboarding: (input: { name: string; goal: string }) => void;
@@ -36,6 +41,7 @@ interface PreferencesState {
   setThemePreference: (pref: ThemePreference) => void;
   setAiEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
+  setUsageAnalyticsEnabled: (enabled: boolean) => void;
   resetAll: () => void;
 }
 
@@ -52,6 +58,7 @@ export const usePreferences = create<PreferencesState>()(
       themePreference: 'system',
       aiEnabled: true,
       hapticsEnabled: true,
+      usageAnalyticsEnabled: true,
       dateLocale: initialLocale,
       dateDisplayFormat: dateDisplayFormatForLocale(initialLocale),
       completeOnboarding: ({ name, goal }) => {
@@ -78,6 +85,7 @@ export const usePreferences = create<PreferencesState>()(
       setThemePreference: (themePreference) => set({ themePreference }),
       setAiEnabled: (aiEnabled) => set({ aiEnabled }),
       setHapticsEnabled: (hapticsEnabled) => set({ hapticsEnabled }),
+      setUsageAnalyticsEnabled: (usageAnalyticsEnabled) => set({ usageAnalyticsEnabled }),
       resetAll: () =>
         set({
           hasOnboarded: false,
@@ -88,6 +96,7 @@ export const usePreferences = create<PreferencesState>()(
           themePreference: 'system',
           aiEnabled: true,
           hapticsEnabled: true,
+          usageAnalyticsEnabled: true,
           dateLocale: initialLocale,
           dateDisplayFormat: dateDisplayFormatForLocale(initialLocale),
         }),

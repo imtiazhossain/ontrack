@@ -1,7 +1,7 @@
 import { findConfirmationMoney } from './confirmation-money';
 import {
-  emptyStayDetailsDraft,
-  type StayDetailsDraft,
+    emptyStayDetailsDraft,
+    type StayDetailsDraft,
 } from './stay-details';
 
 export interface ParsedStayConfirmation {
@@ -309,6 +309,9 @@ function looksLikeStreetAddress(value: string): boolean {
   }
 
   // Positive Pattern 1: Geographic multi-part place (e.g. "Santa Cruz la Laguna, Sololá Department, Guatemala")
+  // Reject room/rate product phrases that look comma-separated but are not places.
+  const roomProductPart =
+    /\b(?:room|suite|view|rate|deluxe|standard|king|queen|twin|double|single|occupancy|non[\s-]?smoking|accessible|balcony)\b/i;
   const parts = trimmed.split(',').map((p) => p.trim()).filter(Boolean);
   if (parts.length >= 2 && parts.length <= 4) {
     const allValidParts = parts.every(
@@ -316,7 +319,8 @@ function looksLikeStreetAddress(value: string): boolean {
         p.length >= 2 &&
         p.length <= 50 &&
         /^[A-Za-z0-9\s.'-–—]+$/.test(p) &&
-        /[A-Za-z]{2,}/.test(p),
+        /[A-Za-z]{2,}/.test(p) &&
+        !roomProductPart.test(p),
     );
     if (allValidParts) {
       return true;

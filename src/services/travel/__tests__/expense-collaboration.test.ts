@@ -43,7 +43,7 @@ const basePlan: TravelPlan = {
   participants: [
     {
       id: 'friend-1',
-      name: 'Farhana Tasmin',
+      name: 'Jordan Lee',
       inviteCode: 'aaaaaaaaaaaaaaaaaaaa',
       invitedAt: '2026-07-01T00:00:00.000Z',
     },
@@ -141,7 +141,7 @@ describe('travel expense collaboration helpers', () => {
       updatedAt: '2026-08-02T12:00:00.000Z',
       people: [
         { id: TRAVEL_EXPENSE_SELF_ID, name: 'Rocky' },
-        { id: 'friend-1', name: 'Farhana Tasmin' },
+        { id: 'friend-1', name: 'Jordan Lee' },
         { id: memberId, name: 'Friend' },
       ],
       expenses: [

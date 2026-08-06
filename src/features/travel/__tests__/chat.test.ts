@@ -76,6 +76,30 @@ describe('travel chat access', () => {
     ).toBe('bbbbbbbbbbbbbbbbbbbb');
   });
 
+  it('prefers the most recently accepted invite for host chat', () => {
+    expect(
+      travelChatAccessCode({
+        ...basePlan,
+        participants: [
+          {
+            id: 'older',
+            name: 'Older Friend',
+            inviteCode: 'aaaaaaaaaaaaaaaaaaaa',
+            invitedAt: '2026-07-01T12:00:00.000Z',
+            acceptedAt: '2026-07-02T12:00:00.000Z',
+          },
+          {
+            id: 'newer',
+            name: 'Newer Friend',
+            inviteCode: 'bbbbbbbbbbbbbbbbbbbb',
+            invitedAt: '2026-07-03T12:00:00.000Z',
+            acceptedAt: '2026-07-04T12:00:00.000Z',
+          },
+        ],
+      }),
+    ).toBe('bbbbbbbbbbbbbbbbbbbb');
+  });
+
   it('keeps chat closed while every invitation is pending', () => {
     expect(
       travelChatAccessCode({

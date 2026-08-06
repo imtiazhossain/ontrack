@@ -74,3 +74,14 @@ export function airportName(codeOrLabel?: string): string | undefined {
 export function airportCity(codeOrLabel?: string): string | undefined {
   return airportPlace(codeOrLabel)?.city;
 }
+
+/** Resolve a layover city name (e.g. "Houston") to an IATA code when known. */
+export function airportCodeForCityName(cityName?: string): string | undefined {
+  const needle = cityName?.trim().toLowerCase();
+  if (!needle) return undefined;
+  for (const [code, place] of Object.entries(AIRPORTS)) {
+    if (place.city.toLowerCase() === needle) return code;
+    if (needle.includes(place.city.toLowerCase())) return code;
+  }
+  return undefined;
+}

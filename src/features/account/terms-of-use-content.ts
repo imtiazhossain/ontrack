@@ -1,3 +1,5 @@
+import { ONTRACK_SUPPORT_EMAIL } from '@/constants/legal';
+
 import type { LegalSection } from './legal-document-screen';
 
 export const TERMS_OF_USE_INTRO =
@@ -72,7 +74,7 @@ export const TERMS_OF_USE_SECTIONS: readonly LegalSection[] = [
   {
     title: 'Contact',
     paragraphs: [
-      'Questions about these terms: imtihoss@gmail.com.',
+      `Questions about these terms: ${ONTRACK_SUPPORT_EMAIL}.`,
     ],
   },
 ];

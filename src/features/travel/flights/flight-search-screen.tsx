@@ -20,17 +20,18 @@ import {
 import { featureFlags } from '@/constants/feature-flags';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import {
-  compareOnGoogleFlights,
-  isValidFlightLocation,
+    compareOnGoogleFlights,
+    isValidFlightLocation,
 } from '@/features/travel/provider';
+import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import {
     itinerarySheetChrome,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
 import {
-  TRAVEL_EDITORIAL_ACCENT,
-  TravelSurfaceCard,
-  useTravelPageStyle,
+    TRAVEL_EDITORIAL_ACCENT,
+    TravelSurfaceCard,
+    useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -43,10 +44,10 @@ import { goBackOrReplace } from '@/utils/navigation';
 import { FlightSearchError, searchFlights } from './client';
 import { getCurrentDepartureLocation } from './departure-location';
 import {
-  FlightSearchErrorBanner,
-  FlightSearchLegSummary,
-  GOOGLE_FLIGHTS_NOTICE,
-  type FlightSearchNotice,
+    FlightSearchErrorBanner,
+    FlightSearchLegSummary,
+    GOOGLE_FLIGHTS_NOTICE,
+    type FlightSearchNotice,
 } from './flight-search-presentational';
 import type { FlightSearchResponse } from './types';
 
@@ -247,7 +248,7 @@ export function FlightSearchScreen({
             goBackOrReplace(router, { pathname: '/travel/[id]', params: { id: planId } })
           }
         />
-        <View style={[styles.headerCopy, { gap: rs.sm }]}>
+        <TravelHeaderFlourish style={styles.headerCopy} contentStyle={{ gap: rs.sm }}>
           <AppText
             variant="overline"
             fit
@@ -284,10 +285,10 @@ export function FlightSearchScreen({
             ]}>
             Live availability and total prices without leaving onTrack.
           </AppText>
-        </View>
+        </TravelHeaderFlourish>
       </View>
 
-      <TravelSurfaceCard stripe={false} padding={0}>
+      <TravelSurfaceCard padding={0}>
         <View style={[styles.cardBody, { padding: rs.lg, gap: rs.md }]}>
           <View style={{ gap: rs.sm }}>
             <Input

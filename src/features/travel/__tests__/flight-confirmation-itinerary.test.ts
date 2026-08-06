@@ -65,7 +65,7 @@ describe('flight confirmation itinerary merge', () => {
           flight: {
             ...SEGMENTS[1].flight,
             passengerCount: '2',
-            passengerName: 'Farhana Tasmin',
+            passengerName: 'Jordan Lee',
           },
         },
       ],
@@ -84,7 +84,7 @@ describe('flight confirmation itinerary merge', () => {
       {
         flight: {
           passengerCount: 2,
-          passengerName: 'Farhana Tasmin',
+          passengerName: 'Jordan Lee',
         },
       },
     ]);
@@ -234,6 +234,33 @@ describe('flight confirmation itinerary merge', () => {
     ];
     expect(isConnectingSegmentGroup(multiCity)).toBe(false);
     expect(isRoundTripSegmentGroup(multiCity)).toBe(false);
+  });
+
+  it('keeps layover connections even when OCR dates disagree by many days', () => {
+    const noisyDates: ParsedFlightSegment[] = [
+      {
+        ...SEGMENTS[0],
+        date: '2024-03-27',
+        layoverMinutesAfter: 99,
+        flight: {
+          ...SEGMENTS[0].flight,
+          departureAirport: 'GUA',
+          arrivalAirport: 'IAH',
+          flightNumber: 'UA 1907',
+        },
+      },
+      {
+        ...SEGMENTS[1],
+        date: '2026-09-27',
+        flight: {
+          ...SEGMENTS[1].flight,
+          departureAirport: 'IAH',
+          arrivalAirport: 'LGA',
+          flightNumber: 'UA 1697',
+        },
+      },
+    ];
+    expect(isConnectingSegmentGroup(noisyDates)).toBe(true);
   });
 
   it('keeps unrelated same-number flights when merging a connecting import', () => {
@@ -493,7 +520,8 @@ describe('flight confirmation itinerary merge', () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].durationMinutes).toBe(9 * 60 + 59);
+    // Zone-aware GUA→LGA door-to-door (not same-day wall-clock span).
+    expect(result[0].durationMinutes).toBe(7 * 60 + 59);
     expect(result[0].flight).toMatchObject({
       departureAirport: 'GUA',
       arrivalAirport: 'LGA',
@@ -515,7 +543,7 @@ describe('flight confirmation itinerary merge', () => {
     });
   });
 
-  it('uses printed door-to-door total from a parsed Chase confirmation', () => {
+  it('uses zone-aware door-to-door total for a parsed Chase confirmation', () => {
     const imported = parseFlightConfirmation(
       `
       Flight details
@@ -545,6 +573,6 @@ describe('flight confirmation itinerary merge', () => {
       tripRange: { startDate: '2026-09-27', endDate: '2026-09-30' },
       createId: () => 'chase',
     });
-    expect(result[0].durationMinutes).toBe(9 * 60 + 59);
+    expect(result[0].durationMinutes).toBe(7 * 60 + 59);
   });
 });

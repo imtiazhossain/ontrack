@@ -2,25 +2,25 @@ import { useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  Card,
-  ErrorMessage,
-  Input,
-  ScreenHeader,
+    AppText,
+    Button,
+    Card,
+    ErrorMessage,
+    Input,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
-import type {
-  TravelParticipant,
-  TravelTripRosterPerson,
-} from '@/features/travel/types';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { TravelScreenHeader } from '@/features/travel/travel-screen-header';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import {
-  TripFriendRow,
-  tripFriendTargetKey,
-  type TripFriendTarget,
+    TripFriendRow,
+    tripFriendTargetKey,
+    type TripFriendTarget,
 } from '@/features/travel/trip-friend-row';
+import type {
+    TravelParticipant,
+    TravelTripRosterPerson,
+} from '@/features/travel/types';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 export type TripHostPerson = {
@@ -390,7 +390,7 @@ export function TripPeople({
 
       {canManage && editing ? (
         <Card style={styles.form}>
-          <ScreenHeader
+          <TravelScreenHeader
             title="Invite a Friend"
             onClose={onCancelInvite}
             closeAccessibilityLabel="Cancel friend invitation"

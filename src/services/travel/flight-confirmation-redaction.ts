@@ -81,14 +81,21 @@ export function redactFlightConfirmationText(
     },
   );
   text = text.replace(
-    /^(\s*(?:passenger|travell?er|guest)(?:\s+name)?\s*[:#-]\s*).+$/gim,
+    /^(\s*(?:passenger|travell?er|guest|pax)(?:\s+name)?\s*[:#-]\s*).+$/gim,
     (_, prefix: string) => {
       redactionCount += 1;
       return `${prefix}[REDACTED_NAME]`;
     },
   );
   text = text.replace(
-    /^(\s*(?:first|last|full)\s+name\s*[:#-]\s*).+$/gim,
+    /^(\s*(?:first|last|full|given|family|surname)\s+name\s*[:#-]\s*).+$/gim,
+    (_, prefix: string) => {
+      redactionCount += 1;
+      return `${prefix}[REDACTED_NAME]`;
+    },
+  );
+  text = text.replace(
+    /^(\s*name\s*[:#-]\s*).+$/gim,
     (_, prefix: string) => {
       redactionCount += 1;
       return `${prefix}[REDACTED_NAME]`;
@@ -106,6 +113,21 @@ export function redactFlightConfirmationText(
     () => {
       redactionCount += 1;
       return '[REDACTED_NAME] has shared trip details';
+    },
+  );
+  // Unlabelled passenger lines that sit directly above flight/booking chrome.
+  text = text.replace(
+    /^([A-Z][a-zA-Z.'’-]{1,40}(?:\s+[A-Z][a-zA-Z.'’-]{1,40}){1,3})\s*\n(?=\s*(?:Flight\b|Depart(?:ure)?\b|Airline\b|Confirmation\b|Booking\b|[A-Z]{2}\s?\d{1,4}\b))/gm,
+    () => {
+      redactionCount += 1;
+      return '[REDACTED_NAME]\n';
+    },
+  );
+  text = text.replace(
+    /\b(?:passport|document)\s*(?:no\.?|number|#)?\s*[:#-]?\s*([A-Z0-9]{6,15})\b/gi,
+    () => {
+      redactionCount += 1;
+      return '[REDACTED_PASSPORT]';
     },
   );
 

@@ -1,16 +1,16 @@
 import {
-  Button,
-  ErrorMessage,
-  Input,
-  ScreenHeader,
+    Button,
+    ErrorMessage,
+    Input,
 } from '@/components/primitives';
+import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import {
-  itinerarySheetChrome,
-  itinerarySheetFieldProps,
+    itinerarySheetChrome,
+    itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
-import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import { TravelPlanModePicker } from '@/features/travel/travel-mode-picker';
+import { TravelScreenHeader } from '@/features/travel/travel-screen-header';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import type { TravelPlanMode } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -66,8 +66,8 @@ export function TravelNewTripCard({
   const { s } = useResponsive();
 
   return (
-    <TravelSurfaceCard stripe>
-      <ScreenHeader
+    <TravelSurfaceCard>
+      <TravelScreenHeader
         title="Start a New Trip"
         onClose={onClose}
         closeAccessibilityLabel="Cancel New Trip"

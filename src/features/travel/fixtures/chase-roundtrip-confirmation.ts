@@ -1,7 +1,7 @@
 /** Chase Travel round-trip PDFKit text (EWR ↔ KEF) for parser/UI fixtures. */
 export const CHASE_ROUNDTRIP_CONFIRMATION = `
-Imtiaz Hossain <imtihoss@gmail.com>
-FARHANA TASMIN has shared their trip details with you
+Alex Rivera <alex.rivera@example.com>
+JORDAN LEE has shared their trip details with you
 Chase Travel <donotreply@chasetravel.com>
 Mon, Jul 27 at 10:33 AM
 Booked on Mon, Jul 27, 2026
@@ -30,8 +30,8 @@ Icelandair
 FI 623 Boeing 737 MAX 9
 Fare: Economy Light
 Not included: Seats, Refund, Exchange
-Traveler 1: FARHANA TASMIN
-Traveler 2: Imtiaz Hossain
+Traveler 1: JORDAN LEE
+Traveler 2: Alex Rivera
 Important flight information
 To verify a seat request, or if seat assignments are not available, please
 contact the airline directly for assistance.

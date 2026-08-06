@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import { AppText, Button, SheetScaffold } from '@/components/primitives';
+import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds } from '@/utils/agent-ui';
 
@@ -38,6 +39,7 @@ export function TravelImportResultModal({
       eyebrow="Success"
       title={imported ? `${kindLabel} Added` : 'Expense Saved'}
       subtitle={imported ? 'Your itinerary has been updated.' : 'Everything is up to date.'}
+      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel="Go to itinerary"
       closeTestID={AgentUiIds.travel.importResult.close}>

@@ -81,7 +81,7 @@ export function TransportDetailsEditor({
         onChange={(mode) => update('mode', mode)}
       />
 
-      {hideArrivalFields ? null : <View style={[styles.row, { gap: rs.sm }]}>
+      <View style={[styles.row, { gap: rs.sm }]}>
         <View style={styles.flex}>
           <Input
             testID={AgentUiIds.travel.transport.origin}
@@ -104,31 +104,33 @@ export function TransportDetailsEditor({
             {...field}
           />
         </View>
-      </View>}
-
-      <View style={[styles.row, { gap: rs.sm }]}>
-        <View style={styles.flex}>
-          <DateField
-            testID={AgentUiIds.travel.transport.arrivalDate}
-            value={value.arrivalDate}
-            onChange={(next) => update('arrivalDate', next)}
-            stackedLabel="Arrival *"
-            minimumDate={planStartDate}
-            maximumDate={planEndDate}
-            {...itinerarySheetFieldProps(chrome, 'calendar')}
-          />
-        </View>
-        <View style={styles.flex}>
-          <TimeField
-            testID={AgentUiIds.travel.transport.arrivalTime}
-            value={value.arrivalMinutes}
-            onChange={(next) => update('arrivalMinutes', next)}
-            stackedLabel="Arrival time *"
-            showChevron
-            {...itinerarySheetFieldProps(chrome, 'clock')}
-          />
-        </View>
       </View>
+
+      {hideArrivalFields ? null : (
+        <View style={[styles.row, { gap: rs.sm }]}>
+          <View style={styles.flex}>
+            <DateField
+              testID={AgentUiIds.travel.transport.arrivalDate}
+              value={value.arrivalDate}
+              onChange={(next) => update('arrivalDate', next)}
+              stackedLabel="Arrival *"
+              minimumDate={planStartDate}
+              maximumDate={planEndDate}
+              {...itinerarySheetFieldProps(chrome, 'calendar')}
+            />
+          </View>
+          <View style={styles.flex}>
+            <TimeField
+              testID={AgentUiIds.travel.transport.arrivalTime}
+              value={value.arrivalMinutes}
+              onChange={(next) => update('arrivalMinutes', next)}
+              stackedLabel="Arrival time *"
+              showChevron
+              {...itinerarySheetFieldProps(chrome, 'clock')}
+            />
+          </View>
+        </View>
+      )}
 
       {!driving ? (
         <Input

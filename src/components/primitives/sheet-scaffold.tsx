@@ -1,17 +1,17 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-  type StyleProp,
-  type ViewStyle,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
+    type StyleProp,
+    type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +27,7 @@ export interface SheetHeaderProps {
   title: string;
   subtitle?: string;
   subtitleIcon?: AppIconName;
+  decoration?: ReactNode;
   onClose: () => void;
   closeAccessibilityLabel?: string;
   closeTestID?: string;
@@ -38,6 +39,7 @@ export function SheetHeader({
   title,
   subtitle,
   subtitleIcon,
+  decoration,
   onClose,
   closeAccessibilityLabel = 'Close',
   closeTestID,
@@ -54,6 +56,7 @@ export function SheetHeader({
       title={title}
       subtitle={subtitle}
       subtitleIcon={subtitleIcon}
+      decoration={decoration}
       onClose={close}
       closeAccessibilityLabel={closeAccessibilityLabel}
       closeTestID={closeTestID}
@@ -68,6 +71,7 @@ export interface SheetScaffoldProps extends PropsWithChildren {
   title: string;
   subtitle?: string;
   subtitleIcon?: AppIconName;
+  decoration?: ReactNode;
   onClose: () => void;
   closeAccessibilityLabel?: string;
   closeTestID?: string;
@@ -89,6 +93,7 @@ export function SheetScaffold({
   title,
   subtitle,
   subtitleIcon,
+  decoration,
   onClose,
   closeAccessibilityLabel = 'Close',
   closeTestID,
@@ -181,6 +186,7 @@ export function SheetScaffold({
                 title={title}
                 subtitle={subtitle}
                 subtitleIcon={subtitleIcon}
+                decoration={decoration}
                 onClose={close}
                 closeAccessibilityLabel={closeAccessibilityLabel}
                 closeTestID={closeTestID}

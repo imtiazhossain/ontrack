@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  Button,
-  DateField,
-  DestructiveSection,
-  ErrorMessage,
-  HeaderBackButton,
-  Input,
-  ScreenHeader,
+    Button,
+    DateField,
+    DestructiveSection,
+    ErrorMessage,
+    HeaderBackButton,
+    Input,
 } from '@/components/primitives';
 import {
     itinerarySheetChrome,
@@ -17,15 +16,16 @@ import {
     TravelRemoveConfirmModal,
     type TravelRemoveConfirmPayload,
 } from '@/features/travel/travel-remove-confirm-modal';
+import { TravelScreenHeader } from '@/features/travel/travel-screen-header';
 import {
-  TravelSurfaceCard,
+    TravelSurfaceCard,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
-import { TravelPlanCoverField } from './travel-plan-cover-field';
 import { TravelPlanModePicker } from './travel-mode-picker';
+import { TravelPlanCoverField } from './travel-plan-cover-field';
 import type { TravelPlan, TravelPlanMode } from './types';
 
 interface TravelPlanDetailsEditorProps {
@@ -112,11 +112,12 @@ export function TravelPlanDetailsEditor({
   return (
     <>
     <View style={[styles.page, { gap: rs.lg }]}>
-      <ScreenHeader
+      <TravelScreenHeader
         title="Edit Trip"
         subtitle="Update your journey details"
         leading={
           <HeaderBackButton
+            compact
             accessibilityLabel="Back to trips"
             testID={AgentUiIds.travel.editTrip.cancel}
             onPress={onCancel}
@@ -124,7 +125,7 @@ export function TravelPlanDetailsEditor({
         }
       />
 
-      <TravelSurfaceCard stripe padding={0}>
+      <TravelSurfaceCard padding={0}>
         <View style={[styles.cardBody, { padding: rs.lg, gap: rs.lg }]}>
           <View style={{ gap: rs.md }}>
             <TravelPlanCoverField

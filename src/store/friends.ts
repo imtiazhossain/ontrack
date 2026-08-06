@@ -1,16 +1,17 @@
 import { create } from 'zustand';
 
 import { useAvatarCache } from '@/features/account/avatar-cache';
+import { mergeAvatarOnHydrate } from '@/features/account/profile-avatar-model';
 import {
-  cancelFriendRequest,
-  ensureFriendProfile,
-  listFriendRequests,
-  listFriends,
-  removeFriend,
-  respondFriendRequest,
-  sendFriendRequest,
-  type FriendProfile,
-  type FriendRequestItem,
+    cancelFriendRequest,
+    ensureFriendProfile,
+    listFriendRequests,
+    listFriends,
+    removeFriend,
+    respondFriendRequest,
+    sendFriendRequest,
+    type FriendProfile,
+    type FriendRequestItem,
 } from '@/services/friends';
 import { usePreferences } from '@/store/preferences';
 
@@ -75,17 +76,9 @@ export const useFriends = create<FriendsState>((set, get) => ({
       }
       if (profile.avatar) {
         const local = usePreferences.getState().avatar;
-        usePreferences.getState().setAvatar({
-          ...profile.avatar,
-          // Keep a locally saved tint when the cloud row is still empty (race after save).
-          ...(profile.avatar.color || local.color
-            ? { color: profile.avatar.color ?? local.color }
-            : {}),
-          ...(local.kind === 'photo' && local.localPhotoUri
-            ? { localPhotoUri: local.localPhotoUri }
-            : {}),
-        });
-        useAvatarCache.getState().upsert(profile.userId, profile.avatar);
+        const merged = mergeAvatarOnHydrate(local, profile.avatar);
+        usePreferences.getState().setAvatar(merged);
+        useAvatarCache.getState().upsert(profile.userId, merged);
       }
       const lists = await loadLists();
       set({

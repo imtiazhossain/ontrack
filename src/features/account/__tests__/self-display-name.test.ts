@@ -4,13 +4,13 @@ describe('resolveSelfDisplayName', () => {
   it('prefers preferences name', () => {
     expect(
       resolveSelfDisplayName({
-        preferencesName: 'Imtiaz Hossain',
+        preferencesName: 'Alex Rivera',
         user: {
-          email: 'imtihoss@gmail.com',
+          email: 'alex.rivera@example.com',
           user_metadata: { full_name: 'Other' },
         },
       }),
-    ).toBe('Imtiaz Hossain');
+    ).toBe('Alex Rivera');
   });
 
   it('skips placeholder You and uses SSO metadata', () => {
@@ -18,19 +18,19 @@ describe('resolveSelfDisplayName', () => {
       resolveSelfDisplayName({
         preferencesName: 'You',
         user: {
-          email: 'imtihoss@gmail.com',
-          user_metadata: { full_name: 'Imtiaz Hossain' },
+          email: 'alex.rivera@example.com',
+          user_metadata: { full_name: 'Alex Rivera' },
         },
       }),
-    ).toBe('Imtiaz Hossain');
+    ).toBe('Alex Rivera');
   });
 
   it('falls back to email local-part', () => {
     expect(
       resolveSelfDisplayName({
         preferencesName: '',
-        user: { email: 'imtihoss@gmail.com', user_metadata: {} },
+        user: { email: 'alex.rivera@example.com', user_metadata: {} },
       }),
-    ).toBe('imtihoss');
+    ).toBe('alex.rivera');
   });
 });

@@ -1,0 +1,44 @@
+---
+description: Never hardcode personal or user-specific identifiers in source
+alwaysApply: true
+---
+
+# No personal / user-specific identifiers in source
+
+Never commit real people’s emails, phone numbers, full names, home addresses, or other personal identifiers into app source, migrations, fixtures, tests, docs, or env examples for access control or sample data.
+
+## Required
+
+1. **Privileges / allowlists** → server-side flags or roles keyed by `user_id` (e.g. `public.account_flags`), never email/name string lists in client or SQL.
+2. **Product contact** → `EXPO_PUBLIC_SUPPORT_EMAIL` / `@/constants/legal` `ONTRACK_SUPPORT_EMAIL` (env-driven). Legal copy must import that constant — do not paste a personal inbox.
+3. **Fixtures & tests** → synthetic `@example.com` / clearly fake display names only (`Alex Rivera`, `Jordan Lee`, …).
+4. **Ops grants** → one-off SQL/CLI by `user_id` UUID; do not add those emails/names to the repo.
+
+## Exempt (already shipped product identity)
+
+- Reverse-DNS bundle / package ids already in stores (e.g. `com.….ontracknow`) and matching Play Store / keychain service strings.
+- User-generated or synced runtime data (not authored into source).
+
+## Never reintroduce
+
+```ts
+// ❌
+const ADMINS = ['person@gmail.com'];
+if (email === 'person@gmail.com') …
+
+// ✅
+const { developerTools } = await loadAccountFlags(userId);
+```
+
+```sql
+-- ❌
+where lower(u.email) = any (array['person@gmail.com'])
+
+-- ✅
+where exists (
+  select 1 from public.account_flags f
+  where f.user_id = auth.uid() and f.analytics_admin
+)
+```
+
+If you discover personal identifiers while editing, scrub them in the same change and prefer the patterns above.

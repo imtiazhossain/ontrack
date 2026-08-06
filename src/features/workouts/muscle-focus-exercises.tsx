@@ -197,7 +197,7 @@ function MuscleFocusExerciseCard({
             {selected ? (
               <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
             ) : (
-              <AppText variant="mono" color="secondary">
+              <AppText variant="caption" color="secondary" fit>
                 0{index + 1}
               </AppText>
             )}

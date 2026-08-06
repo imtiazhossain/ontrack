@@ -91,6 +91,12 @@ describe('agent-ui url parsing', () => {
       id: 'ontrack.tabs.travel',
     });
     expect(
+      parseAgentUiUrl('ontrack://agent/ui?op=scroll&id=ontrack.profile.tmdb'),
+    ).toEqual({
+      op: 'scroll',
+      id: 'ontrack.profile.tmdb',
+    });
+    expect(
       parseAgentUiUrl('ontrack://agent/ui?op=exists&id=ontrack.tabs.travel'),
     ).toEqual({
       op: 'exists',
@@ -373,5 +379,28 @@ describe('agent-ui request handler', () => {
         contains: 'MissingText',
       }),
     ).resolves.toBe(false);
+  });
+
+  it('asserts --contains against registered Input value (not just label)', async () => {
+    registerAgentUiTarget('ontrack.travel.flight.connectionAirport', {
+      label: 'Connection airport',
+      value: 'IAH',
+    });
+
+    await expect(
+      handleAgentUiRequest({
+        op: 'assert',
+        id: 'ontrack.travel.flight.connectionAirport',
+        contains: 'IAH',
+      }),
+    ).resolves.toBe(true);
+    const status = JSON.parse(mockWrite.mock.calls.at(-1)?.[0] as string);
+    expect(status.ok).toBe(true);
+    expect(
+      status.results?.some(
+        (r: { op?: string; detail?: string }) =>
+          r.op === 'label' && String(r.detail || '').includes('value contains'),
+      ),
+    ).toBe(true);
   });
 });

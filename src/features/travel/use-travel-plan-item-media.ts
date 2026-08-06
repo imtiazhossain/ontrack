@@ -70,9 +70,11 @@ export function useTravelPlanItemMedia({
   };
 
   const setItemPhotos = (itemId: string, nextUris: string[]) => {
+    const latest =
+      useTravel.getState().plans.find((entry) => entry.id === planId) ?? plan;
     updatePlan({
-      ...plan,
-      itinerary: itinerary.map((item) =>
+      ...latest,
+      itinerary: latest.itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -88,9 +90,11 @@ export function useTravelPlanItemMedia({
     itemId: string,
     notes: NonNullable<ItineraryItem['notes']>,
   ) => {
+    const latest =
+      useTravel.getState().plans.find((entry) => entry.id === planId) ?? plan;
     updatePlan({
-      ...plan,
-      itinerary: itinerary.map((item) =>
+      ...latest,
+      itinerary: latest.itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -114,11 +118,14 @@ export function useTravelPlanItemMedia({
   const appendPhotosToItem = async (itemId: string, uris: string[]) => {
     if (!uris.length) return;
     try {
+      if (!useTravel.getState().plans.some((entry) => entry.id === planId)) return;
+      const persisted = await persistTravelMomentPhotos(uris, itemId);
+      // Re-read after await so concurrent itinerary/notes edits are not overwritten.
       const latest = useTravel.getState().plans.find((entry) => entry.id === planId);
       if (!latest) return;
       const current = latest.itinerary.find((entry) => entry.id === itemId);
-      const persisted = await persistTravelMomentPhotos(uris, itemId);
-      const next = [...(current?.photoUris ?? []), ...persisted];
+      if (!current) return;
+      const next = [...(current.photoUris ?? []), ...persisted];
       updatePlan({
         ...latest,
         itinerary: latest.itinerary.map((item) =>

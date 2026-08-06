@@ -491,11 +491,11 @@ describe('travel plan normalization', () => {
       chatAccessCode: 'ca11968c4977e8ef06db',
       openJoinCode: '3eb90399d01f9b732186',
       hostTripId: 'trip-invite-1s2yhed',
-      hostDisplayName: 'Farhana',
+      hostDisplayName: 'Jordan',
       sharedExpensePeople: [
-        { id: 'host', name: 'Imtiaz' },
-        { id: 'self', name: 'Imtiaz' },
-        { id: 'friend-1', name: 'Farhana Tasmin' },
+        { id: 'host', name: 'Alex' },
+        { id: 'self', name: 'Alex' },
+        { id: 'friend-1', name: 'Jordan Lee' },
       ],
     });
     expect(normalized?.chatAccessCode).toBeUndefined();
@@ -503,8 +503,8 @@ describe('travel plan normalization', () => {
     expect(normalized?.hostTripId).toBe('trip-invite-euneo2');
     expect(normalized?.hostDisplayName).toBeUndefined();
     expect(normalized?.sharedExpensePeople).toEqual([
-      { id: 'self', name: 'Imtiaz' },
-      { id: 'friend-1', name: 'Farhana Tasmin' },
+      { id: 'self', name: 'Alex' },
+      { id: 'friend-1', name: 'Jordan Lee' },
     ]);
   });
 

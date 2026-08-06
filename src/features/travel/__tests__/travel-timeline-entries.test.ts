@@ -102,6 +102,47 @@ describe('travel timeline entries', () => {
     expect(timelineEntryCaption(dropoff, 'mdy')).toMatch(/3:00 PM/);
   });
 
+  it('uses medium month dates on board captions', () => {
+    const flightCaption = timelineEntryCaption(
+      {
+        key: outbound.id,
+        item: outbound,
+        phase: 'default',
+        date: outbound.date,
+        startMinutes: outbound.startMinutes,
+        title: outbound.title,
+      },
+      'mdy',
+    );
+    expect(flightCaption).toContain('Sep 8');
+    expect(flightCaption).not.toMatch(/\b9\/8\b/);
+
+    const stay: TravelItineraryItem = {
+      id: 'stay-1',
+      kind: 'stay',
+      title: 'Hotel',
+      date: '2026-09-27',
+      startMinutes: 15 * 60,
+      durationMinutes: 60,
+      stay: {
+        checkoutDate: '2026-09-29',
+        checkoutMinutes: 11 * 60,
+      },
+    };
+    const stayCaption = timelineEntryCaption(
+      {
+        key: stay.id,
+        item: stay,
+        phase: 'default',
+        date: stay.date,
+        startMinutes: stay.startMinutes,
+        title: stay.title,
+      },
+      'mdy',
+    );
+    expect(stayCaption).toBe('Sep 27 · 3:00 PM → Sep 29 · 11:00 AM');
+  });
+
   it('keeps activities as a single marker with their title', () => {
     const activity: TravelItineraryItem = {
       id: 'act-1',

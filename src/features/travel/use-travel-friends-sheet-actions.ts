@@ -76,6 +76,7 @@ export function useTravelFriendsSheetActions({
   const [sharingInvite, setSharingInvite] = useState(false);
   const [managingParticipantId, setManagingParticipantId] = useState<string>();
   const [transferringUserId, setTransferringUserId] = useState<string>();
+  const [leavingTrip, setLeavingTrip] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string>();
   const [copiedOpenJoin, setCopiedOpenJoin] = useState(false);
   const [removeConfirm, setRemoveConfirm] =
@@ -258,17 +259,24 @@ export function useTravelFriendsSheetActions({
           setTransferringUserId(member.userId);
           try {
             const result = await transferTravelTripHost(tripId, member.userId);
+            applyFormerHostLocalState(result);
             if (leaveAfter) {
               try {
                 await leaveTravelTrip(tripId);
-              } catch {
-                // Local leave still clears the plan if the RPC fails after transfer.
+                removePlan(plan.id);
+                onClose();
+                return;
+              } catch (leaveReason) {
+                await refreshRoster(tripId);
+                appPrompt.alert(
+                  'Host Transferred',
+                  leaveReason instanceof Error
+                    ? `${member.displayName} is now the host, but you couldn’t leave yet: ${leaveReason.message}`
+                    : `${member.displayName} is now the host, but you couldn’t leave yet. Try Leave Trip again.`,
+                );
+                return;
               }
-              removePlan(plan.id);
-              onClose();
-              return;
             }
-            applyFormerHostLocalState(result);
             await refreshRoster(tripId);
             appPrompt.alert(
               'Host Transferred',
@@ -308,17 +316,24 @@ export function useTravelFriendsSheetActions({
               tripId,
               participant.inviteCode,
             );
+            applyFormerHostLocalState(result);
             if (leaveAfter) {
               try {
                 await leaveTravelTrip(tripId);
-              } catch {
-                // Local leave still clears the plan if the RPC fails after transfer.
+                removePlan(plan.id);
+                onClose();
+                return;
+              } catch (leaveReason) {
+                await refreshRoster(tripId);
+                appPrompt.alert(
+                  'Host Transferred',
+                  leaveReason instanceof Error
+                    ? `${participant.name} is now the host, but you couldn’t leave yet: ${leaveReason.message}`
+                    : `${participant.name} is now the host, but you couldn’t leave yet. Try Leave Trip again.`,
+                );
+                return;
               }
-              removePlan(plan.id);
-              onClose();
-              return;
             }
-            applyFormerHostLocalState(result);
             await refreshRoster(tripId);
             appPrompt.alert(
               'Host Transferred',
@@ -451,7 +466,7 @@ export function useTravelFriendsSheetActions({
               person.email?.toLowerCase() === result.requesterEmail.toLowerCase()),
         );
         if (!already) {
-          onSavePlan({
+          const nextPlan = {
             ...current,
             participants: [
               ...current.participants,
@@ -465,7 +480,10 @@ export function useTravelFriendsSheetActions({
               },
             ],
             updatedAt: now,
-          });
+          };
+          onSavePlan(nextPlan);
+          // Push the expanded roster so shared expenses include the new member.
+          void publishTravelTripExpenses(nextPlan).catch(() => undefined);
         }
       }
       await refreshJoinRequests(tripId);
@@ -482,10 +500,46 @@ export function useTravelFriendsSheetActions({
     }
   };
 
+  const leaveTrip = () => {
+    if (isSoleHost) {
+      appPrompt.alert(
+        'Transfer host first',
+        'Make someone else the host before you leave this trip.',
+      );
+      return;
+    }
+    confirmDestructiveAction({
+      title: 'Leave this trip?',
+      message:
+        'You’ll lose access to the shared itinerary, chat, and expenses on this device.',
+      actionLabel: 'Leave trip',
+      onConfirm: () => {
+        void (async () => {
+          setLeavingTrip(true);
+          try {
+            await leaveTravelTrip(tripId);
+            removePlan(plan.id);
+            onClose();
+          } catch (reason) {
+            appPrompt.alert(
+              'Couldn’t Leave Trip',
+              reason instanceof Error
+                ? reason.message
+                : 'You are still on this trip. Check your connection and try again.',
+            );
+          } finally {
+            setLeavingTrip(false);
+          }
+        })();
+      },
+    });
+  };
+
   return {
     sharingInvite,
     managingParticipantId,
     transferringUserId,
+    leavingTrip,
     copiedCode,
     copiedOpenJoin,
     removeConfirm,
@@ -502,6 +556,7 @@ export function useTravelFriendsSheetActions({
     transferHostByParticipant,
     makeCohost,
     removeCohost,
+    leaveTrip,
     copyInviteLink,
     copyOpenJoinLink,
     shareOpenJoin,

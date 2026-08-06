@@ -12,6 +12,7 @@ import type { Entitlement, EntitlementSource } from '@/entitlements/types';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 
+import { loadAccountFlags } from './account-flags';
 import { getSupabaseClient } from './supabase';
 
 const ADDON_IDS = ADDONS.map((addon) => addon.id) as AddonId[];
@@ -130,5 +131,6 @@ export async function loadEntitlements(userId: string) {
   await Promise.all([
     loadAddonEntitlements(userId),
     loadAgentEntitlements(userId),
+    loadAccountFlags(userId),
   ]);
 }

@@ -1,7 +1,12 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 import type { AgentUiRequest } from './handle-agent-ui-url';
 import type { AgentUiStatusPayload } from './persist';
+
+function agentUiPlatformParam(): 'ios' | 'android' {
+  return Platform.OS === 'android' ? 'android' : 'ios';
+}
 
 const DAEMON_PORT = 8191;
 const DIRECT_DAEMON = `http://127.0.0.1:${DAEMON_PORT}`;
@@ -89,8 +94,9 @@ function candidateBases(): string[] {
 export async function fetchAgentUiCommand(
   waitMs = DEFAULT_WAIT_MS,
 ): Promise<AgentUiRequest | null> {
+  const platform = agentUiPlatformParam();
   for (const base of candidateBases()) {
-    const url = `${base}/next?waitMs=${Math.max(0, waitMs)}`;
+    const url = `${base}/next?waitMs=${Math.max(0, waitMs)}&platform=${platform}`;
     try {
       const res = await fetch(url, {
         method: 'GET',
@@ -103,6 +109,15 @@ export async function fetchAgentUiCommand(
       if (!res.ok) continue;
       const body = await parseJson(res);
       if (!body || typeof body !== 'object') continue;
+      const pinned = (body as { platform?: string }).platform;
+      // Defensive: never run a command stamped for the other OS.
+      if (
+        typeof pinned === 'string' &&
+        pinned.length > 0 &&
+        pinned !== platform
+      ) {
+        continue;
+      }
       cachedBase = base;
       return body as AgentUiRequest;
     } catch {
@@ -110,6 +125,31 @@ export async function fetchAgentUiCommand(
     }
   }
   return null;
+}
+
+/** Re-queue a command the app dequeued but cannot run (unmount / cancel). */
+export async function requeueAgentUiCommand(
+  request: AgentUiRequest,
+): Promise<void> {
+  const body = JSON.stringify(request);
+  for (const base of candidateBases()) {
+    try {
+      const res = await fetch(`${base}/command`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+      if (res.ok) {
+        cachedBase = base;
+        return;
+      }
+    } catch {
+      /* try next */
+    }
+  }
 }
 
 /** Push status to the daemon so the host can wait without Documents polling. */

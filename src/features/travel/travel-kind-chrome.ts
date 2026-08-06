@@ -1,5 +1,4 @@
 import type { AppIconName, Theme } from '@/design-system';
-import { TRAVEL_EDITORIAL_ACCENT } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
 
 type KindChromeSwatch = {
@@ -10,7 +9,7 @@ type KindChromeSwatch = {
 
 /**
  * Single source of truth for itinerary kind colors — Add-to-Timeline picker,
- * timeline stripes/dots, and structured detail cards all read from here.
+ * timeline dots, and structured detail cards all read from here.
  *
  * Moment uses rose so it stays distinct from Stay’s warm tan.
  */
@@ -73,30 +72,6 @@ export function kindIcon(kind: TravelItemKind): AppIconName {
     default:
       return 'list';
   }
-}
-
-/** Cycling day-card stripe colors — same rhythm as kind accents. */
-export function dayStripeColor(dayIndex: number, theme: Theme): string {
-  const light = [
-    KIND_CHROME_LIGHT.flight.accent,
-    KIND_CHROME_LIGHT.transport.accent,
-    KIND_CHROME_LIGHT.stay.accent,
-    KIND_CHROME_LIGHT.activity.accent,
-    KIND_CHROME_LIGHT.rental.accent,
-    KIND_CHROME_LIGHT.moment.accent,
-    TRAVEL_EDITORIAL_ACCENT,
-  ];
-  const dark = [
-    KIND_CHROME_DARK.flight.accent,
-    KIND_CHROME_DARK.transport.accent,
-    KIND_CHROME_DARK.stay.accent,
-    KIND_CHROME_DARK.activity.accent,
-    KIND_CHROME_DARK.rental.accent,
-    KIND_CHROME_DARK.moment.accent,
-    '#C4A07A',
-  ];
-  const palette = theme.name === 'dark' ? dark : light;
-  return palette[dayIndex % palette.length]!;
 }
 
 /** Alias used by timeline spine dots. */

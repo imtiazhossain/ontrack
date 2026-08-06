@@ -64,6 +64,23 @@ describe('rental confirmation parser', () => {
     expect(parsed.rental.vehicleClass).toContain('Compact');
   });
 
+  it('computes overnight rental duration under 24 hours', () => {
+    const parsed = parseRentalConfirmation(
+      `
+        Hertz Confirmation Number: OVERNITE01
+        Pick-up: Sep 09, 2026 10:00 PM
+        Keflavik International Airport (KEF)
+        Drop-off: Sep 10, 2026 8:00 AM
+        Keflavik International Airport (KEF)
+      `,
+      { startDate: '2026-09-08', endDate: '2026-09-14' },
+    );
+    expect(parsed.date).toBe('2026-09-09');
+    expect(parsed.startMinutes).toBe(22 * 60);
+    expect(parsed.durationMinutes).toBe(10 * 60);
+    expect(parsed.rental.dropoffDate).toBe('2026-09-10');
+  });
+
   it('ignores flight times outside the pick-up / drop-off sections', () => {
     const parsed = parseRentalConfirmation(
       `

@@ -1,11 +1,12 @@
 import { travelChatAccessCode } from '@/features/travel/chat';
+import { expensePersonIdAliases } from '@/features/travel/expenses/expense-math';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import { normalizeTravelExpense } from '@/features/travel/normalize';
 import {
-  TRAVEL_EXPENSE_HOST_ID,
-  TRAVEL_EXPENSE_SELF_ID,
-  type TravelExpense,
-  type TravelPlan,
+    TRAVEL_EXPENSE_HOST_ID,
+    TRAVEL_EXPENSE_SELF_ID,
+    type TravelExpense,
+    type TravelPlan,
 } from '@/features/travel/types';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import { usePreferences } from '@/store/preferences';
@@ -42,12 +43,15 @@ export function isTravelExpenseMemberId(id: string): boolean {
 
 /** Member copies joined via invite/open-join (not the host's canonical plan). */
 export function isTravelExpenseMemberPlan(
-  plan: Pick<TravelPlan, 'id' | 'chatAccessCode' | 'hostTripId'>,
+  plan: Pick<
+    TravelPlan,
+    'id' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName'
+  >,
 ): boolean {
   if (plan.chatAccessCode) return true;
   const hostTripId = plan.hostTripId?.trim();
-  if (!hostTripId) return false;
-  return hostTripId !== plan.id;
+  if (!hostTripId || hostTripId === plan.id) return false;
+  return Boolean(plan.hostDisplayName?.trim());
 }
 
 export function sharedExpenseTripId(plan: TravelPlan): string | undefined {
@@ -139,19 +143,27 @@ function remapExpenseIds(
 
 /**
  * Shared document: `self` = host. Members remap local `self` ↔ `member:<uid>`
- * and local `host` ↔ shared `self`.
+ * and local `host` ↔ shared `self`. Hosts also promote local invite person ids
+ * to durable `member:<auth>` ids when the shared roster already has them.
  */
 export function expensesForPublish(
   plan: TravelPlan,
   localUserId: string | undefined,
 ): TravelExpense[] {
-  if (!isTravelExpenseMemberPlan(plan) || !localUserId) return plan.expenses;
+  const aliases = expensePersonIdAliases(plan);
+  const mapHostLocalId = (id: string) => aliases.get(id) ?? id;
+  if (!isTravelExpenseMemberPlan(plan) || !localUserId) {
+    if (aliases.size === 0) return plan.expenses;
+    return plan.expenses.map((expense) =>
+      remapExpenseIds(expense, mapHostLocalId),
+    );
+  }
   const memberId = travelExpenseMemberId(localUserId);
   return plan.expenses.map((expense) =>
     remapExpenseIds(expense, (id) => {
       if (id === TRAVEL_EXPENSE_SELF_ID) return memberId;
       if (id === TRAVEL_EXPENSE_HOST_ID) return TRAVEL_EXPENSE_SELF_ID;
-      return id;
+      return mapHostLocalId(id);
     }),
   );
 }
@@ -180,9 +192,11 @@ export function peopleForPublish(
   const people: SharedExpensePerson[] = [
     { id: TRAVEL_EXPENSE_SELF_ID, name: hostName },
   ];
+  const aliases = expensePersonIdAliases(plan);
   for (const participant of plan.participants) {
-    if (!people.some((person) => person.id === participant.id)) {
-      people.push({ id: participant.id, name: participant.name });
+    const publishId = aliases.get(participant.id) ?? participant.id;
+    if (!people.some((person) => person.id === publishId)) {
+      people.push({ id: publishId, name: participant.name });
     }
   }
   for (const person of plan.sharedExpensePeople ?? []) {

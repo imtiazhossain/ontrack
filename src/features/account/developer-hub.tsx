@@ -1,0 +1,315 @@
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+
+import {
+    ActionChipRow,
+    AppText,
+    Button,
+    Card,
+    CollapsibleSection,
+    FormSection,
+    HeaderBackButton,
+    Input,
+    MetaList,
+    PanelTitle,
+    Screen,
+    ScreenHeader,
+    SettingsActionRow,
+    SettingsToggleRow,
+} from '@/components/primitives';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useCloudSyncStatus } from '@/services/cloud/sync';
+import { apiRequest } from '@/services/http/api-client';
+import { resolveExpoApiUrl } from '@/services/http/api-url';
+import { useDevMode } from '@/store/dev-mode';
+import { AgentUiIds, getAgentUiRoute } from '@/utils/agent-ui';
+import {
+    AGENT_UI_FIXTURE_NAMES,
+    seedAgentUiFixture,
+    type AgentUiFixtureName,
+} from '@/utils/agent-ui/fixtures';
+import {
+    isAgentUiOverlayEnabled,
+    setAgentUiOverlayEnabled,
+    subscribeAgentUiOverlay,
+} from '@/utils/agent-ui/overlay';
+import { agentUiNavigate, resolveAgentUiDestination } from '@/utils/agent-ui/route';
+
+import { setDevModeEnabled } from './dev-mode-controller';
+import { DeveloperInsightsPanel } from './developer-insights-panel';
+import { formatBytes, listLocalStorageSizes, type StorageSizeRow } from './developer-storage';
+
+function useOverlayEnabled() {
+  return useSyncExternalStore(
+    subscribeAgentUiOverlay,
+    isAgentUiOverlayEnabled,
+    () => false,
+  );
+}
+
+export function DeveloperHub() {
+  const router = useRouter();
+  const { spacing } = useResponsive();
+  const overlayOn = useOverlayEnabled();
+  const sync = useCloudSyncStatus();
+  const devModeEnabled = useDevMode((state) => state.enabled);
+  const [routeAlias, setRouteAlias] = useState('travel');
+  const [seedMessage, setSeedMessage] = useState<string | undefined>();
+  const [storageRows, setStorageRows] = useState<StorageSizeRow[]>([]);
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | undefined>();
+  const [currentRoute, setCurrentRoute] = useState(getAgentUiRoute() ?? '—');
+
+  const refreshRoute = useCallback(() => {
+    setCurrentRoute(getAgentUiRoute() ?? '—');
+  }, []);
+
+  const refreshStorage = useCallback(() => {
+    void listLocalStorageSizes().then(setStorageRows);
+  }, []);
+
+  useEffect(() => {
+    refreshStorage();
+    refreshRoute();
+    const timer = setInterval(refreshRoute, 2000);
+    return () => clearInterval(timer);
+  }, [refreshRoute, refreshStorage]);
+
+  const runSeed = (name: AgentUiFixtureName) => {
+    if (!devModeEnabled) {
+      setSeedMessage('Turn on Dev Mode before seeding demos.');
+      return;
+    }
+    const result = seedAgentUiFixture(name);
+    if (!result) {
+      setSeedMessage(`Could not seed ${name}`);
+      return;
+    }
+    setSeedMessage(`Seeded ${result.fixture}`);
+    if (name === 'travel-demo') agentUiNavigate('/travel/trip-agent-ui-demo');
+    else if (name === 'checklist-demo') agentUiNavigate('/to-do');
+    else if (name === 'grocery-demo') agentUiNavigate('/to-do');
+    else if (name === 'health-demo') agentUiNavigate('/health');
+    else if (name === 'vehicle-demo') agentUiNavigate('/vehicles');
+    else if (name === 'plants-demo') agentUiNavigate('/plants');
+    else if (name === 'activity-demo' || name === 'food-demo') agentUiNavigate('/');
+    else if (name === 'workouts-demo') agentUiNavigate('/workouts');
+    else if (name === 'vision-board-demo') agentUiNavigate('/vision-board');
+  };
+
+  const resetRateLimits = async () => {
+    setRateLimitMessage(undefined);
+    try {
+      const url = resolveExpoApiUrl('/api/usage/reset', {
+        configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+        createNotConfiguredError: () => new Error('API host is not configured.'),
+      });
+      await apiRequest<{ ok: boolean; subject: string }, Error>({
+        url,
+        method: 'POST',
+        body: {},
+        offlineMessage: 'Connect to reset rate limits.',
+        unavailableMessage: 'Rate-limit reset failed.',
+        createError: (message) => new Error(message),
+      });
+      setRateLimitMessage('Cleared this subject’s app rate-limit buckets.');
+    } catch (reason) {
+      setRateLimitMessage(reason instanceof Error ? reason.message : 'Reset failed.');
+    }
+  };
+
+  const hostUri = Constants.expoConfig?.hostUri ?? '—';
+  const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || '(Metro host)';
+  const appEnv = process.env.EXPO_PUBLIC_APP_ENV?.trim() || 'development';
+
+  return (
+    <Screen contentStyle={{ gap: spacing.lg }}>
+      <ScreenHeader
+        eyebrow={devModeEnabled ? 'Dev Mode sandbox' : 'Development only'}
+        title="Developer Tools"
+        subtitle="Diagnostics, demo seeds, agent-ui, and product insights"
+        leading={
+          <HeaderBackButton
+            compact
+            accessibilityLabel="Back to profile"
+            fallback="/(tabs)/profile"
+            testID={AgentUiIds.developer.back}
+          />
+        }
+      />
+
+      <CollapsibleSection
+        title="Navigate"
+        defaultExpanded
+        testID={AgentUiIds.developer.section.navigate}>
+        <SettingsToggleRow
+          label="Dev Mode"
+          detail={
+            devModeEnabled
+              ? 'On: snapshots your live data and pauses cloud sync. Demos and seeds stay local. Turn off to restore your account as it was.'
+              : 'Off: your live account is active. Turn on before seeding so demos never sync or stick to your real data.'
+          }
+          detailNumberOfLines={4}
+          icon="maintenance"
+          value={devModeEnabled}
+          onValueChange={(next) => {
+            void setDevModeEnabled(next);
+          }}
+          testID={AgentUiIds.developer.devMode}
+        />
+        <SettingsActionRow
+          label="Design System"
+          detail="Components, accents, icons"
+          icon="smart"
+          testID={AgentUiIds.developer.designSystem}
+          onPress={() => router.push('/design-system' as never)}
+        />
+        <SettingsActionRow
+          label="Integrations"
+          detail="Third-party health and quotas"
+          icon="insights"
+          testID={AgentUiIds.developer.apiUsage}
+          onPress={() => router.push('/integrations' as never)}
+        />
+      </CollapsibleSection>
+
+      <DeveloperInsightsPanel />
+
+      <CollapsibleSection title="Runtime" testID={AgentUiIds.developer.section.runtime}>
+        <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.env}>
+          <PanelTitle>Environment</PanelTitle>
+          <MetaList
+            items={[
+              { label: 'App env', value: appEnv },
+              { label: 'Metro', value: hostUri },
+              { label: 'API base', value: apiBase },
+              { label: 'Route', value: currentRoute },
+              {
+                label: 'Supabase',
+                value: process.env.EXPO_PUBLIC_SUPABASE_URL?.trim()
+                  ? 'Configured'
+                  : 'Missing',
+              },
+            ]}
+          />
+        </Card>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Diagnostics"
+        testID={AgentUiIds.developer.section.diagnostics}>
+        <SettingsToggleRow
+          label="Overlay"
+          detail="Paint testID frames for screenshot triage. Drag the floating Overlay button; tap to toggle."
+          detailNumberOfLines={2}
+          value={overlayOn}
+          onValueChange={setAgentUiOverlayEnabled}
+          testID={AgentUiIds.developer.overlay}
+        />
+        <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.sync}>
+          <PanelTitle>Cloud sync</PanelTitle>
+          <MetaList
+            items={[
+              {
+                label: 'State',
+                value: sync.email ? `${sync.state} · ${sync.email}` : sync.state,
+              },
+              {
+                label: 'Last synced',
+                value: sync.lastSyncedAt
+                  ? new Date(sync.lastSyncedAt).toLocaleString()
+                  : '—',
+              },
+              ...(sync.message ? [{ label: 'Message', value: sync.message }] : []),
+            ]}
+          />
+        </Card>
+        <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.storage}>
+          <PanelTitle>Local storage</PanelTitle>
+          {storageRows.length === 0 ? (
+            <AppText variant="caption" color="secondary">
+              No persisted keys yet.
+            </AppText>
+          ) : (
+            <MetaList
+              items={storageRows.map((row) => ({
+                label: row.label,
+                value: formatBytes(row.bytes),
+              }))}
+            />
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            testID={AgentUiIds.developer.storageRefresh}
+            accessibilityLabel="Refresh storage sizes"
+            onPress={refreshStorage}>
+            Refresh sizes
+          </Button>
+        </Card>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Tools" testID={AgentUiIds.developer.section.tools}>
+        <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.seeds}>
+          <PanelTitle>Demo seeds</PanelTitle>
+          <AppText variant="caption" color="secondary">
+            {devModeEnabled
+              ? 'Loads stable fixtures (same as agent-ui-seed). Restored when you leave Dev Mode.'
+              : 'Turn on Dev Mode above before seeding — protects your live account.'}
+          </AppText>
+          <ActionChipRow
+            items={AGENT_UI_FIXTURE_NAMES.map((name) => ({
+              id: name,
+              label: name,
+              testID: AgentUiIds.developer.seed(name),
+              onPress: () => runSeed(name),
+            }))}
+          />
+          {seedMessage ? (
+            <AppText variant="caption" color="accent" fit>
+              {seedMessage}
+            </AppText>
+          ) : null}
+        </Card>
+
+        <Card style={{ gap: spacing.sm }}>
+          <FormSection title="Open route" description="Alias or path from agent-routes.">
+            <Input
+              label="Alias or path"
+              value={routeAlias}
+              onChangeText={setRouteAlias}
+              testID={AgentUiIds.developer.routeInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Button
+              testID={AgentUiIds.developer.routeGo}
+              accessibilityLabel="Open route alias"
+              onPress={() => {
+                const href = resolveAgentUiDestination(routeAlias.trim());
+                if (href) agentUiNavigate(href);
+              }}>
+              Go
+            </Button>
+          </FormSection>
+        </Card>
+
+        <Card style={{ gap: spacing.sm }}>
+          <PanelTitle>API rate limits</PanelTitle>
+          <Button
+            variant="secondary"
+            testID={AgentUiIds.developer.rateLimitReset}
+            accessibilityLabel="Reset app rate limits"
+            onPress={() => void resetRateLimits()}>
+            Reset app rate-limit buckets
+          </Button>
+          {rateLimitMessage ? (
+            <AppText variant="caption" color="secondary">
+              {rateLimitMessage}
+            </AppText>
+          ) : null}
+        </Card>
+      </CollapsibleSection>
+    </Screen>
+  );
+}

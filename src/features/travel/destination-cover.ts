@@ -11,7 +11,12 @@ import { resolveExpoApiUrl } from '@/services/http/api-url';
 import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 
 const COVER_FETCH_TIMEOUT_MS = 8_000;
-const coverCache = new Map<string, string | null>();
+/** Brief negative cache so timeouts/offline blips can retry without hammering. */
+const COVER_MISS_TTL_MS = 60_000;
+type CoverCacheEntry =
+  | { kind: 'hit'; uri: string }
+  | { kind: 'miss'; expiresAt: number };
+const coverCache = new Map<string, CoverCacheEntry>();
 const inflight = new Map<string, Promise<string | undefined>>();
 
 export {
@@ -126,18 +131,58 @@ async function resolveRemoteCover(place: string): Promise<string | undefined> {
   }
 }
 
-/** Resolve a remote destination cover URL (cached per destination query). */
-export async function fetchDestinationCoverUri(
-  plan: TravelPlan,
-): Promise<string | undefined> {
-  const local = localTripCoverUri(plan);
-  if (local) return local;
+/**
+ * Place-name candidates for a stay thumbnail: hotel title first, then address
+ * parts (skip generic titles like "Demo Stay" / "Stay").
+ */
+export function stayCoverCandidates(
+  title?: string,
+  address?: string,
+): string[] {
+  const out: string[] = [];
+  const add = (value: string | undefined) => {
+    const next = value?.trim();
+    if (!next || next.length < 2) return;
+    if (out.some((existing) => existing.toLowerCase() === next.toLowerCase())) {
+      return;
+    }
+    out.push(next);
+  };
 
-  const key = cacheKey(plan);
-  if (!key.trim()) return undefined;
-  if (coverCache.has(key)) {
-    const cached = coverCache.get(key);
-    return cached ?? undefined;
+  const name = title?.trim();
+  if (name && !/^(demo\s+)?stay$/i.test(name)) {
+    add(name);
+  }
+
+  const location = address?.trim();
+  if (location) {
+    const parts = location
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    // Prefer city/region chunks — skip street lines that include house numbers.
+    for (const part of parts) {
+      if (!/\d/.test(part)) add(part);
+    }
+    add(location);
+  }
+
+  return out;
+}
+
+/** Resolve a remote place photo URL from ordered query candidates (cached). */
+export async function fetchPlaceCoverUri(
+  candidates: string[],
+): Promise<string | undefined> {
+  const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
+  if (!places.length) return undefined;
+
+  const key = `place-v1|${places.join('|').toLowerCase()}`;
+  const cached = coverCache.get(key);
+  if (cached?.kind === 'hit') return cached.uri;
+  if (cached?.kind === 'miss') {
+    if (cached.expiresAt > Date.now()) return undefined;
+    coverCache.delete(key);
   }
 
   const pending = inflight.get(key);
@@ -145,18 +190,19 @@ export async function fetchDestinationCoverUri(
 
   const request = (async () => {
     try {
-      const candidates = destinationCoverCandidates(plan);
-      for (const place of candidates) {
+      for (const place of places) {
         const next = await resolveRemoteCover(place);
         if (next) {
-          coverCache.set(key, next);
+          coverCache.set(key, { kind: 'hit', uri: next });
           return next;
         }
       }
-      coverCache.set(key, null);
+      coverCache.set(key, {
+        kind: 'miss',
+        expiresAt: Date.now() + COVER_MISS_TTL_MS,
+      });
       return undefined;
     } catch {
-      coverCache.set(key, null);
       return undefined;
     } finally {
       inflight.delete(key);
@@ -165,4 +211,14 @@ export async function fetchDestinationCoverUri(
 
   inflight.set(key, request);
   return request;
+}
+
+/** Resolve a remote destination cover URL (cached per destination query). */
+export async function fetchDestinationCoverUri(
+  plan: TravelPlan,
+): Promise<string | undefined> {
+  const local = localTripCoverUri(plan);
+  if (local) return local;
+
+  return fetchPlaceCoverUri(destinationCoverCandidates(plan));
 }

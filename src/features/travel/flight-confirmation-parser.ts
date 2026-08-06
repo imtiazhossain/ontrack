@@ -1,20 +1,21 @@
+import { addDays } from '@/utils/date';
 import { airlineName, CONFIRMATION_AIRLINE_CODES } from './airline-catalog';
 import { findConfirmationMoney } from './confirmation-money';
 import { findAircraft, findPassenger } from './flight-confirmation-fields';
 import {
-  findFlightConfirmationDate,
-  likelyItineraryDates,
+    findFlightConfirmationDate,
+    likelyItineraryDates,
 } from './flight-confirmation-parser-dates';
+import { repairConnectingSegments } from './flight-connection-hub';
 import {
-  emptyFlightDetailsDraft,
-  type FlightDetailsDraft,
+    emptyFlightDetailsDraft,
+    type FlightDetailsDraft,
 } from './flight-details';
 import { flightExpenseTitleFromSegments } from './flight-expense-title';
 import {
-  parseLabeledFlightGate,
-  parseLabeledFlightTerminal,
+    parseLabeledFlightGate,
+    parseLabeledFlightTerminal,
 } from './flight-terminal';
-import { addDays } from '@/utils/date';
 
 export interface ParsedFlightSegment {
   flight: FlightDetailsDraft;
@@ -629,14 +630,15 @@ export function parseFlightConfirmation(
           })
         : [parseSegment(text, tripRange, confirmationCode)];
   const passenger = findPassenger(text);
-  const segments = applyTimedAirportItinerary(
-    parsedSegments,
+  const segments = repairConnectingSegments(
+    applyTimedAirportItinerary(parsedSegments, text, tripRange).map(
+      (segment) => ({
+        ...segment,
+        flight: { ...segment.flight, ...passenger },
+      }),
+    ),
     text,
-    tripRange,
-  ).map((segment) => ({
-    ...segment,
-    flight: { ...segment.flight, ...passenger },
-  }));
+  );
   const itineraryDates = likelyItineraryDates(text);
   const first = segments[0];
   const money = findConfirmationMoney(text);

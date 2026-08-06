@@ -8,26 +8,35 @@ import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
+import { fieldTitleCase } from './field-title-case';
 import { Symbol } from './symbol';
 
 interface SettingsRowProps {
   label: string;
   detail: string;
+  /** Secondary caption lines (default 2). Use 3–4 for longer how-it-works copy. */
+  detailNumberOfLines?: number;
   icon?: AppIconName;
   trailing?: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
   testID?: string;
+  /**
+   * Flush row inside `SettingsGroup` — no outer border/margin (group owns the chrome).
+   */
+  grouped?: boolean;
 }
 
 export function SettingsRow({
   label,
   detail,
+  detailNumberOfLines = 2,
   icon,
   trailing,
   onPress,
   accessibilityLabel = label,
   testID,
+  grouped = false,
 }: SettingsRowProps) {
   const theme = useTheme();
   const { spacing, layout, s } = useResponsive();
@@ -58,9 +67,12 @@ export function SettingsRow({
       ) : null}
       <View style={[styles.text, { gap: spacing.xxs }]}>
         <AppText variant="callout" fit>
-          {label}
+          {fieldTitleCase(label)}
         </AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={2}>
+        <AppText
+          variant="caption"
+          color="secondary"
+          numberOfLines={detailNumberOfLines}>
           {detail}
         </AppText>
       </View>
@@ -72,10 +84,13 @@ export function SettingsRow({
     {
       minHeight: layout.minTapTarget,
       gap: spacing.md,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-      backgroundColor: theme.backgroundSunken,
-      borderColor: theme.separator,
+      paddingVertical: grouped ? spacing.sm : spacing.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: grouped ? 0 : spacing.xs,
+      backgroundColor: grouped ? 'transparent' : theme.backgroundSunken,
+      borderColor: grouped ? 'transparent' : theme.separator,
+      borderWidth: grouped ? 0 : StyleSheet.hairlineWidth,
+      borderRadius: grouped ? 0 : radii.md,
     },
   ];
 
@@ -104,33 +119,43 @@ export function SettingsRow({
 export function SettingsToggleRow({
   label,
   detail,
+  detailNumberOfLines,
   icon,
   value,
   disabled,
   onValueChange,
   testID,
+  grouped,
 }: {
   label: string;
   detail: string;
+  detailNumberOfLines?: number;
   icon?: AppIconName;
   value: boolean;
   disabled?: boolean;
   onValueChange: (value: boolean) => void;
   testID?: string;
+  grouped?: boolean;
 }) {
   const theme = useTheme();
+  const accessibilityLabel = `${label}. ${detail}`;
   return (
     <SettingsRow
       label={label}
       detail={detail}
+      detailNumberOfLines={detailNumberOfLines}
       icon={icon}
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+      grouped={grouped}
+      onPress={disabled ? undefined : () => onValueChange(!value)}
       trailing={
         <Switch
-          testID={testID}
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel}
           disabled={disabled}
           value={value}
-          onValueChange={onValueChange}
+          // Row press owns the toggle so the whole control is one hit target.
+          pointerEvents="none"
           trackColor={{ false: theme.separator, true: theme.accentSoft }}
           ios_backgroundColor={theme.separator}
         />
@@ -146,6 +171,7 @@ export function SettingsActionRow({
   onPress,
   accessibilityLabel,
   testID,
+  grouped,
 }: Omit<SettingsRowProps, 'trailing'> & { onPress: () => void }) {
   const theme = useTheme();
   return (
@@ -156,6 +182,7 @@ export function SettingsActionRow({
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
+      grouped={grouped}
       trailing={<Symbol name="chevron-right" size="sm" color={theme.textTertiary} />}
     />
   );
@@ -165,9 +192,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.md,
     borderCurve: 'continuous',
-    borderWidth: 1,
   },
   icon: {
     borderRadius: radii.sm,

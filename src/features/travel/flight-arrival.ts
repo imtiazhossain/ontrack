@@ -2,6 +2,7 @@ import { airportTimeZone } from '@/features/travel/airport-timezones';
 import {
     DAY_MS,
     addDays,
+    formatDateKeyMedium,
     formatDuration,
     formatMinutes,
     fromDateKey,
@@ -221,25 +222,9 @@ export function flightItineraryCaptionParts(
   };
 }
 
-const SHORT_MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const;
-
 /** Journey-card date chrome: `Sep 27`. */
 export function formatFlightJourneyDate(date: string): string {
-  const d = fromDateKey(date);
-  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return formatDateKeyMedium(date);
 }
 
 export function formatFlightItineraryCaption(

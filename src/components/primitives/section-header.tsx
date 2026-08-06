@@ -1,15 +1,26 @@
 import { Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 
 import { useResponsive } from '@/hooks/use-responsive';
+import { useAgentUiTarget } from '@/utils/agent-ui';
+
 import { AppText } from './app-text';
+import { fieldTitleCase } from './field-title-case';
 
 interface SectionHeaderProps {
   title: string;
   detail?: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** Stable `ontrack.*` testID for the trailing action control. */
+  actionTestID?: string;
+  actionDisabled?: boolean;
   titleStyle?: TextStyle;
   titleColor?: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'onAccent' | 'danger' | 'success';
+  /**
+   * Drop built-in vertical margins when the parent owns rhythm
+   * (e.g. `Screen contentStyle` gap). Default keeps legacy profile-style spacing.
+   */
+  flush?: boolean;
 }
 
 export function SectionHeader({
@@ -17,18 +28,29 @@ export function SectionHeader({
   detail,
   actionLabel,
   onAction,
+  actionTestID,
+  actionDisabled,
   titleStyle,
   titleColor = 'tertiary',
+  flush = false,
 }: SectionHeaderProps) {
-  const { spacing } = useResponsive();
+  const { spacing, layout } = useResponsive();
+  const titleText = fieldTitleCase(title);
+  const actionText = actionLabel ? fieldTitleCase(actionLabel) : undefined;
+  const handleAction = onAction && !actionDisabled ? onAction : undefined;
+  const agent = useAgentUiTarget(actionTestID, {
+    label: actionText,
+    onPress: handleAction,
+  });
+
   return (
     <View
       style={[
         styles.row,
         {
           gap: spacing.md,
-          marginTop: spacing.xl,
-          marginBottom: spacing.md,
+          marginTop: flush ? 0 : spacing.xl,
+          marginBottom: flush ? 0 : spacing.md,
         },
       ]}>
       <AppText
@@ -36,12 +58,29 @@ export function SectionHeader({
         color={titleColor}
         style={[styles.title, titleStyle]}
         fit>
-        {title}
+        {titleText}
       </AppText>
-      {actionLabel && onAction ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} onPress={onAction}>
+      {actionText && onAction ? (
+        <Pressable
+          ref={agent.ref}
+          onLayout={agent.onLayout}
+          testID={agent.testID}
+          accessibilityRole="button"
+          accessibilityLabel={actionText}
+          accessibilityState={{ disabled: Boolean(actionDisabled) }}
+          disabled={actionDisabled}
+          onPress={handleAction}
+          hitSlop={8}
+          style={{
+            minHeight: layout.minTapTarget,
+            minWidth: layout.minTapTarget,
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            flexShrink: 0,
+            opacity: actionDisabled ? 0.45 : 1,
+          }}>
           <AppText variant="caption" color="accent" fit>
-            {actionLabel}
+            {actionText}
           </AppText>
         </Pressable>
       ) : detail ? (
