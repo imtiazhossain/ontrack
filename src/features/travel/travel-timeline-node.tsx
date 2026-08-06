@@ -245,7 +245,7 @@ export function TravelTimelineNode({
       ? AgentUiIds.travel.timelineItem.openAddress(item.id)
       : undefined,
     {
-      label: item.details ? `Share address ${item.details}` : undefined,
+      label: item.details ? `Open address ${item.details}` : undefined,
       onPress: () => {
         if (!item.details) return;
         openAddressWithMapsChooser(item.details);
@@ -574,7 +574,7 @@ export function TravelTimelineNode({
                   onLayout={addressAgent.onLayout}
                   collapsable={false}
                   accessibilityRole="button"
-                  accessibilityLabel={`Share address ${item.details}`}
+                  accessibilityLabel={`Open address ${item.details}`}
                   hitSlop={8}
                   onPress={() => {
                     openAddressWithMapsChooser(item.details!);

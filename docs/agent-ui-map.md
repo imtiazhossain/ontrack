@@ -507,7 +507,7 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.travel.confirmation.importAction.rental` | Import rental details from a confirmation          |
 | `ontrack.travel.confirmation.importAction.stay`   | Import stay details from a confirmation            |
 | `ontrack.travel.timelineItem.<itemId>.editFlight` | Edit a flight itinerary leg                        |
-| `ontrack.travel.timelineItem.<itemId>.openAddress` | Stay address → system share sheet (web maps URL) |
+| `ontrack.travel.timelineItem.<itemId>.openAddress` | Stay address → maps chooser (Apple Maps URL / geo:) |
 | `ontrack.travel.addPhotos.confirmRemovePhoto`     | Confirm photo removal                              |
 | `ontrack.travel.importResult.close`               | Close an import result and return to the itinerary |
 | `ontrack.travel.importResult.reviewExpense`       | Review the expense related to an import            |
