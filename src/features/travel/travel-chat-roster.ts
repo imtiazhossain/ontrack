@@ -70,11 +70,20 @@ export function resolveTravelChatMembersFromRoster(input: {
 
   return ordered.map((person) => {
     const isSelf = Boolean(input.selfUserId && person.userId === input.selfUserId);
+    const avatar: TravelChatMember['avatar'] | undefined = person.avatarKind
+      ? {
+          kind: person.avatarKind,
+          color: person.avatarColor,
+          iconId: person.avatarIconId,
+          photoPath: person.avatarPhotoPath,
+        }
+      : undefined;
     return {
       id: person.userId,
       name: isSelf ? selfName : person.displayName,
       userId: person.userId,
       isSelf,
+      ...(avatar ? { avatar } : {}),
     };
   });
 }
@@ -234,6 +243,29 @@ export function matchTravelChatAccessCapability(
   if (memberMatch) return memberMatch;
   if (byExactId) return byExactId;
   return byIdentity[0];
+}
+
+/**
+ * Remap every local plan that matches a signed-in membership / host chat
+ * capability. Runs from Travel tab hydrate so chat is fixed before Group Chat
+ * opens (OTA may land while the user is still on the list).
+ */
+export async function repairTravelPlansChatAccess(input: {
+  plans: TravelPlan[];
+  savePlan: (plan: TravelPlan) => void;
+}): Promise<number> {
+  const capabilities = await listMyTravelChatAccess();
+  if (capabilities.length === 0) return 0;
+  let repaired = 0;
+  for (const plan of input.plans) {
+    const matched = matchTravelChatAccessCapability(plan, capabilities);
+    if (!matched) continue;
+    const patched = planPatchFromTravelChatCapability({ plan, capability: matched });
+    if (!patched) continue;
+    input.savePlan(patched);
+    repaired += 1;
+  }
+  return repaired;
 }
 
 /** Rewire an orphan local copy onto the shared trip + chat capability. */

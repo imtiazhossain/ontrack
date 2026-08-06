@@ -3,6 +3,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
+import type { ProfileAvatarMeta } from '@/features/account/profile-avatar-model';
 import { travelDialogPalette } from '@/features/travel/travel-dialog-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -12,6 +13,7 @@ export type TravelChatMember = {
   name: string;
   isSelf?: boolean;
   userId?: string;
+  avatar?: ProfileAvatarMeta;
 };
 
 /** Soft editorial palette for the group-chat surface. */
@@ -79,6 +81,7 @@ export function TravelChatMemberStack({
           <ProfileAvatar
             displayName={person.name}
             userId={person.userId}
+            avatar={person.avatar}
             isSelf={person.isSelf}
             size={size}
           />

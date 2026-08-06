@@ -441,19 +441,19 @@ export function TravelChatScreen({ planId }: { planId: string }) {
         </View>
         <View style={[styles.center, { zIndex: 1 }]}>
           {waitingOnRoster ? (
-            <LoadingBlock label="Opening trip chat…" />
+            <LoadingBlock label="Opening shared chat…" />
           ) : (
             <EmptyState
               icon="people"
               title={
                 signedInElsewhere
                   ? 'Sign In With the Account That Joined'
-                  : 'Chat Opens When a Friend Joins'
+                  : 'Couldn’t Open Shared Chat'
               }
               message={
                 signedInElsewhere
                   ? 'This trip is linked to a different onTrack account on this device. Sign in with the account that accepted the invite, or open the join link again.'
-                  : 'Invite someone to this trip. Once they accept, everyone can start planning here.'
+                  : 'Force-quit onTrack and reopen to install the latest update, then open Group Chat again. If it still fails, open the host’s join link while signed in.'
               }
             />
           )}

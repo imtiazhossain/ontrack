@@ -26,6 +26,7 @@ import {
     TravelSurfaceCard,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
+import { repairTravelPlansChatAccess } from '@/features/travel/travel-chat-roster';
 import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import { TravelTripCardHeader } from '@/features/travel/travel-trip-card-header';
@@ -153,6 +154,20 @@ function TravelScreenContent() {
     setStartDate('');
     setEndDate('');
   }, [showForm]);
+
+  useEffect(() => {
+    if (!user?.id || plans.length === 0) return;
+    let active = true;
+    void repairTravelPlansChatAccess({
+      plans: useTravel.getState().plans,
+      savePlan: (plan) => {
+        if (active) savePlan(plan);
+      },
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [user?.id, plans.length, savePlan]);
 
   useEffect(() => {
     if (

@@ -101,12 +101,24 @@ describe('resolveTravelChatMembersFromRoster', () => {
         name: 'Jordan Lee',
         userId: 'user-member',
         isSelf: true,
+        avatar: {
+          kind: 'icon',
+          color: undefined,
+          iconId: 'globe',
+          photoPath: undefined,
+        },
       },
       {
         id: 'user-host',
         name: 'Alex Rivera',
         userId: 'user-host',
         isSelf: false,
+        avatar: {
+          kind: 'icon',
+          color: undefined,
+          iconId: 'plane',
+          photoPath: undefined,
+        },
       },
     ]);
   });
