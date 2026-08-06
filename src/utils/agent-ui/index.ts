@@ -1,6 +1,7 @@
-// Keep the HMR beacon in the DEV dependency graph so watcher probes touch a
-// module Metro already has loaded (see scripts/lib/metro-watcher.sh).
-// Relative import: Metro HMR sometimes fails to resolve `@/utils/dev/*` for this file.
+// Keep the gitignored HMR beacon in the DEV dependency graph so watcher probes
+// touch a module Metro already has loaded (scripts/ensure-metro-hmr-beacon.sh,
+// scripts/lib/metro-watcher.sh). Relative import: Metro HMR sometimes fails to
+// resolve `@/utils/dev/*` for this file.
 import '../dev/metro-hmr-beacon';
 
 export { AgentTestId } from './AgentTestId';
@@ -97,8 +98,6 @@ export {
     type AgentUiEntry,
     type AgentUiFrame
 } from './registry';
-export { scrollAgentUiTargetIntoView } from './scroll-into-view';
-export { useAgentUiScrollContainer } from './use-agent-ui-scroll-container';
 export {
     AGENT_UI_ROUTE_ALIASES,
     agentUiDeepLinkForDestination,
@@ -109,5 +108,7 @@ export {
     setAgentUiRoute,
     type AgentUiRouteAlias
 } from './route';
+export { scrollAgentUiTargetIntoView } from './scroll-into-view';
+export { useAgentUiScrollContainer } from './use-agent-ui-scroll-container';
 export { useAgentUiTarget, type AgentUiTarget } from './use-agent-ui-target';
 

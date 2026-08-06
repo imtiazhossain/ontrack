@@ -23,6 +23,8 @@ expo-env.d.ts
 
 # Metro
 .metro-health-check*
+# Local HMR watcher probe (nonce churn — scripts/ensure-metro-hmr-beacon.sh)
+src/utils/dev/metro-hmr-beacon.ts
 
 # debug
 npm-debug.*

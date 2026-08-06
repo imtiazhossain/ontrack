@@ -80,6 +80,11 @@ describe('metro launch command contract', () => {
     expect(watcherLib).toContain('metro_watcher_healthy');
     expect(watcherLib).toContain('metro_entry_resolves');
     expect(watcherLib).toContain('metro_subscription_live');
+    expect(watcherLib).toContain('ensure_metro_hmr_beacon_probe_file');
+
+    const beaconEnsure = read('scripts/ensure-metro-hmr-beacon.sh');
+    expect(beaconEnsure).toContain('metro-hmr-beacon.ts');
+    expect(read('.gitignore')).toContain('src/utils/dev/metro-hmr-beacon.ts');
 
     const ensure = read('scripts/ensure-packager.sh');
     expect(ensure).toContain('metro-watcher.sh');

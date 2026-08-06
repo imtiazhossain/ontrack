@@ -20,6 +20,12 @@ METRO_WATCHER_PROBE_WAIT_SECS="${METRO_WATCHER_PROBE_WAIT_SECS:-6}"
 METRO_LOG="${METRO_LOG:-$ROOT/.cursor/metro-ensure.log}"
 METRO_WATCHMAN_REQUIRED_CAPS="${METRO_WATCHMAN_REQUIRED_CAPS:-field-content.sha1hex relative_root suffix-set wildmatch}"
 
+# Gitignored probe file — create a stable stub so Metro/tsc can resolve the import.
+ensure_metro_hmr_beacon_probe_file() {
+  METRO_WATCHER_PROBE_FILE="$METRO_WATCHER_PROBE_FILE" \
+    "$ROOT/scripts/ensure-metro-hmr-beacon.sh"
+}
+
 watchman_bin() {
   command -v watchman 2>/dev/null || true
 }
@@ -203,14 +209,15 @@ PY
 metro_subscription_live() {
   local before after nonce
   before="$(metro_subscription_since)" || return 1
-  [[ -f "$METRO_WATCHER_PROBE_FILE" ]] || return 1
+  ensure_metro_hmr_beacon_probe_file || return 1
 
   nonce="$(python3 - "$METRO_WATCHER_PROBE_FILE" <<'PY'
 import pathlib, sys, time
 path = pathlib.Path(sys.argv[1])
 nonce = f"metro-hmr-beacon-{time.time_ns()}"
 path.write_text(
-    "// Auto-maintained by scripts/lib/metro-watcher.sh — do not edit by hand.\n"
+    "// Local Metro watcher probe artifact (gitignored).\n"
+    "// Created by scripts/ensure-metro-hmr-beacon.sh; nonce updates by metro-watcher.sh.\n"
     f"export const METRO_HMR_BEACON = '{nonce}';\n",
     encoding="utf-8",
 )
@@ -286,3 +293,6 @@ Probe file:       ${METRO_WATCHER_PROBE_FILE}
 -------------------------------
 EOF
 }
+
+# Keep the gitignored import target present whenever this lib is sourced.
+ensure_metro_hmr_beacon_probe_file || true
