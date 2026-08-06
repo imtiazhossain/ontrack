@@ -78,18 +78,20 @@ export function TimelineProgressStrip({
             label={summary.label}>
             <StatusBadge label={summary.label} tone={tone} />
           </AgentTestId>
-          <AgentTestId
-            testID={AgentUiIds.travel.timeline.progressMeta}
-            label={daysDoneLabel}
-            style={styles.stripMeta}>
-            <AppText
-              variant="caption"
-              color="tertiary"
-              fit
-              style={styles.stripMetaText}>
-              {daysDoneLabel}
-            </AppText>
-          </AgentTestId>
+          <View style={styles.stripMeta}>
+            <AgentTestId
+              testID={AgentUiIds.travel.timeline.progressMeta}
+              label={daysDoneLabel}>
+              <AppText
+                variant="caption"
+                color="tertiary"
+                fit
+                align="right"
+                style={styles.stripMetaText}>
+                {daysDoneLabel}
+              </AppText>
+            </AgentTestId>
+          </View>
         </View>
         <View
           style={[
@@ -203,17 +205,21 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   stripRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     minWidth: 0,
   },
   stripMeta: {
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   stripMetaText: {
+    width: '100%',
     textAlign: 'right',
   },
   trackRow: {
