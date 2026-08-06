@@ -11,16 +11,18 @@ alwaysApply: false
 
 **Full procedure:** [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).
 
-After app-affecting Expo changes, prove the surface on **both** iOS (iPhone 17 Pro) and Android (Galaxy_S26). Prefer:
+After app-affecting Expo changes, prove the surface on **both** iOS (iPhone 17 Pro) and Android (Galaxy_S26). **Default close-out:**
 
 ```bash
+# Already on route → omit --flow; otherwise pass a named flow (travel-demo, …)
 ./scripts/agent-ui-verify-both.sh --route <path> [--flow <name>] --exists <id> …
 ```
 
 Paste both assert outputs. Exceptions: pure docs/rules, host-only scripts, or user scoped one platform.
 
-- Pin `AGENT_UI_PLATFORM=android` for Android; clear before iOS (sticky pin breaks default).
-- Reuse Metro when healthy; agents use `packager:ensure:start` — never `npm start` in agent shells.
-- Assert/`--color` then **STOP** — no ritual handoff screenshot.
+- Prefer named `--flow` / seeds over hand-built `--goto` / `--wait` chains.
+- Pin `AGENT_UI_PLATFORM=android` for Android; clear before iOS (sticky pin breaks default). `verify-both` does this.
+- Reuse Metro when healthy; agents use `packager:ensure:start` — never `npm start` in agent shells. No prophylactic force-stop / `--force-reconnect`.
+- Assert/`--color` then **STOP** — no ritual handoff screenshot. Glyph orientation → source, not screenshots.
 - Leave devices on the changed surface (not splash/blank/error/unrelated tab).
 - Verify slow or flaky after a retry or two → fix the blocker ([`stuck-check-config.mdc`](./stuck-check-config.mdc)); do not loop retries.

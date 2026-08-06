@@ -316,7 +316,11 @@ describe('agent-ui flows', () => {
     expect(listAgentUiFlowNames()).toContain('vehicles-new');
     expect(listAgentUiFlowNames()).toContain('workouts');
     const steps = resolveAgentUiFlow('travel-demo-add-flight');
-    expect(steps?.[0]).toMatchObject({ op: 'seed', to: 'travel-demo' });
+    expect(steps?.[0]).toMatchObject({
+      op: 'dismiss',
+      prefix: 'ontrack.travel.',
+    });
+    expect(steps?.[1]).toMatchObject({ op: 'seed', to: 'travel-demo' });
     expect(steps?.some((s) => s.op === 'goto')).toBe(true);
     expect(steps?.some((s) => s.op === 'wait')).toBe(true);
     expect(

@@ -417,6 +417,8 @@ export const AgentUiIds = {
     flight: {
       layoverDuration: 'ontrack.travel.flight.layoverDuration',
       connectionAirport: 'ontrack.travel.flight.connectionAirport',
+      departureAirport: 'ontrack.travel.flight.departureAirport',
+      arrivalAirport: 'ontrack.travel.flight.arrivalAirport',
       departureTerminal: 'ontrack.travel.flight.departureTerminal',
       arrivalTerminal: 'ontrack.travel.flight.arrivalTerminal',
       departureGate: 'ontrack.travel.flight.departureGate',
@@ -536,12 +538,23 @@ export const AgentUiIds = {
         `ontrack.travel.detailsEditor.remove.${itemId}`,
     },
     friends: {
+      close: 'ontrack.travel.friends.close',
       openInvite: 'ontrack.travel.friends.openInvite',
       cancelInvite: 'ontrack.travel.friends.cancelInvite',
       inviteName: 'ontrack.travel.friends.inviteName',
       inviteEmail: 'ontrack.travel.friends.inviteEmail',
       createInvite: 'ontrack.travel.friends.createInvite',
       leaveTrip: 'ontrack.travel.friends.leaveTrip',
+      copyJoinLink: 'ontrack.travel.friends.copyJoinLink',
+      shareJoinLink: 'ontrack.travel.friends.shareJoinLink',
+    },
+    currency: {
+      close: 'ontrack.travel.currency.close',
+      done: 'ontrack.travel.currency.done',
+    },
+    weather: {
+      close: 'ontrack.travel.weather.close',
+      done: 'ontrack.travel.weather.done',
     },
     friendRow: {
       action: (target: string, action: string) =>
@@ -564,7 +577,9 @@ export const AgentUiIds = {
       confirmDelete: 'ontrack.travel.notes.confirmDelete',
     },
     planDetail: {
+      /** Unused — weather/currency live on the list card (`list.tripWeather` / `list.currency`). */
       weather: 'ontrack.travel.planDetail.weather',
+      /** Unused — prefer `list.currency`. */
       currency: 'ontrack.travel.planDetail.currency',
       addToTimeline: 'ontrack.travel.planDetail.addToTimeline',
       transportSection: 'ontrack.travel.planDetail.section.transport',

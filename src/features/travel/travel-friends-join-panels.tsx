@@ -15,6 +15,7 @@ import type {
   TravelOpenJoinRequest,
   TravelParticipant,
 } from '@/features/travel/types';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 export function TravelOpenJoinCard({
@@ -101,50 +102,82 @@ export function TravelOpenJoinCard({
       )}
 
       <View style={styles.linkActions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Copy open join link"
-          disabled={!openJoinCode || openJoinBusy}
-          onPress={() => {
-            haptics.tap();
-            onCopy();
-          }}
-          style={({ pressed }) => [
+        <AgentTestId
+          testID={AgentUiIds.travel.friends.copyJoinLink}
+          label="Copy open join link"
+          onPress={
+            !openJoinCode || openJoinBusy
+              ? undefined
+              : () => {
+                  haptics.tap();
+                  onCopy();
+                }
+          }
+          style={[
             styles.joinAction,
             {
               backgroundColor: travelInputFieldBackground(theme),
               borderColor: chrome.fieldBorder,
               minHeight: Math.max(44, s(48)),
-              opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
+              opacity: !openJoinCode || openJoinBusy ? 0.45 : 1,
             },
           ]}>
-          <Symbol name="link" size="sm" color={chrome.label} />
-          <AppText variant="callout" fit numberOfLines={1}>
-            {copiedOpenJoin ? 'Copied' : 'Copy Link'}
-          </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Share open join link"
-          disabled={!openJoinCode || openJoinBusy}
-          onPress={() => {
-            haptics.tap();
-            onShare();
-          }}
-          style={({ pressed }) => [
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Copy open join link"
+            disabled={!openJoinCode || openJoinBusy}
+            onPress={() => {
+              haptics.tap();
+              onCopy();
+            }}
+            style={({ pressed }) => [
+              styles.joinActionInner,
+              { opacity: pressed ? 0.72 : 1 },
+            ]}>
+            <Symbol name="link" size="sm" color={chrome.label} />
+            <AppText variant="callout" fit numberOfLines={1}>
+              {copiedOpenJoin ? 'Copied' : 'Copy Link'}
+            </AppText>
+          </Pressable>
+        </AgentTestId>
+        <AgentTestId
+          testID={AgentUiIds.travel.friends.shareJoinLink}
+          label="Share open join link"
+          onPress={
+            !openJoinCode || openJoinBusy
+              ? undefined
+              : () => {
+                  haptics.tap();
+                  onShare();
+                }
+          }
+          style={[
             styles.joinAction,
             {
               backgroundColor: travelInputFieldBackground(theme),
               borderColor: chrome.fieldBorder,
               minHeight: Math.max(44, s(48)),
-              opacity: !openJoinCode || openJoinBusy ? 0.45 : pressed ? 0.72 : 1,
+              opacity: !openJoinCode || openJoinBusy ? 0.45 : 1,
             },
           ]}>
-          <Symbol name="share" size="sm" color={chrome.label} />
-          <AppText variant="callout" fit numberOfLines={1}>
-            Share
-          </AppText>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Share open join link"
+            disabled={!openJoinCode || openJoinBusy}
+            onPress={() => {
+              haptics.tap();
+              onShare();
+            }}
+            style={({ pressed }) => [
+              styles.joinActionInner,
+              { opacity: pressed ? 0.72 : 1 },
+            ]}>
+            <Symbol name="share" size="sm" color={chrome.label} />
+            <AppText variant="callout" fit numberOfLines={1}>
+              Share
+            </AppText>
+          </Pressable>
+        </AgentTestId>
       </View>
     </TravelSurfaceCard>
   );
@@ -292,12 +325,18 @@ const styles = StyleSheet.create({
   joinAction: {
     flex: 1,
     minWidth: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  joinActionInner: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
+    minHeight: 44,
   },
 });

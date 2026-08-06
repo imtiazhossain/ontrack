@@ -15,8 +15,11 @@ Agent-ui triage:
 
 1. Sticky pins — `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, serials/sim overrides.
 2. `route` with pin: iOS ~402×874, Android ~384×832. Width mismatch → fix env/device.
-3. Pin Android ops; unset/`ios` before iOS. Prefer `agent-ui-verify-both.sh`.
-4. Android after reconnect often `route=/` — land before `verify --route`.
-5. Metro `:8081/status`, daemon `:8191/health`; Android `adb reverse` for 8081/8191.
+3. Pin Android ops; unset/`ios` before iOS. Prefer `agent-ui-verify-both.sh` + named `--flow`.
+4. Android after reconnect often `route=/` — `verify` without `--flow`/`--open` fails fast; always land.
+5. iOS covered by Apple Account / system sheet → `./scripts/agent-ui-ios-alerts.sh ensure` (auto from `ensure_app_up`). Do not grind verify under it.
+6. Visible AVD needed → `ensure-android-emulator.sh --window` (restarts headless).
+7. Metro `:8081/status`, daemon `:8191/health`; Android `adb reverse` for 8081/8191.
+8. Do **not** force-stop / `--force-reconnect` for glyph/orientation checks — edit source, Fast Refresh, assert.
 
 Details: [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).

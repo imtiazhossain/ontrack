@@ -2,7 +2,7 @@
 # Persistent-style agent-ui entrypoint — one Python process for multi-step once chains.
 #
 # Preferred verification shape (web-like):
-#   ./scripts/agent-ui.sh once --flow travel-demo --assert-exists travel.planDetail.weather
+#   ./scripts/agent-ui.sh once --flow travel-demo-list --assert-exists travel.list.currency.trip-agent-ui-demo
 #   ./scripts/agent-ui.sh verify --route /travel/trip-agent-ui-demo --flow travel-demo \
 #     --exists travel.planDetail.transportSection --color travel.planDetail.transportSection '#2474A8'
 #   ./scripts/agent-ui.sh once --open travel --assert-prefix travel.planDetail.

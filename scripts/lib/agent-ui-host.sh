@@ -225,6 +225,25 @@ agent_ui_heal_packager() {
   return 1
 }
 
+# Dismiss blocking iOS SpringBoard sheets (Apple Account, etc.) when present.
+# No-op on Android / when AGENT_UI_SKIP_IOS_ALERTS=1. Cached clear ~90s.
+agent_ui_ensure_ios_system_alerts_clear() {
+  if agent_ui_is_android; then
+    return 0
+  fi
+  if [[ "${AGENT_UI_SKIP_IOS_ALERTS:-0}" == "1" ]]; then
+    return 0
+  fi
+  AGENT_UI_ROOT="$(agent_ui_repo_root)" AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+    python3 "$(agent_ui_repo_root)/scripts/lib/ios_system_alert.py" ensure
+}
+
+# Bridge answered — also clear iOS system sheets that cover the app.
+agent_ui_finish_app_up() {
+  agent_ui_ensure_ios_system_alerts_clear || return 1
+  return 0
+}
+
 # Gate verification: app must be up on the device (bridge answering).
 # Happy path = one cheap route probe. Soft-launch / heal only when down.
 # Skip with AGENT_UI_SKIP_APP_UP=1 (nested probes / ensure-packager recursion).
@@ -235,7 +254,8 @@ agent_ui_ensure_app_up() {
 
   # Definitive liveness: JS bridge answered a route probe.
   if agent_ui_bridge_answers; then
-    return 0
+    agent_ui_finish_app_up
+    return $?
   fi
 
   local device_label="simulator"
@@ -249,7 +269,8 @@ agent_ui_ensure_app_up() {
         reverse_was_missing=1
       fi
       if agent_ui_bridge_answers; then
-        return 0
+        agent_ui_finish_app_up
+        return $?
       fi
     fi
   fi
@@ -260,7 +281,8 @@ agent_ui_ensure_app_up() {
     echo "agent-ui: Android bridge quiet but recently ok — soft wait…" >&2
     while (( SECONDS < soft )); do
       if agent_ui_bridge_answers; then
-        return 0
+        agent_ui_finish_app_up
+        return $?
       fi
       sleep 0.5
     done
@@ -269,7 +291,8 @@ agent_ui_ensure_app_up() {
   if ! agent_ui_simulator_booted; then
     echo "agent-ui: ${device_label} not booted — ensuring packager/app…" >&2
     if agent_ui_heal_packager && agent_ui_bridge_answers; then
-      return 0
+      agent_ui_finish_app_up
+      return $?
     fi
     echo "error: ${device_label} is not booted (and heal failed)" >&2
     return 1
@@ -294,7 +317,8 @@ agent_ui_ensure_app_up() {
   fi
   while (( SECONDS < deadline )); do
     if agent_ui_bridge_answers; then
-      return 0
+      agent_ui_finish_app_up
+      return $?
     fi
     sleep 0.4
   done
@@ -305,7 +329,8 @@ agent_ui_ensure_app_up() {
     if [[ "$reverse_was_missing" == "1" ]]; then
       echo "agent-ui: adb reverse was missing — healing packager once…" >&2
       if agent_ui_heal_packager && agent_ui_bridge_answers; then
-        return 0
+        agent_ui_finish_app_up
+        return $?
       fi
     fi
     echo "agent-ui: Android process up but bridge quiet — skipping force-reconnect heal" >&2
@@ -315,7 +340,8 @@ agent_ui_ensure_app_up() {
 
   echo "agent-ui: app bridge not answering — healing packager…" >&2
   if agent_ui_heal_packager && agent_ui_bridge_answers; then
-    return 0
+    agent_ui_finish_app_up
+    return $?
   fi
 
   echo "error: ${BUNDLE_ID} is not up on the ${device_label} (bridge not answering)" >&2

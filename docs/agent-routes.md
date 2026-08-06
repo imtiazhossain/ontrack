@@ -35,9 +35,13 @@ Pin is required when iOS Simulator and Android Emulator are both running — oth
   --color travel.planDetail.transportSection '#2474A8'
 
 # One-process once chain (flow/open + structural asserts)
-./scripts/agent-ui.sh once --flow travel-demo \
-  --assert-exists travel.planDetail.weather \
-  --assert-route /travel/trip-agent-ui-demo
+./scripts/agent-ui.sh once --flow travel-demo-list \
+  --assert-exists travel.list.tripWeather.trip-agent-ui-demo \
+  --assert-route /travel
+
+# Leftover sheets: land flows dismiss travel overlays first; or once --dismiss
+./scripts/agent-ui.sh once --dismiss --flow travel-demo-list \
+  --assert-exists travel.list.currency.trip-agent-ui-demo
 
 ./scripts/agent-ui.sh once --flow travel-demo-add-flight \
   --assert-prefix travel.itineraryAdd.

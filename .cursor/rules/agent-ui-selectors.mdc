@@ -17,10 +17,10 @@ alwaysApply: false
 When you create or edit an interactive / agent-tappable control, same change:
 
 1. Constant in [`src/utils/agent-ui/ids.ts`](../../src/utils/agent-ui/ids.ts) → `ontrack.<feature>.<surface>.<control>`
-2. `testID` / `useAgentUiTarget` / `AgentTestId`
+2. **`AgentTestId` or `useAgentUiTarget`** — bare `testID=` does not register for agent-ui tap/dump/assert
 3. Document in [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md)
 
-Layout anchors (major sections): `AgentTestId` without `onPress` → `ontrack.<feature>.<surface>.section.<name>`.
+Layout anchors (major sections): `AgentTestId` without `onPress` → `ontrack.<feature>.<surface>.section.<name>`. Sheets: stamp `.close` / `.done` so land flows can `dismiss`.
 
 Coordinates are not an alternative. Screenshot bugs → [`screenshot-triage.mdc`](./screenshot-triage.mdc).
 
@@ -28,12 +28,13 @@ Coordinates are not an alternative. Screenshot bugs → [`screenshot-triage.mdc`
 
 0. Stuck → [`stuck-check-config.mdc`](./stuck-check-config.mdc)
 1. App up via `once`/`verify`/`flow` (or `ensure-packager.sh --start`)
-2. Already on route → `./scripts/agent-ui.sh verify --route …`
-3. Else `once --flow` / `agent-ui-flow.sh` / `agent-ui-open.sh` / known `agent-ui-tap.sh`
-4. Unknown id → **one** dump, then **retire it** (stamp id/map and/or named flow/seed) so the next run never dumps for that gap; re-prove with assert/tap — no second dump
-5. Assert / `--color` then **STOP** (see [`show-simulator-screenshot.mdc`](./show-simulator-screenshot.mdc))
+2. App-affecting close-out → `./scripts/agent-ui-verify-both.sh --route … [--flow <name>] --exists …`
+3. Already on route → `./scripts/agent-ui.sh verify --route …` (or verify-both without re-flow)
+4. Else named flow → `once --flow` / `agent-ui-flow.sh` / `agent-ui-open.sh` / known `agent-ui-tap.sh`
+5. Unknown id → **one** dump, then **retire it** (stamp id/map and/or named flow/seed) so the next run never dumps for that gap; re-prove with assert/tap — no second dump
+6. Assert / `--color` then **STOP** (see [`show-simulator-screenshot.mdc`](./show-simulator-screenshot.mdc))
 
-JS key paths work (`travel.planDetail.transportSection`). Off-screen: `agent-ui-scroll` — never host CGEvent swipes.
+JS key paths work (`travel.planDetail.transportSection`). Off-screen: `agent-ui-scroll` — never host CGEvent swipes. Android: expand + scroll before below-fold taps. Leftover sheets: travel land flows `dismiss` first, or `once --dismiss`.
 
 ## Dump = debt
 
@@ -41,4 +42,4 @@ Dump means the map/flows were incomplete. Same turn: add the missing `ontrack.*`
 
 ## Do not
 
-Dump “just to be sure”; leave a dump without a lasting id/flow fix; re-run `once --flow` when `verify --route` fits; mid-flow / ritual handoff screenshots; tab-hop; prophylactic `ensure-packager`; ship interactive UI without `ontrack.*` ids.
+Dump “just to be sure”; leave a dump without a lasting id/flow fix; re-run `once --flow` when `verify --route` fits; mid-flow / ritual handoff screenshots; tab-hop; prophylactic `ensure-packager` / force-reconnect; screenshot→vision loops for icon orientation; ship interactive UI without `ontrack.*` ids.

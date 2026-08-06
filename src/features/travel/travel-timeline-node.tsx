@@ -241,7 +241,7 @@ export function TravelTimelineNode({
     { label: toggleLabel, onPress: onToggle },
   );
   const addressAgent = useAgentUiTarget(
-    item.kind === 'stay' && item.details
+    item.kind === 'stay' && item.details && isExpanded
       ? AgentUiIds.travel.timelineItem.openAddress(item.id)
       : undefined,
     {
@@ -572,6 +572,7 @@ export function TravelTimelineNode({
                   ref={addressAgent.ref}
                   testID={addressAgent.testID}
                   onLayout={addressAgent.onLayout}
+                  collapsable={false}
                   accessibilityRole="button"
                   accessibilityLabel={`Open ${item.details} with Maps`}
                   hitSlop={8}

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { dismissAgentUiOverlays } from './dismiss-overlays';
 import { formatAgentUiSeedDetail, seedAgentUiFixture } from './fixtures';
 import {
   AGENT_UI_ANDROID_WAIT_TIMEOUT_MS,
@@ -46,7 +47,8 @@ export type AgentUiOp =
   | 'flow'
   | 'assert'
   | 'hit'
-  | 'overlay';
+  | 'overlay'
+  | 'dismiss';
 
 export type AgentUiRequest = {
   op?: string | string[];
@@ -102,6 +104,7 @@ const OPS = new Set<AgentUiOp>([
   'assert',
   'hit',
   'overlay',
+  'dismiss',
 ]);
 
 function parseOp(raw: string): AgentUiOp {
@@ -462,6 +465,29 @@ export async function handleAgentUiRequest(
       });
     }
     return Boolean(element);
+  }
+
+  if (op === 'dismiss') {
+    const scope = prefix ?? id ?? 'ontrack.';
+    const { tapped, rounds } = dismissAgentUiOverlays(scope);
+    if (tapped.length > 0) {
+      // Let sheet unmount / registry catch up before the next land step.
+      await sleep(Platform.OS === 'android' ? 200 : 120);
+    }
+    if (emitStatus) {
+      await writeAgentUiStatus({
+        op: 'dismiss',
+        id: scope,
+        ok: true,
+        detail:
+          tapped.length > 0
+            ? `dismissed ${tapped.length} (${rounds} round${rounds === 1 ? '' : 's'})`
+            : 'nothing open',
+        count: tapped.length,
+        route: getAgentUiRoute(),
+      });
+    }
+    return true;
   }
 
   if (op === 'route') {

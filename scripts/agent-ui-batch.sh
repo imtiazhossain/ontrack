@@ -5,7 +5,7 @@
 #   ./scripts/agent-ui-batch.sh --goto travel --wait-prefix ontrack.travel. --tap ontrack.travel.newTrip.open
 #   ./scripts/agent-ui-batch.sh --seed travel-demo --goto travel/trip-agent-ui-demo --wait-prefix ontrack.travel.planDetail.
 #   ./scripts/agent-ui-batch.sh --flow travel-demo-add-flight
-#   ./scripts/agent-ui-batch.sh --flow travel-demo --assert-exists ontrack.travel.planDetail.weather
+#   ./scripts/agent-ui-batch.sh --flow travel-demo-list --assert-exists ontrack.travel.list.currency.trip-agent-ui-demo
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -1,7 +1,9 @@
 import type { ComponentProps } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     BackHandler,
+    Keyboard,
+    type KeyboardEvent,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -64,8 +66,9 @@ export function TravelItineraryAddSheet({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const { spacing: rs } = useResponsive();
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const kindLabel =
     ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
   const title =
@@ -83,6 +86,38 @@ export function TravelItineraryAddSheet({
     return () => sub.remove();
   }, [visible, onClose]);
 
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardInset(0);
+      return;
+    }
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const updateInset = (event: KeyboardEvent) => {
+      Keyboard.scheduleLayoutAnimation(event);
+      const { height: kbHeight, screenY, width: kbWidth } = event.endCoordinates;
+      // Floating / side IMEs should not lift the sheet; docked IMEs must.
+      const fullWidth = kbWidth >= windowWidth * 0.8;
+      if (!fullWidth) {
+        setKeyboardInset(0);
+        return;
+      }
+      const fromScreenY = Math.max(0, windowHeight - screenY - insets.bottom);
+      const fromHeight = Math.max(0, kbHeight - insets.bottom);
+      setKeyboardInset(fromScreenY > 0 ? fromScreenY : fromHeight);
+    };
+    const showSubscription = Keyboard.addListener(showEvent, updateInset);
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardInset(0);
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [visible, insets.bottom, windowHeight, windowWidth]);
+
   if (!visible) return null;
 
   return (
@@ -95,7 +130,7 @@ export function TravelItineraryAddSheet({
         style={styles.backdrop}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
         pointerEvents="box-none"
         style={styles.modalRoot}>
@@ -106,6 +141,8 @@ export function TravelItineraryAddSheet({
               backgroundColor: chrome.sheetBg,
               maxHeight: sheetMaxHeight,
               paddingBottom: Math.max(insets.bottom, rs.sm),
+              // Lift the whole sheet above the soft keyboard (chat composer pattern).
+              marginBottom: keyboardInset,
             },
           ]}>
           <View
@@ -128,6 +165,7 @@ export function TravelItineraryAddSheet({
           <ScrollView
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             showsVerticalScrollIndicator={false}
             bounces
             style={styles.scroll}

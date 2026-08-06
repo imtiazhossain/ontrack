@@ -32,6 +32,7 @@ import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 import { sanitizeNumericInput } from '@/utils/parse';
 import { travelCurrencySheetStyles as styles } from './travel-currency-sheet.styles';
@@ -41,6 +42,7 @@ import {
   formatFxMoney,
   formatPlainAmount,
   formatRateDate,
+  formatRateInput,
   parseAmountText,
 } from './travel-currency-formatters';
 
@@ -165,7 +167,7 @@ function TravelCurrencySheetContent({
 
   const syncRateTextFromMarket = useCallback((nextMarket: number | undefined) => {
     if (nextMarket !== undefined && nextMarket > 0) {
-      setRateText(formatAmountInput(nextMarket));
+      setRateText(formatRateInput(nextMarket));
     } else {
       setRateText('');
     }
@@ -346,7 +348,7 @@ function TravelCurrencySheetContent({
     setDestinationText(nextDestinationText);
     if (nextOverride !== undefined) {
       setRateOverride(nextOverride);
-      setRateText(formatAmountInput(nextOverride));
+      setRateText(formatRateInput(nextOverride));
     } else {
       setRateOverride(undefined);
       syncRateTextFromMarket(nextMarketRate);
@@ -489,34 +491,51 @@ function TravelCurrencySheetContent({
       subtitleIcon={destinationLabel ? 'location' : undefined}
       onClose={onClose}
       closeAccessibilityLabel="Close currency calculator"
+      closeTestID={AgentUiIds.travel.currency.close}
       minHeight={sheetMinHeight}
       scrollKey={`${plan.id}-${visible ? 'open' : 'closed'}`}
       chrome={sheetChrome}
       footer={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Done"
+        <AgentTestId
+          testID={AgentUiIds.travel.currency.done}
+          label="Done"
           onPress={() => {
             haptics.tap();
             onClose();
           }}
-          style={({ pressed }) => [
+          style={[
             styles.doneButton,
             {
               backgroundColor: chrome.accent,
               minHeight: Math.max(layout.minTapTarget, s(52)),
               borderRadius: radii.pill,
-              opacity: pressed ? 0.88 : 1,
             },
           ]}>
-          <AppText
-            variant="callout"
-            fit
-            numberOfLines={1}
-            style={{ color: chrome.onAccent, fontWeight: '600' }}>
-            Done
-          </AppText>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Done"
+            onPress={() => {
+              haptics.tap();
+              onClose();
+            }}
+            style={({ pressed }) => [
+              {
+                minHeight: Math.max(layout.minTapTarget, s(52)),
+                borderRadius: radii.pill,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.88 : 1,
+              },
+            ]}>
+            <AppText
+              variant="callout"
+              fit
+              numberOfLines={1}
+              style={{ color: chrome.onAccent, fontWeight: '600' }}>
+              Done
+            </AppText>
+          </Pressable>
+        </AgentTestId>
       }>
       {Platform.OS === 'ios' ? (
         <InputAccessoryView nativeID={accessoryId}>
@@ -613,7 +632,7 @@ function TravelCurrencySheetContent({
             onRateChange={onRateChange}
             isCustom={isCustomRate}
             marketRateLabel={
-              marketRate !== undefined ? formatAmountInput(marketRate) : undefined
+              marketRate !== undefined ? formatRateInput(marketRate) : undefined
             }
             sourceLabel={rates?.sourceLabel}
             statusLabel={statusLabel}

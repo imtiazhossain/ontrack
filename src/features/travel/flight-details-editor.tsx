@@ -122,6 +122,8 @@ export function FlightDetailsEditor({
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <Input
+        testID={AgentUiIds.travel.flight.departureAirport}
+        accessibilityLabel="From"
         icon="location"
         stackedLabel="From"
         helperText={airportHelper(value.departureAirport)}
@@ -157,6 +159,8 @@ export function FlightDetailsEditor({
         {...itinerarySheetFieldProps(chrome, 'flight')}
       />
       <Input
+        testID={AgentUiIds.travel.flight.arrivalAirport}
+        accessibilityLabel="To"
         icon="location"
         stackedLabel="To"
         helperText={airportHelper(value.arrivalAirport)}

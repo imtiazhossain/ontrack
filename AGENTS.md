@@ -27,7 +27,7 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 
 - Metro: `npm run packager:ensure` / `packager:ensure:start` — **never** `npm start` in agent shells (Cursor kills it). Node 24 (`.nvmrc`).
 - Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
-- Dual verify: `npm run agent-ui:verify-both -- --route … --exists …`
+- Dual verify: `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route)
 - `npm run typecheck` · `npm test` · `npm run lint`
 
 Prefer leaving Metro up for Fast Refresh. Details: agent-ui skill + `package.json` scripts.

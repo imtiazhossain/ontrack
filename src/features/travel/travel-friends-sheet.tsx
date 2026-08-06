@@ -236,6 +236,7 @@ export function TravelFriendsSheet({
         }
         lockHeight
         closeAccessibilityLabel="Close Co-Travelers"
+        closeTestID={AgentUiIds.travel.friends.close}
         onClose={onClose}>
             <TripPeople
               host={hostPerson}

@@ -9,6 +9,7 @@ import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
@@ -50,55 +51,64 @@ export function TravelWeatherSheet({
       subtitleIcon={destinationLabel ? 'location' : undefined}
       onClose={onClose}
       closeAccessibilityLabel="Close weather"
+      closeTestID={AgentUiIds.travel.weather.close}
       minHeight={sheetMinHeight}
       scrollKey={`${plan.id}-${visible ? 'open' : 'closed'}`}
       chrome={chrome}
       footer={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Done"
+        <AgentTestId
+          testID={AgentUiIds.travel.weather.done}
+          label="Done"
           onPress={() => {
             haptics.tap();
             onClose();
           }}
-          style={({ pressed }) => [
+          style={[
             styles.doneButton,
             {
               minHeight: doneMinHeight,
               borderRadius: radii.pill,
-              opacity: pressed ? 0.88 : 1,
               boxShadow: light
                 ? '0 4px 14px rgba(160, 110, 40, 0.35), 0 1px 3px rgba(51, 39, 28, 0.12)'
                 : '0 8px 18px rgba(0, 0, 0, 0.35)',
             },
           ]}>
-          <LinearGradient
-            colors={[...doneColors]}
-            locations={light ? [0, 0.45, 1] : undefined}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[
-              styles.doneGradient,
-              {
-                minHeight: doneMinHeight,
-                borderRadius: radii.pill,
-              },
-            ]}>
-            <AppText
-              variant="callout"
-              fit
-              numberOfLines={1}
-              style={{
-                color: chrome.ctaText,
-                fontFamily: fontFamilies.serif,
-                fontSize: s(20),
-                lineHeight: s(25),
-                fontWeight: '400',
-              }}>
-              Done
-            </AppText>
-          </LinearGradient>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Done"
+            onPress={() => {
+              haptics.tap();
+              onClose();
+            }}
+            style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1 }]}>
+            <LinearGradient
+              colors={[...doneColors]}
+              locations={light ? [0, 0.45, 1] : undefined}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[
+                styles.doneGradient,
+                {
+                  minHeight: doneMinHeight,
+                  borderRadius: radii.pill,
+                },
+              ]}>
+              <AppText
+                variant="callout"
+                fit
+                numberOfLines={1}
+                style={{
+                  color: chrome.ctaText,
+                  fontFamily: fontFamilies.serif,
+                  fontSize: s(20),
+                  lineHeight: s(25),
+                  fontWeight: '400',
+                }}>
+                Done
+              </AppText>
+            </LinearGradient>
+          </Pressable>
+        </AgentTestId>
       }>
       <View style={{ paddingTop: s(16) }}>
         <TravelWeatherCard

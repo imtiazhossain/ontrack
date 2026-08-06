@@ -65,7 +65,7 @@ Each map row below is a stable id; use `agent-ui-source.sh` for the **file** col
 ./scripts/agent-ui-dump.sh --prefix ontrack.today
 
 # Screenshot triage
-./scripts/agent-ui-source.sh travel.planDetail.weather
+./scripts/agent-ui-source.sh travel.list.tripWeather.trip-agent-ui-demo
 ./scripts/agent-ui-hit.sh 180 420
 ./scripts/agent-ui-overlay.sh on
 ```
@@ -493,6 +493,8 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.travel.detailsEditor.remove.<itemId>`    | Remove an itinerary item                           |
 | `ontrack.travel.flight.layoverDuration`           | Set a flight-leg layover as hours and minutes      |
 | `ontrack.travel.flight.connectionAirport`         | Set the connection / layover airport code          |
+| `ontrack.travel.flight.departureAirport`          | Departure airport code (From)                      |
+| `ontrack.travel.flight.arrivalAirport`            | Arrival airport code (To)                          |
 | `ontrack.travel.flight.departureTerminal`         | Set the departure airport terminal                 |
 | `ontrack.travel.flight.arrivalTerminal`           | Set the arrival airport terminal                   |
 | `ontrack.travel.flight.departureGate`             | Set the departure airport gate                     |
@@ -509,12 +511,19 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.travel.addPhotos.confirmRemovePhoto`     | Confirm photo removal                              |
 | `ontrack.travel.importResult.close`               | Close an import result and return to the itinerary |
 | `ontrack.travel.importResult.reviewExpense`       | Review the expense related to an import            |
+| `ontrack.travel.friends.close`                    | Close the Co-Travelers sheet                       |
 | `ontrack.travel.friends.openInvite`               | Open the friend invitation form                    |
 | `ontrack.travel.friends.cancelInvite`             | Close the friend invitation form                   |
 | `ontrack.travel.friends.inviteName`               | Friend invitation name                             |
 | `ontrack.travel.friends.inviteEmail`              | Friend invitation account email                    |
 | `ontrack.travel.friends.createInvite`             | Create a friend invitation                         |
 | `ontrack.travel.friends.leaveTrip`                | Leave a shared trip (non-host members)             |
+| `ontrack.travel.friends.copyJoinLink`             | Copy the open join link                            |
+| `ontrack.travel.friends.shareJoinLink`            | Share the open join link                           |
+| `ontrack.travel.currency.close`                   | Close the currency calculator                      |
+| `ontrack.travel.currency.done`                    | Done on the currency calculator                    |
+| `ontrack.travel.weather.close`                    | Close destination weather                          |
+| `ontrack.travel.weather.done`                     | Done on destination weather                        |
 | `ontrack.travel.friendRow.<target>.<action>`      | Manage, rename, or remove a trip friend            |
 | `ontrack.travel.confirmation.open.<kind>`         | Open uploaded confirmation images                  |
 | `ontrack.travel.confirmation.close`               | Close the confirmation viewer                      |
@@ -650,8 +659,8 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 
 | testID                                         | Control                                                                  |
 | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `ontrack.travel.planDetail.weather`            | Weather                                                                  |
-| `ontrack.travel.planDetail.currency`           | Currency                                                                 |
+| ~~`ontrack.travel.planDetail.weather`~~        | **Unused** — use `list.tripWeather.<tripId>` on the travel list          |
+| ~~`ontrack.travel.planDetail.currency`~~       | **Unused** — use `list.currency.<tripId>` on the travel list             |
 | `ontrack.travel.planDetail.addToTimeline`      | Add to Timeline                                                          |
 | `ontrack.travel.planDetail.section.transport`  | Expand/collapse transport group                                          |
 | `ontrack.travel.planDetail.section.timeline`   | Expand/collapse timeline                                                 |

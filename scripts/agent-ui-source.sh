@@ -5,7 +5,7 @@
 #   ./scripts/agent-ui-source.sh travel.planDetail.transportSection
 #   ./scripts/agent-ui-source.sh ontrack.travel.planDetail.section.transport
 #   ./scripts/agent-ui-source.sh --label "Transport"
-#   ./scripts/agent-ui-source.sh --json travel.planDetail.weather
+#   ./scripts/agent-ui-source.sh --json travel.list.currency.trip-agent-ui-demo
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

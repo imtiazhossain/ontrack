@@ -11,6 +11,21 @@ export function formatAmountInput(amount: number): string {
   }
 }
 
+/** FX unit rates — keep enough digits so displayed rate × amount matches money rounding. */
+export function formatRateInput(rate: number): string {
+  if (!Number.isFinite(rate) || !(rate > 0)) return '';
+  try {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+      useGrouping: false,
+    }).format(rate);
+  } catch {
+    const fixed = rate.toFixed(6);
+    return fixed.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.00$/, '.00');
+  }
+}
+
 export function parseAmountText(text: string): number | undefined {
   const cleaned = text.replace(/,/g, '').trim();
   if (!cleaned) return undefined;

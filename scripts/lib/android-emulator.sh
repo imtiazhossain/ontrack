@@ -45,6 +45,30 @@ android_emu_want_window() {
   esac
 }
 
+# True when the preferred AVD is running with `-no-window` / headless qemu.
+android_emu_is_headless() {
+  local name
+  name="$(android_emu_preferred_name)"
+  # Match either the headless qemu binary or an emulator cmdline with -no-window.
+  if pgrep -lf "qemu-system-.*-headless.*${name}|${name}.*-no-window|-no-window.*${name}" >/dev/null 2>&1; then
+    return 0
+  fi
+  # Fallback: any qemu for this AVD whose argv includes -no-window.
+  if pgrep -lf "qemu-system.*-avd[[:space:]]+${name}" 2>/dev/null | grep -q -- '-no-window'; then
+    return 0
+  fi
+  return 1
+}
+
+# Soft keyboard visible even with hw.keyboard=yes (needed for keyboard layout hunts).
+android_emu_ensure_soft_ime() {
+  local serial="${1:-${ONTRACK_ANDROID_SERIAL:-}}"
+  local adb_bin
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" && -n "$serial" ]] || return 0
+  "$adb_bin" -s "$serial" shell settings put secure show_ime_with_hard_keyboard 1 >/dev/null 2>&1 || true
+}
+
 android_emu_adb() {
   local adb_bin
   adb_bin="$(android_emu_sdk_bin adb)"
@@ -247,11 +271,32 @@ ensure_preferred_android_emulator() {
   serial="$(android_emu_preferred_serial || true)"
   android_emu_shutdown_others "${serial:-}"
 
+  local want_window=0
+  if android_emu_want_window; then
+    want_window=1
+  fi
+
+  # `--window` must restart a headless instance — reusing it leaves no GUI.
+  if [[ -n "$serial" ]] && (( want_window )) && android_emu_is_headless; then
+    echo "Restarting ${name} with window (was headless)…"
+    "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+    local kill_deadline=$((SECONDS + 30))
+    while (( SECONDS < kill_deadline )); do
+      serial="$(android_emu_preferred_serial || true)"
+      [[ -z "$serial" ]] && break
+      sleep 1
+    done
+    serial=""
+  fi
+
   if [[ -n "$serial" ]]; then
     if android_emu_wait_boot "$serial"; then
       export ANDROID_SERIAL="$serial"
       export ONTRACK_ANDROID_SERIAL="$serial"
       android_emu_ensure_adb_reverse || true
+      if (( want_window )); then
+        android_emu_ensure_soft_ime "$serial"
+      fi
       echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
       return 0
     fi
@@ -259,9 +304,7 @@ ensure_preferred_android_emulator() {
 
   log="${ROOT:-.}/.cursor/android-emulator.log"
   mkdir -p "$(dirname "$log")" 2>/dev/null || true
-  local want_window=0
-  if android_emu_want_window; then
-    want_window=1
+  if (( want_window )); then
     echo "Booting preferred emulator (window): ${name}"
   else
     echo "Booting preferred emulator (headless): ${name}"
@@ -328,6 +371,9 @@ PY
   export ANDROID_SERIAL="$serial"
   export ONTRACK_ANDROID_SERIAL="$serial"
   android_emu_ensure_adb_reverse || true
+  if (( want_window )); then
+    android_emu_ensure_soft_ime "$serial"
+  fi
   echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
   return 0
 }

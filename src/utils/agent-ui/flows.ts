@@ -47,10 +47,13 @@ function flowWaitTimeoutMs(): number {
 
 export const AGENT_UI_FLOWS = {
   'travel-list': [
+    // Clear leftover travel sheets so list taps are not swallowed.
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'goto', to: 'travel' },
     { op: 'wait', prefix: 'ontrack.travel.', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
   ],
   'travel-demo': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
     {
@@ -60,6 +63,7 @@ export const AGENT_UI_FLOWS = {
     },
   ],
   'travel-demo-list': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: 'travel' },
     {
@@ -69,6 +73,7 @@ export const AGENT_UI_FLOWS = {
     },
   ],
   'travel-demo-add-flight': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/flight` },
     {
@@ -76,8 +81,11 @@ export const AGENT_UI_FLOWS = {
       prefix: 'ontrack.travel.itineraryAdd.',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
+    // Sheet chrome paints after route; avoid mid-open screenshots/taps.
+    { op: 'wait', ms: 250 },
   ],
   'travel-demo-add-flight-connecting': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     {
       op: 'goto',
@@ -92,6 +100,7 @@ export const AGENT_UI_FLOWS = {
     { op: 'wait', ms: 350 },
   ],
   'travel-demo-add-flight-roundtrip': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     {
       op: 'goto',
@@ -103,7 +112,7 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
     // Import prefills settle after mount; keep a short pure delay.
-    { op: 'wait', ms: 200 },
+    { op: 'wait', ms: 250 },
     { op: 'tap', id: 'ontrack.travel.itineraryAdd.submit' },
     {
       op: 'wait',
@@ -121,12 +130,27 @@ export const AGENT_UI_FLOWS = {
     },
   ],
   'travel-demo-edit-flight': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
     {
       op: 'wait',
       prefix: 'ontrack.travel.planDetail.',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    // Expand then scroll — Edit sits below the fold on Android (~384×832).
+    {
+      op: 'tap',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.default`,
+    },
+    {
+      op: 'wait',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.editFlight`,
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    {
+      op: 'scroll',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.editFlight`,
     },
     {
       op: 'tap',
@@ -139,6 +163,7 @@ export const AGENT_UI_FLOWS = {
     },
   ],
   'open-new-trip': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'goto', to: 'travel' },
     { op: 'wait', prefix: 'ontrack.travel.', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
     { op: 'tap', id: 'ontrack.travel.newTrip.open' },
@@ -147,6 +172,7 @@ export const AGENT_UI_FLOWS = {
       id: 'ontrack.travel.newTrip.title',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
+    { op: 'wait', ms: 250 },
   ],
   calendar: [
     { op: 'goto', to: 'calendar' },

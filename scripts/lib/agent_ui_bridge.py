@@ -637,6 +637,21 @@ def parse_batch_args(
             )
         elif flag == "--wait-ms":
             ops.append({"op": "wait", "ms": int(args.pop(0) if args else "80")})
+        elif flag == "--dismiss":
+            # Best-effort close leftover sheets (optional prefix scope).
+            scope = "ontrack."
+            if args and not args[0].startswith("-"):
+                scope = ids.resolve_prefix(args.pop(0), root=root)
+            ops.append({"op": "dismiss", "prefix": scope})
+        elif flag == "--dismiss-prefix":
+            ops.append(
+                {
+                    "op": "dismiss",
+                    "prefix": ids.resolve_prefix(
+                        args.pop(0) if args else "ontrack.", root=root
+                    ),
+                }
+            )
         elif flag == "--route":
             # Probe current route (no match). Prefer --assert-route for checks.
             ops.append({"op": "route"})
@@ -733,6 +748,11 @@ def run_host_ops(
     return results
 
 
+# Let sheet/route chrome finish painting before a host screenshot (avoids
+# mid-open transparency / partial-layout captures on Android).
+SCREENSHOT_SETTLE_SECS = float(os.environ.get("AGENT_UI_SCREENSHOT_SETTLE_SECS", "0.45"))
+
+
 def run_once(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
     """Run a multi-step once chain in one process / one in-app batch."""
     ops, host_ops = parse_batch_args(argv, allow_host_ops=True)
@@ -749,8 +769,12 @@ def run_once(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
     if host_ops:
         # Reuse one screenshot across color + --screenshot when both present.
         shared = None
+        needs_capture = False
         for hop in host_ops:
-            if hop.get("op") == "screenshot":
+            op_name = hop.get("op")
+            if op_name in {"screenshot", "color"}:
+                needs_capture = True
+            if op_name == "screenshot":
                 path_raw = hop.get("path") or ""
                 shared = (
                     Path(path_raw)
@@ -759,7 +783,8 @@ def run_once(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
                 )
                 if not shared.is_absolute():
                     shared = repo_root() / shared
-                break
+        if needs_capture and SCREENSHOT_SETTLE_SECS > 0:
+            time.sleep(SCREENSHOT_SETTLE_SECS)
         host_results = run_host_ops(
             host_ops, wait_secs=wait_secs, shared_screenshot=shared
         )
@@ -818,12 +843,23 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
         i += 1
 
     already = False
-    if route_want and land_ops:
+    current: str | None = None
+    if route_want:
         probe = send({"op": "route"}, wait_secs=min(2.5, wait_secs), allow_fail=True)
-        current = probe.get("route")
-        already = route_matches(
-            current if isinstance(current, str) else None, route_want
-        )
+        current = probe.get("route") if isinstance(probe.get("route"), str) else None
+        if land_ops:
+            already = route_matches(current, route_want)
+        # Android reconnect often wakes on `/` — refuse silent assert-only verify.
+        if (
+            agent_ui_platform() == "android"
+            and not land_ops
+            and route_want not in {"/", ""}
+            and (not current or current == "/")
+        ):
+            raise SystemExit(
+                "verify: Android is on / — pass --flow or --open/--goto to land "
+                f"(wanted {route_want})"
+            )
 
     chain: list[str] = []
     if land_ops and not already:

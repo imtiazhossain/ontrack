@@ -49,6 +49,10 @@ export {
     type AgentUiFlowStep
 } from './flows';
 export {
+    dismissAgentUiOverlays,
+    isAgentUiDismissTargetId,
+} from './dismiss-overlays';
+export {
     handleAgentUiRequest,
     handleAgentUiUrl,
     isAgentUiUrl,

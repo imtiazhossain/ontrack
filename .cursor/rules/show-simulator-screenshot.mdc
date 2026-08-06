@@ -1,5 +1,5 @@
 ---
-description: Prove UI with assert/--color by default; screenshot only for visual claims
+description: Prove UI with assert/--color by default; screenshot only for visual claims; never guess icon orientation from vision
 globs:
   - src/**/*.{ts,tsx}
   - scripts/agent-ui*
@@ -21,3 +21,12 @@ Default proof — **STOP after assert**:
 - Dumps ≤ 1 per verification.
 
 When a screenshot is required: state claims → one final capture → every claim visible in that image.
+
+## Vision honesty (no guessing)
+
+Screenshots are lossy. Tiny glyphs, icon orientation/rotation, and subtle optical alignment are often **not reliably readable**.
+
+- If the image does not clearly settle a **layout** claim → say **not sure** and stop. Do not invent a defect.
+- Do not “fix” orientation, upside-down, flipped, or micro-alignment issues from vision alone.
+- Orientation / glyph geometry → `Symbol` / `design-system/icons.ts` / transforms in source, then Fast Refresh + assert. No screenshot crop loops; no force-reconnect to re-check icons.
+- Never escalate an uncertain visual impression into a multi-step fix loop without user confirmation.

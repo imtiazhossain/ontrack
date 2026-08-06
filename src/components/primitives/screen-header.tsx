@@ -77,14 +77,20 @@ export function ScreenHeader({
     </AppText>
   );
 
+  // Flourish sits behind the title only so long subtitles stay readable.
+  const decoratedTitle = decoration ? (
+    <View style={styles.copyDecorated}>
+      <View style={styles.decoration} pointerEvents="none">
+        {decoration}
+      </View>
+      <View style={styles.copyForeground}>{titleBlock}</View>
+    </View>
+  ) : (
+    titleBlock
+  );
+
   // Compact back stays on the eyebrow band; title + subtitle share the page left edge.
   if (leading && eyebrow) {
-    const titleStack = (
-      <>
-        {titleBlock}
-        {subtitleBlock}
-      </>
-    );
     return (
       <View style={[styles.stack, { gap: spacing.xs }, style]}>
         <View style={[styles.eyebrowRow, { gap: spacing.xs }]}>
@@ -94,42 +100,23 @@ export function ScreenHeader({
           </AppText>
           {trailingSlot}
         </View>
-        {decoration ? (
-          <View style={styles.copyDecorated}>
-            <View style={styles.decoration} pointerEvents="none">
-              {decoration}
-            </View>
-            <View style={styles.copyForeground}>{titleStack}</View>
-          </View>
-        ) : (
-          titleStack
-        )}
+        {decoratedTitle}
+        {subtitleBlock}
       </View>
     );
   }
 
-  const copy = (
-    <>
-      {eyebrow ? (
-        <AppText variant="overline" color="accent" fit>
-          {eyebrow}
-        </AppText>
-      ) : null}
-      {titleBlock}
-      {subtitleBlock}
-    </>
-  );
-
   return (
     <View style={[styles.root, { gap: spacing.sm }, style]}>
       {leading ? <View style={styles.action}>{leading}</View> : null}
-      <View style={[styles.copy, { gap: spacing.xs }, decoration ? styles.copyDecorated : null]}>
-        {decoration ? (
-          <View style={styles.decoration} pointerEvents="none">
-            {decoration}
-          </View>
+      <View style={[styles.copy, { gap: spacing.xs }]}>
+        {eyebrow ? (
+          <AppText variant="overline" color="accent" fit>
+            {eyebrow}
+          </AppText>
         ) : null}
-        {decoration ? <View style={[styles.copyForeground, { gap: spacing.xs }]}>{copy}</View> : copy}
+        {decoratedTitle}
+        {subtitleBlock}
       </View>
       {trailingSlot}
     </View>
