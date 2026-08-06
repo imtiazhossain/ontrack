@@ -6,6 +6,7 @@ import { AgentUiOverlayToggle } from './AgentUiOverlayToggle';
 import { AgentUiIds } from './ids';
 import {
   agentUiOverlayShortLabel,
+  isAgentUiFabVisible,
   isAgentUiOverlayEnabled,
   isAgentUiOverlayPaintTarget,
   subscribeAgentUiOverlay,
@@ -34,6 +35,11 @@ export function AgentUiOverlay() {
     subscribeAgentUiOverlay,
     isAgentUiOverlayEnabled,
     () => false,
+  );
+  const fabVisible = useSyncExternalStore(
+    subscribeAgentUiOverlay,
+    isAgentUiFabVisible,
+    () => true,
   );
   const framesEpoch = useSyncExternalStore(
     subscribeAgentUiFrames,
@@ -92,7 +98,9 @@ export function AgentUiOverlay() {
 
   const layer = (
     <View style={styles.layer} pointerEvents="box-none" collapsable={false}>
-      <AgentUiOverlayToggle enabled={enabled} idCount={elements.length} />
+      {fabVisible ? (
+        <AgentUiOverlayToggle enabled={enabled} idCount={elements.length} />
+      ) : null}
       {enabled
         ? elements.map((entry) => {
             const frame = entry.frame!;

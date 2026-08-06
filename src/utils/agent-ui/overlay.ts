@@ -6,7 +6,13 @@
 type Listener = () => void;
 
 let overlayEnabled = false;
+/** Floating Overlay FAB — long-press hides; enabling overlay brings it back. */
+let fabVisible = true;
 const listeners = new Set<Listener>();
+
+function notifyListeners(): void {
+  for (const listener of listeners) listener();
+}
 
 /** Chrome that stays mounted across tabs / stacks — always safe to paint. */
 const OVERLAY_GLOBAL_PREFIXES = [
@@ -81,10 +87,43 @@ export function isAgentUiOverlayEnabled(): boolean {
   return overlayEnabled;
 }
 
+export function isAgentUiFabVisible(): boolean {
+  return fabVisible;
+}
+
 export function setAgentUiOverlayEnabled(enabled: boolean): void {
-  if (overlayEnabled === enabled) return;
-  overlayEnabled = enabled;
-  for (const listener of listeners) listener();
+  let changed = false;
+  if (overlayEnabled !== enabled) {
+    overlayEnabled = enabled;
+    changed = true;
+  }
+  // Turning overlay on (diagnostics / script) restores a long-press-dismissed FAB.
+  if (enabled && !fabVisible) {
+    fabVisible = true;
+    changed = true;
+  }
+  if (changed) notifyListeners();
+}
+
+/** Hide the floating Overlay button and turn paint off. */
+export function dismissAgentUiFab(): void {
+  let changed = false;
+  if (fabVisible) {
+    fabVisible = false;
+    changed = true;
+  }
+  if (overlayEnabled) {
+    overlayEnabled = false;
+    changed = true;
+  }
+  if (changed) notifyListeners();
+}
+
+/** Show the floating Overlay button again (does not enable paint). */
+export function restoreAgentUiFab(): void {
+  if (fabVisible) return;
+  fabVisible = true;
+  notifyListeners();
 }
 
 export function toggleAgentUiOverlay(): boolean {

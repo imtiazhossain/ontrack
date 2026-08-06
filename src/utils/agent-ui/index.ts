@@ -4,6 +4,7 @@
 import '../dev/metro-hmr-beacon';
 
 export { AgentTestId } from './AgentTestId';
+export { AgentUiFabRestoreHost } from './AgentUiFabRestoreHost';
 export { AgentUiOverlay } from './AgentUiOverlay';
 export { AgentUiRouteSync } from './AgentUiRouteSync';
 export {
@@ -65,8 +66,11 @@ export {
 export {
     agentUiOverlayRoutePrefixes,
     agentUiOverlayShortLabel,
+    dismissAgentUiFab,
+    isAgentUiFabVisible,
     isAgentUiOverlayEnabled,
     isAgentUiOverlayPaintTarget,
+    restoreAgentUiFab,
     setAgentUiOverlayEnabled,
     subscribeAgentUiOverlay,
     toggleAgentUiOverlay

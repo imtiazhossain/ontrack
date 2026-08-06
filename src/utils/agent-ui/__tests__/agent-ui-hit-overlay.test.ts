@@ -5,8 +5,11 @@ import {
 import {
   agentUiOverlayRoutePrefixes,
   agentUiOverlayShortLabel,
+  dismissAgentUiFab,
+  isAgentUiFabVisible,
   isAgentUiOverlayEnabled,
   isAgentUiOverlayPaintTarget,
+  restoreAgentUiFab,
   setAgentUiOverlayEnabled,
 } from '../overlay';
 import {
@@ -85,6 +88,11 @@ describe('agent-ui hit-test', () => {
 describe('agent-ui overlay', () => {
   beforeEach(() => {
     setAgentUiOverlayEnabled(false);
+    // Ensure FAB is visible for each case (dismiss leaves it hidden).
+    if (!isAgentUiFabVisible()) {
+      setAgentUiOverlayEnabled(true);
+      setAgentUiOverlayEnabled(false);
+    }
     mockWrite.mockClear();
   });
 
@@ -131,6 +139,31 @@ describe('agent-ui overlay', () => {
     await handleAgentUiRequest({ op: 'overlay', to: 'toggle' });
     expect(isAgentUiOverlayEnabled()).toBe(true);
   });
+
+  it('hides the FAB on dismiss and restores it when overlay is turned on', () => {
+    expect(isAgentUiFabVisible()).toBe(true);
+    setAgentUiOverlayEnabled(true);
+    dismissAgentUiFab();
+    expect(isAgentUiFabVisible()).toBe(false);
+    expect(isAgentUiOverlayEnabled()).toBe(false);
+
+    setAgentUiOverlayEnabled(false);
+    expect(isAgentUiFabVisible()).toBe(false);
+
+    setAgentUiOverlayEnabled(true);
+    expect(isAgentUiFabVisible()).toBe(true);
+    expect(isAgentUiOverlayEnabled()).toBe(true);
+  });
+
+  it('restores a dismissed FAB without enabling overlay paint', () => {
+    dismissAgentUiFab();
+    expect(isAgentUiFabVisible()).toBe(false);
+    expect(isAgentUiOverlayEnabled()).toBe(false);
+    restoreAgentUiFab();
+    expect(isAgentUiFabVisible()).toBe(true);
+    expect(isAgentUiOverlayEnabled()).toBe(false);
+  });
+
 
   it('parses hit/overlay urls', () => {
     expect(parseAgentUiUrl('ontrack://agent/ui?op=overlay&to=on')).toEqual({

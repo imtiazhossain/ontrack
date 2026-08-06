@@ -778,7 +778,7 @@ Deep link: `ontrack://travel/<planId>/chat` → `/travel/[id]/chat`
 | testID                            | Control                                                                 |
 | --------------------------------- | ----------------------------------------------------------------------- |
 | `ontrack.agentUi.overlay.root`    | Overlay host (`./scripts/agent-ui-overlay.sh on` paints framed testIDs) |
-| `ontrack.agentUi.overlay.toggle`  | Draggable FAB — tap toggles overlay; drag to move (__DEV__)             |
+| `ontrack.agentUi.overlay.toggle`  | Draggable FAB — tap toggles overlay; drag to move; long-press hides. Restore: page long-press (Dev Mode + developer account) or Diagnostics → Overlay (__DEV__) |
 
 ## Source of truth
 

@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AgentUiIds } from './ids';
-import { toggleAgentUiOverlay } from './overlay';
+import { dismissAgentUiFab, toggleAgentUiOverlay } from './overlay';
 import { useAgentUiTarget } from './use-agent-ui-target';
 
 const BUTTON_MIN_WIDTH = 72;
@@ -43,11 +43,16 @@ type Props = {
 };
 
 /**
- * Compact draggable __DEV__ FAB — tap toggles overlay frames; drag to move.
+ * Compact draggable __DEV__ FAB — tap toggles overlay frames; drag to move;
+ * long-press dismisses. Restore with a page long-press (Dev Mode + developer
+ * account) or by turning Overlay on in Diagnostics.
  */
 export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
   const onToggle = useCallback(() => {
     toggleAgentUiOverlay();
+  }, []);
+  const onDismiss = useCallback(() => {
+    dismissAgentUiFab();
   }, []);
   const target = useAgentUiTarget(AgentUiIds.agentUi.overlayToggle, {
     label: enabled ? 'Hide agent UI overlay' : 'Show agent UI overlay',
@@ -88,11 +93,17 @@ export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
       runOnJS(persistPosition)(left.value, top.value);
     });
 
+  const longPress = Gesture.LongPress()
+    .minDuration(450)
+    .onStart(() => {
+      runOnJS(onDismiss)();
+    });
+
   const tap = Gesture.Tap().onEnd(() => {
     runOnJS(onToggle)();
   });
 
-  const gesture = Gesture.Exclusive(pan, tap);
+  const gesture = Gesture.Exclusive(pan, longPress, tap);
 
   const animatedStyle = useAnimatedStyle(() => ({
     left: left.value,
@@ -109,7 +120,7 @@ export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
         accessibilityLabel={
           enabled ? 'Hide agent UI overlay' : 'Show agent UI overlay'
         }
-        accessibilityHint="Drag to move"
+        accessibilityHint="Drag to move. Long-press to hide. With Dev Mode on, long-press anywhere to show again."
         testID={target.testID}
         style={[
           styles.fab,
