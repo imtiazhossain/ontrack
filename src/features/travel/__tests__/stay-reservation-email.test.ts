@@ -1,7 +1,7 @@
 import {
-  emptyStayDetailsDraft,
-  normalizeStayDetails,
-  validateStayDetails,
+    emptyStayDetailsDraft,
+    normalizeStayDetails,
+    validateStayDetails,
 } from '../stay-details';
 
 describe('stay reservation email', () => {
@@ -9,11 +9,11 @@ describe('stay reservation email', () => {
     expect(
       normalizeStayDetails({
         confirmationCode: '13460175',
-        reservationEmail: '  ImtiHoss@Gmail.COM ',
+        reservationEmail: '  Alex.Rivera@Example.COM ',
       }),
     ).toEqual({
       confirmationCode: '13460175',
-      reservationEmail: 'imtihoss@gmail.com',
+      reservationEmail: 'alex.rivera@example.com',
     });
   });
 

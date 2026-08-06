@@ -1,11 +1,11 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
-  PendingTodoMutation,
-  TodoRecipe,
-  TodoSharedSnapshot,
+    PendingTodoMutation,
+    TodoRecipe,
+    TodoSharedSnapshot,
 } from '@/store/todos';
 
 const BUCKET = 'todo-recipe-images';
@@ -56,58 +56,30 @@ export async function uploadSharedRecipeImage(
   return path;
 }
 
+function recipeImageCandidates(
+  listId: string,
+  recipe: { id?: unknown; sourceImagePath?: unknown },
+): string[] {
+  if (typeof recipe.sourceImagePath === 'string') {
+    return [recipe.sourceImagePath];
+  }
+  if (typeof recipe.id !== 'string') return [];
+  return ['jpg', 'png', 'webp'].map(
+    (extension) => `${listId}/${recipe.id}.${extension}`,
+  );
+}
+
+/** Upload-only prep. Deletes happen in cleanupRecipeMutationMedia after ack. */
 export async function prepareRecipeMutationMedia(
   client: SupabaseClient,
   mutation: PendingTodoMutation,
 ) {
-  if (mutation.operation === 'clear_completed') {
-    const deletedRecipes = Array.isArray(mutation.payload.deletedRecipes)
-      ? mutation.payload.deletedRecipes
-      : [];
-    const candidates = deletedRecipes.flatMap((value) => {
-      if (!value || typeof value !== 'object') return [];
-      const recipe = value as { id?: unknown; sourceImagePath?: unknown };
-      if (typeof recipe.sourceImagePath === 'string') {
-        return [recipe.sourceImagePath];
-      }
-      if (typeof recipe.id !== 'string') return [];
-      return ['jpg', 'png', 'webp'].map(
-        (extension) => `${mutation.listId}/${recipe.id}.${extension}`,
-      );
-    });
-    if (candidates.length) {
-      await client.storage
-        .from(BUCKET)
-        .remove(candidates)
-        .catch(() => undefined);
-    }
+  if (
+    mutation.operation !== 'add_recipe' &&
+    mutation.operation !== 'update_recipe'
+  ) {
     return mutation;
   }
-  if (mutation.operation === 'delete_recipe') {
-    const recipeId =
-      typeof mutation.payload.recipeId === 'string'
-        ? mutation.payload.recipeId
-        : undefined;
-    const path =
-      typeof mutation.payload.sourceImagePath === 'string'
-        ? mutation.payload.sourceImagePath
-        : undefined;
-    const candidates = path
-      ? [path]
-      : recipeId
-        ? ['jpg', 'png', 'webp'].map(
-            (extension) => `${mutation.listId}/${recipeId}.${extension}`,
-          )
-        : [];
-    if (candidates.length) {
-      await client.storage
-        .from(BUCKET)
-        .remove(candidates)
-        .catch(() => undefined);
-    }
-    return mutation;
-  }
-  if (mutation.operation !== 'add_recipe') return mutation;
   const recipe =
     mutation.payload.recipe &&
     typeof mutation.payload.recipe === 'object' &&
@@ -125,6 +97,97 @@ export async function prepareRecipeMutationMedia(
       },
     },
   };
+}
+
+/** Returns remaining recipe ids, or null when the snapshot is unavailable. */
+async function remainingRecipeIds(
+  client: SupabaseClient,
+  listId: string,
+): Promise<Set<string> | null> {
+  const { data, error } = await client.rpc('todo_list_snapshot', {
+    requested_list_id: listId,
+  });
+  if (error || data == null) return null;
+  const remainingIds = new Set<string>();
+  const recipes =
+    typeof data === 'object' &&
+    Array.isArray((data as { recipes?: unknown }).recipes)
+      ? (data as { recipes: unknown[] }).recipes
+      : [];
+  for (const row of recipes) {
+    if (
+      row &&
+      typeof row === 'object' &&
+      typeof (row as { id?: unknown }).id === 'string'
+    ) {
+      remainingIds.add((row as { id: string }).id);
+    }
+  }
+  return remainingIds;
+}
+
+/** Remove storage objects only after the matching mutation is acknowledged. */
+export async function cleanupRecipeMutationMedia(
+  client: SupabaseClient,
+  mutation: PendingTodoMutation,
+): Promise<void> {
+  if (mutation.operation === 'clear_completed') {
+    const deletedRecipes = Array.isArray(mutation.payload.deletedRecipes)
+      ? mutation.payload.deletedRecipes
+      : [];
+    if (!deletedRecipes.length) return;
+    // Confirm the recipe is actually gone — a concurrent edit may have kept it.
+    // Fail closed when the snapshot cannot be loaded (never delete on uncertainty).
+    const remainingIds = await remainingRecipeIds(client, mutation.listId);
+    if (!remainingIds) return;
+    const candidates = deletedRecipes.flatMap((value) => {
+      if (!value || typeof value !== 'object') return [];
+      const recipe = value as { id?: unknown; sourceImagePath?: unknown };
+      if (typeof recipe.id === 'string' && remainingIds.has(recipe.id)) {
+        return [];
+      }
+      return recipeImageCandidates(mutation.listId, recipe);
+    });
+    if (candidates.length) {
+      await client.storage
+        .from(BUCKET)
+        .remove(candidates)
+        .catch(() => undefined);
+    }
+    return;
+  }
+  if (
+    mutation.operation === 'delete_recipe' ||
+    mutation.operation === 'delete_task'
+  ) {
+    const recipeId =
+      typeof mutation.payload.recipeId === 'string'
+        ? mutation.payload.recipeId
+        : typeof mutation.payload.deleteRecipeId === 'string'
+          ? mutation.payload.deleteRecipeId
+          : undefined;
+    if (mutation.operation === 'delete_task' && !recipeId) return;
+    // Confirm the recipe is gone — fail closed if the snapshot is unavailable.
+    if (recipeId) {
+      const remainingIds = await remainingRecipeIds(client, mutation.listId);
+      if (!remainingIds || remainingIds.has(recipeId)) return;
+    }
+    const path =
+      typeof mutation.payload.sourceImagePath === 'string'
+        ? mutation.payload.sourceImagePath
+        : undefined;
+    const candidates = path
+      ? [path]
+      : recipeId
+        ? recipeImageCandidates(mutation.listId, { id: recipeId })
+        : [];
+    if (candidates.length) {
+      await client.storage
+        .from(BUCKET)
+        .remove(candidates)
+        .catch(() => undefined);
+    }
+  }
 }
 
 export async function resolveSharedRecipeMedia(

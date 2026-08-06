@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import {
-  StyleSheet,
-  TextInput,
-  View,
-  type StyleProp,
-  type TextInputProps,
-  type ViewStyle,
+    StyleSheet,
+    TextInput,
+    View,
+    type StyleProp,
+    type TextInputProps,
+    type ViewStyle,
 } from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
@@ -120,6 +120,8 @@ export function Input({
   const handleChangeText = numericChangeForKeyboard(keyboardType, onChangeText);
   const agent = useAgentUiTarget(testID, {
     label: accessibilityLabel ?? stackedLabel ?? label,
+    // Registry value for --contains; keep accessibilityLabel chrome-only.
+    value: String(numericValue ?? ''),
     onPress: () => inputRef.current?.focus(),
   });
 

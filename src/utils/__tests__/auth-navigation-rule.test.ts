@@ -57,13 +57,59 @@ describe('authentication navigation invariants', () => {
     );
   });
 
-  it('waits for vision board persistence before releasing the loading shell', () => {
+  it('waits for vision board and health persistence before releasing the loading shell', () => {
     const hydrated = readFileSync(
       join(process.cwd(), 'src/hooks/use-hydrated.ts'),
       'utf8',
     );
     expect(hydrated).toContain("from '@/store/vision-board'");
     expect(hydrated).toContain('useVisionBoard.persist.rehydrate()');
-    expect(hydrated).toContain('HYDRATION_TIMEOUT_MS');
+    expect(hydrated).toContain('useHealth.persist.rehydrate()');
+    // Never seal while rehydrates are still in flight (no timeout escape hatch).
+    expect(hydrated).not.toContain('setTimeout(release');
+    expect(hydrated).not.toContain('HYDRATION_TIMEOUT_MS');
+    expect(hydrated).not.toContain('Promise.race');
+  });
+
+  it('keeps hydration sticky across Fast Refresh remounts without sealing aborted boots', () => {
+    const hydrated = readFileSync(
+      join(process.cwd(), 'src/hooks/use-hydrated.ts'),
+      'utf8',
+    );
+    expect(hydrated).toContain('sessionHydrated');
+    expect(hydrated).toContain('useState(sessionHydrated)');
+    expect(hydrated).toContain('if (!active) return');
+  });
+
+  it('restores the selected section after a Fast Refresh stack remount', () => {
+    expect(rootLayout).toContain('NavigationSessionSync');
+    const authProvider = readFileSync(
+      join(process.cwd(), 'src/features/auth/auth-provider.tsx'),
+      'utf8',
+    );
+    expect(authProvider).toContain('sessionAuthSnapshot');
+    expect(authProvider).toContain("sessionAuthSnapshot?.phase ?? 'loading'");
+  });
+
+  it('does not demote sticky auth phases on getSession timeout', () => {
+    const authProvider = readFileSync(
+      join(process.cwd(), 'src/features/auth/auth-provider.tsx'),
+      'utf8',
+    );
+    expect(authProvider).toContain("current === 'resolving-data'");
+    expect(authProvider).toContain("phase === 'guest' || phase === 'authenticated' || phase === 'resolving-data'");
+  });
+
+  it('keeps guest dirty tracking through auth-upgrade phases', () => {
+    const authProvider = readFileSync(
+      join(process.cwd(), 'src/features/auth/auth-provider.tsx'),
+      'utf8',
+    );
+    expect(authProvider).toContain("!guestEnabled || phase === 'authenticated' || phase === 'welcome'");
+    expect(authProvider).toContain('useVehicles.subscribe(mark)');
+  });
+
+  it('gates app routes on settled guest or authenticated phases only', () => {
+    expect(rootLayout).toContain("phase === 'authenticated' || phase === 'guest'");
   });
 });

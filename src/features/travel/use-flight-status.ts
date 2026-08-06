@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Theme } from '@/design-system';
 
@@ -205,10 +205,14 @@ export function useFlightStatus(
     return () => clearTimeout(timer);
   }, [cooldownUntil]);
 
+  const activeRequestKeyRef = useRef(requestKey);
+  activeRequestKeyRef.current = requestKey;
+
   const check = useCallback(() => {
     if (!available || !requestKey) return;
     if (flightStatusSyncCooldownRemainingMs(requestKey) > 0) return;
 
+    const startedForKey = requestKey;
     setState((current) => ({ ...current, loading: true, error: undefined }));
     void (async () => {
       const settled = await Promise.all(
@@ -240,13 +244,15 @@ export function useFlightStatus(
           }
         }),
       );
+      // Journey fingerprint changed while in-flight — drop stale results.
+      if (activeRequestKeyRef.current !== startedForKey) return;
       const failure = settled.find(
         (leg): leg is FlightLegStatus & { errorMessage: string } =>
           Boolean(leg && 'errorMessage' in leg && leg.errorMessage),
       );
       const checkedAt = Date.now();
-      lastSyncAtByKey.set(requestKey, checkedAt);
-      lastLegsByKey.set(requestKey, settled);
+      lastSyncAtByKey.set(startedForKey, checkedAt);
+      lastLegsByKey.set(startedForKey, settled);
       setCooldownUntil(checkedAt + FLIGHT_STATUS_SYNC_COOLDOWN_MS);
       setState({
         loading: false,

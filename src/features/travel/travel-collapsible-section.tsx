@@ -4,7 +4,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import type { AppIconName, TypeVariant } from '@/design-system';
 import { radii } from '@/design-system';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import {
+  TRAVEL_TITLE_ICON_GAP,
+  travelOverlineStyle,
+} from '@/features/travel/travel-chrome';
 import {
   TRAVEL_EDITORIAL_ACCENT,
   travelCardBorder,
@@ -75,7 +78,15 @@ export function TravelCollapsibleSection({
     : nested
       ? s(16)
       : Math.max(32, s(32));
-  const headerGap = nested ? spacing.xxs : spacing.sm;
+  // Same icon→title breath for parent + nested (mock: suitcase / FLIGHTS).
+  const titleIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
+  const headerGap = titleIconGap;
+  const leadingIconSize = compact ? (nested ? 12 : 16) : undefined;
+  // Hug the glyph so `titleIconGap` is the true space to the label (no phantom pad).
+  const leadingIconBox =
+    leadingIconSize !== undefined
+      ? Math.max(leadingIconSize, s(leadingIconSize))
+      : Math.max(28, s(30));
   const mainCardFill = travelMainCardFill(theme);
   const headerBackground = nested
     ? 'transparent'
@@ -107,8 +118,8 @@ export function TravelCollapsibleSection({
           {
             minHeight: tap,
             gap: headerGap,
-            paddingLeft: nested ? 0 : tightHeader ? spacing.xs : spacing.sm,
-            paddingRight: nested ? 0 : spacing.sm,
+            paddingLeft: nested ? 0 : spacing.md,
+            paddingRight: nested ? 0 : spacing.md,
             paddingVertical: nested || compact ? 0 : spacing.xs,
             borderRadius: card || nested ? 0 : radii.lg,
             backgroundColor: headerBackground,
@@ -140,20 +151,10 @@ export function TravelCollapsibleSection({
           }
           style={[styles.toggle, { minHeight: tap, gap: headerGap }]}>
           {icon ? (
-            <View
-              style={[
-                styles.leadingIcon,
-                {
-                  width: nested
-                    ? Math.max(18, s(18))
-                    : tightHeader
-                      ? Math.max(26, s(28))
-                      : Math.max(28, s(30)),
-                },
-              ]}>
+            <View style={[styles.leadingIcon, { width: leadingIconBox }]}>
               <Symbol
                 name={icon}
-                size={compact ? (nested ? 12 : tightHeader ? 18 : 16) : 'sm'}
+                size={leadingIconSize ?? 'sm'}
                 color={accent}
               />
             </View>
@@ -167,6 +168,7 @@ export function TravelCollapsibleSection({
               travelOverlineStyle,
               styles.title,
               compact && nested ? styles.compactNestedTitle : undefined,
+              compact && !nested ? styles.compactCardTitle : undefined,
               { color: accent },
             ]}>
             {title}
@@ -200,7 +202,7 @@ export function TravelCollapsibleSection({
               },
             ]}>
             <Symbol
-              name={expanded ? 'chevron-up' : 'chevron-down'}
+              name={expanded ? 'chevron-up' : 'chevron-right'}
               size={nested ? 12 : 'sm'}
               color={accent}
             />
@@ -288,5 +290,10 @@ const styles = StyleSheet.create({
   },
   compactNestedTitle: {
     letterSpacing: 1.2,
+  },
+  /** Match icon optical center — callout’s default line-box sits high next to a 16pt glyph. */
+  compactCardTitle: {
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
 });

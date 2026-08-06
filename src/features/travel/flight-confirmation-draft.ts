@@ -1,11 +1,12 @@
 import {
-  connectionArrivalMinutesForSegment,
-  isConnectingSegmentGroup,
+    connectionArrivalMinutesForSegment,
+    isConnectingSegmentGroup,
 } from './flight-confirmation-itinerary';
 import type { ParsedFlightConfirmation } from './flight-confirmation-parser';
+import { resolveConnectingHub } from './flight-connection-hub';
 import {
-  formatLayoverDuration,
-  type FlightDetailsDraft,
+    formatLayoverDuration,
+    type FlightDetailsDraft,
 } from './flight-details';
 import { flightLegsFromSegments } from './flight-journey-model';
 
@@ -90,15 +91,21 @@ export function mergeFlightConfirmationDraftDetails(
   }
 
   const lastSegment = imported.segments.at(-1) ?? firstSegment;
-  const layover =
-    firstSegment.layoverMinutesAfter !== undefined
-      ? formatLayoverDuration(firstSegment.layoverMinutesAfter)
-      : current.layoverMinutesAfter;
   const connectionAirport =
-    firstSegment.flight.arrivalAirport ||
+    resolveConnectingHub(imported.segments) ||
     firstSegment.flight.connectionAirport ||
     current.connectionAirport;
-  const connectionTimes = connectionTimesFromImport(imported);
+  // Layover duration only belongs with a real hub — never keep "1h 39m" when
+  // the connection collapsed onto the final destination (OCR noise).
+  const layover =
+    connectionAirport && firstSegment.layoverMinutesAfter !== undefined
+      ? formatLayoverDuration(firstSegment.layoverMinutesAfter)
+      : connectionAirport
+        ? current.layoverMinutesAfter
+        : '';
+  const connectionTimes = connectionAirport
+    ? connectionTimesFromImport(imported)
+    : {};
   const legs = flightLegsFromSegments(imported.segments);
 
   return {
@@ -108,23 +115,16 @@ export function mergeFlightConfirmationDraftDetails(
     arrivalTerminal:
       lastSegment.flight.arrivalTerminal || current.arrivalTerminal,
     arrivalGate: lastSegment.flight.arrivalGate || current.arrivalGate,
-    ...(layover ? { layoverMinutesAfter: layover } : {}),
-    ...(connectionAirport ? { connectionAirport } : {}),
-    ...(connectionTimes.connectionArrivalMinutes !== undefined
-      ? {
-          connectionArrivalMinutes: connectionTimes.connectionArrivalMinutes,
-        }
-      : current.connectionArrivalMinutes !== undefined
-        ? { connectionArrivalMinutes: current.connectionArrivalMinutes }
-        : {}),
-    ...(connectionTimes.connectionDepartureMinutes !== undefined
-      ? {
-          connectionDepartureMinutes:
-            connectionTimes.connectionDepartureMinutes,
-        }
-      : current.connectionDepartureMinutes !== undefined
-        ? { connectionDepartureMinutes: current.connectionDepartureMinutes }
-        : {}),
+    connectionAirport: connectionAirport || '',
+    layoverMinutesAfter: layover || '',
+    connectionArrivalMinutes: connectionAirport
+      ? (connectionTimes.connectionArrivalMinutes ??
+        current.connectionArrivalMinutes)
+      : undefined,
+    connectionDepartureMinutes: connectionAirport
+      ? (connectionTimes.connectionDepartureMinutes ??
+        current.connectionDepartureMinutes)
+      : undefined,
     ...(legs?.length
       ? { legs }
       : current.legs?.length

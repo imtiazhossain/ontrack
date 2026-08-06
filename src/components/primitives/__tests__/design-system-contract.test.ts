@@ -13,10 +13,32 @@ describe('canonical design-system contract', () => {
       'FormSection',
       'SheetScaffold',
       'DestructiveSection',
+      'DangerZone',
       'StackedFieldLabel',
+      'PanelTitle',
+      'StatusBadge',
+      'MetaList',
+      'CollapsibleSection',
+      'ToolbarRow',
+      'ActionChip',
+      'ActionChipRow',
+      'Dropdown',
       'fieldTitleCase',
     ]) {
       expect(barrel).toContain(name);
+    }
+  });
+
+  it('title-cases chrome titles in shared header primitives', () => {
+    for (const relative of [
+      'src/components/primitives/screen-header.tsx',
+      'src/components/primitives/section-header.tsx',
+      'src/components/primitives/form-section.tsx',
+      'src/components/primitives/panel-title.tsx',
+      'src/components/primitives/stacked-field-label.tsx',
+      'src/components/primitives/settings-row.tsx',
+    ]) {
+      expect(read(relative)).toContain('fieldTitleCase');
     }
   });
 
@@ -92,10 +114,9 @@ describe('canonical design-system contract', () => {
     const rootLayout = read('src/app/_layout.tsx');
     const safeAreaChrome = read('src/components/primitives/safe-area-chrome.tsx');
     expect(surface).toContain('travelSafeAreaBackground');
-    expect(surface).toContain("theme.name === 'dark' ? darkTheme : lightTheme");
-    expect(surface).toContain('todayTheme(theme).backgroundPrimary');
+    expect(surface).toContain('travelPagePaper');
     expect(surface).toContain('lightTravelTheme.backgroundPrimary');
-    expect(surface).toContain('darkTravelTheme.backgroundSecondary');
+    expect(surface).toContain('darkTravelTheme.backgroundPrimary');
     expect(surface).toContain('experimental_backgroundImage');
     expect(surface).not.toContain('radial-gradient');
     expect(travelTab).toContain('style={travelStyle}');
@@ -145,6 +166,9 @@ describe('canonical design-system contract', () => {
     expect(read('src/features/travel/travel-plan-details-editor.tsx')).toContain(
       'DestructiveSection',
     );
+    expect(read('src/components/primitives/index.ts')).toContain('DangerZone');
+    expect(read('src/app/(tabs)/profile.tsx')).toContain('DangerZone');
+    expect(read('src/app/(tabs)/profile.tsx')).toContain('flush');
   });
 
   it('keeps the Travel chat composer cohesive and full width', () => {
@@ -158,12 +182,49 @@ describe('canonical design-system contract', () => {
   });
 
   it('ships a development-only gallery and canonical guide', () => {
-    expect(read('src/app/design-system.tsx')).toContain('__DEV__');
+    expect(read('src/app/design-system.tsx')).toContain('DevAccessGate');
     expect(read('src/features/design-system/design-system-gallery.tsx')).toContain(
       'SheetScaffold',
     );
-    expect(read('src/app/(tabs)/profile.tsx')).toContain('AgentUiIds.profile.designSystem');
+    expect(read('src/features/account/developer-hub.tsx')).toContain(
+      'AgentUiIds.developer.designSystem',
+    );
     expect(read('docs/design-system.md')).toContain('Consistency wins');
     expect(read('docs/design-system.md')).toContain('## Intuitive path');
+    expect(read('docs/design-system.md')).toContain('fieldTitleCase');
+  });
+
+  it('keeps product UI on the UI font (no AppText mono outside design-system)', () => {
+    const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+    const { join } = require('node:path') as typeof import('node:path');
+    const roots = ['src/features', 'src/app', 'src/components'];
+    const skip = (relative: string) =>
+      relative.includes('/design-system/') ||
+      relative.includes('/__tests__/') ||
+      relative.includes('/primitives/');
+
+    const walk = (dir: string, out: string[] = []): string[] => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        const relative = full.replace(`${root}/`, '');
+        if (statSync(full).isDirectory()) {
+          if (name === 'node_modules' || name === '.git') continue;
+          walk(full, out);
+          continue;
+        }
+        if (!/\.(tsx|ts)$/.test(name) || skip(relative)) continue;
+        out.push(relative);
+      }
+      return out;
+    };
+
+    const offenders: string[] = [];
+    for (const base of roots) {
+      for (const relative of walk(join(root, base))) {
+        const source = read(relative);
+        if (/variant\s*=\s*["']mono["']/.test(source)) offenders.push(relative);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

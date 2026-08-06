@@ -1,10 +1,10 @@
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
 import {
-  canCompleteTodo,
-  normalizeTodoState,
-  privateTodoPayload,
-  useTodos,
+    canCompleteTodo,
+    normalizeTodoState,
+    privateTodoPayload,
+    useTodos,
 } from '@/store/todos';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
@@ -152,6 +152,54 @@ describe('to-do store', () => {
       important: true,
     });
     expect(migrated.tasks[0].id).not.toBe('legacy-task');
+  });
+
+  it('applies server task positions from shared snapshots', () => {
+    const shared = {
+      ...useTodos.getState().lists[0],
+      id: '9a21f566-3bc6-43df-a125-03e4c4541963',
+      name: 'Shared order',
+      mode: 'shared' as const,
+    };
+    const base = {
+      listId: shared.id,
+      completed: false,
+      important: false,
+      createdAt: '2026-07-01T10:00:00.000Z',
+      updatedAt: '2026-07-01T10:00:00.000Z',
+      version: 0,
+    };
+    useTodos.getState().replaceSharedSnapshot({
+      list: shared,
+      tasks: [
+        { ...base, id: 'task-a', title: 'A', position: 0 },
+        { ...base, id: 'task-b', title: 'B', position: 1 },
+      ],
+      members: [],
+    });
+    // Local optimistic order differs from a later server reorder.
+    useTodos.setState((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === 'task-a'
+          ? { ...task, position: 1 }
+          : task.id === 'task-b'
+            ? { ...task, position: 0 }
+            : task,
+      ),
+    }));
+    useTodos.getState().replaceSharedSnapshot({
+      list: { ...shared, updatedAt: '2026-07-28T12:00:00.000Z' },
+      tasks: [
+        { ...base, id: 'task-a', title: 'A', position: 0 },
+        { ...base, id: 'task-b', title: 'B', position: 1 },
+      ],
+      members: [],
+    });
+    const ordered = useTodos
+      .getState()
+      .tasks.filter((task) => task.listId === shared.id)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    expect(ordered.map((task) => task.id)).toEqual(['task-a', 'task-b']);
   });
 
   it('excludes shared caches and mutations from the private account payload', () => {

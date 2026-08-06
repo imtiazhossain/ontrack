@@ -1,11 +1,12 @@
 import {
-  calculateFlightArrival,
-  calculateFlightDuration,
+    calculateFlightArrival,
+    calculateFlightDuration,
 } from './flight-arrival';
 import type { ParsedFlightSegment } from './flight-confirmation-parser';
+import { resolveConnectingHub } from './flight-connection-hub';
 import { normalizeFlightDetails } from './flight-details';
 import { flightLegsFromSegments } from './flight-journey-model';
-import { formatFlightRouteLabel } from './flight-route-label';
+import { formatFlightTitle } from './flight-route-label';
 import type { TravelFlightDetails, TravelItineraryItem, TravelPlan } from './types';
 
 interface MergeImportedFlightsOptions {
@@ -15,6 +16,8 @@ interface MergeImportedFlightsOptions {
   createId: () => string;
   targetItemId?: string;
   confirmationUris?: string[];
+  /** Document-level OCR / itinerary date when a segment omits its own date. */
+  dateFallback?: string;
 }
 
 /** Booking-level fields parsers put on drafts; keep them through itinerary merge. */
@@ -160,13 +163,9 @@ export function doorToDoorDuration(
     }, 0);
     return sum > 0 ? sum : undefined;
   }
-  // Confirmations often print total as first-dep → final-arr wall clocks.
-  if (first.date === lastArrivalDate) {
-    const printed = lastArrivalMinutes - first.startMinutes;
-    if (printed > 0) return printed;
-  }
-  // Prefer block time across airport zones when the printed span is overnight.
-  return calculateFlightDuration({
+  // Always use zone-aware block time when airports resolve; falls back to
+  // local wall-clock math only when either endpoint zone is unknown.
+  const duration = calculateFlightDuration({
     departureDate: first.date,
     departureMinutes: first.startMinutes,
     arrivalDate: lastArrivalDate,
@@ -174,30 +173,35 @@ export function doorToDoorDuration(
     departureAirport: first.flight.departureAirport,
     arrivalAirport: last.flight.arrivalAirport,
   });
+  return duration > 0 ? duration : undefined;
 }
 
 function connectingJourneyValues(
   segments: ParsedFlightSegment[],
   tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
   confirmationUris?: string[],
+  dateFallback?: string,
 ) {
   const first = segments[0]!;
   const second = segments[1];
   const last = segments.at(-1)!;
   const legs = flightLegsFromSegments(segments);
   const connectionArrivalMinutes = connectionArrivalMinutesForSegment(first);
-  const date = first.date ?? tripRange.startDate;
+  const date = first.date ?? dateFallback ?? tripRange.startDate;
   const startMinutes = first.startMinutes ?? 12 * 60;
   const durationMinutes = doorToDoorDuration(segments);
   const connectionAirport =
-    first.flight.arrivalAirport || first.flight.connectionAirport || undefined;
+    resolveConnectingHub(segments) ||
+    first.flight.connectionAirport ||
+    undefined;
   const lastArrival = bookingFieldsFromDraft(last.flight);
   const flight: TravelFlightDetails = {
     ...bookingFieldsFromDraft(first.flight),
+    // Hub may have been repaired onto first.arrival; keep origin from first.
     arrivalAirport: lastArrival.arrivalAirport,
     arrivalTerminal: lastArrival.arrivalTerminal,
     arrivalGate: lastArrival.arrivalGate,
-    ...(first.layoverMinutesAfter
+    ...(connectionAirport && first.layoverMinutesAfter
       ? { layoverMinutesAfter: first.layoverMinutesAfter }
       : {}),
     ...(connectionAirport ? { connectionAirport } : {}),
@@ -210,9 +214,12 @@ function connectingJourneyValues(
     ...(legs?.length ? { legs } : {}),
     ...(confirmationUris?.length ? { confirmationUris } : {}),
   };
-  const route = formatFlightRouteLabel(flight);
   return {
-    title: route ? `Flight ${route}` : first.title || first.flight.flightNumber || 'Flight',
+    title:
+      formatFlightTitle(flight) ||
+      first.title ||
+      first.flight.flightNumber ||
+      'Flight',
     date,
     startMinutes,
     ...(durationMinutes !== undefined ? { durationMinutes } : {}),
@@ -226,9 +233,12 @@ function importedItemValues(
   tripRange: Pick<TravelPlan, 'startDate' | 'endDate'>,
   confirmationUris?: string[],
   nextSegment?: ParsedFlightSegment,
+  dateFallback?: string,
 ) {
   const date =
-    segment.date ?? (index === 0 ? tripRange.startDate : tripRange.endDate);
+    segment.date ??
+    dateFallback ??
+    (index === 0 ? tripRange.startDate : tripRange.endDate);
   const connectionArrivalMinutes = segment.layoverMinutesAfter
     ? connectionArrivalMinutesForSegment(segment)
     : undefined;
@@ -325,13 +335,16 @@ export function isConnectingSegmentGroup(
   for (let index = 0; index < segments.length - 1; index++) {
     const current = segments[index]!;
     const next = segments[index + 1]!;
-    const gapDays = segmentDateGapDays(current, next);
-    // Round-trips often leave days later; connections are same/next day.
-    if (gapDays !== undefined && gapDays > 1) return false;
-    if (current.layoverMinutesAfter) continue;
     const arrival = airportCode(current.flight.arrivalAirport);
     const departure = airportCode(next.flight.departureAirport);
-    if (!arrival || !departure || arrival !== departure) return false;
+    const chained = Boolean(arrival && departure && arrival === departure);
+    // Explicit layover on the confirmation beats noisy OCR calendar gaps.
+    if (current.layoverMinutesAfter) continue;
+
+    const gapDays = segmentDateGapDays(current, next);
+    // Round-trips / multi-city stopovers often leave days later.
+    if (gapDays !== undefined && gapDays > 1) return false;
+    if (!chained) return false;
   }
   return true;
 }
@@ -366,11 +379,13 @@ function mergeConnectingJourney(
   createId: () => string,
   targetItemId: string | undefined,
   confirmationUris?: string[],
+  dateFallback?: string,
 ): TravelItineraryItem[] {
   const values = connectingJourneyValues(
     segments,
     tripRange,
     confirmationUris,
+    dateFallback,
   );
   const merged = [...itinerary];
   const segmentFlightNumbers = new Set(
@@ -428,6 +443,7 @@ function mergeDirectionSegments(
   targetItemId: string | undefined,
   confirmationUris: string[] | undefined,
   directionIndex: number,
+  dateFallback?: string,
 ): TravelItineraryItem[] {
   if (segments.length === 0) return itinerary;
   if (isConnectingSegmentGroup(segments)) {
@@ -438,6 +454,7 @@ function mergeDirectionSegments(
       createId,
       targetItemId,
       confirmationUris,
+      dateFallback,
     );
   }
 
@@ -449,6 +466,7 @@ function mergeDirectionSegments(
       tripRange,
       confirmationUris,
       segments[index + 1],
+      dateFallback,
     );
     const targetIndex =
       index === 0 && targetItemId
@@ -493,6 +511,7 @@ export function mergeImportedFlights({
   createId,
   targetItemId,
   confirmationUris,
+  dateFallback,
 }: MergeImportedFlightsOptions): TravelItineraryItem[] {
   if (isConnectingSegmentGroup(segments)) {
     return mergeConnectingJourney(
@@ -502,6 +521,7 @@ export function mergeImportedFlights({
       createId,
       targetItemId,
       confirmationUris,
+      dateFallback,
     );
   }
 
@@ -515,6 +535,7 @@ export function mergeImportedFlights({
       targetItemId,
       confirmationUris,
       0,
+      dateFallback,
     );
     return mergeDirectionSegments(
       withOutbound,
@@ -524,6 +545,7 @@ export function mergeImportedFlights({
       undefined,
       confirmationUris,
       1,
+      dateFallback,
     );
   }
 
@@ -535,5 +557,6 @@ export function mergeImportedFlights({
     targetItemId,
     confirmationUris,
     0,
+    dateFallback,
   );
 }

@@ -1,10 +1,10 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
+    Pressable,
+    StyleSheet,
+    type StyleProp,
+    type TextStyle,
+    type ViewStyle,
 } from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
@@ -110,8 +110,8 @@ export function Button({
         <AppText
           variant={size === 'lg' ? 'subheading' : size === 'sm' ? 'caption' : 'callout'}
           color={textColor}
-          fit
-          style={[{ flexShrink: 1, minWidth: 0 }, textStyle]}>
+          numberOfLines={1}
+          style={textStyle}>
           {children}
         </AppText>
       ) : null}

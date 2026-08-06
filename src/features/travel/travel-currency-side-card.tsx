@@ -1,16 +1,15 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import {
   Keyboard,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, Dropdown, Symbol } from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
 import {
   currencyDisplayLabel,
@@ -21,7 +20,6 @@ import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import { currencySheetChrome } from '@/features/travel/travel-currency-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { haptics } from '@/utils/haptics';
 import { numericOnChangeText, sanitizeNumericInput } from '@/utils/parse';
 
 type CurrencyOption = { value: string; label: string };
@@ -59,7 +57,6 @@ export function TravelCurrencySideCard({
   const theme = useTheme();
   const chrome = currencySheetChrome(theme);
   const { s, spacing: rs, layout, typography } = useResponsive();
-  const listId = useId();
   const [amountFocused, setAmountFocused] = useState(false);
   const code = normalizeCurrencyCode(currency);
   const badgeSize = Math.max(40, s(44));
@@ -67,18 +64,6 @@ export function TravelCurrencySideCard({
   const symbol = currencyNarrowSymbol(code);
   const amountSize = Math.max(28, s(32));
   const amountLine = Math.max(34, s(38));
-
-  const toggle = () => {
-    haptics.select();
-    Keyboard.dismiss();
-    onOpenChange(!open);
-  };
-
-  const choose = (next: string) => {
-    haptics.select();
-    if (next !== code) onCurrencyChange(next);
-    onOpenChange(false);
-  };
 
   return (
     <View
@@ -91,119 +76,82 @@ export function TravelCurrencySideCard({
           zIndex: open ? 4 : 1,
         },
       ]}>
-      <Pressable
-        accessibilityRole="button"
+      <Dropdown
+        label={sideLabel}
+        value={code}
+        options={options.map((option) => ({
+          ...option,
+          leading: (
+            <Text style={{ fontSize: Math.max(15, s(16)) }}>
+              {currencyFlagEmoji(option.value)}
+            </Text>
+          ),
+        }))}
+        open={open}
+        onOpenChange={(next) => {
+          if (next) Keyboard.dismiss();
+          onOpenChange(next);
+        }}
+        onChange={onCurrencyChange}
         accessibilityLabel={`${sideLabel}: ${currencyDisplayLabel(code)}`}
         accessibilityHint="Opens a scrollable list of currencies"
-        accessibilityState={{ expanded: open }}
-        onPress={toggle}
-        style={({ pressed }) => [
-          styles.currencyRow,
-          {
-            paddingHorizontal: rs.lg,
-            paddingVertical: rs.md,
-            gap: rs.md,
-            minHeight: Math.max(layout.minTapTarget, s(56)),
-            opacity: pressed ? 0.86 : 1,
-          },
-        ]}>
-        <View
-          style={[
-            styles.flag,
-            {
-              width: flagSize,
-              height: flagSize,
-              borderRadius: radii.sm,
-              backgroundColor: chrome.softBg,
-            },
-          ]}>
-          <Text style={{ fontSize: Math.max(16, s(18)), lineHeight: Math.max(20, s(22)) }}>
-            {currencyFlagEmoji(code)}
-          </Text>
-        </View>
-        <View style={[styles.currencyCopy, { gap: 2, flex: 1, minWidth: 0 }]}>
-          <AppText
-            variant="caption"
-            fit
-            numberOfLines={1}
-            style={{ color: chrome.label }}>
-            {sideLabel}
-          </AppText>
-          <AppText
-            variant="callout"
-            fit
-            numberOfLines={1}
-            style={{ color: chrome.title, fontWeight: '600', flexShrink: 1, minWidth: 0 }}>
-            {currencyDisplayLabel(code)}
-          </AppText>
-        </View>
-        <Symbol
-          name={open ? 'chevron-up' : 'chevron-down'}
-          size="sm"
-          color={chrome.label}
-        />
-      </Pressable>
-
-      {open ? (
-        <View
-          style={[
-            styles.menu,
-            {
-              borderTopColor: chrome.fieldBorder,
-              backgroundColor: chrome.cardBg,
-            },
-          ]}>
-          <ScrollView
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            style={styles.menuScroll}
-            contentContainerStyle={{ paddingVertical: rs.xs }}
-            showsVerticalScrollIndicator>
-            {options.map((option) => {
-              const active = option.value === code;
-              return (
-                <Pressable
-                  key={`${listId}-${option.value}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  onPress={() => choose(option.value)}
-                  style={({ pressed }) => [
-                    styles.option,
-                    {
-                      minHeight: Math.max(44, s(44)),
-                      paddingHorizontal: rs.lg,
-                      paddingVertical: rs.sm,
-                      gap: rs.sm,
-                      backgroundColor: active
-                        ? chrome.softBg
-                        : pressed
-                          ? chrome.softBg
-                          : 'transparent',
-                    },
-                  ]}>
-                  <Text style={{ fontSize: Math.max(15, s(16)) }}>
-                    {currencyFlagEmoji(option.value)}
-                  </Text>
-                  <AppText
-                    variant="callout"
-                    fit
-                    numberOfLines={1}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      color: active ? chrome.accent : chrome.title,
-                    }}>
-                    {option.label}
-                  </AppText>
-                  {active ? (
-                    <Symbol name="check" size="sm" color={chrome.accent} />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ) : null}
+        menuMaxHeight={220}
+        renderTrigger={({ open: isOpen, onPress, fieldRef, selectedLabel }) => (
+          <Pressable
+            ref={fieldRef}
+            accessibilityRole="button"
+            accessibilityLabel={`${sideLabel}: ${selectedLabel}`}
+            accessibilityHint="Opens a scrollable list of currencies"
+            accessibilityState={{ expanded: isOpen }}
+            onPress={onPress}
+            style={({ pressed }) => [
+              styles.currencyRow,
+              {
+                paddingHorizontal: rs.lg,
+                paddingVertical: rs.md,
+                gap: rs.md,
+                minHeight: Math.max(layout.minTapTarget, s(56)),
+                opacity: pressed ? 0.86 : 1,
+              },
+            ]}>
+            <View
+              style={[
+                styles.flag,
+                {
+                  width: flagSize,
+                  height: flagSize,
+                  borderRadius: radii.sm,
+                  backgroundColor: chrome.softBg,
+                },
+              ]}>
+              <Text style={{ fontSize: Math.max(16, s(18)), lineHeight: Math.max(20, s(22)) }}>
+                {currencyFlagEmoji(code)}
+              </Text>
+            </View>
+            <View style={[styles.currencyCopy, { gap: 2, flex: 1, minWidth: 0 }]}>
+              <AppText
+                variant="caption"
+                fit
+                numberOfLines={1}
+                style={{ color: chrome.label }}>
+                {sideLabel}
+              </AppText>
+              <AppText
+                variant="callout"
+                fit
+                numberOfLines={1}
+                style={{ color: chrome.title, fontWeight: '600', flexShrink: 1, minWidth: 0 }}>
+                {currencyDisplayLabel(code)}
+              </AppText>
+            </View>
+            <Symbol
+              name={isOpen ? 'chevron-up' : 'chevron-down'}
+              size="sm"
+              color={chrome.label}
+            />
+          </Pressable>
+        )}
+      />
 
       <View
         style={[
@@ -312,16 +260,6 @@ const styles = StyleSheet.create({
   },
   currencyCopy: {
     flexShrink: 1,
-  },
-  menu: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  menuScroll: {
-    maxHeight: 200,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   amountRow: {
     flexDirection: 'row',

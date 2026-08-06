@@ -117,6 +117,47 @@ export async function guardedFetch(
   }
 }
 
+export type DependencyGuardPeek = {
+  dependency: string;
+  active: number;
+  consecutiveFailures: number;
+  /** Milliseconds until the circuit closes; 0 when closed. */
+  openForMs: number;
+  status: 'closed' | 'open' | 'half-open';
+};
+
+/** Read circuit state without recording traffic. */
+export function peekDependencyGuard(
+  dependency: string,
+  now = Date.now(),
+): DependencyGuardPeek {
+  const state = circuits.get(dependency) ?? {
+    active: 0,
+    consecutiveFailures: 0,
+    openedUntil: 0,
+    probeInFlight: false,
+  };
+  const openForMs = Math.max(0, state.openedUntil - now);
+  const status =
+    openForMs > 0 ? 'open' : state.openedUntil > 0 ? 'half-open' : 'closed';
+  return {
+    dependency,
+    active: state.active,
+    consecutiveFailures: state.consecutiveFailures,
+    openForMs,
+    status,
+  };
+}
+
+export function peekDependencyGuards(
+  dependencies: readonly string[],
+  now = Date.now(),
+): Record<string, DependencyGuardPeek> {
+  return Object.fromEntries(
+    dependencies.map((dependency) => [dependency, peekDependencyGuard(dependency, now)]),
+  );
+}
+
 export function resetDependencyGuardsForTests() {
   circuits.clear();
 }

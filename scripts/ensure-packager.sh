@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Keep Metro + the iOS Simulator dev client connected without needless relaunches.
+# Keep Metro + the preferred device dev client connected without needless relaunches.
 #
-# Default (simulator-friendly):
+# Default (iOS simulator-friendly):
 #   - Prefer packager host 127.0.0.1 (survives Wi-Fi / DHCP IP churn)
 #   - Start Metro via scripts/start-metro.sh (--lan bind + advertise 127.0.0.1)
 #   - Align EXPO_PUBLIC_API_BASE_URL in .env.local when it looks like a local Metro URL
@@ -14,7 +14,8 @@
 # Usage:
 #   ./scripts/ensure-packager.sh
 #   ./scripts/ensure-packager.sh --start          # start Metro if down / fix IPv6-only / dead watcher
-#   ./scripts/ensure-packager.sh --metro-only     # Metro/watcher/env only — do not boot or open Simulator
+#   ./scripts/ensure-packager.sh --metro-only     # Metro/watcher/env only — do not boot a device
+#   ./scripts/ensure-packager.sh --android        # boot Galaxy_S26 + reconnect Android (AGENT_UI_PLATFORM=android)
 #   ./scripts/ensure-packager.sh --clear          # replace Metro and clear a poisoned cache
 #   ./scripts/ensure-packager.sh --lan            # use en0 LAN IP (physical device)
 #   ./scripts/ensure-packager.sh --force-reconnect
@@ -28,9 +29,13 @@
 #   WAIT_SECS=8
 #   START_WAIT_SECS=20
 #   METRO_WATCHER_FS_PROBE=1   # also touch beacon + confirm Watchman sees it
+#   ONTRACK_PACKAGER_TARGET=ios|android   # or pass --android
+#   AGENT_UI_PLATFORM=ios|android         # agent-ui command pin (set with --android)
 #   ONTRACK_IOS_SIMULATOR=iPhone 17 Pro   # default simulator device name
 #   ONTRACK_IOS_SIMULATOR_UDID=<udid>     # optional exact device
 #   ONTRACK_IOS_SIMULATOR_WINDOW=1        # open Simulator.app (default: headless)
+#   ONTRACK_ANDROID_AVD=Galaxy_S26
+#   ONTRACK_ANDROID_EMULATOR_WINDOW=1
 
 set -euo pipefail
 
@@ -41,6 +46,8 @@ cd "$ROOT"
 source "$ROOT/scripts/lib/metro-watcher.sh"
 # shellcheck source=lib/ios-simulator.sh
 source "$ROOT/scripts/lib/ios-simulator.sh"
+# shellcheck source=lib/android-emulator.sh
+source "$ROOT/scripts/lib/android-emulator.sh"
 
 BUNDLE_ID="${BUNDLE_ID:-com.imtihoss.ontracknow}"
 METRO_PORT="${METRO_PORT:-8081}"
@@ -67,9 +74,15 @@ HOST_MODE="${PACKAGER_HOST:-localhost}"
 # client's HMR socket even though the app's agent-ui bridge (plain HTTP polling)
 # keeps answering — so probe_connected is a false positive and we must reconnect.
 METRO_RELAUNCHED=0
+# Prefer explicit --android / ONTRACK_PACKAGER_TARGET; also honor AGENT_UI_PLATFORM.
+PACKAGER_TARGET="${ONTRACK_PACKAGER_TARGET:-}"
+if [[ -z "$PACKAGER_TARGET" && "${AGENT_UI_PLATFORM:-}" == "android" ]]; then
+  PACKAGER_TARGET="android"
+fi
+: "${PACKAGER_TARGET:=ios}"
 
 usage() {
-  sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -78,6 +91,8 @@ while [[ $# -gt 0 ]]; do
     --start) DO_START=1 ;;
     --clear) DO_START=1; DO_CLEAR=1 ;;
     --metro-only) METRO_ONLY=1 ;;
+    --android) PACKAGER_TARGET="android" ;;
+    --ios) PACKAGER_TARGET="ios" ;;
     --force-reconnect) DO_FORCE=1 ;;
     --check-only) CHECK_ONLY=1 ;;
     --no-env) SYNC_ENV=0 ;;
@@ -91,6 +106,29 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+case "${PACKAGER_TARGET}" in
+  android|ANDROID)
+    PACKAGER_TARGET="android"
+    export AGENT_UI_PLATFORM=android
+    export ONTRACK_PACKAGER_TARGET=android
+    ;;
+  *)
+    PACKAGER_TARGET="ios"
+    # Don't clobber an explicit android pin from the environment mid-heal.
+    if [[ "${AGENT_UI_PLATFORM:-}" != "android" ]]; then
+      export AGENT_UI_PLATFORM=ios
+    fi
+    export ONTRACK_PACKAGER_TARGET=ios
+    ;;
+esac
+
+# Final pin: --android / AGENT_UI_PLATFORM=android wins.
+if [[ "${AGENT_UI_PLATFORM:-}" == "android" || "$PACKAGER_TARGET" == "android" ]]; then
+  PACKAGER_TARGET="android"
+  export AGENT_UI_PLATFORM=android
+  export ONTRACK_PACKAGER_TARGET=android
+fi
 
 http_ok() {
   local url="$1"
@@ -194,25 +232,57 @@ node_version_label() {
 }
 
 simulator_booted() {
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    local serial
+    serial="$(android_emu_preferred_serial || true)"
+    [[ -n "$serial" ]] || return 1
+    ONTRACK_ANDROID_SERIAL="$serial" android_emu_adb get-state >/dev/null 2>&1
+    return $?
+  fi
   xcrun simctl list devices booted 2>/dev/null | grep -q Booted
 }
 
 app_installed() {
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    android_emu_adb shell pm path "$BUNDLE_ID" 2>/dev/null | grep -q "package:"
+    return $?
+  fi
   xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
 }
 
 probe_connected() {
   # Agent-ui dump only succeeds when JS runtime is alive and listening for deep links.
   # Skip heal recursion (dump → open → heal → ensure → probe).
-  AGENT_UI_SKIP_HEAL=1 WAIT_SECS=3 ./scripts/agent-ui-dump.sh >/dev/null 2>&1
+  AGENT_UI_SKIP_HEAL=1 AGENT_UI_PLATFORM="${AGENT_UI_PLATFORM}" WAIT_SECS=3 \
+    ./scripts/agent-ui-dump.sh >/dev/null 2>&1
 }
 
 ensure_fast_refresh_enabled() {
-  # The dev client persists the Fast Refresh toggle (RCTDevMenu.hotLoadingEnabled)
-  # per install. When it is off, the app never subscribes to HMR — edits silently
-  # never apply no matter how healthy Metro/Watchman are. Heal it here.
+  # The dev client persists the Fast Refresh toggle. When it is off, edits
+  # silently never apply no matter how healthy Metro/Watchman are.
   simulator_booted || return 0
   app_installed || return 0
+
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    # Best-effort: debug builds allow run-as to read SharedPreferences.
+    if ! android_emu_adb shell run-as "$BUNDLE_ID" true >/dev/null 2>&1; then
+      return 0
+    fi
+    local prefs
+    prefs="$(android_emu_adb shell run-as "$BUNDLE_ID" sh -c \
+      'for f in shared_prefs/*.xml; do [ -f "$f" ] && cat "$f"; done' 2>/dev/null || true)"
+    if ! printf '%s' "$prefs" | grep -qiE 'hotLoadingEnabled[^>]*value="false"|hotLoadingEnabled">false'; then
+      return 0
+    fi
+    echo "Fast Refresh looks OFF in Android shared_prefs — clearing RCTDevMenu prefs…"
+    android_emu_adb shell run-as "$BUNDLE_ID" sh -c \
+      'rm -f shared_prefs/RCTDevMenu.xml shared_prefs/rkct_dev_menu.xml' \
+      >/dev/null 2>&1 || true
+    android_emu_adb shell am force-stop "$BUNDLE_ID" >/dev/null 2>&1 || true
+    echo "Fast Refresh prefs cleared; app will be relaunched by the reconnect step."
+    return 0
+  fi
+
   local menu
   menu="$(xcrun simctl spawn booted defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
   if [[ "$menu" != *"hotLoadingEnabled = 0"* ]]; then
@@ -231,8 +301,10 @@ print_packager_diagnostics() {
   local host="$1"
   local status="down"
   local listen
-  local sim="not booted"
+  local device="not booted"
+  local preferred=""
   local app="n/a"
+  local target_label="Simulator"
 
   if metro_ipv4_ok; then
     status="up (127.0.0.1)"
@@ -247,14 +319,30 @@ print_packager_diagnostics() {
   listen="$(listening_addresses)"
   [[ -z "$listen" ]] && listen="none"
 
-  if simulator_booted; then
-    local preferred_udid
-    preferred_udid="$(ios_sim_preferred_booted_udid || true)"
-    if [[ -n "$preferred_udid" ]]; then
-      sim="booted ($(ios_sim_preferred_name))"
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    target_label="Emulator"
+    preferred="$(android_emu_preferred_name)"
+    local serial
+    serial="$(android_emu_preferred_serial || true)"
+    if [[ -n "$serial" ]]; then
+      device="booted (${preferred} / ${serial})"
     else
-      sim="booted (not $(ios_sim_preferred_name))"
+      device="not booted (want ${preferred})"
     fi
+  else
+    preferred="$(ios_sim_preferred_name)"
+    if simulator_booted; then
+      local preferred_udid
+      preferred_udid="$(ios_sim_preferred_booted_udid || true)"
+      if [[ -n "$preferred_udid" ]]; then
+        device="booted (${preferred})"
+      else
+        device="booted (not ${preferred})"
+      fi
+    fi
+  fi
+
+  if simulator_booted; then
     if app_installed; then
       if probe_connected; then
         app="installed + connected"
@@ -268,12 +356,13 @@ print_packager_diagnostics() {
 
   cat <<EOF
 --- packager diagnostic ---
+Target:           ${PACKAGER_TARGET} (AGENT_UI_PLATFORM=${AGENT_UI_PLATFORM:-})
 Metro status:     ${status}
 Listening:        ${listen}
 Watchman client:  $(metro_has_watchman_client && echo yes || echo NO)
 Node:             $(node_version_label)
-Simulator:        ${sim}
-Preferred sim:    $(ios_sim_preferred_name)
+${target_label}:        ${device}
+Preferred:        ${preferred}
 App (${BUNDLE_ID}): ${app}
 Host expected:    ${host}:${METRO_PORT}
 ---------------------------
@@ -564,20 +653,36 @@ reconnect_dev_client() {
   encoded="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "http://${host}:${METRO_PORT}")"
   local url="exp+ontrack://expo-development-client/?url=${encoded}"
 
-  if ! ensure_preferred_ios_simulator; then
-    print_packager_diagnostics "$host"
-    exit 1
-  fi
-  if ! app_installed; then
-    echo "error: ${BUNDLE_ID} is not installed on the preferred simulator ($(ios_sim_preferred_name))" >&2
-    print_packager_diagnostics "$host"
-    exit 1
-  fi
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    if ! ensure_preferred_android_emulator; then
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
+    if ! app_installed; then
+      echo "error: ${BUNDLE_ID} is not installed on the preferred emulator ($(android_emu_preferred_name))" >&2
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
+    android_emu_adb shell monkey -p "$BUNDLE_ID" -c android.intent.category.LAUNCHER 1 \
+      >/dev/null 2>&1 || true
+    echo "Reconnecting Android dev client → http://${host}:${METRO_PORT}"
+    android_emu_adb shell am start -a android.intent.action.VIEW -d "$url" >/dev/null 2>&1 || true
+  else
+    if ! ensure_preferred_ios_simulator; then
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
+    if ! app_installed; then
+      echo "error: ${BUNDLE_ID} is not installed on the preferred simulator ($(ios_sim_preferred_name))" >&2
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
 
-  # Soft foreground; avoid terminate/relaunch unless launch is required.
-  xcrun simctl launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
-  echo "Reconnecting dev client → http://${host}:${METRO_PORT}"
-  xcrun simctl openurl booted "$url"
+    # Soft foreground; avoid terminate/relaunch unless launch is required.
+    xcrun simctl launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+    echo "Reconnecting dev client → http://${host}:${METRO_PORT}"
+    xcrun simctl openurl booted "$url"
+  fi
 
   # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.
   local deadline=$((SECONDS + WAIT_SECS + 30))
@@ -588,7 +693,7 @@ reconnect_dev_client() {
     fi
     sleep 0.75
   done
-  echo "error: reconnect timed out — check Metro / Simulator launcher" >&2
+  echo "error: reconnect timed out — check Metro / device launcher" >&2
   print_packager_diagnostics "$host"
   exit 1
 }
@@ -618,10 +723,10 @@ ensure_metro_watcher "$HOST"
 
 sync_env_local "$HOST"
 
-# SessionStart / Metro keep-alive: never open Simulator. Agents boot the
+# SessionStart / Metro keep-alive: never open Simulator/Emulator. Agents boot the
 # preferred device only when verification (agent-ui / reconnect) needs it.
 if [[ "$METRO_ONLY" == "1" ]]; then
-  echo "Metro-only: skipping simulator boot/reconnect"
+  echo "Metro-only: skipping device boot/reconnect"
   exit 0
 fi
 
@@ -644,15 +749,30 @@ if [[ "$DO_FORCE" == "1" ]]; then
   exit 0
 fi
 
-# Boot preferred device only (default iPhone 17 Pro). Never leave peer sims up.
-if ! ensure_preferred_ios_simulator; then
-  echo "note: could not boot preferred simulator — Metro is healthy"
-  exit 0
-fi
+# Boot preferred device only. Never leave peer iOS sims / Android emulators up.
+if [[ "$PACKAGER_TARGET" == "android" ]]; then
+  if ! ensure_preferred_android_emulator; then
+    echo "note: could not boot preferred emulator — Metro is healthy"
+    exit 0
+  fi
+  if [[ -n "${ONTRACK_ANDROID_SERIAL:-}" ]]; then
+    mkdir -p "$ROOT/.cursor"
+    printf '%s\n' "$ONTRACK_ANDROID_SERIAL" >"$ROOT/.cursor/android-emulator.serial"
+  fi
+  if ! app_installed; then
+    echo "note: app not installed on $(android_emu_preferred_name) — Metro is healthy"
+    exit 0
+  fi
+else
+  if ! ensure_preferred_ios_simulator; then
+    echo "note: could not boot preferred simulator — Metro is healthy"
+    exit 0
+  fi
 
-if ! app_installed; then
-  echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
-  exit 0
+  if ! app_installed; then
+    echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
+    exit 0
+  fi
 fi
 
 if [[ "$METRO_RELAUNCHED" == "1" ]]; then

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Svg, { Line } from 'react-native-svg';
+import Svg, { Defs, Line, LinearGradient, Stop } from 'react-native-svg';
 
 import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
@@ -47,34 +47,84 @@ function codeLabel(airport?: string): string {
 /** SVG dashed stroke — RN View borderStyle:'dashed' is unreliable on iOS. */
 export function DashedLine({
   color,
+  toColor,
   thickness = 2,
   dashLength = 6,
   gapLength = 4,
+  direction = 'horizontal',
+  /** Explicit length in px — skips onLayout when the parent size is known. */
+  length: lengthProp,
 }: {
   color: string;
+  /** Optional end color — paints a gradient along the stroke. */
+  toColor?: string;
   thickness?: number;
   dashLength?: number;
   gapLength?: number;
+  direction?: 'horizontal' | 'vertical';
+  length?: number;
 }) {
   const { s } = useResponsive();
-  const [width, setWidth] = useState(0);
+  const gradientId = useId().replace(/:/g, '');
+  const [measured, setMeasured] = useState(0);
   const stroke = Math.max(1.5, s(thickness));
   const dash = Math.max(3, s(dashLength));
   const gap = Math.max(2, s(gapLength));
+  const vertical = direction === 'vertical';
+  const length = lengthProp && lengthProp > 0 ? lengthProp : measured;
+  const gradient = Boolean(toColor && toColor !== color);
+  const strokePaint = gradient ? `url(#${gradientId})` : color;
 
   return (
     <View
-      style={[styles.dashedHost, { height: stroke }]}
+      style={
+        vertical
+          ? [
+              styles.dashedHostVertical,
+              { width: stroke },
+              lengthProp ? { height: lengthProp } : null,
+            ]
+          : [
+              styles.dashedHost,
+              { height: stroke },
+              lengthProp ? { width: lengthProp } : null,
+            ]
+      }
       pointerEvents="none"
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      {width > 0 ? (
-        <Svg width={width} height={stroke}>
+      onLayout={
+        lengthProp
+          ? undefined
+          : (event) => {
+              const next = vertical
+                ? event.nativeEvent.layout.height
+                : event.nativeEvent.layout.width;
+              setMeasured(next);
+            }
+      }>
+      {length > 0 ? (
+        <Svg
+          width={vertical ? stroke : length}
+          height={vertical ? length : stroke}>
+          {gradient ? (
+            <Defs>
+              <LinearGradient
+                id={gradientId}
+                gradientUnits="userSpaceOnUse"
+                x1={vertical ? stroke / 2 : 0}
+                y1={vertical ? 0 : stroke / 2}
+                x2={vertical ? stroke / 2 : length}
+                y2={vertical ? length : stroke / 2}>
+                <Stop offset="0" stopColor={color} />
+                <Stop offset="1" stopColor={toColor} />
+              </LinearGradient>
+            </Defs>
+          ) : null}
           <Line
-            x1={0}
-            y1={stroke / 2}
-            x2={width}
-            y2={stroke / 2}
-            stroke={color}
+            x1={vertical ? stroke / 2 : 0}
+            y1={vertical ? 0 : stroke / 2}
+            x2={vertical ? stroke / 2 : length}
+            y2={vertical ? length : stroke / 2}
+            stroke={strokePaint}
             strokeWidth={stroke}
             strokeDasharray={`${dash},${gap}`}
             strokeLinecap="round"
@@ -645,6 +695,7 @@ export function LayoverBanner({
 
 const styles = StyleSheet.create({
   dashedHost: { width: '100%', overflow: 'hidden' },
+  dashedHostVertical: { height: '100%', alignSelf: 'center', overflow: 'hidden' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   chip: {
     flexDirection: 'row',

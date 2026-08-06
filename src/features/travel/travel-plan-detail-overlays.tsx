@@ -1,22 +1,23 @@
 import type { MutableRefObject } from 'react';
 
-import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import type { StayBookingOpen } from '@/features/travel/booking-open';
+import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import type { ExpenseFormState } from '@/features/travel/expenses/expense-form';
 import { TravelExpensesSheet } from '@/features/travel/expenses/travel-expenses-sheet';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import {
-  TravelImportResultModal,
-  type TravelImportResult,
+    TravelImportResultModal,
+    type TravelImportResult,
 } from '@/features/travel/travel-import-result-modal';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
 import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
-import type { TravelPlanDetailAddForm } from '@/features/travel/use-travel-plan-detail-add-form';
 import type { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
+import type { TravelPlanDetailAddForm } from '@/features/travel/use-travel-plan-detail-add-form';
 import type { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
+import { useTravel } from '@/store/travel';
 import { pickCameraImage, pickLibraryImages } from '@/utils/pick-image';
 
 type TravelPlanDetailOverlaysProps = {
@@ -86,8 +87,11 @@ export function TravelPlanDetailOverlays({
         itinerary={itinerary}
         onClose={() => setEditingTripDates(false)}
         onSave={(nextStartDate, nextEndDate) => {
+          const latest =
+            useTravel.getState().plans.find((entry) => entry.id === plan.id) ??
+            plan;
           updatePlan({
-            ...plan,
+            ...latest,
             startDate: nextStartDate,
             endDate: nextEndDate,
             updatedAt: new Date().toISOString(),

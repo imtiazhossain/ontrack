@@ -1,42 +1,47 @@
 import { Image } from 'expo-image';
-import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import {
-  AppText,
-  Button,
-  Screen,
-  SegmentedControl,
-  SectionHeader,
-  SettingsActionRow,
-  SettingsToggleRow,
-} from '@/components/primitives';
 import { ADDONS } from '@/addons/registry';
 import type { AddonId } from '@/addons/types';
+import {
+  AppText,
+  appPrompt,
+  Card,
+  CollapsibleSection,
+  DangerZone,
+  DestructiveSection,
+  Screen,
+  SectionHeader,
+  SegmentedControl,
+  SettingsActionRow,
+  SettingsGroup,
+  SettingsToggleRow,
+} from '@/components/primitives';
 import { CloudAccountCard } from '@/features/account/cloud-account-card';
+import { useCanUseDeveloperTools } from '@/features/account/dev-access';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { ProfileAvatarEditorSheet } from '@/features/account/profile-avatar-editor-sheet';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
-import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
-import { spacing } from '@/design-system';
-import { useResponsive } from '@/hooks/use-responsive';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { usePreferences, type ThemePreference } from '@/store/preferences';
+import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
+import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
+import { useResponsive } from '@/hooks/use-responsive';
+import { deletePlant } from '@/services/plants/schedule';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
-import { useSchedule } from '@/store/schedule';
-import { usePlants } from '@/store/plants';
-import { useTravel } from '@/store/travel';
-import { useTodos } from '@/store/todos';
-import { deletePlant } from '@/services/plants/schedule';
-import { deleteAllVisionBoardImages } from '@/features/vision-board/media';
-import { useVisionBoard } from '@/store/vision-board';
 import { useHealth } from '@/store/health';
-import { haptics } from '@/utils/haptics';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
+import { usePlants } from '@/store/plants';
+import { usePreferences, type ThemePreference } from '@/store/preferences';
+import { useSchedule } from '@/store/schedule';
+import { useTodos } from '@/store/todos';
+import { useTravel } from '@/store/travel';
+import { useVisionBoard } from '@/store/vision-board';
+import { AgentTestId, AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
+import { haptics } from '@/utils/haptics';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -48,35 +53,40 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const { s, spacing: rs } = useResponsive();
-  const { user } = useAuthSession();
-  const name = usePreferences((s) => s.name);
-  const goal = usePreferences((s) => s.goal);
-  const homeLocation = usePreferences((s) => s.homeLocation);
-  const themePreference = usePreferences((s) => s.themePreference);
-  const aiEnabled = usePreferences((s) => s.aiEnabled);
-  const hapticsEnabled = usePreferences((s) => s.hapticsEnabled);
-  const setThemePreference = usePreferences((s) => s.setThemePreference);
-  const setAiEnabled = usePreferences((s) => s.setAiEnabled);
-  const setHapticsEnabled = usePreferences((s) => s.setHapticsEnabled);
-  const resetPreferences = usePreferences((s) => s.resetAll);
-  const enabledAddons = useAddons((s) => s.enabled);
-  const setAddonEnabled = useAddons((s) => s.setEnabled);
-  const resetAddons = useAddons((s) => s.reset);
-  const installedAgentCount = useAgents((s) => Object.keys(s.installations).length);
-  const resetAgents = useAgents((s) => s.reset);
-  const resetSchedule = useSchedule((s) => s.resetAll);
-  const seedIfNeeded = useSchedule((s) => s.seedIfNeeded);
-  const plants = usePlants((s) => s.plants);
-  const resetPlants = usePlants((s) => s.reset);
-  const resetTravel = useTravel((s) => s.reset);
-  const resetTodos = useTodos((s) => s.reset);
-  const resetVisionBoard = useVisionBoard((s) => s.reset);
-  const resetHealth = useHealth((s) => s.reset);
+  const { user, isGuest, deleteAccount } = useAuthSession();
+  /** Profile → Developer: only when `account_flags.developer_tools` is granted server-side. */
+  const showDeveloperSection = useCanUseDeveloperTools();
+  const showDeleteAccount = !isGuest && Boolean(user);
+  const name = usePreferences((state) => state.name);
+  const goal = usePreferences((state) => state.goal);
+  const homeLocation = usePreferences((state) => state.homeLocation);
+  const themePreference = usePreferences((state) => state.themePreference);
+  const aiEnabled = usePreferences((state) => state.aiEnabled);
+  const hapticsEnabled = usePreferences((state) => state.hapticsEnabled);
+  const usageAnalyticsEnabled = usePreferences((state) => state.usageAnalyticsEnabled);
+  const setThemePreference = usePreferences((state) => state.setThemePreference);
+  const setAiEnabled = usePreferences((state) => state.setAiEnabled);
+  const setHapticsEnabled = usePreferences((state) => state.setHapticsEnabled);
+  const setUsageAnalyticsEnabled = usePreferences((state) => state.setUsageAnalyticsEnabled);
+  const resetPreferences = usePreferences((state) => state.resetAll);
+  const enabledAddons = useAddons((state) => state.enabled);
+  const setAddonEnabled = useAddons((state) => state.setEnabled);
+  const resetAddons = useAddons((state) => state.reset);
+  const installedAgentCount = useAgents((state) => Object.keys(state.installations).length);
+  const resetAgents = useAgents((state) => state.reset);
+  const resetSchedule = useSchedule((state) => state.resetAll);
+  const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
+  const plants = usePlants((state) => state.plants);
+  const resetPlants = usePlants((state) => state.reset);
+  const resetTravel = useTravel((state) => state.reset);
+  const resetTodos = useTodos((state) => state.reset);
+  const resetVisionBoard = useVisionBoard((state) => state.reset);
+  const resetHealth = useHealth((state) => state.reset);
   const [locationOpen, setLocationOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
 
   const displayName = resolveSelfDisplayName({ preferencesName: name, user });
-  const avatarSize = Math.max(72, s(80));
+  const avatarSize = Math.max(56, s(60));
   const openAvatar = () => {
     haptics.tap();
     setAvatarOpen(true);
@@ -84,6 +94,13 @@ export default function ProfileSettingsScreen() {
   const avatarAgent = useAgentUiTarget(AgentUiIds.profile.avatar, {
     label: 'Customize profile icon',
     onPress: openAvatar,
+  });
+  const openTmdb = () => {
+    void WebBrowser.openBrowserAsync('https://www.themoviedb.org');
+  };
+  const tmdbAgent = useAgentUiTarget(AgentUiIds.profile.tmdb, {
+    label: 'Open The Movie Database',
+    onPress: openTmdb,
   });
 
   const handleReset = () => {
@@ -113,8 +130,36 @@ export default function ProfileSettingsScreen() {
     });
   };
 
+  const handleDeleteAccount = () => {
+    confirmDestructiveAction({
+      title: 'Delete Account?',
+      message:
+        'This permanently deletes your onTrack account, synced cloud data, and app-owned cloud photos. Shared trips or lists you host become unavailable to others. This cannot be undone.',
+      actionLabel: 'Delete Account',
+      onConfirm: () => {
+        void (async () => {
+          try {
+            const result = await deleteAccount();
+            if (result.status === 'failed') {
+              appPrompt.alert('Delete failed', result.message ?? 'Account deletion failed.');
+            }
+          } catch (deleteError) {
+            appPrompt.alert(
+              'Delete failed',
+              deleteError instanceof Error ? deleteError.message : 'Account deletion failed.',
+            );
+          }
+        })();
+      },
+    });
+  };
+
+  const addonList = ADDONS.filter(
+    (addon) => addon.id !== 'health' || process.env.EXPO_OS === 'ios',
+  );
+
   return (
-    <Screen>
+    <Screen contentStyle={{ gap: rs.lg }}>
       <Pressable
         ref={avatarAgent.ref}
         accessibilityRole="button"
@@ -122,162 +167,228 @@ export default function ProfileSettingsScreen() {
         testID={avatarAgent.testID}
         onLayout={avatarAgent.onLayout}
         onPress={openAvatar}
-        style={[
-          styles.hero,
-          {
-            gap: rs.md,
-            marginBottom: rs.lg,
-            paddingVertical: rs.md,
-          },
-        ]}>
+        style={[styles.hero, { gap: rs.sm }]}>
         <ProfileAvatar displayName={displayName} size={avatarSize} isSelf />
-        <View style={[styles.heroCopy, { gap: rs.xs, minWidth: 0, flexShrink: 1 }]}>
-          <AppText variant="title" style={styles.title} fit numberOfLines={1}>
-            Profile
+        <View style={[styles.heroCopy, { gap: rs.xxs, minWidth: 0, flexShrink: 1 }]}>
+          <AppText variant="title" fit numberOfLines={1}>
+            {displayName}
           </AppText>
-          <AppText variant="body" color="secondary" numberOfLines={2}>
-            {displayName} · {goal || 'Living intentionally'}
-          </AppText>
-          <AppText variant="caption" color="accent" fit>
-            Tap to customize icon
+          <AppText variant="caption" color="secondary" numberOfLines={1} fit>
+            {goal || 'Living intentionally'}
           </AppText>
         </View>
       </Pressable>
 
-      <SectionHeader title="Account & Sync" />
-      <CloudAccountCard />
+      <AgentTestId
+        testID={AgentUiIds.profile.section.account}
+        label="Account"
+        style={{ gap: rs.sm }}>
+        <SectionHeader title="Account" flush />
+        <CloudAccountCard />
+      </AgentTestId>
 
-      <SectionHeader title="Appearance" />
-      <SegmentedControl
-        value={themePreference}
-        options={THEME_OPTIONS.map((option) => ({
-          ...option,
-          testID: AgentUiIds.profile.theme(option.value),
-        }))}
-        onChange={setThemePreference}
-        style={styles.segment}
-      />
-
-      {__DEV__ ? (
-        <>
-          <SectionHeader title="Developer" />
-          <SettingsActionRow
-            label="Design System"
-            detail="Canonical components, actions, states, and feature accents"
-            icon="smart"
-            testID={AgentUiIds.profile.designSystem}
-            onPress={() => router.push('/design-system' as never)}
-            accessibilityLabel="Open design-system gallery"
+      <AgentTestId
+        testID={AgentUiIds.profile.section.appearance}
+        label="Appearance"
+        style={{ gap: rs.sm }}>
+        <SectionHeader title="Appearance" flush />
+        <Card variant="elevated" padded={false} style={{ padding: rs.xs }}>
+          <SegmentedControl
+            value={themePreference}
+            options={THEME_OPTIONS.map((option) => ({
+              ...option,
+              testID: AgentUiIds.profile.theme(option.value),
+            }))}
+            onChange={setThemePreference}
           />
-        </>
+        </Card>
+      </AgentTestId>
+
+      {showDeveloperSection ? (
+        <AgentTestId
+          testID={AgentUiIds.profile.section.developer}
+          label="Developer"
+          style={{ gap: rs.sm }}>
+          <SectionHeader title="Developer" flush />
+          <SettingsGroup>
+            <SettingsActionRow
+              label="Developer Tools"
+              detail="Insights, seeds, overlay, sync, storage"
+              icon="smart"
+              testID={AgentUiIds.profile.developer}
+              onPress={() => router.push('/developer' as never)}
+              accessibilityLabel="Open developer tools"
+            />
+          </SettingsGroup>
+        </AgentTestId>
       ) : null}
 
-      <SectionHeader title="Preferences" />
-      <SettingsActionRow
-        label="Home location"
-        detail={homeLocation.trim() || 'Uses phone location · tap to change'}
-        icon="location"
-        testID={AgentUiIds.profile.homeLocation}
-        onPress={() => setLocationOpen(true)}
-        accessibilityLabel="Set home location for weather"
-      />
-      <SettingsToggleRow
-        label="AI Summaries"
-        detail="Daily insights, meal analysis, and plant analysis"
-        value={aiEnabled}
-        onValueChange={setAiEnabled}
-      />
-      <SettingsToggleRow
-        label="Haptic Feedback"
-        detail="Subtle taps on key actions"
-        value={hapticsEnabled}
-        onValueChange={setHapticsEnabled}
-      />
+      <AgentTestId
+        testID={AgentUiIds.profile.section.preferences}
+        label="Preferences"
+        style={{ gap: rs.sm }}>
+        <SectionHeader title="Preferences" flush />
+        <SettingsGroup>
+          <SettingsActionRow
+            label="Home location"
+            detail={homeLocation.trim() || 'Phone location'}
+            icon="location"
+            testID={AgentUiIds.profile.homeLocation}
+            onPress={() => setLocationOpen(true)}
+            accessibilityLabel="Set home location for weather"
+          />
+          <SettingsToggleRow
+            label="AI Summaries"
+            detail="Daily insights, meals, and plants"
+            icon="smart"
+            value={aiEnabled}
+            onValueChange={setAiEnabled}
+          />
+          <SettingsToggleRow
+            label="Usage Analytics"
+            detail="Screen time to improve the product"
+            icon="insights"
+            value={usageAnalyticsEnabled}
+            onValueChange={setUsageAnalyticsEnabled}
+            testID={AgentUiIds.profile.usageAnalytics}
+          />
+          <SettingsToggleRow
+            label="Haptic Feedback"
+            detail="Subtle taps on key actions"
+            icon="settings"
+            value={hapticsEnabled}
+            onValueChange={setHapticsEnabled}
+          />
+        </SettingsGroup>
+      </AgentTestId>
 
-      <SectionHeader title="Add-ons" />
-      <AppText variant="body" color="secondary" style={styles.sectionIntro}>
-        Turn an add-on off to hide it on this account; its data is kept.
-      </AppText>
-      {ADDONS.filter((addon) => addon.id !== 'health' || process.env.EXPO_OS === 'ios').map((addon) => (
-        <SettingsToggleRow
-          key={addon.id}
-          label={addon.name}
-          detail={addon.description}
-          value={enabledAddons[addon.id]}
-          onValueChange={(value) => setAddonEnabled(addon.id as AddonId, value)}
-          testID={AgentUiIds.profile.addon(addon.id)}
+      <AgentTestId
+        testID={AgentUiIds.profile.section.features}
+        label="Features"
+        style={{ gap: rs.sm }}>
+        <SectionHeader title="Features" flush />
+        <SettingsGroup>
+          <SettingsActionRow
+            label="Manage Agents"
+            detail={
+              installedAgentCount > 0
+                ? `${installedAgentCount} installed`
+                : 'Permissions and access'
+            }
+            icon="agents"
+            testID={AgentUiIds.profile.agents}
+            onPress={() => router.push('/agents' as never)}
+            accessibilityLabel="Manage Agents"
+          />
+          <SettingsActionRow
+            label="Nutrition"
+            detail="Profiles, dependents & targets"
+            icon="nutrition-profiles"
+            testID={AgentUiIds.profile.nutrition}
+            onPress={() => router.push('/nutrition-profile' as never)}
+            accessibilityLabel="Open nutrition profiles"
+          />
+        </SettingsGroup>
+      </AgentTestId>
+
+      <CollapsibleSection
+        title="Add-ons"
+        detail="Data kept when off"
+        testID={AgentUiIds.profile.section.addons}>
+        <SettingsGroup>
+          {addonList.map((addon) => (
+            <SettingsToggleRow
+              key={addon.id}
+              label={addon.name}
+              detail={addon.description}
+              detailNumberOfLines={1}
+              value={enabledAddons[addon.id]}
+              onValueChange={(value) => setAddonEnabled(addon.id as AddonId, value)}
+              testID={AgentUiIds.profile.addon(addon.id)}
+            />
+          ))}
+        </SettingsGroup>
+      </CollapsibleSection>
+
+      <AgentTestId
+        testID={AgentUiIds.profile.section.legal}
+        label="Legal"
+        style={{ gap: rs.sm }}>
+        <SectionHeader title="Legal" flush />
+        <SettingsGroup>
+          <SettingsActionRow
+            label="Privacy Policy"
+            detail="How onTrack handles your data"
+            icon="shield"
+            testID={AgentUiIds.profile.privacy}
+            onPress={() => router.push('/privacy' as never)}
+            accessibilityLabel="Privacy Policy"
+          />
+          <SettingsActionRow
+            label="Terms of Use"
+            detail="Rules for using onTrack"
+            icon="note"
+            testID={AgentUiIds.profile.terms}
+            onPress={() => router.push('/terms' as never)}
+            accessibilityLabel="Terms of Use"
+          />
+        </SettingsGroup>
+      </AgentTestId>
+
+      <DangerZone testID={AgentUiIds.profile.section.dangerZone}>
+        <DestructiveSection
+          flush
+          label="Reset All Data"
+          description="Clears local schedules, add-ons data, and app photos."
+          onPress={handleReset}
+          testID={AgentUiIds.profile.resetData}
+          accessibilityLabel="Reset All Data"
         />
-      ))}
+        {showDeleteAccount ? (
+          <DestructiveSection
+            flush
+            label="Delete Account"
+            description="Permanently deletes your cloud account and synced data. This cannot be undone."
+            onPress={handleDeleteAccount}
+            testID={AgentUiIds.profile.deleteAccount}
+            accessibilityLabel="Delete Account"
+          />
+        ) : null}
+      </DangerZone>
 
-      <SectionHeader title="Agents" />
-      <SettingsActionRow
-        label="Manage Agents"
-        detail={
-          installedAgentCount > 0
-            ? `${installedAgentCount} installed · permissions and access`
-            : 'None installed yet'
-        }
-        icon="agents"
-        testID={AgentUiIds.profile.agents}
-        onPress={() => router.push('/agents' as never)}
-        accessibilityLabel="Manage Agents"
-      />
-
-      <SectionHeader title="Nutrition" />
-      <Button
-        variant="secondary"
-        icon="nutrition-profiles"
-        testID={AgentUiIds.profile.nutrition}
-        onPress={() => router.push('/nutrition-profile' as never)}
-        accessibilityLabel="Open nutrition profiles">
-        Profiles, dependents & targets
-      </Button>
-      <AppText variant="caption" color="secondary" style={styles.clinicalNote}>
-        Youth and infant clinical guidance is not available in this version.
-      </AppText>
-
-      <SectionHeader title="Legal" />
-      <SettingsActionRow
-        label="Privacy Policy"
-        detail="How onTrack handles your data"
-        icon="shield"
-        testID={AgentUiIds.profile.privacy}
-        onPress={() => router.push('/privacy' as never)}
-        accessibilityLabel="Privacy Policy"
-      />
-      <SettingsActionRow
-        label="Terms of Use"
-        detail="Rules for using onTrack"
-        icon="note"
-        testID={AgentUiIds.profile.terms}
-        onPress={() => router.push('/terms' as never)}
-        accessibilityLabel="Terms of Use"
-      />
-
-      <SectionHeader title="Data" />
-      <Button
-        variant="danger"
-        testID={AgentUiIds.profile.resetData}
-        onPress={handleReset}
-        accessibilityLabel="Reset All Data">
-        Reset All Data
-      </Button>
-
-      <SectionHeader title="Movie Data" />
-      <Pressable
-        accessibilityRole="link"
-        accessibilityLabel="Open The Movie Database"
-        onPress={() => WebBrowser.openBrowserAsync('https://www.themoviedb.org')}
-        style={styles.attribution}>
-        <Image
-          source="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
-          style={styles.tmdbLogo}
-          contentFit="contain"
-        />
-        <AppText variant="caption" color="secondary">
-          This product uses the TMDB API but is not endorsed or certified by TMDB.
-        </AppText>
-      </Pressable>
+      <AgentTestId
+        testID={AgentUiIds.profile.section.disclaimers}
+        label="Disclaimers"
+        style={{ gap: rs.sm, paddingBottom: rs.xl }}>
+        <SectionHeader title="Disclaimers" flush />
+        <SettingsGroup>
+          <Pressable
+            ref={tmdbAgent.ref}
+            accessibilityRole="link"
+            accessibilityLabel="Open The Movie Database"
+            testID={tmdbAgent.testID}
+            onLayout={tmdbAgent.onLayout}
+            onPress={openTmdb}
+            style={[
+              styles.attribution,
+              {
+                gap: rs.sm,
+                paddingHorizontal: rs.md,
+                paddingVertical: rs.md,
+                minHeight: Math.max(44, s(56)),
+              },
+            ]}>
+            <Image
+              source="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
+              style={{ width: s(72), height: s(28) }}
+              contentFit="contain"
+            />
+            <AppText variant="caption" color="tertiary" numberOfLines={2} style={{ flexShrink: 1, minWidth: 0 }}>
+              This product uses the TMDB API but is not endorsed or certified by TMDB.
+            </AppText>
+          </Pressable>
+        </SettingsGroup>
+      </AgentTestId>
 
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
       <ProfileAvatarEditorSheet visible={avatarOpen} onClose={() => setAvatarOpen(false)} />
@@ -293,12 +404,8 @@ const styles = StyleSheet.create({
   heroCopy: {
     flex: 1,
   },
-  title: { marginBottom: 0 },
-  segment: {
-    marginBottom: spacing.lg,
+  attribution: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
-  attribution: { gap: spacing.sm, marginBottom: spacing.xl },
-  tmdbLogo: { width: 96, height: 40 },
-  clinicalNote: { marginTop: spacing.sm, marginBottom: spacing.lg },
-  sectionIntro: { marginBottom: spacing.md },
 });

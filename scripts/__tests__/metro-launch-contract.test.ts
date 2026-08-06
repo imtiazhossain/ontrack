@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -132,7 +133,7 @@ describe('metro launch command contract', () => {
 
     const ensure = read('scripts/ensure-packager.sh');
     expect(ensure).toContain('--metro-only');
-    expect(ensure).toContain('Metro-only: skipping simulator boot/reconnect');
+    expect(ensure).toContain('Metro-only: skipping device boot/reconnect');
 
     const host = read('scripts/lib/agent-ui-host.sh');
     expect(host).toContain('agent_ui_heal_packager');
@@ -152,5 +153,106 @@ describe('metro launch command contract', () => {
     expect(sim).toMatch(/if ios_sim_want_window; then[\s\S]*?ios_sim_open_focused/);
     expect(sim).toContain('-CurrentDeviceUDID');
     expect(sim).toContain('ios_sim_prune_peers_briefly');
+  });
+
+  it('boots preferred Android emulator headless; GUI window is opt-in only', () => {
+    const emu = read('scripts/lib/android-emulator.sh');
+    expect(emu).toContain('ONTRACK_ANDROID_AVD:=Galaxy_S26');
+    expect(emu).toContain('ONTRACK_ANDROID_EMULATOR_WINDOW:=0');
+    expect(emu).toContain('android_emu_want_window');
+    expect(emu).toContain('Booting preferred emulator (headless)');
+    expect(emu).toContain('-no-window');
+    expect(emu).toContain('no-boot-anim');
+    expect(emu).toContain('hw.keyboard');
+    expect(emu).toContain('android_emu_ensure_hw_keyboard');
+    expect(emu).toContain('android_emu_set_clipboard');
+    // Must detach like Metro — nohup alone dies with Cursor agent shells.
+    expect(emu).toContain('start_new_session=True');
+    expect(emu).toContain('Emulator detached (new session)');
+    const ensure = read('scripts/ensure-android-emulator.sh');
+    expect(ensure).toContain('ensure_preferred_android_emulator');
+    expect(ensure).toContain('--window');
+    const pkg = JSON.parse(read('package.json'));
+    expect(pkg.scripts['android:ensure']).toContain('ensure-android-emulator.sh');
+    expect(pkg.scripts['android:ensure:start']).toContain('--android');
+    expect(pkg.scripts['packager:ensure:android']).toContain('--android');
+    expect(pkg.scripts['android:run']).toContain('ensure-android-emulator.sh --window');
+    expect(pkg.scripts['android:push-fixture']).toContain('android-push-fixture.sh');
+  });
+
+  it('pins agent-ui commands by AGENT_UI_PLATFORM (ios|android)', () => {
+    const daemon = read('scripts/lib/agent_ui_daemon.py');
+    expect(daemon).toContain('pending_by_platform');
+    expect(daemon).toContain('status_by_nonce');
+    expect(daemon).toContain('MAX_PENDING_PER_PLATFORM');
+    expect(daemon).toContain('daemon_code_fingerprint');
+    expect(daemon).toContain('normalize_platform');
+    expect(daemon).toContain('platform=');
+    const bridge = read('scripts/lib/agent_ui_bridge.py');
+    expect(bridge).toContain('agent_ui_platform');
+    expect(bridge).toContain('agent_ui_device');
+    expect(bridge).toContain('stamp_platform');
+    expect(bridge).toContain('AGENT_UI_PLATFORM');
+    expect(bridge).toContain('AGENT_UI_DEVICE');
+    const host = read('scripts/lib/agent-ui-host.sh');
+    expect(host).toContain('agent_ui_is_android');
+    expect(host).toContain('AGENT_UI_ANDROID_WARM_WAIT_SECS');
+    expect(host).toContain('agent_ui_bridge_recently_ok');
+    expect(host).toContain('skipping force-reconnect heal');
+    const packager = read('scripts/ensure-packager.sh');
+    expect(packager).toContain('--android');
+    expect(packager).toContain('ensure_preferred_android_emulator');
+    expect(packager).toContain('AGENT_UI_PLATFORM=android');
+    expect(packager).toContain('Target:');
+    expect(packager).toContain('shared_prefs');
+    const http = read('src/utils/agent-ui/http-bridge.ts');
+    expect(http).toContain('platform=');
+    expect(http).toContain("Platform.OS === 'android'");
+    const sync = read('src/utils/agent-ui/AgentUiRouteSync.tsx');
+    expect(sync).toContain('MAX_QUEUED_COMMANDS');
+    expect(sync).toContain('Do not long-poll while draining');
+    const color = read('scripts/lib/agent_ui_color.py');
+    expect(color).toContain('screencap');
+    expect(color).toContain('_agent_ui_platform');
+    const recipe = read('scripts/agent-ui-android-travel-demo.sh');
+    expect(recipe).toContain('AGENT_UI_PLATFORM=android');
+    expect(recipe).toContain('travel-demo');
+    const pkg = JSON.parse(read('package.json'));
+    expect(pkg.scripts['android:travel-demo']).toContain('agent-ui-android-travel-demo.sh');
+    const dropdown = read('src/components/primitives/dropdown.tsx');
+    expect(dropdown).toContain('value: String(value');
+  });
+
+  it('daemon BridgeState FIFO + status-by-nonce isolate platforms', () => {
+    const lib = join(root, 'scripts/lib');
+    const out = execFileSync(
+      'python3',
+      [
+        '-c',
+        [
+          'import sys',
+          `sys.path.insert(0, ${JSON.stringify(lib)})`,
+          'from agent_ui_daemon import BridgeState',
+          's = BridgeState()',
+          'n1 = s.enqueue({"op": "route", "platform": "android"})',
+          'n2 = s.enqueue({"op": "exists", "platform": "android"})',
+          'n_ios = s.enqueue({"op": "route", "platform": "ios"})',
+          'a1 = s.take_command(0, platform="android")',
+          'a2 = s.take_command(0, platform="android")',
+          'ios = s.take_command(0, platform="ios")',
+          'assert a1["nonce"] == n1 and a1["op"] == "route"',
+          'assert a2["nonce"] == n2 and a2["op"] == "exists"',
+          'assert ios["nonce"] == n_ios',
+          's.publish_status({"ok": True, "nonce": n1, "op": "route"})',
+          's.publish_status({"ok": True, "nonce": n_ios, "op": "route"})',
+          'assert s.wait_status(n1, 0.01)["nonce"] == n1',
+          'assert s.wait_status(n_ios, 0.01)["nonce"] == n_ios',
+          'assert s.take_command(0, platform="android") is None',
+          'print("ok")',
+        ].join('; '),
+      ],
+      { cwd: root, encoding: 'utf8' },
+    );
+    expect(out.trim()).toBe('ok');
   });
 });

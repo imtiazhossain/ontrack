@@ -17,14 +17,22 @@ export function canonicalTravelTripId(
  * Member copy joined via invite / open-join (not the host’s canonical plan).
  * Host plans may store hostTripId equal to plan.id after expense sync — that
  * alone does not make them a member copy.
+ *
+ * A distinct `hostTripId` without `chatAccessCode` is only treated as a member
+ * copy when `hostDisplayName` is still set (typical member snapshot). After a
+ * host-transfer promotion we clear chat access + host display name while keeping
+ * `hostTripId` as the server trip id for expense sync.
  */
 export function isTravelMemberPlan(
-  plan: Pick<TravelPlan, 'id' | 'chatAccessCode' | 'hostTripId'>,
+  plan: Pick<
+    TravelPlan,
+    'id' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName'
+  >,
 ): boolean {
   if (plan.chatAccessCode) return true;
   const hostTripId = plan.hostTripId?.trim();
-  if (!hostTripId) return false;
-  return hostTripId !== plan.id;
+  if (!hostTripId || hostTripId === plan.id) return false;
+  return Boolean(plan.hostDisplayName?.trim());
 }
 
 export type TravelTripRosterRole = 'host' | 'cohost' | 'member';

@@ -1,8 +1,30 @@
 # Agent routes
 
-Stable deep links and aliases for jumping to onTrack surfaces in the iOS Simulator without tab-hopping or screenshot coordinates.
+Stable deep links and aliases for jumping to onTrack surfaces without tab-hopping or screenshot coordinates (default: iOS Simulator; Android with `AGENT_UI_PLATFORM=android`).
 
 **Prefer these over tapping through the carousel** when you already know the destination.
+
+## Android (when the emulator is the target)
+
+```bash
+# One-shot: Metro + Galaxy_S26 + travel demo assert
+./scripts/agent-ui-android-travel-demo.sh
+./scripts/agent-ui-android-travel-demo.sh --fixture path/to/chase.png
+
+# Or manual pin:
+export AGENT_UI_PLATFORM=android
+# Optional adb serial pin (also used for screencap / --color):
+# export AGENT_UI_DEVICE=emulator-5554
+npm run android:ensure:start   # Metro + Galaxy_S26 + reconnect
+./scripts/agent-ui.sh verify --route /travel/trip-agent-ui-demo --flow travel-demo \
+  --exists travel.planDetail.transportSection
+# Push a confirmation screenshot for the photo picker:
+npm run android:push-fixture -- path/to/chase.png
+# OAuth / Custom Tab paste (best-effort — Chrome may still need long-press Paste):
+./scripts/android-clipboard.sh "text to paste"
+```
+
+Pin is required when iOS Simulator and Android Emulator are both running — otherwise either app may answer `/next`. Prefer `verify` / `once` **batches** over many solo `send` ops on Android.
 
 ## Fast path (use this)
 
@@ -79,6 +101,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo` | Seed demo trip → open plan detail |
 | `travel-demo-list` | Seed → travel list with demo itinerary button |
 | `travel-demo-add-flight` | Seed → add-flight sheet |
+| `travel-demo-add-flight-connecting` | Seed → United GUA→IAH→LGA connecting prefills Add Flight Name/route |
 | `travel-demo-add-flight-roundtrip` | Seed → Chase round-trip prefills → submit → expand outbound card (passenger ready) |
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
 | `open-new-trip` | Travel list → New Trip sheet |
@@ -141,6 +164,7 @@ Host bridge notes:
 ./scripts/agent-ui-open.sh profile
 ./scripts/agent-ui-open.sh health
 ./scripts/agent-ui-open.sh design-system
+./scripts/agent-ui-open.sh integrations
 ./scripts/agent-ui-open.sh reset
 
 # Nested shortcuts
@@ -221,6 +245,8 @@ Tap/goto no longer rewrite the dump by default.
 | `health` | `/health` | `ontrack:///health` |
 | `agents` | `/agents` | `ontrack:///agents` |
 | `designSystem` / `design-system` | `/design-system` | `ontrack:///design-system` |
+| `integrations` / `apiUsage` / `api-usage` | `/integrations` | `ontrack:///integrations` |
+| `developer` / `developer-tools` | `/developer` | `ontrack:///developer` |
 | `nutrition` | `/nutrition-profile` | `ontrack:///nutrition-profile` |
 | `activityForm` / `activity` | `/activity-form` | `ontrack:///activity-form` |
 | `privacy` | `/privacy` | `ontrack:///privacy` |

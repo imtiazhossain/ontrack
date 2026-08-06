@@ -236,33 +236,41 @@ export function TravelExpensesSheet({
     });
   };
 
+  const savingFormRef = useRef(false);
   const saveForm = () => {
-    if (!form) return;
+    if (!form || savingFormRef.current) return;
     const built = buildExpenseFromForm(form);
     if (!built.ok) {
       setFormError(built.error);
       return;
     }
-    const latestPlan =
-      useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
-    const existingForEdit = editingExpenseId
-      ? latestPlan.expenses.find((entry) => entry.id === editingExpenseId)
-      : undefined;
-    const saveMode = existingForEdit ? 'edit' : 'create';
-    const expenseToSave = existingForEdit
-      ? {
-          ...built.expense,
-          id: existingForEdit.id,
-          createdAt: existingForEdit.createdAt,
-        }
-      : built.expense;
-    const next = applyLocalExpenseEdit(upsertTravelExpense(latestPlan, expenseToSave));
-    onSavePlan(next);
-    syncSharedExpenses(next);
-    setForm(undefined);
-    setFormError(undefined);
-    setEditingExpenseId(undefined);
-    onSaved?.({ mode: saveMode });
+    savingFormRef.current = true;
+    try {
+      const latestPlan =
+        useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
+      const existingForEdit = editingExpenseId
+        ? latestPlan.expenses.find((entry) => entry.id === editingExpenseId)
+        : undefined;
+      const saveMode = existingForEdit ? 'edit' : 'create';
+      const expenseToSave = existingForEdit
+        ? {
+            ...built.expense,
+            id: existingForEdit.id,
+            createdAt: existingForEdit.createdAt,
+          }
+        : built.expense;
+      const next = applyLocalExpenseEdit(
+        upsertTravelExpense(latestPlan, expenseToSave),
+      );
+      onSavePlan(next);
+      syncSharedExpenses(next);
+      setForm(undefined);
+      setFormError(undefined);
+      setEditingExpenseId(undefined);
+      onSaved?.({ mode: saveMode });
+    } finally {
+      savingFormRef.current = false;
+    }
   };
 
   const deleteExpense = (expenseId: string) => {

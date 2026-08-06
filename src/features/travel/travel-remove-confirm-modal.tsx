@@ -1,4 +1,5 @@
 import { Button, SheetScaffold } from '@/components/primitives';
+import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds } from '@/utils/agent-ui';
 
@@ -40,6 +41,7 @@ export function TravelRemoveConfirmModal({
       eyebrow="Confirm"
       title={payload.title}
       subtitle={payload.message}
+      decoration={<TravelFlightPathArc />}
       onClose={onCancel}
       closeAccessibilityLabel="Cancel destructive action"
       closeTestID={AgentUiIds.travel.removeConfirm.close}

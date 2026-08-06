@@ -1,16 +1,4 @@
-import { useId, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-
-import { AppText, Symbol } from '@/components/primitives';
-import {
-  FieldLeadingIcon,
-  fieldLeadingIconRowStyle,
-} from '@/components/primitives/field-leading-icon';
-import { borders, radii, spacing, type AppIconName } from '@/design-system';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { haptics } from '@/utils/haptics';
+import { Dropdown, type DropdownProps } from '@/components/primitives';
 
 import { normalizeCurrencyCode } from './format-money';
 
@@ -150,162 +138,9 @@ export function currencyNarrowSymbol(code: string): string {
   return normalized;
 }
 
-type DropdownOption = { value: string; label: string };
-
-/**
- * Inline expandable dropdown with a scrollable option list.
- * Prefer this over centered action-sheet menus for long lists.
- */
-export function ScrollableDropdown({
-  label,
-  value,
-  options,
-  onChange,
-  open,
-  onOpenChange,
-  icon,
-  iconBackground,
-  iconColor,
-  fieldBackground,
-  labelColor,
-}: {
-  label: string;
-  value: string;
-  options: DropdownOption[];
-  onChange: (value: string) => void;
-  /** Controlled open state — when set, parent coordinates exclusive open. */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  icon?: AppIconName;
-  iconBackground?: string;
-  iconColor?: string;
-  fieldBackground?: string;
-  labelColor?: string;
-}) {
-  const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
-  const listId = useId();
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const isOpen = open ?? uncontrolledOpen;
-  const setOpen = (next: boolean) => {
-    onOpenChange?.(next);
-    if (open === undefined) setUncontrolledOpen(next);
-  };
-
-  const selectedLabel =
-    options.find((option) => option.value === value)?.label ?? value;
-
-  const toggle = () => {
-    haptics.select();
-    setOpen(!isOpen);
-  };
-
-  const choose = (next: string) => {
-    haptics.select();
-    if (next !== value) onChange(next);
-    setOpen(false);
-  };
-
-  return (
-    <View style={styles.wrap}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${label}: ${selectedLabel}`}
-        accessibilityHint="Opens a scrollable list of options"
-        accessibilityState={{ expanded: isOpen }}
-        onPress={toggle}
-        style={({ pressed }) => [
-          styles.field,
-          fieldLeadingIconRowStyle({
-            minHeight: icon ? Math.max(56, s(60)) : 58,
-            paddingHorizontal: icon ? rs.md : spacing.md,
-            paddingVertical: icon ? rs.sm : spacing.sm,
-            backgroundColor: fieldBackground ?? theme.backgroundSunken,
-            borderColor: isOpen
-              ? theme.accentPrimary
-              : icon
-                ? 'transparent'
-                : theme.separator,
-            opacity: pressed ? 0.86 : 1,
-          }),
-        ]}>
-        {icon ? (
-          <FieldLeadingIcon
-            name={icon}
-            backgroundColor={iconBackground}
-            color={iconColor}
-          />
-        ) : null}
-        <View style={styles.fieldCopy}>
-          <AppText
-            variant={icon ? 'caption' : 'overline'}
-            color={icon ? undefined : 'tertiary'}
-            fit
-            numberOfLines={1}
-            style={icon ? { color: labelColor, fontWeight: '600' } : travelOverlineStyle}>
-            {label}
-          </AppText>
-          <AppText variant={icon ? 'body' : 'callout'} fit numberOfLines={1}>
-            {selectedLabel}
-          </AppText>
-        </View>
-        <Symbol
-          name={isOpen ? 'chevron-up' : 'chevron-down'}
-          size="sm"
-          color={theme.textTertiary}
-        />
-      </Pressable>
-
-      {isOpen ? (
-        <View
-          style={[
-            styles.menu,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: theme.separator,
-            },
-          ]}>
-          <ScrollView
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            style={styles.menuScroll}
-            contentContainerStyle={styles.menuContent}
-            showsVerticalScrollIndicator>
-            {options.map((option) => {
-              const active = option.value === value;
-              return (
-                <Pressable
-                  key={`${listId}-${option.value}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  onPress={() => choose(option.value)}
-                  style={({ pressed }) => [
-                    styles.option,
-                    {
-                      backgroundColor: active
-                        ? theme.accentFaint
-                        : pressed
-                          ? theme.backgroundSunken
-                          : 'transparent',
-                    },
-                  ]}>
-                  <AppText
-                    variant="callout"
-                    color={active ? 'accent' : 'primary'}
-                    numberOfLines={1}>
-                    {option.label}
-                  </AppText>
-                  {active ? (
-                    <Symbol name="check" size="sm" color={theme.accentPrimary} />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ) : null}
-    </View>
-  );
+/** Overlay dropdown (scrollable options). Prefer over inline push menus. */
+export function ScrollableDropdown(props: DropdownProps) {
+  return <Dropdown {...props} />;
 }
 
 export function CurrencyDropdown({
@@ -324,11 +159,11 @@ export function CurrencyDropdown({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 } & Pick<
-  Parameters<typeof ScrollableDropdown>[0],
-  'icon' | 'iconBackground' | 'iconColor' | 'fieldBackground' | 'labelColor'
+  DropdownProps,
+  'icon' | 'iconBackground' | 'iconColor' | 'fieldBackground' | 'labelColor' | 'testID'
 >) {
   return (
-    <ScrollableDropdown
+    <Dropdown
       label={label}
       value={normalizeCurrencyCode(value)}
       options={options}
@@ -339,43 +174,3 @@ export function CurrencyDropdown({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    gap: spacing.xs,
-    zIndex: 2,
-  },
-  field: {
-    minHeight: 58,
-    borderWidth: borders.thin,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  fieldCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  menu: {
-    borderWidth: borders.thin,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-  },
-  menuScroll: {
-    maxHeight: 220,
-  },
-  menuContent: {
-    paddingVertical: spacing.xs,
-  },
-  option: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-});

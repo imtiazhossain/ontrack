@@ -1,47 +1,67 @@
 import { useState } from 'react';
-import { View } from 'react-native';
 
 import {
   AppText,
-  Button,
-  Card,
-  DestructiveSection,
-  ErrorMessage,
-  FormSection,
+  HeaderBackButton,
   IconButton,
-  Input,
   Screen,
   ScreenHeader,
   SegmentedControl,
   SheetScaffold,
 } from '@/components/primitives';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
-import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
-type GalleryMode = 'overview' | 'forms' | 'states';
+import { DesignSystemCatalogPanel } from './design-system-catalog-panel';
+import { DesignSystemColorsPanel } from './design-system-colors-panel';
+import { DesignSystemComponentsPanel } from './design-system-components-panel';
+import { DesignSystemFontsPanel } from './design-system-fonts-panel';
+import { DesignSystemFormsPanel } from './design-system-forms-panel';
+import { DesignSystemIconsPanel } from './design-system-icons-panel';
+
+export type GalleryMode =
+  | 'catalog'
+  | 'components'
+  | 'forms'
+  | 'colors'
+  | 'fonts'
+  | 'icons';
 
 const MODES = [
-  { value: 'overview', label: 'Actions', testID: AgentUiIds.designSystem.mode('overview') },
+  { value: 'catalog', label: 'Catalog', testID: AgentUiIds.designSystem.mode('catalog') },
+  {
+    value: 'components',
+    label: 'UI',
+    testID: AgentUiIds.designSystem.mode('components'),
+  },
   { value: 'forms', label: 'Forms', testID: AgentUiIds.designSystem.mode('forms') },
-  { value: 'states', label: 'States', testID: AgentUiIds.designSystem.mode('states') },
+  { value: 'colors', label: 'Colors', testID: AgentUiIds.designSystem.mode('colors') },
+  { value: 'fonts', label: 'Type', testID: AgentUiIds.designSystem.mode('fonts') },
+  { value: 'icons', label: 'Icons', testID: AgentUiIds.designSystem.mode('icons') },
 ] as const;
 
 export function DesignSystemGallery() {
   const theme = useTheme();
   const { spacing } = useResponsive();
-  const [mode, setMode] = useState<GalleryMode>('overview');
+  const [mode, setMode] = useState<GalleryMode>('catalog');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sample, setSample] = useState('Lisbon');
 
   return (
     <>
-      <Screen contentStyle={{ gap: spacing.xl }}>
+      <Screen contentStyle={{ gap: spacing.lg }}>
         <ScreenHeader
           eyebrow="Development only"
           title="Design System"
-          subtitle="Canonical components and interaction states"
+          subtitle="Catalog, components, forms, accents, type, and icons"
+          leading={
+            <HeaderBackButton
+              compact
+              accessibilityLabel="Back to developer tools"
+              fallback="/developer"
+              testID={AgentUiIds.designSystem.back}
+            />
+          }
           trailing={
             <IconButton
               icon="smart"
@@ -54,80 +74,18 @@ export function DesignSystemGallery() {
           }
         />
 
-        <SegmentedControl value={mode} options={MODES} onChange={setMode} />
+        <SegmentedControl value={mode} options={[...MODES]} onChange={setMode} wrap />
 
-        {mode === 'overview' ? (
-          <Card style={{ gap: spacing.md }}>
-            <AppText variant="subheading" bold fit>Canonical actions</AppText>
-            <Button
-              size="lg"
-              testID={AgentUiIds.designSystem.primary}
-              accessibilityLabel="Primary action example"
-              onPress={() => setSheetOpen(true)}>
-              Primary Action
-            </Button>
-            <Button
-              variant="secondary"
-              testID={AgentUiIds.designSystem.secondary}
-              accessibilityLabel="Secondary action example"
-              onPress={() => setSheetOpen(true)}>
-              Secondary Action
-            </Button>
-            <Button
-              variant="ghost"
-              testID={AgentUiIds.designSystem.ghost}
-              accessibilityLabel="Ghost action example"
-              onPress={() => setSheetOpen(true)}>
-              Inline Action
-            </Button>
-            <DestructiveSection
-              label="Delete Example"
-              description="Destructive actions are separated and always confirmed."
-              testID={AgentUiIds.designSystem.delete}
-              onPress={() =>
-                confirmDestructiveAction({
-                  title: 'Delete Example?',
-                  message: 'This demonstrates the canonical destructive prompt.',
-                  actionLabel: 'Delete Example',
-                  onConfirm: () => undefined,
-                })
-              }
-            />
-          </Card>
+        {mode === 'catalog' ? (
+          <DesignSystemCatalogPanel onOpenDemo={setMode} />
         ) : null}
-
-        {mode === 'forms' ? (
-          <Card>
-            <FormSection
-              title="Trip details"
-              description="Labels, supporting copy, fields, and errors share one rhythm."
-              error={!sample.trim() ? 'Destination is required.' : undefined}>
-              <Input
-                label="Destination"
-                value={sample}
-                onChangeText={setSample}
-                testID={AgentUiIds.designSystem.input}
-                accessibilityLabel="Gallery destination"
-              />
-            </FormSection>
-          </Card>
+        {mode === 'components' ? (
+          <DesignSystemComponentsPanel onOpenSheet={() => setSheetOpen(true)} />
         ) : null}
-
-        {mode === 'states' ? (
-          <Card style={{ gap: spacing.md }}>
-            <AppText variant="subheading" bold fit>Shared states</AppText>
-            <Button loading onPress={() => undefined}>Saving</Button>
-            <Button disabled onPress={() => undefined}>Disabled</Button>
-            <ErrorMessage message="Errors use the shared semantic danger treatment." />
-          </Card>
-        ) : null}
-
-        <AppText variant="overline" color="tertiary" fit>Feature accents</AppText>
-        <View style={{ gap: spacing.md }}>
-          <FeatureAccent feature="travel" label="Travel" />
-          <FeatureAccent feature="plants" label="Plants" />
-          <FeatureAccent feature="vehicles" label="Vehicles" />
-        </View>
+        {mode === 'forms' ? <DesignSystemFormsPanel /> : null}
+        {mode === 'colors' ? <DesignSystemColorsPanel /> : null}
+        {mode === 'fonts' ? <DesignSystemFontsPanel /> : null}
+        {mode === 'icons' ? <DesignSystemIconsPanel /> : null}
       </Screen>
 
       <SheetScaffold
@@ -139,34 +97,10 @@ export function DesignSystemGallery() {
         closeTestID={AgentUiIds.designSystem.sheetClose}
         closeAccessibilityLabel="Close design-system sheet">
         <AppText color="secondary">
-          Feature content can vary, but safe areas, header hierarchy, dismissal, scrolling, and footer actions stay consistent.
+          Feature content can vary, but safe areas, header hierarchy, dismissal, scrolling, and
+          footer actions stay consistent. Use Catalog to see which features use each element.
         </AppText>
       </SheetScaffold>
     </>
-  );
-}
-
-function FeatureAccent({
-  feature,
-  label,
-}: {
-  feature: 'travel' | 'plants' | 'vehicles';
-  label: string;
-}) {
-  return (
-    <FeatureThemeProvider feature={feature}>
-      <FeatureAccentCard label={label} />
-    </FeatureThemeProvider>
-  );
-}
-
-function FeatureAccentCard({ label }: { label: string }) {
-  const theme = useTheme();
-  const { spacing } = useResponsive();
-  return (
-    <Card variant="sunken" style={{ gap: spacing.sm }}>
-      <AppText variant="callout" color="accent" bold fit>{label}</AppText>
-      <View style={{ height: spacing.sm, borderRadius: spacing.sm, backgroundColor: theme.accentPrimary }} />
-    </Card>
   );
 }

@@ -1,56 +1,45 @@
 ---
-description: Always test UI changes on the booted simulator (headless OK) and prove the change
+description: Prove UI changes with assert/--color by default; screenshot only for visual claims
 alwaysApply: true
 ---
 
 # Show UI in Simulator
 
-After any change that affects the running Expo/iOS app UI, **always test on the booted iOS simulator** (headless `simctl` is fine — do not launch Simulator.app) and do not end the turn until the changed surface is verified.
+After UI/app changes, verify on **both** iOS and Android (headless OK). Metro / Fast Refresh + dual close-out: `.cursor/rules/verify-working-app.mdc`. Prefer `./scripts/agent-ui-verify-both.sh`. Navigation budget: `.cursor/rules/agent-ui-selectors.mdc`. Android `--color`/screenshots use `adb exec-out screencap`.
 
-Metro / Node 24 / Fast Refresh / reconnect details live in `.cursor/rules/verify-working-app.mdc` — follow that; do not restate here.
+## Default proof — STOP after assert
 
-Navigation speed rules live in `.cursor/rules/agent-ui-selectors.mdc` — follow the **decision tree** and **budget** there. This file governs **final proof**.
+For route, testID presence/absence, prefix, label, or accent-color claims:
 
-## Required close-out
+1. Exercise the surface (`verify` if already on `--route`, else `once` / `flow` / `open`).
+2. Prove with `./scripts/agent-ui-assert.sh` / `once --assert-*` / `--color <id> <hex>`.
+3. **STOP.** Paste the assert output in the reply.
 
-1. Confirm Metro `/status` is 200 (reuse running bundler; `./scripts/ensure-packager.sh --start` only if down).
-2. Confirm the app is up on the simulator before verification (`once` / `verify` / `flow` / `assert` / `open` gate via `agent_ui_ensure_app_up`; use `ensure-packager.sh --start` if you already know the app is dead).
-3. Exercise the changed surface with `./scripts/agent-ui.sh verify …` (when already on `--route`) or `once` / `flow` / `open` ([`docs/agent-routes.md`](../../docs/agent-routes.md)) — not tab-hopping and not re-flowing a screen you’re already on. Tap known ids; dump only if an id is unknown.
-4. **Test the change** via Fast Refresh. Do not terminate/relaunch solely for JS/UI edits.
-5. Wait until fully loaded (in-app wait / `./scripts/agent-ui-wait.sh` / assert — not dump loops).
-6. **Prove the claim:**
- - **Structural** (route, testID present/absent, prefix, label contains) → `./scripts/agent-ui-assert.sh` / `once --assert-*` is sufficient proof. Include the assert output in the reply.
- - **Accent / chrome color** on a known testID → `--color <id> <hex>` (or `verify … --color`) is sufficient; no vision read.
- - **Visual / layout / pixel copy** → capture **one** final `xcrun simctl io booted screenshot`, **read the image**, run the evidence gate below. Prefer `agent-ui.sh verify` when already on the surface.
-7. Leave the booted device on that working screen (no Simulator.app window required).
+**Do not** capture a handoff screenshot, vision-read the screen, or take a second “proof” turn after a passing assert/`--color`.
 
-Run typecheck/tests **in parallel** with the UI once-chain.
+Prefer adding a `testID` + `--color` (or `--contains`) over a screenshot when the claim is contrast/theme chrome or visible copy on a known control.
 
 ## Screenshot budget
 
-- **Allowed:** one post-action screenshot for visual/layout claims (plus replacements only if the evidence gate fails).
-- **Preferred over screenshot:** `agent-ui-assert.sh` / `once --assert-*` for route/id/prefix/label claims.
-- **Forbidden:** mid-flow screenshots, screenshot-to-navigate, screenshot instead of `flow`/`open`/`tap`/`assert`, or reading images to discover controls.
-- Dumps and route/exists/assert probes are not screenshots — still keep dumps ≤ 1 per verification (see agent-ui-selectors).
+- **Allowed:** one post-action screenshot **only** when the claim is visual/layout/pixel copy that assert/`--color` cannot prove (plus replacements if the evidence gate fails).
+- **Preferred over screenshot:** `agent-ui-assert.sh` / `once --assert-*` / `--color`.
+- **Forbidden:** mid-flow screenshots, screenshot-to-navigate, screenshot instead of `flow`/`open`/`tap`/`assert`, reading images to discover controls, or a ritual handoff screenshot after a passing assert.
+- Dumps ≤ 1 per verification (see agent-ui-selectors).
 
-## Screenshot evidence gate
+## Visual evidence gate (screenshots only)
 
-A screenshot is proof only when the pixels visibly demonstrate the result being claimed. Before handing off a **visual** claim:
+When a screenshot is required:
 
-1. Write down the concrete user-visible claims you intend to make (for example, “Departure shows 09/27/26” and “Arrival shows 09/27/26”).
-2. Inspect the **final** captured screenshot itself—not the code, parser output, unit tests, accessibility dump, or expected state.
-3. For every claim, identify the visible UI text/state in the screenshot that proves it.
-4. If any claimed value is blank, off-screen, obscured, pre-action, or otherwise not visibly verifiable, the evidence check **fails**. Continue exercising/fixing the flow and capture a **new final** screenshot (still no mid-hop gallery).
-5. Only describe a visual result as verified when the final screenshot visibly contains that result. Tests, logs, and asserts may support the claim; asserts substitute for screenshots only for structural (route/id/label) claims.
+1. State the concrete visible claims.
+2. Capture **one** final `xcrun simctl io booted screenshot` and **read the image**.
+3. Every claim must be visible in that image; otherwise re-exercise and replace the final shot (still no mid-flow gallery).
 
-An empty form before import does **not** prove that import populated the form. A screenshot of the import picker does **not** prove the selected itinerary was parsed. For state-changing flows with visible field values, capture the post-action state with the resulting values visible (or assert label/id when that covers the claim).
+Empty/pre-action screens do not prove post-action field values. Prefer assert label/id when that covers the claim.
 
 ## Do not
 
 - Skip simulator testing after UI/app changes.
-- Restart Metro with `--clear` or kill the app as the default way to see UI edits.
-- End on “reload the app” without proving the change (assert and/or screenshot as appropriate).
-- Claim a visual value passed when that value is absent from the screenshot.
-- Use a pre-action, empty, or setup screen as evidence for a completed interaction.
+- End on “reload the app” without assert/`--color`/screenshot proof as appropriate.
+- Claim a visual value passed when it is absent from the screenshot.
 - Use mid-flow screenshots as navigation or progress checks.
-- Hand off a white screen, error boundary, partial load, or unrelated screen as the final visual proof.
+- Hand off splash, blank, error, or an unrelated screen.

@@ -12,7 +12,11 @@ import type {
     TravelPlan,
     TravelTripRosterPerson,
 } from '@/features/travel/types';
-import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
+import { TRAVEL_EXPENSE_HOST_ID } from '@/features/travel/types';
+import {
+    publishTravelTripExpenses,
+    travelExpenseMemberId,
+} from '@/services/travel/expense-collaboration';
 import { useTravel } from '@/store/travel';
 
 type SetOptStr = Dispatch<SetStateAction<string | undefined>>;
@@ -25,6 +29,7 @@ export function useTravelFriendsSheetSync({
   visible,
   plan,
   onSavePlan,
+  selfUserId,
   openJoinCode,
   setOpenJoinCode,
   setOpenJoinBusy,
@@ -44,6 +49,7 @@ export function useTravelFriendsSheetSync({
   visible: boolean;
   plan: TravelPlan;
   onSavePlan: (plan: TravelPlan) => void;
+  selfUserId?: string;
   openJoinCode?: string;
   setOpenJoinCode: SetOptStr;
   setOpenJoinBusy: Dispatch<SetStateAction<boolean>>;
@@ -99,7 +105,48 @@ export function useTravelFriendsSheetSync({
       let next = current;
       let changed = false;
 
+      // New host after transfer: clear member markers so expense publish stops
+      // remapping `self` as a member. Keep hostTripId as the server trip id.
       if (
+        selfUserId &&
+        host?.userId === selfUserId &&
+        isTravelMemberPlan(current)
+      ) {
+        const formerHost = people.find(
+          (person) =>
+            person.role !== 'host' &&
+            person.userId !== selfUserId &&
+            current.hostDisplayName &&
+            person.displayName === current.hostDisplayName,
+        );
+        const formerHostMemberId = formerHost?.userId
+          ? travelExpenseMemberId(formerHost.userId)
+          : undefined;
+        next = {
+          ...next,
+          chatAccessCode: undefined,
+          hostDisplayName: undefined,
+          hostTripId: canonicalId,
+          expenses: next.expenses.map((expense) => ({
+            ...expense,
+            paidById:
+              expense.paidById === TRAVEL_EXPENSE_HOST_ID && formerHostMemberId
+                ? formerHostMemberId
+                : expense.paidById,
+            splitWithIds: expense.splitWithIds.map((id) =>
+              id === TRAVEL_EXPENSE_HOST_ID && formerHostMemberId
+                ? formerHostMemberId
+                : id,
+            ),
+          })),
+          sharedExpensePeople: (next.sharedExpensePeople ?? []).map((person) =>
+            person.id === TRAVEL_EXPENSE_HOST_ID && formerHostMemberId
+              ? { ...person, id: formerHostMemberId }
+              : person,
+          ),
+        };
+        changed = true;
+      } else if (
         host?.displayName &&
         current.hostDisplayName !== host.displayName &&
         (isTravelMemberPlan(current) || current.hostDisplayName)
@@ -112,7 +159,7 @@ export function useTravelFriendsSheetSync({
       }
 
       // Keep local invite labels in sync with roster names so trip-card
-      // initials match Co-Travelers (e.g. "Farhana Tasmin" vs truncated "Farhana").
+      // initials match Co-Travelers (e.g. "Jordan Lee" vs truncated "Jordan").
       const participants = next.participants.map((person) => {
         const match = people.find(
           (member) =>
@@ -144,15 +191,25 @@ export function useTravelFriendsSheetSync({
     if (inviteCodes.length > 0 && !isMember) {
       void loadTravelInviteStatuses(inviteCodes)
         .then((statuses) => {
-          if (!active || Object.keys(statuses).length === 0) return;
+          // Empty `{}` is meaningful: every accepted invite may have been revoked.
+          if (!active) return;
           const current =
             useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
           let changed = false;
-          const participants = current.participants.map((person) => {
+          const participants = current.participants.flatMap((person) => {
             const acceptedAt = statuses[person.inviteCode];
-            if (!acceptedAt || person.acceptedAt === acceptedAt) return person;
-            changed = true;
-            return { ...person, acceptedAt };
+            if (acceptedAt) {
+              if (person.acceptedAt === acceptedAt) return [person];
+              changed = true;
+              return [{ ...person, acceptedAt }];
+            }
+            // Statuses only include live accepted invites. Drop friends who left
+            // or were revoked so host chat doesn't keep using a dead code.
+            if (person.acceptedAt) {
+              changed = true;
+              return [];
+            }
+            return [person];
           });
           if (changed) {
             savePlan({
@@ -226,6 +283,7 @@ export function useTravelFriendsSheetSync({
     visible,
     plan,
     onSavePlan,
+    selfUserId,
     refreshJoinRequests,
     refreshRoster,
     setCopiedCode,

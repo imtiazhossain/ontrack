@@ -1,21 +1,33 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useSyncExternalStore } from 'react';
+import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
 import { FullWindowOverlay } from 'react-native-screens';
 
+import { AgentUiOverlayToggle } from './AgentUiOverlayToggle';
 import { AgentUiIds } from './ids';
 import {
   agentUiOverlayShortLabel,
   isAgentUiOverlayEnabled,
+  isAgentUiOverlayPaintTarget,
   subscribeAgentUiOverlay,
 } from './overlay';
-import { isAgentUiEnabled, listAgentUiTargets } from './registry';
+import {
+  getAgentUiFramesEpoch,
+  isAgentUiEnabled,
+  listAgentUiTargets,
+  remeasureAllAgentUiFrames,
+  subscribeAgentUiFrames,
+} from './registry';
 import { getAgentUiRoute } from './route';
 import { useAgentUiTarget } from './use-agent-ui-target';
 
 /**
- * __DEV__ visual overlay: route chip + framed testIDs so screenshots carry
- * reference points. Uses FullWindowOverlay on iOS so native-stack screens
- * do not cover it. pointerEvents=none — never blocks taps.
+ * __DEV__ visual overlay: framed testIDs + a draggable toggle FAB.
+ * Uses FullWindowOverlay on iOS so native-stack screens do not cover it.
+ * Frame boxes are pointerEvents=none; the FAB is tappable/draggable.
+ *
+ * Android: use a plain View (not GestureHandlerRootView) for the absolute
+ * layer — a nested full-screen GH root with box-none still eats touches under
+ * the New Architecture. Gestures use the app-root GestureHandlerRootView.
  */
 export function AgentUiOverlay() {
   const enabled = useSyncExternalStore(
@@ -23,29 +35,49 @@ export function AgentUiOverlay() {
     isAgentUiOverlayEnabled,
     () => false,
   );
-  const [tick, setTick] = useState(0);
+  const framesEpoch = useSyncExternalStore(
+    subscribeAgentUiFrames,
+    getAgentUiFramesEpoch,
+    () => 0,
+  );
   const root = useAgentUiTarget(AgentUiIds.agentUi.overlayRoot, {
     label: enabled ? 'Agent UI overlay on' : 'Agent UI overlay',
   });
 
   useEffect(() => {
     if (!enabled) return;
-    const id = setInterval(() => setTick((n) => n + 1), 400);
+    // Remeasure (not just re-read) — scroll moves window frames without onLayout.
+    remeasureAllAgentUiFrames();
+    const id = setInterval(() => {
+      remeasureAllAgentUiFrames();
+    }, 250);
     return () => clearInterval(id);
   }, [enabled]);
 
   if (!isAgentUiEnabled()) return null;
 
-  void tick;
+  void framesEpoch;
   const route = getAgentUiRoute() ?? '(unknown route)';
   const elements = enabled
-    ? listAgentUiTargets().filter(
-        (entry) =>
-          entry.testID !== AgentUiIds.agentUi.overlayRoot &&
-          entry.frame &&
-          entry.frame.width > 0 &&
-          entry.frame.height > 0,
-      )
+    ? listAgentUiTargets().filter((entry) => {
+        if (
+          entry.testID === AgentUiIds.agentUi.overlayRoot ||
+          entry.testID === AgentUiIds.agentUi.overlayToggle
+        ) {
+          return false;
+        }
+        if (!entry.frame || entry.frame.width <= 0 || entry.frame.height <= 0) {
+          return false;
+        }
+        if (!isAgentUiOverlayPaintTarget(entry.testID, route)) return false;
+        const { width: winW, height: winH } = Dimensions.get('window');
+        const bottom = entry.frame.y + entry.frame.height;
+        const right = entry.frame.x + entry.frame.width;
+        if (bottom < 8 || right < 8 || entry.frame.y > winH - 8 || entry.frame.x > winW - 8) {
+          return false;
+        }
+        return true;
+      })
     : [];
 
   const probe = (
@@ -58,39 +90,33 @@ export function AgentUiOverlay() {
     />
   );
 
-  if (!enabled) return probe;
-
   const layer = (
-    <View pointerEvents="none" style={styles.layer} collapsable={false}>
-      <View style={styles.routeChip}>
-        <Text style={styles.routeText} numberOfLines={1}>
-          {route}
-        </Text>
-        <Text style={styles.routeMeta} numberOfLines={1}>
-          {elements.length} ids · overlay on
-        </Text>
-      </View>
-      {elements.map((entry) => {
-        const frame = entry.frame!;
-        return (
-          <View
-            key={entry.testID}
-            style={[
-              styles.box,
-              entry.tappable ? styles.boxTappable : styles.boxAnchor,
-              {
-                left: frame.x,
-                top: frame.y,
-                width: Math.max(frame.width, 1),
-                height: Math.max(frame.height, 1),
-              },
-            ]}>
-            <Text style={styles.boxLabel} numberOfLines={1}>
-              {agentUiOverlayShortLabel(entry.testID)}
-            </Text>
-          </View>
-        );
-      })}
+    <View style={styles.layer} pointerEvents="box-none" collapsable={false}>
+      <AgentUiOverlayToggle enabled={enabled} idCount={elements.length} />
+      {enabled
+        ? elements.map((entry) => {
+            const frame = entry.frame!;
+            return (
+              <View
+                key={entry.testID}
+                pointerEvents="none"
+                style={[
+                  styles.box,
+                  entry.tappable ? styles.boxTappable : styles.boxAnchor,
+                  {
+                    left: frame.x,
+                    top: frame.y,
+                    width: Math.max(frame.width, 1),
+                    height: Math.max(frame.height, 1),
+                  },
+                ]}>
+                <Text style={styles.boxLabel} numberOfLines={1}>
+                  {agentUiOverlayShortLabel(entry.testID)}
+                </Text>
+              </View>
+            );
+          })
+        : null}
     </View>
   );
 
@@ -115,28 +141,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
     opacity: 0,
-  },
-  routeChip: {
-    position: 'absolute',
-    top: 54,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(10, 18, 32, 0.88)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    gap: 2,
-  },
-  routeText: {
-    color: '#F4F7FB',
-    fontSize: 12,
-    fontFamily: 'System',
-    fontWeight: '600',
-  },
-  routeMeta: {
-    color: '#9DB0C7',
-    fontSize: 10,
-    fontFamily: 'System',
   },
   box: {
     position: 'absolute',

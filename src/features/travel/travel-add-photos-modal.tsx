@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import { Button, SheetScaffold } from '@/components/primitives';
+import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
@@ -49,6 +50,7 @@ export function TravelAddPhotosModal({
       eyebrow="Photos"
       title={title}
       subtitle={subtitle}
+      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel="Close photo actions"
       closeTestID={AgentUiIds.travel.addPhotos.close}>

@@ -1,7 +1,7 @@
 import {
-  canonicalTravelTripId,
-  isTravelMemberPlan,
-  resolveIsTravelSoleHost,
+    canonicalTravelTripId,
+    isTravelMemberPlan,
+    resolveIsTravelSoleHost,
 } from '@/features/travel/trip-roster';
 import type { TravelPlan } from '@/features/travel/types';
 
@@ -17,12 +17,20 @@ describe('trip roster helpers', () => {
     ).toBe('trip-host-9');
   });
 
-  it('detects member copies from chatAccessCode or a distinct hostTripId', () => {
+  it('detects member copies from chatAccessCode or hostTripId + hostDisplayName', () => {
     expect(isTravelMemberPlan(base)).toBe(false);
     expect(isTravelMemberPlan({ ...base, chatAccessCode: 'abc' })).toBe(true);
     expect(
-      isTravelMemberPlan({ ...base, hostTripId: 'trip-host-9' }),
+      isTravelMemberPlan({
+        ...base,
+        hostTripId: 'trip-host-9',
+        hostDisplayName: 'Sam',
+      }),
     ).toBe(true);
+    // Promoted host: keep server trip id, clear member markers.
+    expect(
+      isTravelMemberPlan({ ...base, hostTripId: 'trip-host-9' }),
+    ).toBe(false);
     expect(
       isTravelMemberPlan({ ...base, hostTripId: 'trip-local-1' }),
     ).toBe(false);

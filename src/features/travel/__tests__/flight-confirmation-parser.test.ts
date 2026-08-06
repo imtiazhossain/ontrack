@@ -8,13 +8,14 @@ import {
 
 import { applyImportedFlightsToPlan } from '../apply-imported-flights';
 import { CHASE_ROUNDTRIP_CONFIRMATION } from '../fixtures/chase-roundtrip-confirmation';
+import { UNITED_CONNECTING_CONFIRMATION } from '../fixtures/united-connecting-confirmation';
 import { mergeImportedFlights } from '../flight-confirmation-itinerary';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import type { TravelPlan } from '../types';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
-const FARHANA_CHASE_PDFKIT_TEXT = CHASE_ROUNDTRIP_CONFIRMATION;
+const CHASE_ROUNDTRIP_PDFKIT_TEXT = CHASE_ROUNDTRIP_CONFIRMATION;
 
 describe('flight confirmation parser', () => {
   it('extracts a labeled itinerary without shifting its calendar date', () => {
@@ -163,7 +164,7 @@ describe('flight confirmation parser', () => {
   });
 
   it('imports both correct legs from the provided Chase PDFKit text', () => {
-    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_PDFKIT_TEXT, {
       startDate: '2026-09-08',
       endDate: '2026-09-13',
     });
@@ -237,47 +238,13 @@ describe('flight confirmation parser', () => {
   });
 
   it('extracts every leg and the connection from a layover itinerary', () => {
-    const parsed = parseFlightConfirmation(
-      `
-        /elsecure.chase.com
-        Flight details
-        Guatemala City (GUA) → New
-        York (LGA)
-        Sun, Sep 27, 2026
-        1 Traveler
-        Sun, Sep 27, 2026
-        1:30 am
-        Guatemala City, GT (GUA)
-        La Aurora International Airport
-        United Airlines
-        UA 1907
-        Boeing 737-800 Passenger
-        2h 51m
-        Basic Economy._ Economy class (N)
-        No pre-reserved seats
-        5:21 am
-        Houston, US (IAH)
-        George Bush Intercontinental Airport
-        1h 39m layover in Houston
-        7:00 am
-        Houston, US (IAH)
-        George Bush Intercontinental Airport
-        United Airlines
-        UA 1697
-        Boeing 737 MAX 8
-        3h 29m
-        Basic Economy.. Economy class (N)
-        No pre-reserved seats
-        11:29 am
-        New York, US (LGA)
-        New York LaGuardia Airport
-        Baggage Fees
-      `,
-      { startDate: '2026-09-27', endDate: '2026-09-27' },
-    );
+    const parsed = parseFlightConfirmation(UNITED_CONNECTING_CONFIRMATION, {
+      startDate: '2026-09-27',
+      endDate: '2026-09-27',
+    });
 
     expect(parsed.segments).toHaveLength(2);
-    expect(parsed.title).toBe('Flight GUA → LGA');
+    expect(parsed.title).toBe('Flight GUA → IAH → LGA');
     expect(parsed.segments[0]).toMatchObject({
       title: 'Flight GUA → IAH',
       date: '2026-09-27',
@@ -366,7 +333,7 @@ describe('flight confirmation expense', () => {
   });
 
   it('adds a flight expense for the parsed total', () => {
-    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_PDFKIT_TEXT, {
       startDate: '2026-09-08',
       endDate: '2026-09-14',
     });
@@ -388,7 +355,7 @@ describe('flight confirmation expense', () => {
   });
 
   it('reads the traveler count and per-leg gates', () => {
-    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_PDFKIT_TEXT, {
       startDate: '2026-09-08',
       endDate: '2026-09-14',
     });
@@ -448,7 +415,7 @@ describe('flight confirmation expense', () => {
   });
 
   it('updates an existing flight expense when the confirmation matches', () => {
-    const parsed = parseFlightConfirmation(FARHANA_CHASE_PDFKIT_TEXT, {
+    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_PDFKIT_TEXT, {
       startDate: '2026-09-08',
       endDate: '2026-09-14',
     });

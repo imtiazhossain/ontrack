@@ -399,13 +399,23 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | testID                                              | Control                             |
 | --------------------------------------------------- | ----------------------------------- |
 | `ontrack.profile.avatar`                            | Customize avatar                    |
+| `ontrack.profile.section.account`                   | Account section anchor              |
+| `ontrack.profile.section.appearance`                | Appearance section anchor           |
+| `ontrack.profile.section.developer`                 | Developer section anchor            |
+| `ontrack.profile.section.preferences`               | Preferences section anchor          |
+| `ontrack.profile.section.features`                  | Features section anchor             |
+| `ontrack.profile.section.addons`                    | Expand/collapse Add-ons section     |
+| `ontrack.profile.section.legal`                     | Legal section anchor                |
+| `ontrack.profile.section.dangerZone`                | Danger Zone (reset / delete)        |
+| `ontrack.profile.section.disclaimers`               | Disclaimers footer section anchor   |
 | `ontrack.profile.theme.system` / `.light` / `.dark` | Theme segment                       |
 | `ontrack.profile.homeLocation`                      | Home location                       |
 | `ontrack.profile.agents`                            | Manage Agents                       |
 | `ontrack.profile.nutrition`                         | Nutrition profiles                  |
 | `ontrack.profile.privacy`                           | Privacy Policy                      |
 | `ontrack.profile.terms`                             | Terms of Use                        |
-| `ontrack.profile.signOut`                           | Sign Out of This Device (signed-in) |
+| `ontrack.profile.tmdb`                              | TMDB attribution link (footer)      |
+| `ontrack.profile.signOut`                           | Sign Out (signed-in)                |
 | `ontrack.profile.deleteAccount`                     | Delete Account (signed-in)          |
 | `ontrack.profile.resetData`                         | Reset All Data                      |
 
@@ -416,6 +426,7 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.auth.apple`            | Continue with Apple               |
 | `ontrack.auth.google`           | Continue with Google              |
 | `ontrack.auth.guest`            | Continue as Guest                 |
+| `ontrack.auth.dismissError`     | Dismiss sign-in error             |
 | `ontrack.auth.privacy`          | Privacy Policy link               |
 | `ontrack.auth.terms`            | Terms of Use link                 |
 | `ontrack.prompt.close`          | Prompt / alert dismiss (X)        |
@@ -425,6 +436,7 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
+| `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish behind travel titles |
 | `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo                                 |
 | `ontrack.travel.list.collapse.<tripId>`          | Collapse or expand a trip card without reordering it      |
 | `ontrack.travel.list.editTrip.<tripId>`          | Edit trip details                                         |
@@ -502,6 +514,7 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.travel.friends.inviteName`               | Friend invitation name                             |
 | `ontrack.travel.friends.inviteEmail`              | Friend invitation account email                    |
 | `ontrack.travel.friends.createInvite`             | Create a friend invitation                         |
+| `ontrack.travel.friends.leaveTrip`                | Leave a shared trip (non-host members)             |
 | `ontrack.travel.friendRow.<target>.<action>`      | Manage, rename, or remove a trip friend            |
 | `ontrack.travel.confirmation.open.<kind>`         | Open uploaded confirmation images                  |
 | `ontrack.travel.confirmation.close`               | Close the confirmation viewer                      |
@@ -520,15 +533,84 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 
 | testID                             | Control                                   |
 | ---------------------------------- | ----------------------------------------- |
-| `ontrack.profile.designSystem`     | Open the development gallery from Profile |
+| `ontrack.profile.designSystem`     | Open the development gallery from Profile (also via Developer Tools) |
+| `ontrack.profile.apiUsage`         | Open Integrations (also via Developer Tools) |
+| `ontrack.profile.developer`        | Open Developer Tools hub |
+| `ontrack.profile.usageAnalytics`   | Toggle first-party usage analytics |
+
+### Developer Tools (`/developer`, `__DEV__` + `account_flags.developer_tools`)
+
+| ID | Control |
+|----|---------|
+| `ontrack.developer.back` | Back to profile |
+| `ontrack.developer.section.navigate` | Expand/collapse Navigate |
+| `ontrack.developer.section.insights` | Expand/collapse Product insights |
+| `ontrack.developer.section.runtime` | Expand/collapse Runtime |
+| `ontrack.developer.section.diagnostics` | Expand/collapse Diagnostics |
+| `ontrack.developer.section.tools` | Expand/collapse Tools |
+| `ontrack.developer.insights` | Product insights body |
+| `ontrack.developer.insights.local` | This-device usage card |
+| `ontrack.developer.insights.product` | All-users usage card |
+| `ontrack.developer.insights.refresh` | Refresh insights (header action) |
+| `ontrack.developer.devMode` | Toggle Dev Mode sandbox |
+| `ontrack.developer.designSystem` | Open Design System |
+| `ontrack.developer.apiUsage` | Open Integrations |
+| `ontrack.developer.env` | Runtime env card |
+| `ontrack.developer.overlay` | Agent-ui overlay toggle |
+| `ontrack.developer.sync` | Cloud sync status |
+| `ontrack.developer.seeds` | Demo seed list |
+| `ontrack.developer.seed.<name>` | Seed fixture button |
+| `ontrack.developer.routeInput` | Route alias field |
+| `ontrack.developer.routeGo` | Open route |
+| `ontrack.developer.storage` | Local storage sizes |
+| `ontrack.developer.storageRefresh` | Refresh storage sizes |
+| `ontrack.developer.rateLimitReset` | Reset app rate limits |
+
+### Integrations (`/integrations`, `__DEV__` only)
+
+| ID | Control |
+|----|---------|
+| `ontrack.apiUsage.screen` | Screen anchor |
+| `ontrack.apiUsage.back` | Back to profile |
+| `ontrack.apiUsage.sync` | Sync / reload snapshot (section header trailing action) |
+| `ontrack.apiUsage.retry` | Retry after error |
+| `ontrack.apiUsage.healthSummary` | Status overview card |
+| `ontrack.apiUsage.sort` | Sort dropdown trigger (Unhealthy / Healthy / A–Z / Usage) |
+| `ontrack.apiUsage.sort.status-worst` / `.status-healthy` / `.name` / `.usage` | Sort dropdown options |
+| `ontrack.apiUsage.service.<id>` | Service row (e.g. `openai-nutrition`) |
+| `ontrack.designSystem.back`        | Leave the gallery (back to Developer)     |
 | `ontrack.designSystem.info`        | Open the canonical sheet example          |
-| `ontrack.designSystem.mode.<mode>` | Switch gallery section                    |
+| `ontrack.designSystem.mode.<mode>` | Switch gallery tab (`catalog` / `components`→label UI / `forms` / `colors` / `fonts`→Type / `icons`) |
+| `ontrack.designSystem.catalogView.<view>` | Catalog index mode (`elements` / `features`) |
+| `ontrack.designSystem.catalogGroup.<group>` | Collapsible catalog group toggle (`layout` / `actions` / …) |
+| `ontrack.designSystem.catalogFeature.<id>` | Collapsible feature usage toggle (`travel` / `todos` / …) |
+| `ontrack.designSystem.catalogFeature.<id>.element.<name>` | Element row inside a feature section (opens demo) |
+| `ontrack.designSystem.catalogElement.<id>` | Catalog element row (opens demo tab) |
+| `ontrack.designSystem.demo.<name>` | Live demo control inside Components/Forms |
 | `ontrack.designSystem.primary`     | Primary action example                    |
 | `ontrack.designSystem.secondary`   | Secondary action example                  |
 | `ontrack.designSystem.ghost`       | Ghost action example                      |
 | `ontrack.designSystem.delete`      | Destructive action example                |
 | `ontrack.designSystem.input`       | Form field example                        |
 | `ontrack.designSystem.sheet.close` | Close the canonical sheet                 |
+| `ontrack.designSystem.section.<scope>` | Colors editor section (`default` / `travel` / `plants` / `vehicles`) |
+| `ontrack.designSystem.token.<scope>.<key>` | Hex input for an editable theme token |
+| `ontrack.designSystem.swatch.<scope>.<key>` | Live swatch for an editable token |
+| `ontrack.designSystem.resetToken.<scope>.<key>` | Reset one token to the shipped default |
+| `ontrack.designSystem.preset.<scope>.<key>.<hex>` | Preset chip (hex without `#`) |
+| `ontrack.designSystem.resetAll`    | Restore all theme defaults (top Colors card) |
+| `ontrack.designSystem.resetAll.footer` | Restore defaults (footer, when overrides active) |
+| `ontrack.designSystem.confirmRestoreDefaults` | Confirm restore-defaults prompt     |
+| `ontrack.designSystem.history`     | Collapsible theme change-history toggle |
+| `ontrack.designSystem.history.entry.<id>` | One history row (scroll list, ~3 visible) |
+| `ontrack.designSystem.history.clear` | Clear history (visible while expanded)  |
+| `ontrack.designSystem.fontRole.<role>` | Font preset dropdown trigger (`ui` / `mono`) |
+| `ontrack.designSystem.fontPreset.<role>.<id>` | Font preset menu option              |
+| `ontrack.designSystem.fontScale`   | Type-scale preview block                  |
+| `ontrack.designSystem.resetFonts`  | Restore default UI + mono fonts           |
+| `ontrack.designSystem.confirmRestoreFonts` | Confirm restore-fonts prompt         |
+| `ontrack.designSystem.iconSection.<id>` | Icons gallery section (`categories` / `travel` / `navigation` / `status` / `exercises`) |
+| `ontrack.designSystem.icon.<name>` | Individual semantic icon cell             |
 
 ## Activity form
 
@@ -572,10 +654,21 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 | `ontrack.travel.planDetail.currency`           | Currency                                                                 |
 | `ontrack.travel.planDetail.addToTimeline`      | Add to Timeline                                                          |
 | `ontrack.travel.planDetail.section.transport`  | Expand/collapse transport group                                          |
+| `ontrack.travel.planDetail.section.timeline`   | Expand/collapse timeline                                                 |
 | `ontrack.travel.planDetail.section.notes`      | Expand/collapse trip notes                                               |
 | `ontrack.travel.planDetail.section.ground`     | Expand/collapse ground and transit items                                 |
+| `ontrack.travel.planDetail.addFlight`          | Empty-state CTA to add a flight                                          |
+| `ontrack.travel.planDetail.addTransport`       | Empty-state CTA to add ground/transit                                    |
+| `ontrack.travel.planDetail.addStay`            | Empty-state CTA to add a stay                                            |
+| `ontrack.travel.planDetail.addRental`          | Empty-state CTA to add a rental                                          |
 | `ontrack.travel.timelineAdd.close`             | Kind picker close                                                        |
 | `ontrack.travel.timelineAdd.kind.<kind>`       | Timeline kind choice                                                     |
+| `ontrack.travel.timelineDay.<date>`            | Expand/collapse a timeline day group                                     |
+| `ontrack.travel.timeline.progress`             | Timeline journey progress strip                                          |
+| `ontrack.travel.timeline.progressBadge`        | Timeline progress status badge                                           |
+| `ontrack.travel.timeline.progressMeta`         | Timeline progress “X/Y Days Done” meta                                   |
+| `ontrack.travel.timeline.traveler`             | Tiny traveler chip on the progress track (beat icon)                     |
+| `ontrack.travel.timeline.now`                  | Current-time marker on the active day                                    |
 | `ontrack.travel.timelineItem.<itemId>.<phase>` | Expand/collapse an itinerary marker or structured card                   |
 | `ontrack.travel.itineraryAdd.title`            | Itinerary item name                                                      |
 | `ontrack.travel.itineraryAdd.importScreenshots`| Import a confirmation from photo screenshots                             |
@@ -682,9 +775,10 @@ Deep link: `ontrack://travel/<planId>/chat` → `/travel/[id]/chat`
 
 ## Agent UI (DEV)
 
-| testID                         | Control                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| `ontrack.agentUi.overlay.root` | Overlay host (`./scripts/agent-ui-overlay.sh on` paints framed testIDs) |
+| testID                            | Control                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `ontrack.agentUi.overlay.root`    | Overlay host (`./scripts/agent-ui-overlay.sh on` paints framed testIDs) |
+| `ontrack.agentUi.overlay.toggle`  | Draggable FAB — tap toggles overlay; drag to move (__DEV__)             |
 
 ## Source of truth
 

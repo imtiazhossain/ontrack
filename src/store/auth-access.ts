@@ -30,6 +30,7 @@ export const useAuthAccess = create<AuthAccessState>()(
           guestEnabled: true,
           guestDataDirty: dirty,
           authUpgradePending: false,
+          pendingAuthReturnTo: undefined,
         }),
       markGuestDataDirty: () =>
         set((state) => (state.guestEnabled ? { guestDataDirty: true } : state)),
@@ -49,7 +50,8 @@ export const useAuthAccess = create<AuthAccessState>()(
           guestDataDirty: false,
           authUpgradePending: false,
         }),
-      cancelAuthUpgrade: () => set({ authUpgradePending: false }),
+      cancelAuthUpgrade: () =>
+        set({ authUpgradePending: false, pendingAuthReturnTo: undefined }),
       resetAccess: () =>
         set({
           guestEnabled: false,

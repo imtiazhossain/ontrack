@@ -1,9 +1,9 @@
 import {
-  flightExpenseDisplayTitle,
-  flightExpenseTitleFromSegments,
-  formatRoundTripFlightTitle,
-  isRoundTripFlightExpense,
-  withRoundTripFlightExpenseTitles,
+    flightExpenseDisplayTitle,
+    flightExpenseTitleFromSegments,
+    formatRoundTripFlightTitle,
+    isRoundTripFlightExpense,
+    withRoundTripFlightExpenseTitles,
 } from '@/features/travel/flight-expense-title';
 import type { TravelExpense, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 
@@ -70,6 +70,15 @@ describe('flightExpenseTitleFromSegments', () => {
         { flight: { departureAirport: 'EWR', arrivalAirport: 'KEF' } },
       ]),
     ).toBe('Flight EWR → KEF');
+  });
+
+  it('includes connection hubs on one-way connecting itineraries', () => {
+    expect(
+      flightExpenseTitleFromSegments([
+        { flight: { departureAirport: 'GUA', arrivalAirport: 'IAH' } },
+        { flight: { departureAirport: 'IAH', arrivalAirport: 'LGA' } },
+      ]),
+    ).toBe('Flight GUA → IAH → LGA');
   });
 });
 

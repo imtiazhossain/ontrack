@@ -16,8 +16,8 @@ describe('private flight confirmation fallback', () => {
     write: async () => undefined,
   };
   const source = `
-    Passenger name: Farhana Tasmin
-    Imtiaz Hossain <imtihoss@example.com>
+    Passenger name: Jordan Lee
+    Alex Rivera <alex.rivera@example.com>
     Phone: +1 (212) 555-0198
     Airline confirmation: AB2ZQV
     E-ticket number: 016-1234567890
@@ -31,8 +31,8 @@ describe('private flight confirmation fallback', () => {
   it('removes identity and booking secrets while retaining editor values locally', () => {
     const privacy = redactFlightConfirmationText(source);
 
-    expect(privacy.text).not.toContain('Farhana Tasmin');
-    expect(privacy.text).not.toContain('imtihoss@example.com');
+    expect(privacy.text).not.toContain('Jordan Lee');
+    expect(privacy.text).not.toContain('alex.rivera@example.com');
     expect(privacy.text).not.toContain('212) 555-0198');
     expect(privacy.text).not.toContain('AB2ZQV');
     expect(privacy.text).not.toContain('016-1234567890');
@@ -46,9 +46,23 @@ describe('private flight confirmation fallback', () => {
     });
   });
 
+  it('redacts unlabelled passenger names above flight chrome and passport numbers', () => {
+    const privacy = redactFlightConfirmationText(`
+John Doe
+Flight UA 123
+Passport number: X1234567
+Depart September 27, 2026 at 1:30 AM
+`);
+    expect(privacy.text).not.toContain('John Doe');
+    expect(privacy.text).not.toContain('X1234567');
+    expect(privacy.text).toContain('[REDACTED_NAME]');
+    expect(privacy.text).toContain('[REDACTED_PASSPORT]');
+    expect(privacy.text).toContain('Flight UA 123');
+  });
+
   it('sends only redacted OCR text and restores confirmation and seat in the draft', async () => {
     const analyze = jest.fn(async ({ redactedText }: { redactedText: string }) => {
-      expect(redactedText).not.toContain('Farhana Tasmin');
+      expect(redactedText).not.toContain('Jordan Lee');
       expect(redactedText).not.toContain('AB2ZQV');
       expect(redactedText).not.toContain('14A');
       return {
@@ -166,7 +180,7 @@ describe('private flight confirmation fallback', () => {
         },
       ],
     }));
-    const incomplete = 'Passenger: Farhana\nFlight UA 1907\nGUA to LGA';
+    const incomplete = 'Passenger: Jordan\nFlight UA 1907\nGUA to LGA';
 
     await parseFlightConfirmationWithFallback(incomplete, undefined, analyze, memory);
     await parseFlightConfirmationWithFallback(incomplete, undefined, analyze, memory);

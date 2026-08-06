@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
-  Button,
-  ErrorMessage,
-  Input,
-  SegmentedControl,
-  Symbol,
+    Button,
+    ErrorMessage,
+    Input,
+    SegmentedControl,
+    Symbol,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { ConfirmationImportBanner } from '@/features/travel/confirmation-import-banner';
@@ -15,26 +15,26 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import { FlightDetailsEditor } from '@/features/travel/flight-details-editor';
 import { FlightReturnLegFields } from '@/features/travel/flight-return-leg-fields';
 import type {
-  FlightLegScheduleDraft,
-  FlightTripType,
+    FlightLegScheduleDraft,
+    FlightTripType,
 } from '@/features/travel/flight-roundtrip-draft';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import { RentalDetailsEditor } from '@/features/travel/rental-details-editor';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import type { TransportDetailsDraft } from '@/features/travel/transport-details';
+import { TransportDetailsEditor } from '@/features/travel/transport-details-editor';
 import { TravelAddPhotosModal } from '@/features/travel/travel-add-photos-modal';
 import { TravelItineraryFormScheduleFields } from '@/features/travel/travel-itinerary-form-schedule-fields';
 import {
-  TravelItineraryStayAddressField,
-  TravelItineraryStayFields,
-  TravelItineraryStayNotesField,
-} from '@/features/travel/travel-itinerary-stay-fields';
-import {
-  itinerarySheetChrome,
-  itinerarySheetFieldProps,
+    itinerarySheetChrome,
+    itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetImportCard } from '@/features/travel/travel-itinerary-sheet-fields';
-import type { TransportDetailsDraft } from '@/features/travel/transport-details';
-import { TransportDetailsEditor } from '@/features/travel/transport-details-editor';
+import {
+    TravelItineraryStayAddressField,
+    TravelItineraryStayFields,
+    TravelItineraryStayNotesField,
+} from '@/features/travel/travel-itinerary-stay-fields';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useAutoGrowingNote } from '@/features/travel/use-auto-growing-note';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -325,12 +325,24 @@ export function TravelItineraryForm({
         }
         accessibilityLabel={
           kind === 'stay'
-            ? 'Stay Name, required'
+            ? title.trim()
+              ? `Stay Name, ${title.trim()}, required`
+              : 'Stay Name, required'
             : isMoment
-              ? 'Title'
+              ? title.trim()
+                ? `Title, ${title.trim()}`
+                : 'Title'
               : kind === 'flight' && flightTripType === 'round-trip'
-                ? 'Departing Name, required'
-                : 'Name, required'
+                ? title.trim()
+                  ? `Departing Name, ${title.trim()}, required`
+                  : 'Departing Name, required'
+                : kind === 'flight'
+                  ? title.trim()
+                    ? `Name, ${title.trim()}, required`
+                    : 'Name, required'
+                  : title.trim()
+                    ? `Name, ${title.trim()}, required`
+                    : 'Name, required'
         }
         {...itinerarySheetFieldProps(chrome, nameTone)}
       />

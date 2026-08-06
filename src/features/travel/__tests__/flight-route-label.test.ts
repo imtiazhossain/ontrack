@@ -1,6 +1,7 @@
 import {
-  flightItemDisplayTitle,
-  formatFlightRouteLabel,
+    flightItemDisplayTitle,
+    formatFlightRouteLabel,
+    formatFlightTitle,
 } from '../flight-route-label';
 import type { TravelItineraryItem } from '../types';
 
@@ -13,6 +14,13 @@ describe('flight route label', () => {
         connectionAirport: 'IAH',
       }),
     ).toBe('GUA → IAH → LGA');
+    expect(
+      formatFlightTitle({
+        departureAirport: 'GUA',
+        arrivalAirport: 'LGA',
+        connectionAirport: 'IAH',
+      }),
+    ).toBe('Flight GUA → IAH → LGA');
   });
 
   it('omits a connection that matches an endpoint', () => {

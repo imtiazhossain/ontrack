@@ -5,6 +5,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 
 import { AppText } from './app-text';
 import { ErrorMessage } from './error-message';
+import { fieldTitleCase } from './field-title-case';
 
 export interface FormSectionProps extends PropsWithChildren {
   title?: string;
@@ -22,7 +23,7 @@ export function FormSection({ title, description, error, children, style }: Form
         <View style={{ gap: spacing.xs }}>
           {title ? (
             <AppText variant="subheading" bold fit>
-              {title}
+              {fieldTitleCase(title)}
             </AppText>
           ) : null}
           {description ? (

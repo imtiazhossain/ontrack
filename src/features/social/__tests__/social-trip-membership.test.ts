@@ -6,8 +6,8 @@ import type { TravelPlan } from '@/features/travel/types';
 import type { FriendProfile } from '@/services/friends';
 
 const friend: FriendProfile = {
-  userId: 'farhana',
-  displayName: 'Farhana Tasmin',
+  userId: 'jordan',
+  displayName: 'Jordan Lee',
   email: 'ftasmin1126@msn.com',
   avatar: { kind: 'initials', color: '#2E7D5A' },
 };
@@ -34,10 +34,10 @@ describe('social trip membership', () => {
     const iceland = plan({
       participants: [
         {
-          id: 'participant-farhana',
-          name: 'Farhana Tasmin',
+          id: 'participant-jordan',
+          name: 'Jordan Lee',
           email: ' FTASMIN1126@MSN.COM ',
-          inviteCode: 'invite-farhana',
+          inviteCode: 'invite-jordan',
           invitedAt: '2026-08-01T12:00:00.000Z',
           acceptedAt: '2026-08-02T15:22:07.010Z',
         },
@@ -53,10 +53,10 @@ describe('social trip membership', () => {
     const iceland = plan({
       participants: [
         {
-          id: 'participant-farhana',
-          name: 'Farhana Tasmin',
+          id: 'participant-jordan',
+          name: 'Jordan Lee',
           email: friend.email,
-          inviteCode: 'invite-farhana',
+          inviteCode: 'invite-jordan',
           invitedAt: '2026-08-01T12:00:00.000Z',
         },
       ],
@@ -71,7 +71,7 @@ describe('social trip membership', () => {
     const hostTrip = plan({
       id: 'trip-local-copy',
       hostTripId: 'trip-host-iceland',
-      hostDisplayName: ' FARHANA TASMIN ',
+      hostDisplayName: ' JORDAN LEE ',
     });
 
     expect(socialTripMemberships(friend, [hostTrip])).toEqual([

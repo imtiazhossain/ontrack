@@ -31,13 +31,15 @@ function Segment<T extends string>({
   option,
   selected,
   onSelect,
+  wrap,
 }: {
   option: SegmentedControlOption<T>;
   selected: boolean;
   onSelect: () => void;
+  wrap: boolean;
 }) {
   const theme = useTheme();
-  const { spacing, layout } = useResponsive();
+  const { spacing, layout, s } = useResponsive();
   const handlePress = () => {
     haptics.select();
     onSelect();
@@ -59,11 +61,13 @@ function Segment<T extends string>({
       onPress={handlePress}
       style={({ pressed }) => [
         styles.segment,
+        wrap ? styles.segmentWrapped : styles.segmentRow,
         {
           minHeight: layout.minTapTarget,
+          minWidth: wrap ? s(104) : 0,
           gap: spacing.xs,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
+          paddingHorizontal: wrap ? spacing.lg : spacing.md,
+          paddingVertical: wrap ? spacing.md : spacing.sm,
           backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
           borderColor: selected ? theme.accentPrimary : theme.separator,
           opacity: option.disabled ? 0.4 : pressed ? 0.72 : 1,
@@ -76,9 +80,20 @@ function Segment<T extends string>({
           color={selected ? theme.accentPrimary : theme.textSecondary}
         />
       ) : null}
-      <AppText variant="callout" color={selected ? 'accent' : 'secondary'} fit>
-        {option.label}
-      </AppText>
+      {wrap ? (
+        <AppText
+          variant="body"
+          color={selected ? 'accent' : 'primary'}
+          bold={selected}
+          numberOfLines={1}
+          style={{ flexShrink: 1, minWidth: 0 }}>
+          {option.label}
+        </AppText>
+      ) : (
+        <AppText variant="callout" color={selected ? 'accent' : 'secondary'} fit>
+          {option.label}
+        </AppText>
+      )}
     </Pressable>
   );
 }
@@ -108,6 +123,7 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             option={option}
             selected={option.value === value}
+            wrap={wrap}
             onSelect={() => onChange(option.value)}
           />
         ))}
@@ -120,13 +136,25 @@ const styles = StyleSheet.create({
   root: { width: '100%' },
   row: { flexDirection: 'row', width: '100%' },
   segment: {
-    flex: 1,
-    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
     borderCurve: 'continuous',
+  },
+  /** Single-row mode: share width and allow shrink-to-fit labels. */
+  segmentRow: {
+    flex: 1,
+    minWidth: 0,
+  },
+  /**
+   * Wrapped chips: grow into a readable grid (≈3 per row on phones) instead of
+   * crushing six labels onto one line with `fit`.
+   */
+  segmentWrapped: {
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: '30%',
   },
 });

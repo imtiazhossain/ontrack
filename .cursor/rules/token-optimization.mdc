@@ -26,6 +26,7 @@ Future agents must leave the codebase *more* optimized than they found it when t
 
 ## Never reintroduce
 
+- Personal emails, full names, or email allowlists in source (see `.cursor/rules/no-personal-identifiers.mdc`)
 - Raw `Alert` / `ActionSheetIOS` for app UI
 - Ad-hoc UUID/`Date.now()` ID generators when `@/utils/id` fits
 - Duplicate camera/library permission + picker flows

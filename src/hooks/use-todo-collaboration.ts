@@ -2,12 +2,20 @@ import { useEffect, useMemo } from 'react';
 import { AppState } from 'react-native';
 
 import {
-  flushTodoMutations,
-  loadAllSharedTodoLists,
-  loadTodoListSnapshot,
-  subscribeToTodoList,
+    flushTodoMutations,
+    loadAllSharedTodoLists,
+    loadTodoListSnapshot,
+    subscribeToTodoList,
+    TodoCollaborationError,
 } from '@/services/todos/collaboration';
 import { useTodos } from '@/store/todos';
+
+function isRevokedSharedListError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? '');
+  // Match the RPC access denial only — not generic refresh/network failures.
+  return /no longer have access to this list/i.test(message);
+}
 
 export function useTodoCollaboration(enabled: boolean) {
   const lists = useTodos((state) => state.lists);
@@ -35,6 +43,13 @@ export function useTodoCollaboration(enabled: boolean) {
   useEffect(() => {
     if (!enabled || !pendingCount) return;
     void flushTodoMutations().catch(() => undefined);
+    // Soft prep/RPC failures leave pending length unchanged — retry while
+    // mutations remain rather than waiting for AppState/realtime traffic.
+    const timer = setInterval(() => {
+      if (useTodos.getState().pendingMutations.length === 0) return;
+      void flushTodoMutations().catch(() => undefined);
+    }, 15_000);
+    return () => clearInterval(timer);
   }, [enabled, pendingCount]);
 
   useEffect(() => {
@@ -52,8 +67,14 @@ export function useTodoCollaboration(enabled: boolean) {
             // remote snapshot would otherwise wipe unsynced edits.
             if (hasPending()) return;
           }
-          await loadTodoListSnapshot(list.id).catch(() => {
-            useTodos.getState().removeSharedList(list.id);
+          await loadTodoListSnapshot(list.id).catch((error: unknown) => {
+            // Transient network/auth blips must not wipe the local shared list.
+            if (
+              error instanceof TodoCollaborationError &&
+              isRevokedSharedListError(error)
+            ) {
+              useTodos.getState().removeSharedList(list.id);
+            }
           });
         })();
       });

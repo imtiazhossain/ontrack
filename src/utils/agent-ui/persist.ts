@@ -55,6 +55,8 @@ export type AgentUiStatusPayload = {
   route?: string | null;
   /** Logical window size + native scale for host screenshot sampling. */
   screen?: AgentUiScreenMetrics;
+  /** Full dump elements (op=dump) so Android hosts need no Documents pull. */
+  elements?: AgentUiEntry[];
   /** Per-step outcomes for `op=batch`. */
   results?: AgentUiStatusResult[];
   /** Host/daemon correlation id for the active command. */
@@ -94,10 +96,16 @@ export function writeAgentUiStatus(
     screen: payload.screen ?? agentUiScreenMetrics(),
     ...(nonce !== undefined ? { nonce } : {}),
   };
-  writeJson(AGENT_UI_STATUS_FILENAME, full);
-  // Fire-and-forget — daemon hosts wait on HTTP; file hosts ignore this.
+  // HTTP first — daemon hosts wait on it. After goto/reset, Documents I/O can
+  // stall on Android while the navigator remounts; posting before writeJson
+  // keeps solo ops from timing out.
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     void postAgentUiStatus(full);
+  }
+  try {
+    writeJson(AGENT_UI_STATUS_FILENAME, full);
+  } catch {
+    /* File mirror is best-effort; HTTP status already left. */
   }
   return full;
 }

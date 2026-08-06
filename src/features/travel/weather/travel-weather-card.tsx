@@ -147,7 +147,6 @@ export function TravelWeatherCard({
       {weather?.availability === 'too-early' ? (
         <TypicalWeatherBlock
           startDate={startDate}
-          temperatureUnit={temperatureUnit}
           availableOn={weather.availableOn!}
           dateDisplayFormat={dateDisplayFormat}
           theme={theme}
@@ -240,14 +239,12 @@ export function TravelWeatherCard({
 
 function TypicalWeatherBlock({
   startDate,
-  temperatureUnit,
   availableOn,
   dateDisplayFormat,
   theme,
   accent,
 }: {
   startDate: string;
-  temperatureUnit: TemperatureUnit;
   availableOn: string;
   dateDisplayFormat: DateDisplayFormat;
   theme: Theme;
@@ -266,12 +263,6 @@ function TypicalWeatherBlock({
     /* keep fallback */
   }
 
-  const isF = temperatureUnit === 'fahrenheit';
-  const stats = [
-    { label: 'Avg High', value: isF ? '54°F' : '12°C' },
-    { label: 'Avg Low', value: isF ? '43°F' : '6°C' },
-    { label: 'Rainfall', value: '15 days' },
-  ] as const;
   const ruleColor = light ? 'rgba(160, 120, 80, 0.28)' : chrome.fieldBorder;
   const diamondColor = light ? '#C4A06A' : chrome.ctaFrom;
 
@@ -312,44 +303,8 @@ function TypicalWeatherBlock({
                 lineHeight: s(21),
               },
             ]}>
-            Typical {monthName} Weather
+            Forecast Coming for {monthName}
           </AppText>
-        </View>
-
-        <View style={styles.typicalWeatherRow}>
-          {stats.map((stat, index) => (
-            <View key={stat.label} style={styles.typicalWeatherStatWrap}>
-              {index > 0 ? (
-                <View style={[styles.statDivider, { backgroundColor: ruleColor }]} />
-              ) : null}
-              <View style={[styles.typicalWeatherStat, { gap: Math.max(4, s(4)) }]}>
-                <AppText
-                  variant="caption"
-                  fit
-                  numberOfLines={1}
-                  style={{
-                    color: chrome.subtitle,
-                    fontSize: s(12),
-                    lineHeight: s(16),
-                  }}>
-                  {stat.label}
-                </AppText>
-                <AppText
-                  fit
-                  numberOfLines={1}
-                  style={[
-                    styles.typicalWeatherValue,
-                    {
-                      color: chrome.title,
-                      fontSize: s(22),
-                      lineHeight: s(26),
-                    },
-                  ]}>
-                  {stat.value}
-                </AppText>
-              </View>
-            </View>
-          ))}
         </View>
 
         <View style={styles.diamondRule}>
@@ -367,8 +322,8 @@ function TypicalWeatherBlock({
             lineHeight: s(20),
             textAlign: 'center',
           }}>
-          Weather transitions quickly. Rain and wind are common, so dressing in waterproof and
-          windproof layers is highly recommended.
+          Daily highs, lows, and conditions appear here once this trip is inside the forecast
+          window. Check back closer to departure for destination-specific weather.
         </AppText>
       </View>
     </View>

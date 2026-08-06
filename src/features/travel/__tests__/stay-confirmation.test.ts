@@ -32,7 +32,7 @@ Standard Room
 Room only
 Non-Refundable
 Booking details
-Booked for Imtiaz Hossain
+Booked for Alex Rivera
 Check-in Sep 09, 2026
 Check-out Sep 14, 2026
 Number of nights 5 Nights
@@ -215,6 +215,22 @@ Call host: +1 800-555-0199
     expect(parsed.title).toBe('Cozy Lakeside Cabin');
     expect(parsed.stay.confirmationCode).toBe('XYZ987654');
     expect(parsed.details).toBeUndefined();
+  });
+
+  it('does not treat room or rate product phrases as stay addresses', () => {
+    const parsed = parseStayConfirmation(
+      `
+Your reservation is confirmed
+Confirmation code: ROOM123
+Harbor Hotel
+Standard Room, City View
+Check-in: Sep 10, 2026 3:00 PM
+Check-out: Sep 12, 2026 11:00 AM
+`,
+      { startDate: '2026-09-08', endDate: '2026-09-20' },
+    );
+    expect(parsed.details).toBeUndefined();
+    expect(parsed.stay.confirmationCode).toBe('ROOM123');
   });
 });
 

@@ -2,18 +2,20 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import {
+    cleanupRecipeMutationMedia,
     prepareRecipeMutationMedia,
     removeSharedRecipeImages,
     resolveSharedRecipeMedia,
-    uploadSharedRecipeImage,
 } from '@/services/todos/recipe-media';
 import {
     normalizeTodoState,
+    type PendingTodoMutation,
     type TodoInvite,
     type TodoList,
     type TodoSharedSnapshot,
     useTodos,
 } from '@/store/todos';
+import { newUuid } from '@/utils/id';
 
 export class TodoCollaborationError extends Error {
   constructor(message: string) {
@@ -67,7 +69,17 @@ function sharedSnapshot(value: unknown): TodoSharedSnapshot | undefined {
 
 export async function loadTodoListSnapshot(
   listId: string,
+  options?: { applyWhilePending?: boolean },
 ): Promise<TodoSharedSnapshot | undefined> {
+  if (
+    !options?.applyWhilePending &&
+    useTodos
+      .getState()
+      .pendingMutations.some((mutation) => mutation.listId === listId)
+  ) {
+    // Keep optimistic local edits until the queue for this list drains.
+    return undefined;
+  }
   const client = await authenticatedClient();
   const { data, error } = await client.rpc('todo_list_snapshot', {
     requested_list_id: listId,
@@ -86,6 +98,18 @@ export async function loadTodoListSnapshot(
   return snapshot;
 }
 
+async function ensureListMutationsFlushed(listId: string) {
+  await flushTodoMutations();
+  const stillPending = useTodos
+    .getState()
+    .pendingMutations.some((mutation) => mutation.listId === listId);
+  if (stillPending) {
+    throw new TodoCollaborationError(
+      'Wait for your latest changes to sync before continuing.',
+    );
+  }
+}
+
 export async function publishTodoList(listId: string): Promise<TodoSharedSnapshot> {
   const state = useTodos.getState();
   const list = state.lists.find((item) => item.id === listId);
@@ -94,18 +118,17 @@ export async function publishTodoList(listId: string): Promise<TodoSharedSnapsho
   }
   const client = await authenticatedClient();
   const recipes = state.recipes.filter((recipe) => recipe.listId === list.id);
-  const sharedRecipes = await Promise.all(
-    recipes.map(async (recipe) => ({
-      ...recipe,
-      sourceImagePath: await uploadSharedRecipeImage(client, recipe),
-    })),
-  );
+  // Publish first so storage RLS recognizes list ownership, then upload images.
   const { error } = await client.rpc('publish_todo_list', {
     list_payload: {
       id: list.id,
       name: list.name,
       kind: list.kind,
-      recipes: sharedRecipes,
+      recipes: recipes.map((recipe) => ({
+        ...recipe,
+        sourceImagePath: recipe.sourceImagePath,
+        sourceImageUri: undefined,
+      })),
       tasks: state.tasks.filter((task) => task.listId === list.id),
     },
   });
@@ -114,15 +137,79 @@ export async function publishTodoList(listId: string): Promise<TodoSharedSnapsho
       messageFrom(error, 'The list could not be shared.'),
     );
   }
-  const snapshot = await loadTodoListSnapshot(listId);
-  if (!snapshot) throw new TodoCollaborationError('The shared list could not be loaded.');
+
+  const needingUpload = recipes.filter(
+    (recipe) => recipe.sourceImageUri && !recipe.sourceImagePath,
+  );
+  // Queue thumbnail uploads before snapshot so a failed upload remains retryable
+  // via flushTodoMutations after the list becomes shared.
+  if (needingUpload.length) {
+    const createdAt = new Date().toISOString();
+    useTodos.setState((current) => ({
+      pendingMutations: [
+        ...current.pendingMutations,
+        ...needingUpload.map((recipe) => ({
+          id: newUuid(),
+          listId: list.id,
+          operation: 'update_recipe' as const,
+          createdAt,
+          attempts: 0,
+          payload: { recipe },
+        })),
+      ],
+    }));
+  }
+
+  // Reconcile local private → shared immediately so retries don't re-insert.
+  // Image uploads are intentionally still pending — force-apply the shared shell.
+  let snapshot = await loadTodoListSnapshot(listId, {
+    applyWhilePending: true,
+  });
+  if (!snapshot) {
+    throw new TodoCollaborationError('The shared list could not be loaded.');
+  }
+
+  if (needingUpload.length) {
+    // Snapshot drops private file URIs — restore them for UI until upload acks.
+    const localUriById = new Map(
+      needingUpload.map((recipe) => [recipe.id, recipe.sourceImageUri] as const),
+    );
+    useTodos.setState((current) => ({
+      recipes: current.recipes.map((recipe) => {
+        const localUri = localUriById.get(recipe.id);
+        return localUri && !recipe.sourceImagePath
+          ? { ...recipe, sourceImageUri: localUri }
+          : recipe;
+      }),
+    }));
+
+    // flushTodoMutations swallows transient prep/RPC failures; check pending after.
+    await flushTodoMutations();
+    const stillPending = useTodos
+      .getState()
+      .pendingMutations.some(
+        (mutation) =>
+          mutation.listId === list.id && mutation.operation === 'update_recipe',
+      );
+    if (stillPending) {
+      throw new TodoCollaborationError(
+        'Recipe photos could not be shared yet. They will retry automatically.',
+      );
+    }
+    snapshot = (await loadTodoListSnapshot(listId)) ?? snapshot;
+  }
+
   return snapshot;
 }
 
 function permanentMutationError(message: string) {
-  return /no longer have access|only the list owner|assigned to someone else|not a member/i.test(
+  return /no longer have access|only the list owner|assigned to someone else|not a member|Recipes can only be added to Grocery lists/i.test(
     message,
   );
+}
+
+function permanentMediaPrepError(message: string) {
+  return /recipe thumbnail could not be read/i.test(message);
 }
 
 const TODO_MUTATION_BATCH_SIZE = 50;
@@ -137,16 +224,66 @@ export async function flushTodoMutations(): Promise<void> {
     batch.forEach((mutation) => {
       useTodos.getState().markMutationAttempt(mutation.id);
     });
-    let preparedBatch;
-    try {
-      preparedBatch = await Promise.all(
-        batch.map((mutation) => prepareRecipeMutationMedia(client, mutation)),
+
+    // Prepare per mutation so one bad local image cannot stall the queue.
+    const preparedResults = await Promise.all(
+      batch.map(async (mutation) => {
+        try {
+          const prepared = await prepareRecipeMutationMedia(client, mutation);
+          if (prepared !== mutation) {
+            // Persist uploaded path so a later RPC failure does not re-upload.
+            useTodos.setState((state) => ({
+              pendingMutations: state.pendingMutations.map((item) =>
+                item.id === mutation.id
+                  ? { ...item, payload: prepared.payload }
+                  : item,
+              ),
+            }));
+          }
+          return { mutation: prepared };
+        } catch (error) {
+          return {
+            mutation,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Recipe media could not be prepared.',
+          };
+        }
+      }),
+    );
+
+    let shouldRetryLater = false;
+    const rejectedLists = new Set<string>();
+    const ready: PendingTodoMutation[] = [];
+    for (const result of preparedResults) {
+      if (!result.error) {
+        ready.push(result.mutation);
+        continue;
+      }
+      if (permanentMediaPrepError(result.error)) {
+        useTodos.getState().rejectMutation(result.mutation.id, result.error);
+        rejectedLists.add(result.mutation.listId);
+      } else {
+        shouldRetryLater = true;
+      }
+    }
+
+    if (ready.length === 0) {
+      await Promise.all(
+        [...rejectedLists].map((listId) =>
+          // Force reconcile so a permanent reject cannot leave optimistic UI
+          // stuck behind sibling soft-failing mutations.
+          loadTodoListSnapshot(listId, { applyWhilePending: true }).catch(
+            () => undefined,
+          ),
+        ),
       );
-    } catch {
       return;
     }
+
     const { data, error } = await client.rpc('apply_todo_mutations', {
-      mutations: preparedBatch.map((mutation) => ({
+      mutations: ready.map((mutation) => ({
         id: mutation.id,
         listId: mutation.listId,
         operation: mutation.operation,
@@ -166,9 +303,10 @@ export async function flushTodoMutations(): Promise<void> {
       });
     }
 
-    let shouldRetryLater = false;
-    const rejectedLists = new Set<string>();
-    for (const mutation of batch) {
+    const acknowledged = ready.filter(
+      (mutation) => results.get(mutation.id)?.ok,
+    );
+    for (const mutation of ready) {
       const result = results.get(mutation.id);
       if (result?.ok) {
         useTodos.getState().acknowledgeMutation(mutation.id);
@@ -180,8 +318,15 @@ export async function flushTodoMutations(): Promise<void> {
       }
     }
     await Promise.all(
+      acknowledged.map((mutation) =>
+        cleanupRecipeMutationMedia(client, mutation).catch(() => undefined),
+      ),
+    );
+    await Promise.all(
       [...rejectedLists].map((listId) =>
-        loadTodoListSnapshot(listId).catch(() => undefined),
+        loadTodoListSnapshot(listId, { applyWhilePending: true }).catch(
+          () => undefined,
+        ),
       ),
     );
     if (shouldRetryLater) return;
@@ -249,7 +394,17 @@ export async function loadAllSharedTodoLists(): Promise<void> {
       useTodos.getState().removeSharedList(list.id);
     }
   }
-  await Promise.all(ids.map((id) => loadTodoListSnapshot(id)));
+  const pendingListIds = new Set(
+    useTodos
+      .getState()
+      .pendingMutations.map((mutation) => mutation.listId),
+  );
+  await Promise.all(
+    ids.map((id) =>
+      // Keep optimistic local edits when flush could not clear the queue.
+      pendingListIds.has(id) ? Promise.resolve() : loadTodoListSnapshot(id),
+    ),
+  );
   await loadTodoInvites();
 }
 
@@ -483,18 +638,48 @@ export async function transferTodoListOwnership(
   listId: string,
   newOwnerUserId: string,
 ) {
+  await ensureListMutationsFlushed(listId);
   const client = await authenticatedClient();
   const { error } = await client.rpc('transfer_todo_list_ownership', {
     requested_list_id: listId,
     new_owner_user_id: newOwnerUserId,
   });
   if (error) throw new TodoCollaborationError(error.message);
+  // Former owner's plaintext join code is no longer valid after transfer.
+  useTodos.getState().setShareCode(listId, undefined);
   await loadTodoListSnapshot(listId);
 }
 
+function restoreSharedListRollback(
+  listId: string,
+  rollback:
+    | {
+        list: TodoList;
+        tasks: TodoSharedSnapshot['tasks'];
+        recipes: TodoSharedSnapshot['recipes'];
+        members: TodoSharedSnapshot['members'];
+      }
+    | undefined,
+  pendingRollback: ReturnType<typeof useTodos.getState>['pendingMutations'],
+) {
+  if (!rollback) return;
+  useTodos.getState().replaceSharedSnapshot(rollback);
+  if (!pendingRollback.length) return;
+  useTodos.setState((state) => ({
+    pendingMutations: [
+      ...state.pendingMutations.filter((mutation) => mutation.listId !== listId),
+      ...pendingRollback,
+    ],
+  }));
+}
+
 export async function leaveTodoList(listId: string) {
+  await ensureListMutationsFlushed(listId);
   const state = useTodos.getState();
   const list = state.lists.find((item) => item.id === listId);
+  const pendingRollback = state.pendingMutations.filter(
+    (mutation) => mutation.listId === listId,
+  );
   const rollback = list
     ? {
         list,
@@ -511,14 +696,18 @@ export async function leaveTodoList(listId: string) {
     });
     if (error) throw new TodoCollaborationError(error.message);
   } catch (error) {
-    if (rollback) useTodos.getState().replaceSharedSnapshot(rollback);
+    restoreSharedListRollback(listId, rollback, pendingRollback);
     throw error;
   }
 }
 
 export async function deleteSharedTodoList(listId: string) {
+  await ensureListMutationsFlushed(listId);
   const state = useTodos.getState();
   const list = state.lists.find((item) => item.id === listId);
+  const pendingRollback = state.pendingMutations.filter(
+    (mutation) => mutation.listId === listId,
+  );
   const rollback = list
     ? {
         list,
@@ -536,7 +725,7 @@ export async function deleteSharedTodoList(listId: string) {
     });
     if (error) throw new TodoCollaborationError(error.message);
   } catch (error) {
-    if (rollback) useTodos.getState().replaceSharedSnapshot(rollback);
+    restoreSharedListRollback(listId, rollback, pendingRollback);
     throw error;
   }
   // The list is permanently gone after the RPC succeeds. Storage cleanup is

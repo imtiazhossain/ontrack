@@ -2,13 +2,15 @@ import { useCallback, useEffect, useRef, type RefCallback } from 'react';
 import { type LayoutChangeEvent, type View } from 'react-native';
 
 import {
-  isAgentUiEnabled,
-  registerAgentUiTarget,
-  unregisterAgentUiTarget,
+    isAgentUiEnabled,
+    registerAgentUiTarget,
+    unregisterAgentUiTarget,
 } from './registry';
 
 type AgentUiTargetOptions = {
   label?: string;
+  /** Live field value for agent-ui --contains (does not change a11y label). */
+  value?: string;
   onPress?: () => void;
 };
 
@@ -28,6 +30,7 @@ export function useAgentUiTarget(
 ): AgentUiTarget {
   const ref = useRef<View | null>(null);
   const label = options.label;
+  const value = options.value;
   const onPress = options.onPress;
   const enabled = isAgentUiEnabled() && Boolean(testID);
 
@@ -35,17 +38,26 @@ export function useAgentUiTarget(
     if (!enabled || !testID) return;
     const node = ref.current;
     if (!node) {
-      registerAgentUiTarget(testID, { label, press: onPress, frame: null });
+      registerAgentUiTarget(testID, {
+        label,
+        value,
+        press: onPress,
+        frame: null,
+        node: null,
+      });
       return;
     }
+    registerAgentUiTarget(testID, { label, value, press: onPress, node });
     node.measureInWindow((x, y, width, height) => {
       registerAgentUiTarget(testID, {
         label,
+        value,
         press: onPress,
+        node,
         frame: { x, y, width, height },
       });
     });
-  }, [enabled, testID, label, onPress]);
+  }, [enabled, testID, label, value, onPress]);
 
   useEffect(() => {
     if (!enabled || !testID) return;
@@ -60,9 +72,16 @@ export function useAgentUiTarget(
     [measureAndRegister],
   );
 
-  const setRef = useCallback<RefCallback<View | null>>((node) => {
-    ref.current = node;
-  }, []);
+  const setRef = useCallback<RefCallback<View | null>>(
+    (node) => {
+      ref.current = node;
+      if (enabled && testID) {
+        registerAgentUiTarget(testID, { label, value, press: onPress, node });
+        if (node) measureAndRegister();
+      }
+    },
+    [enabled, testID, label, value, onPress, measureAndRegister],
+  );
 
   if (!enabled) {
     return { ref: setRef, onLayout: undefined as undefined, testID };

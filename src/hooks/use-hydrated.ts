@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 
+import { rehydrateDevModeSyncGate } from '@/features/account/dev-mode-controller';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 import { useAuthAccess } from '@/store/auth-access';
+import { useDevMode } from '@/store/dev-mode';
+import { useHealth } from '@/store/health';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -11,8 +14,11 @@ import { useTravel } from '@/store/travel';
 import { useVehicles } from '@/store/vehicles';
 import { useVisionBoard } from '@/store/vision-board';
 
-/** Hard ceiling so a stuck persist never leaves the user on a blank shell. */
-const HYDRATION_TIMEOUT_MS = 4_000;
+/**
+ * Survives Fast Refresh remounts so RootNavigator does not tear down the
+ * Stack and bounce back to the default Today tab.
+ */
+let sessionHydrated = false;
 
 async function rehydrateStore(
   rehydrate: () => Promise<unknown> | unknown,
@@ -24,19 +30,33 @@ async function rehydrateStore(
   }
 }
 
-/** True only after every persisted store has finished rehydrating from disk. */
+/**
+ * True only after every persisted store has finished rehydrating from disk.
+ * Auth prepare/sign-out wipes must not race a late persist.setState — so we
+ * never seal while any rehydrate is still in flight (no timeout escape hatch).
+ */
 export function useHydrated(): boolean {
   // Keep the server and first browser render identical, then release the
   // loading shell at one deterministic point when all stores are ready.
-  const [hydrated, setHydrated] = useState(false);
+  // Remounts in the same JS session start hydrated to preserve navigation.
+  const [hydrated, setHydrated] = useState(sessionHydrated);
 
   useEffect(() => {
+    if (sessionHydrated) {
+      setHydrated(true);
+      return;
+    }
+
     let active = true;
     const release = () => {
-      if (active) setHydrated(true);
+      // Only seal the session after a mount that is still alive. A remount
+      // during in-flight rehydrate must await its own Promise.all — otherwise
+      // sessionHydrated=true would skip disk restore on the next mount.
+      if (!active) return;
+      sessionHydrated = true;
+      setHydrated(true);
     };
 
-    const timer = setTimeout(release, HYDRATION_TIMEOUT_MS);
     void Promise.all([
       rehydrateStore(() => usePreferences.persist.rehydrate()),
       rehydrateStore(() => useSchedule.persist.rehydrate()),
@@ -48,11 +68,15 @@ export function useHydrated(): boolean {
       rehydrateStore(() => useTodos.persist.rehydrate()),
       rehydrateStore(() => useVisionBoard.persist.rehydrate()),
       rehydrateStore(() => useVehicles.persist.rehydrate()),
-    ]).then(release);
+      rehydrateStore(() => useHealth.persist.rehydrate()),
+      rehydrateStore(() => useDevMode.persist.rehydrate()),
+    ]).then(() => {
+      rehydrateDevModeSyncGate();
+      release();
+    });
 
     return () => {
       active = false;
-      clearTimeout(timer);
     };
   }, []);
 

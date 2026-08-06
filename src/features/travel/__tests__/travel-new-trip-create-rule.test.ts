@@ -13,8 +13,9 @@ describe('new trip creation feedback', () => {
     );
 
     expect(travelTab).toMatch(/const saved = savePlan\(/);
+    expect(travelTab).toContain('creatingPlanRef');
     expect(travelTab).toMatch(
-      /if \(!saved\) \{\s*setError\([\s\S]*?\);\s*return;\s*\}/,
+      /if \(!saved\) \{\s*creatingPlanRef\.current = false;\s*setError\([\s\S]*?\);\s*return;\s*\}/,
     );
     expect(newTripCard).toContain(
       '{error ? <ErrorMessage message={error} /> : null}',

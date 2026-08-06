@@ -155,7 +155,7 @@ export const MealCard = memo(function MealCard({
           </AppText>
         </View>
         <Symbol
-          name={collapsed ? 'chevron-down' : 'chevron-up'}
+          name={collapsed ? 'chevron-right' : 'chevron-up'}
           size={19}
           color={theme.textSecondary}
         />

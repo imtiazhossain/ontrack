@@ -1,44 +1,46 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import { Button } from '@/components/primitives';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
-  createTravelOpenJoinUrl,
-  listTravelOpenJoinRequests,
+    createTravelOpenJoinUrl,
+    listTravelOpenJoinRequests,
 } from '@/features/travel/share';
+import {
+    TravelJoinRequestsPanel,
+    TravelOpenJoinCard,
+    TravelPendingInviteLinks,
+} from '@/features/travel/travel-friends-join-panels';
+import {
+    filterTravelFriendsVisibleParticipants,
+    resolveTravelFriendsHostPerson,
+    resolveTravelFriendsRosterMembers,
+} from '@/features/travel/travel-friends-roster-model';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import { TripPeople } from '@/features/travel/trip-people';
 import {
-  canonicalTravelTripId,
-  isTravelMemberPlan,
-  listTravelTripRoster,
-  resolveIsTravelSoleHost,
+    canonicalTravelTripId,
+    isTravelMemberPlan,
+    listTravelTripRoster,
+    resolveIsTravelSoleHost,
 } from '@/features/travel/trip-roster';
-import { ensureFriendProfile } from '@/services/friends';
 import type {
-  TravelOpenJoinRequest,
-  TravelPlan,
-  TravelTripRosterPerson,
+    TravelOpenJoinRequest,
+    TravelPlan,
+    TravelTripRosterPerson,
 } from '@/features/travel/types';
+import { useTravelFriendsSheetActions } from '@/features/travel/use-travel-friends-sheet-actions';
+import { useTravelFriendsSheetSync } from '@/features/travel/use-travel-friends-sheet-sync';
+import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
+import { ensureFriendProfile } from '@/services/friends';
 import { publishTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
-import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
-import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
-import {
-  TravelJoinRequestsPanel,
-  TravelOpenJoinCard,
-  TravelPendingInviteLinks,
-} from '@/features/travel/travel-friends-join-panels';
-import {
-  filterTravelFriendsVisibleParticipants,
-  resolveTravelFriendsHostPerson,
-  resolveTravelFriendsRosterMembers,
-} from '@/features/travel/travel-friends-roster-model';
-import { useTravelFriendsSheetActions } from '@/features/travel/use-travel-friends-sheet-actions';
-import { useTravelFriendsSheetSync } from '@/features/travel/use-travel-friends-sheet-sync';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export function TravelFriendsSheet({
   plan,
@@ -169,6 +171,8 @@ export function TravelFriendsSheet({
     copyOpenJoinLink,
     shareOpenJoin,
     decideRequest,
+    leaveTrip,
+    leavingTrip,
   } = useTravelFriendsSheetActions({
     plan,
     tripId,
@@ -193,6 +197,7 @@ export function TravelFriendsSheet({
     visible,
     plan,
     onSavePlan,
+    selfUserId: user?.id,
     openJoinCode,
     setOpenJoinCode,
     setOpenJoinBusy,
@@ -350,6 +355,16 @@ export function TravelFriendsSheet({
                   : undefined
               }
             />
+
+            {!isSoleHost ? (
+              <Button
+                testID={AgentUiIds.travel.friends.leaveTrip}
+                variant="secondary"
+                disabled={leavingTrip}
+                onPress={leaveTrip}>
+                {leavingTrip ? 'Leaving…' : 'Leave Trip'}
+              </Button>
+            ) : null}
 
             {canManage ? (
               <TravelOpenJoinCard

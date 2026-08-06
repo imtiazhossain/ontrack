@@ -10,6 +10,7 @@ import { travelCalendarDrafts } from '@/features/travel/calendar';
 import {
   acceptTravelInvite,
   createInstalledTravelInviteUrl,
+  decodeTravelInvite,
   findMatchingTravelPlan,
   isShortTravelInvite,
   ONTRACK_APP_STORE_URL,
@@ -33,6 +34,8 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
   const setAddonEnabled = useAddons((state) => state.setEnabled);
   const handledInvite = useRef<string | undefined>(undefined);
   const isShortInvite = Boolean(invite && isShortTravelInvite(invite));
+  const localDecoded =
+    invite && !isShortInvite ? decodeTravelInvite(invite) : undefined;
   const [remoteResult, setRemoteResult] = useState<{
     invite: string;
     plan?: Awaited<ReturnType<typeof resolveTravelInvite>>;
@@ -41,7 +44,7 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
   const currentRemoteResult = remoteResult?.invite === invite ? remoteResult : undefined;
   const remoteDecoded = currentRemoteResult?.plan;
   const inviteError = currentRemoteResult?.error;
-  const decoded = remoteDecoded;
+  const decoded = remoteDecoded ?? localDecoded;
   const isWeb = process.env.EXPO_OS === 'web';
   const resolving = !isWeb && Boolean(user) && isShortInvite && !decoded && !inviteError;
   const nativeError =
@@ -91,14 +94,17 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
     if (handledInvite.current === invite) return;
     let active = true;
     void (async () => {
-      const accepted = await acceptTravelInvite(invite);
-      if (!active) return;
-      if (!accepted) {
-        setRemoteResult({
-          invite,
-          error: 'This invitation is no longer available.',
-        });
-        return;
+      // Encoded (v1–v3) invites are capability URLs — no server accept step.
+      if (isShortInvite) {
+        const accepted = await acceptTravelInvite(invite);
+        if (!active) return;
+        if (!accepted) {
+          setRemoteResult({
+            invite,
+            error: 'This invitation is no longer available.',
+          });
+          return;
+        }
       }
 
       const plans = useTravel.getState().plans;

@@ -234,20 +234,23 @@ export function getTravelWeather(
 ): Promise<TravelWeather> {
   const key = [destination.trim().toLocaleLowerCase(), startDate, endDate, temperatureUnit].join('|');
   const cached = cache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+  // Shared cache must not bind to a caller AbortSignal — one unmount would abort
+  // every concurrent consumer of the same key.
+  if (cached && cached.expiresAt > Date.now()) {
+    return raceWeatherPromise(cached.promise, signal);
+  }
 
   const promise = requestTravelWeather(
     destination.trim(),
     startDate,
     endDate,
     temperatureUnit,
-    signal,
   ).catch((error) => {
     cache.delete(key);
     throw error;
   });
   cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, promise });
-  return promise;
+  return raceWeatherPromise(promise, signal);
 }
 
 async function geocodeDestination(
@@ -306,18 +309,46 @@ export function getDestinationCurrentWeather(
 ): Promise<DestinationCurrentWeather> {
   const key = `current|${destination.trim().toLocaleLowerCase()}|${temperatureUnit}`;
   const cached = currentCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+  if (cached && cached.expiresAt > Date.now()) {
+    return raceWeatherPromise(cached.promise, signal);
+  }
 
   const promise = requestDestinationCurrentWeather(
     destination.trim(),
     temperatureUnit,
-    signal,
   ).catch((error) => {
     currentCache.delete(key);
     throw error;
   });
   currentCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, promise });
-  return promise;
+  return raceWeatherPromise(promise, signal);
+}
+
+/** Let a caller cancel awaiting without aborting the shared in-flight request. */
+function raceWeatherPromise<T>(
+  promise: Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) {
+    return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function clearTravelWeatherCache(): void {

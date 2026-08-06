@@ -3,25 +3,26 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import {
-  AppText,
-  EmptyState,
-  Screen,
-  Symbol,
+    AppText,
+    EmptyState,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { fontFamilies } from '@/design-system';
 import {
-  searchStays,
-  stayProviders,
-  staySearchInput,
-  type StayProvider,
+    searchStays,
+    stayProviders,
+    staySearchInput,
+    type StayProvider,
 } from '@/features/travel/stays/provider';
 import { StayProviderLogo } from '@/features/travel/stays/stay-provider-logo';
+import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
-  TRAVEL_EDITORIAL_ACCENT,
-  TravelSurfaceCard,
-  useTravelPageStyle,
+    TRAVEL_EDITORIAL_ACCENT,
+    TravelSurfaceCard,
+    useTravelPageStyle,
 } from '@/features/travel/travel-surface';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -65,7 +66,7 @@ function StayProviderRow({
         accessibilityLabel={label}
         onPress={handlePress}
         style={({ pressed }) => [{ opacity: pressed ? 0.82 : 1 }]}>
-        <TravelSurfaceCard stripe={false} padding={0}>
+        <TravelSurfaceCard padding={0}>
           <View
             style={[
               styles.providerRow,
@@ -287,7 +288,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
             goBackOrReplace(router, { pathname: '/travel/[id]', params: { id: planId } })
           }
         />
-        <View style={[styles.headerCopy, { gap: rs.sm }]}>
+        <TravelHeaderFlourish style={styles.headerCopy} contentStyle={{ gap: rs.sm }}>
           <AppText
             variant="overline"
             fit
@@ -322,10 +323,10 @@ export function StayProviderScreen({ planId }: { planId: string }) {
             ]}>
             Choose a provider. Your destination, dates, and travelers are ready to go.
           </AppText>
-        </View>
+        </TravelHeaderFlourish>
       </View>
 
-      <TravelSurfaceCard stripe={false} padding={0}>
+      <TravelSurfaceCard padding={0}>
         <View style={[styles.summaryBody, { padding: rs.lg, gap: rs.md }]}>
           <View style={[styles.summaryRow, { gap: rs.md }]}>
             <View

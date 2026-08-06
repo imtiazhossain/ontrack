@@ -107,6 +107,53 @@ export function emptyAvatarMeta(): ProfileAvatarMeta {
   return { kind: 'initials' };
 }
 
+/** True when the profile row has no custom tint/icon/photo yet. */
+export function isDefaultAvatarMeta(meta: ProfileAvatarMeta): boolean {
+  return (
+    meta.kind === 'initials' &&
+    !meta.color &&
+    !meta.iconId &&
+    !meta.photoPath &&
+    !meta.localPhotoUri
+  );
+}
+
+/** True when the device has a customized self avatar worth keeping. */
+export function isCustomAvatarMeta(meta: ProfileAvatarMeta): boolean {
+  return (
+    meta.kind === 'photo' ||
+    meta.kind === 'icon' ||
+    Boolean(meta.color) ||
+    Boolean(meta.localPhotoUri)
+  );
+}
+
+/**
+ * On friends hydrate after sign-in, do not replace a customized local avatar
+ * with a bare cloud initials row (common for new/guest upgrades).
+ */
+export function mergeAvatarOnHydrate(
+  local: ProfileAvatarMeta,
+  remote: ProfileAvatarMeta,
+): ProfileAvatarMeta {
+  if (isDefaultAvatarMeta(remote) && isCustomAvatarMeta(local)) {
+    return normalizeAvatarMeta(local);
+  }
+  return normalizeAvatarMeta({
+    ...remote,
+    ...(remote.color || local.color
+      ? { color: remote.color ?? local.color }
+      : {}),
+    // Keep a local preview only when the cloud row has no photo yet — otherwise
+    // a stale guest file would mask the account photo in ProfileAvatar.
+    ...(local.kind === 'photo' &&
+    local.localPhotoUri &&
+    !(remote.kind === 'photo' && remote.photoPath)
+      ? { localPhotoUri: local.localPhotoUri }
+      : {}),
+  });
+}
+
 export function normalizeAvatarMeta(input: unknown): ProfileAvatarMeta {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return emptyAvatarMeta();

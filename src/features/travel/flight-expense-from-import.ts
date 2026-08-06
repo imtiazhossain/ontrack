@@ -1,16 +1,17 @@
 import {
-  createExpenseDraft,
-  defaultSplitIds,
-  upsertTravelExpense,
+    createExpenseDraft,
+    defaultSplitIds,
+    upsertTravelExpense,
 } from '@/features/travel/expenses/expense-math';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import type { ParsedFlightConfirmation } from '@/features/travel/flight-confirmation-parser';
 import { flightExpenseTitleFromSegments } from '@/features/travel/flight-expense-title';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
-  TRAVEL_EXPENSE_SELF_ID,
-  type TravelExpense,
-  type TravelFlightDetails,
-  type TravelPlan,
+    TRAVEL_EXPENSE_SELF_ID,
+    type TravelExpense,
+    type TravelFlightDetails,
+    type TravelPlan,
 } from '@/features/travel/types';
 
 function confirmationNote(code?: string): string | undefined {
@@ -36,7 +37,13 @@ export function applyFlightExpenseFromImport(
   plan: TravelPlan,
   parsed: Pick<
     ParsedFlightConfirmation,
-    'amount' | 'currency' | 'title' | 'date' | 'flight' | 'segments'
+    | 'amount'
+    | 'currency'
+    | 'title'
+    | 'date'
+    | 'flight'
+    | 'segments'
+    | 'itineraryDates'
   > & {
     flight: Pick<TravelFlightDetails, 'airline' | 'confirmationCode' | 'flightNumber'> | {
       airline?: string;
@@ -69,11 +76,18 @@ export function applyFlightExpenseFromImport(
       parsed.currency ?? plan.baseCurrency,
       plan.baseCurrency,
     ),
-    date: parsed.date ?? plan.startDate,
+    date:
+      parsed.date ||
+      parsed.segments?.[0]?.date ||
+      parsed.itineraryDates?.[0] ||
+      plan.startDate,
     category: 'flight',
     notes: confirmationNote(confirmationCode),
     paidById: TRAVEL_EXPENSE_SELF_ID,
-    splitWithIds: defaultSplitIds(plan.participants),
+    splitWithIds: defaultSplitIds(
+      plan.participants,
+      isTravelMemberPlan(plan),
+    ),
     existing,
   });
   return upsertTravelExpense(plan, expense);

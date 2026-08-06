@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 
+import { resolveActiveFontFamilies } from '@/design-system/font-presets';
 import {
   MAX_SCALE,
   MIN_SCALE,
@@ -11,6 +12,7 @@ import {
 } from '@/design-system/responsive';
 import { iconSizes as baseIconSizes, layout as baseLayout, spacing as baseSpacing } from '@/design-system/spacing';
 import { typography as baseTypography } from '@/design-system/typography';
+import { useThemeOverrides } from '@/store/theme-overrides';
 
 type TypographyScale = {
   [K in keyof typeof baseTypography]: {
@@ -67,17 +69,25 @@ export function useResponsive(): ResponsiveTokens {
   const { width, height, fontScale } = useWindowDimensions();
   // Prefer the narrower edge so landscape doesn't inflate type/chrome.
   const layoutWidth = Math.min(width, height);
+  const fontOverrides = useThemeOverrides((state) => state.fonts);
 
   return useMemo(() => {
     const scale = windowScale(layoutWidth);
     const s = (size: number) => scaleSize(size, layoutWidth);
     const ms = (size: number, factor = 0.45) => moderateScale(size, layoutWidth, factor);
+    const faces = resolveActiveFontFamilies(fontOverrides);
 
     const typography = Object.fromEntries(
-      (Object.keys(baseTypography) as (keyof typeof baseTypography)[]).map((key) => [
-        key,
-        scaleTypographyToken(baseTypography[key], layoutWidth),
-      ]),
+      (Object.keys(baseTypography) as (keyof typeof baseTypography)[]).map((key) => {
+        const scaled = scaleTypographyToken(baseTypography[key], layoutWidth);
+        return [
+          key,
+          {
+            ...scaled,
+            fontFamily: key === 'mono' ? faces.monoFamily : faces.fontFamily,
+          },
+        ];
+      }),
     ) as TypographyScale;
 
     return {
@@ -97,7 +107,7 @@ export function useResponsive(): ResponsiveTokens {
       } satisfies LayoutScale,
       iconSizes: scaleRecord(baseIconSizes, s) as IconSizeScale,
     };
-  }, [fontScale, layoutWidth]);
+  }, [fontOverrides, fontScale, layoutWidth]);
 }
 
 export { MAX_SCALE, MIN_SCALE, windowScale, scaleSize, moderateScale };

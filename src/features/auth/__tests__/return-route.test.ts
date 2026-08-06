@@ -24,4 +24,18 @@ describe('authentication return route', () => {
     useAuthAccess.getState().setAuthReturnTo('//evil.example/phish');
     expect(useAuthAccess.getState().takeAuthReturnTo()).toBeUndefined();
   });
+
+  it('clears a pending return route when the upgrade is cancelled', () => {
+    useAuthAccess.getState().setAuthReturnTo('/l/secure-code');
+    useAuthAccess.getState().startAuthUpgrade();
+    useAuthAccess.getState().cancelAuthUpgrade();
+    expect(useAuthAccess.getState().authUpgradePending).toBe(false);
+    expect(useAuthAccess.getState().takeAuthReturnTo()).toBeUndefined();
+  });
+
+  it('clears a pending return route when entering guest mode', () => {
+    useAuthAccess.getState().setAuthReturnTo('/i/invite-code');
+    useAuthAccess.getState().enterGuest();
+    expect(useAuthAccess.getState().takeAuthReturnTo()).toBeUndefined();
+  });
 });

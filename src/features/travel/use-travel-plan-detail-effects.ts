@@ -8,6 +8,7 @@ import {
     attachOrphanedFlightConfirmationUris,
 } from '@/features/travel/confirmation-uri-attach';
 import { CHASE_ROUNDTRIP_CONFIRMATION } from '@/features/travel/fixtures/chase-roundtrip-confirmation';
+import { UNITED_CONNECTING_CONFIRMATION } from '@/features/travel/fixtures/united-connecting-confirmation';
 import { mergeFlightConfirmationDraftDetails } from '@/features/travel/flight-confirmation-draft';
 import type { ImportedFlightConfirmation } from '@/features/travel/flight-confirmation-import';
 import { splitRoundTripDirections } from '@/features/travel/flight-confirmation-itinerary';
@@ -21,6 +22,7 @@ import {
     flightLegScheduleFromImported,
     returnFlightTitle as suggestReturnFlightTitle,
 } from '@/features/travel/flight-roundtrip-draft';
+import { formatFlightTitle } from '@/features/travel/flight-route-label';
 import {
     applyFlightTerminalPatches,
     fetchFlightTerminalPatches,
@@ -42,7 +44,7 @@ type DetailEffectsOptions = {
   form: TravelPlanDetailAddForm;
   updatePlan: (plan: TravelPlan) => void;
   accountEmail?: string;
-  initialFlightImportFixture?: 'roundtrip';
+  initialFlightImportFixture?: 'roundtrip' | 'connecting';
   autoOpenStayBooking?: boolean;
   autoOpenReservationEmail?: string;
   setDevBookingOpen: (
@@ -90,7 +92,13 @@ export function useTravelPlanDetailEffects({
   );
 
   useEffect(() => {
-    if (!__DEV__ || initialFlightImportFixture !== 'roundtrip') return;
+    if (
+      !__DEV__ ||
+      (initialFlightImportFixture !== 'roundtrip' &&
+        initialFlightImportFixture !== 'connecting')
+    ) {
+      return;
+    }
     if (
       form.kind !== 'flight' ||
       !form.isAddingItem ||
@@ -99,18 +107,29 @@ export function useTravelPlanDetailEffects({
       return;
     }
     form.appliedFlightImportFixture.current = true;
-    const parsed = parseFlightConfirmation(CHASE_ROUNDTRIP_CONFIRMATION, {
-      startDate: '2026-09-08',
-      endDate: '2026-09-14',
-    });
+    const isConnectingFixture = initialFlightImportFixture === 'connecting';
+    const parsed = parseFlightConfirmation(
+      isConnectingFixture
+        ? UNITED_CONNECTING_CONFIRMATION
+        : CHASE_ROUNDTRIP_CONFIRMATION,
+      isConnectingFixture
+        ? { startDate: '2026-09-27', endDate: '2026-09-27' }
+        : { startDate: '2026-09-08', endDate: '2026-09-14' },
+    );
     const imported: ImportedFlightConfirmation = {
       ...parsed,
-      fileName: 'FARHANA TASMIN has shared their trip details with you.pdf',
+      fileName: isConnectingFixture
+        ? 'united-gua-iah-lga-confirmation.png'
+        : 'JORDAN LEE has shared their trip details with you.pdf',
       confirmationUris: [],
-      agentUiItemIds: [
-        AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
-        AGENT_UI_DEMO_CHASE_RETURN_ID,
-      ],
+      ...(isConnectingFixture
+        ? {}
+        : {
+            agentUiItemIds: [
+              AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
+              AGENT_UI_DEMO_CHASE_RETURN_ID,
+            ],
+          }),
     };
     const directions = splitRoundTripDirections(imported.segments);
     const outboundSegments = directions?.outbound ?? imported.segments;
@@ -118,6 +137,13 @@ export function useTravelPlanDetailEffects({
       ? flightDirectionSchedule(directions.outbound, imported)
       : flightConfirmationSchedule(imported);
     form.setPendingFlightImport(imported);
+    const outboundDetails = mergeFlightConfirmationDraftDetails(
+      emptyFlightDetailsDraft(),
+      {
+        ...imported,
+        segments: outboundSegments,
+      },
+    );
     form.setFlightDetails((current) =>
       mergeFlightConfirmationDraftDetails(current, {
         ...imported,
@@ -138,14 +164,16 @@ export function useTravelPlanDetailEffects({
         ),
       );
       form.setReturnFlightTitle(
-        directions.returning[0]?.title?.trim() ||
+        formatFlightTitle(returnDetails) ||
+          directions.returning[0]?.title?.trim() ||
           suggestReturnFlightTitle(returnDetails),
       );
     }
     form.setTitle(
-      directions
-        ? outboundSegments[0]?.title || imported.title || ''
-        : imported.title || '',
+      formatFlightTitle(outboundDetails) ||
+        imported.title ||
+        outboundSegments[0]?.title ||
+        '',
     );
     if (schedule.departureDate) form.setDate(schedule.departureDate);
     if (schedule.departureMinutes !== undefined) {

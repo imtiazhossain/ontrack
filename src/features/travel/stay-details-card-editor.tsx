@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { StayDetailsEditor } from '@/features/travel/stay-details-editor';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { StayDetailsEditor } from '@/features/travel/stay-details-editor';
 import { TravelDetailsCardActions } from '@/features/travel/travel-details-card-actions';
 import { TravelRangeFields } from '@/features/travel/travel-range-fields';
 import {
-  travelRangeScheduleDraft,
-  type TravelRangeScheduleDraft,
+    travelRangeScheduleDraft,
+    type TravelRangeScheduleDraft,
 } from '@/features/travel/travel-range-schedule';
 import type { TravelItineraryItem } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -45,16 +45,36 @@ export function StayDetailsCardEditor({
   onRemove: () => void;
 }) {
   const { spacing: rs } = useResponsive();
-  const [schedule, setSchedule] = useState(() =>
-    travelRangeScheduleDraft(
+  const [start, setStart] = useState(() => ({
+    startDate: item.date,
+    startMinutes: item.startMinutes as number | null,
+  }));
+
+  // Checkout always follows `value` so confirmation import is not overwritten by
+  // stale local schedule state on save.
+  const schedule = useMemo<TravelRangeScheduleDraft>(() => {
+    const seeded = travelRangeScheduleDraft(
       item,
       value.checkoutDate || undefined,
       optionalMinutes(value.checkoutMinutes),
-    ),
-  );
+    );
+    return {
+      startDate: start.startDate || seeded.startDate,
+      startMinutes:
+        start.startMinutes !== null ? start.startMinutes : seeded.startMinutes,
+      endDate: value.checkoutDate.trim() || seeded.endDate,
+      endMinutes:
+        optionalMinutes(value.checkoutMinutes) !== undefined
+          ? optionalMinutes(value.checkoutMinutes)!
+          : seeded.endMinutes,
+    };
+  }, [item, start, value.checkoutDate, value.checkoutMinutes]);
 
   const updateSchedule = (next: TravelRangeScheduleDraft) => {
-    setSchedule(next);
+    setStart({
+      startDate: next.startDate,
+      startMinutes: next.startMinutes,
+    });
     onChange({
       ...value,
       checkoutDate: next.endDate,

@@ -20,12 +20,15 @@ export function TimelineItemTitle({
   compact = false,
   dense = false,
   emphasize = false,
+  align = 'left',
 }: {
   title: string;
   compact?: boolean;
   dense?: boolean;
   /** Larger route header used by compact flight cards. */
   emphasize?: boolean;
+  /** Center title copy in compact board cards. */
+  align?: 'left' | 'center';
 }) {
   const primaryVariant = dense
     ? 'caption'
@@ -42,7 +45,11 @@ export function TimelineItemTitle({
         variant={primaryVariant}
         bold={emphasize}
         fit
-        style={compact && !emphasize ? styles.compactTitle : undefined}>
+        align={align}
+        style={[
+          compact && !emphasize ? styles.compactTitle : undefined,
+          align === 'center' ? styles.fullWidthCopy : undefined,
+        ]}>
         {title}
       </AppText>
     );
@@ -50,35 +57,52 @@ export function TimelineItemTitle({
   const head = title.slice(0, breakAt);
   const tail = title.slice(breakAt + separator.length);
   return (
-    <View style={styles.titleStack}>
+    <View
+      style={[
+        styles.titleStack,
+        align === 'center' ? styles.centeredStack : undefined,
+      ]}>
       <AppText
         variant={primaryVariant}
         fit
-        style={compact ? styles.compactTitle : undefined}>
+        align={align}
+        style={[
+          compact ? styles.compactTitle : undefined,
+          align === 'center' ? styles.fullWidthCopy : undefined,
+        ]}>
         {head}
       </AppText>
       <AppText
         variant={compact ? 'caption' : 'subheading'}
         color={compact ? 'secondary' : 'primary'}
-        fit>
+        fit
+        align={align}
+        style={align === 'center' ? styles.fullWidthCopy : undefined}>
         {tail}
       </AppText>
     </View>
   );
 }
 
-/** Compact flight meta under the route: `9/27 · 9h 59m total · 1 stop`. */
+/** Compact flight meta under the route: `Sep 27 · 9h 59m total · 1 stop`. */
 export function TimelineFlightCaption({
   dateLabel,
   durationLabel,
   stopsLabel,
+  align = 'left',
 }: {
   dateLabel: string;
   durationLabel: string;
   stopsLabel: string;
+  align?: 'left' | 'center';
 }) {
   return (
-    <AppText variant="caption" color="secondary" fit>
+    <AppText
+      variant="caption"
+      color="secondary"
+      fit
+      align={align}
+      style={align === 'center' ? styles.fullWidthCopy : undefined}>
       {[dateLabel, durationLabel, stopsLabel].join(' · ')}
     </AppText>
   );
@@ -91,6 +115,7 @@ export function TimelineItemToolbar({
   allowStructuredEditing,
   showStructuredDetails,
   isMoment,
+  align = 'center',
   onOpenNotes,
   onAddPhotos,
   onBeginFlightEdit,
@@ -105,6 +130,8 @@ export function TimelineItemToolbar({
   allowStructuredEditing: boolean;
   showStructuredDetails: boolean;
   isMoment: boolean;
+  /** Dense timeline stacks actions under the title — left-align with that column. */
+  align?: 'center' | 'left';
   onOpenNotes: () => void;
   onAddPhotos: () => void;
   onBeginFlightEdit: () => void;
@@ -125,8 +152,17 @@ export function TimelineItemToolbar({
     allowStructuredEditing && item.kind === kind;
 
   return (
-    <View style={styles.toolbarWrap}>
-      <View style={[styles.toolbar, { gap: Math.max(8, rs.xs) }]}>
+    <View
+      style={[
+        styles.toolbarWrap,
+        align === 'left' ? styles.toolbarWrapLeft : undefined,
+      ]}>
+      <View
+        style={[
+          styles.toolbar,
+          { gap: Math.max(8, rs.xs) },
+          align === 'left' ? styles.toolbarLeft : undefined,
+        ]}>
         <TravelItemNotesButton
           hasNotes={(item.notes?.length ?? 0) > 0}
           size={size}
@@ -252,14 +288,18 @@ export function PhotoStrip({
 }
 
 const styles = StyleSheet.create({
-  titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1 },
+  titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1, width: '100%' },
+  centeredStack: { alignItems: 'center', alignSelf: 'stretch' },
+  fullWidthCopy: { width: '100%', alignSelf: 'stretch' },
   toolbarWrap: { width: '100%', alignItems: 'center' },
+  toolbarWrapLeft: { alignItems: 'flex-start' },
   toolbar: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  toolbarLeft: { justifyContent: 'flex-start' },
   compactTitle: { fontWeight: '400' },
   photoStrip: { gap: spacing.sm, paddingVertical: spacing.xxs },
   photoWrap: {

@@ -17,8 +17,11 @@
 
 import { categoryPalette, palette, type CategoryColorKey } from './colors';
 
+export type ThemeAppearance = 'light' | 'dark';
+export type ThemeFeatureScope = 'default' | 'travel' | 'plants' | 'vehicles';
+
 export interface Theme {
-  name: 'light' | 'dark';
+  name: ThemeAppearance;
   backgroundPrimary: string;
   backgroundSecondary: string;
   backgroundElevated: string;
@@ -79,17 +82,16 @@ export const darkTheme: Theme = {
 
 export const lightTravelTheme: Theme = {
   ...lightTheme,
-  // Soft sky-tinted surfaces — never pure white — so cards/buttons sit in
-  // the travel wash instead of flashing a harsh white cliff under the hero.
-  // Keep clear value steps so navy/accent text stays readable on nested blues.
-  backgroundPrimary: '#A8C4D8',
-  backgroundSecondary: '#B4CCDC',
-  backgroundElevated: '#E8F2F8',
-  backgroundSunken: '#D4E4F0',
-  separator: '#8AADC2',
+  // Cool off-white itinerary wash — white cards sit on soft gray paper.
+  // Top wash stays a light sky tint so Travel still reads as travel, not Today.
+  backgroundPrimary: '#DCE8F1',
+  backgroundSecondary: '#E8F0F6',
+  backgroundElevated: '#F4F7FA',
+  backgroundSunken: '#E2EBF2',
+  separator: '#C5D4E0',
   textPrimary: '#0B1C28',
-  textSecondary: '#1E3A4D',
-  textTertiary: '#3A5568',
+  textSecondary: '#3A5568',
+  textTertiary: '#6A8294',
   accentPrimary: palette.travelBlue,
   accentSoft: palette.travelBlueSoft,
   accentFaint: palette.travelBlueFaint,
@@ -98,14 +100,15 @@ export const lightTravelTheme: Theme = {
 
 export const darkTravelTheme: Theme = {
   ...darkTheme,
-  backgroundPrimary: '#0E1A26',
-  backgroundSecondary: '#152433',
-  backgroundElevated: '#1C2E3F',
-  backgroundSunken: '#152433',
-  separator: '#2A4156',
-  textPrimary: '#EAF3F8',
-  textSecondary: '#B4C7D4',
-  textTertiary: '#8499AA',
+  // Deep navy itinerary wash with slightly lighter elevated cards.
+  backgroundPrimary: '#0B1221',
+  backgroundSecondary: '#101A2B',
+  backgroundElevated: '#162238',
+  backgroundSunken: '#121C2C',
+  separator: '#243247',
+  textPrimary: '#F2F6FA',
+  textSecondary: '#A8B8C8',
+  textTertiary: '#7A8FA3',
   accentPrimary: palette.travelBlueDark,
   accentSoft: palette.travelBlueSoftDark,
   accentFaint: palette.travelBlueFaintDark,
@@ -169,4 +172,18 @@ export function timeOfDayGradient(theme: Theme, hour: number): [string, string] 
 /** Top stop of the Today wash — paint the status-bar shell to match. */
 export function timeOfDaySafeAreaBackground(theme: Theme, hour: number): string {
   return timeOfDayGradient(theme, hour)[0];
+}
+
+/** Shipped base theme for a feature scope + appearance (before local overrides). */
+export function resolveBaseTheme(scope: ThemeFeatureScope, appearance: ThemeAppearance): Theme {
+  if (scope === 'travel') {
+    return appearance === 'dark' ? darkTravelTheme : lightTravelTheme;
+  }
+  if (scope === 'plants') {
+    return appearance === 'dark' ? darkPlantTheme : lightPlantTheme;
+  }
+  if (scope === 'vehicles') {
+    return appearance === 'dark' ? darkVehicleTheme : lightVehicleTheme;
+  }
+  return appearance === 'dark' ? darkTheme : lightTheme;
 }

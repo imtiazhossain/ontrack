@@ -82,8 +82,17 @@ function iconPixelHint(tag: string, href: string): number {
   return 0;
 }
 
-function parseIconCandidates(html: string, pageUrl: string): string[] {
-  const icons: Array<{ href: string; score: number }> = [];
+type ScoredLogo = { href: string; score: number };
+
+function sortLogoHrefs(icons: ScoredLogo[]): string[] {
+  return icons
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.href)
+    .filter((href, index, all) => all.indexOf(href) === index);
+}
+
+function parseIconCandidates(html: string, pageUrl: string): ScoredLogo[] {
+  const icons: ScoredLogo[] = [];
   const linkRe = /<link\b[^>]*>/gi;
   let match: RegExpExecArray | null;
   while ((match = linkRe.exec(html))) {
@@ -106,10 +115,67 @@ function parseIconCandidates(html: string, pageUrl: string): string[] {
     icons.push({ href: sharpenLogoUrl(resolved), score });
   }
 
-  return icons
-    .sort((a, b) => b.score - a.score)
-    .map((item) => item.href)
-    .filter((href, index, all) => all.indexOf(href) === index);
+  return icons;
+}
+
+/**
+ * Hotels often ship the brand mark as a theme asset (`…/logo.svg`, `logo-black.png`)
+ * without exposing it via `<link rel="icon">`. Pull those out of the homepage HTML.
+ */
+export function parseEmbeddedLogoCandidates(
+  html: string,
+  pageUrl: string,
+): string[] {
+  return sortLogoHrefs(collectEmbeddedLogoCandidates(html, pageUrl));
+}
+
+function collectEmbeddedLogoCandidates(
+  html: string,
+  pageUrl: string,
+): ScoredLogo[] {
+  const icons: ScoredLogo[] = [];
+  const seen = new Set<string>();
+
+  const consider = (raw: string, baseScore: number) => {
+    const href = raw.trim();
+    if (!href) return;
+    const withProtocol = href.startsWith('//') ? `https:${href}` : href;
+    const resolved = absoluteUrl(withProtocol, pageUrl);
+    if (!resolved?.toLowerCase().startsWith('https://')) return;
+    const lower = resolved.toLowerCase();
+    if (!/logo/i.test(lower)) return;
+    if (lower.includes('.ico')) return;
+    if (seen.has(lower)) return;
+    seen.add(lower);
+
+    let score = baseScore;
+    // Dark/black marks read on the light plates used in timeline pills.
+    if (/logo[-_.]?(black|dark)/i.test(lower)) score += 160;
+    if (/logo[-_.]?(color|full|primary)/i.test(lower)) score += 40;
+    if (/\.svg(?:$|\?)/i.test(lower)) {
+      score += /black|dark/i.test(lower) ? 80 : 20;
+    } else if (/\.png(?:$|\?)/i.test(lower)) {
+      score += 50;
+    } else if (/\.webp(?:$|\?)/i.test(lower)) {
+      score += 40;
+    }
+    icons.push({ href: sharpenLogoUrl(resolved), score });
+  };
+
+  const absoluteRe =
+    /(?:https?:)?\/\/[^"'\\s<>]+?\/[^"'\\s<>]*logo[^"'\\s<>]*\.(?:svg|png|webp)(?:\?[^"'\\s<>]*)?/gi;
+  let match: RegExpExecArray | null;
+  while ((match = absoluteRe.exec(html))) {
+    consider(match[0], 140);
+  }
+
+  const relativeRe =
+    /["']([^"'<>]*\/logo[^"'<>]*\.(?:svg|png|webp)(?:\?[^"'<>]*)?)["']/gi;
+  while ((match = relativeRe.exec(html))) {
+    consider(match[1] ?? '', 130);
+  }
+
+  return icons;
 }
 
 async function fetchWithTimeout(
@@ -185,13 +251,45 @@ async function discoverLogoFromHomepage(domain: string): Promise<string | undefi
     if (!response.ok) return undefined;
     const html = await response.text();
     if (html.length < 200) return undefined;
-    for (const candidate of parseIconCandidates(html, response.url || pageUrl)) {
+    const base = response.url || pageUrl;
+    const candidates = sortLogoHrefs([
+      ...collectEmbeddedLogoCandidates(html, base),
+      ...parseIconCandidates(html, base),
+    ]);
+    for (const candidate of candidates) {
       if (await urlLooksLikeImage(candidate)) return candidate;
     }
   } catch {
     return undefined;
   }
   return undefined;
+}
+
+async function resolveStayProviderBrandLogoUrl(
+  domain: string,
+): Promise<string | undefined> {
+  for (const candidate of FIRST_PARTY_LOGO_CANDIDATES[domain] ?? []) {
+    const sharpened = sharpenLogoUrl(candidate);
+    if (await urlLooksLikeImage(sharpened)) return sharpened;
+  }
+  const discovered = await discoverLogoFromHomepage(domain);
+  return discovered ? sharpenLogoUrl(discovered) : undefined;
+}
+
+/**
+ * Brand mark only (first-party list or homepage `/logo*` assets).
+ * Omits tiny favicon fallbacks — use when place photos are a better fallback.
+ */
+export async function lookupStayProviderBrandLogoUrl(
+  domain: string,
+): Promise<string | undefined> {
+  const safeDomain = domain.trim().toLowerCase();
+  if (!safeDomain) return undefined;
+  try {
+    return await resolveStayProviderBrandLogoUrl(safeDomain);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Async sharp logo URI — prefers first-party / discovered icons over favicons. */
@@ -205,19 +303,10 @@ export async function lookupStayProviderLogoUrl(domain: string): Promise<string>
 
   const request = (async () => {
     try {
-      for (const candidate of FIRST_PARTY_LOGO_CANDIDATES[safeDomain] ?? []) {
-        const sharpened = sharpenLogoUrl(candidate);
-        if (await urlLooksLikeImage(sharpened)) {
-          logoCache.set(safeDomain, sharpened);
-          return sharpened;
-        }
-      }
-
-      const discovered = await discoverLogoFromHomepage(safeDomain);
-      if (discovered) {
-        const sharpened = sharpenLogoUrl(discovered);
-        logoCache.set(safeDomain, sharpened);
-        return sharpened;
+      const brand = await resolveStayProviderBrandLogoUrl(safeDomain);
+      if (brand) {
+        logoCache.set(safeDomain, brand);
+        return brand;
       }
 
       const fallback = googleFaviconLogoUrl(safeDomain, 256);

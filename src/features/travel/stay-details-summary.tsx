@@ -1,7 +1,8 @@
+import { StayLocationThumbnail } from '@/features/travel/stay-location-thumbnail';
 import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
-    formatDateKeyShort,
+    formatDateKeyMedium,
     formatMinutes,
     type DateDisplayFormat,
 } from '@/utils/date';
@@ -17,10 +18,9 @@ import type { TravelStayDetails } from './types';
 function formatStamp(
   date: string | undefined,
   minutes: number | undefined,
-  dateDisplayFormat: DateDisplayFormat,
 ): string | undefined {
   const parts = [
-    date ? formatDateKeyShort(date, dateDisplayFormat) : undefined,
+    date ? formatDateKeyMedium(date) : undefined,
     minutes !== undefined ? formatMinutes(minutes) : undefined,
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : undefined;
@@ -28,27 +28,33 @@ function formatStamp(
 
 export function StayDetailsSummary({
   details,
+  title,
+  address,
+  bookingUrl,
+  photoUris,
   checkinDate,
   checkinMinutes,
-  dateDisplayFormat = 'mdy',
+  dateDisplayFormat: _dateDisplayFormat = 'mdy',
 }: {
   details: TravelStayDetails;
+  /** Hotel / property name for brand + place-photo lookup. */
+  title?: string;
+  /** Stay address (itinerary `details`) for place-photo lookup. */
+  address?: string;
+  bookingUrl?: string;
+  photoUris?: string[];
   checkinDate?: string;
   checkinMinutes?: number;
+  /** Kept for call-site compatibility; board chrome always uses medium dates. */
   dateDisplayFormat?: DateDisplayFormat;
 }) {
   const theme = useTheme();
   const accent = kindAccent('stay', theme);
   const tint = kindTint('stay', theme);
-  const checkinStamp = formatStamp(
-    checkinDate,
-    checkinMinutes,
-    dateDisplayFormat,
-  );
+  const checkinStamp = formatStamp(checkinDate, checkinMinutes);
   const checkoutStamp = formatStamp(
     details.checkoutDate,
     details.checkoutMinutes,
-    dateDisplayFormat,
   );
   const confirmationUris = confirmationUrisForDisplay(
     details.confirmationUris,
@@ -97,8 +103,17 @@ export function StayDetailsSummary({
 
   return (
     <TravelDetailsSummaryCard
-      title="Stay"
+      title={title?.trim() || 'Stay'}
       icon="lodging"
+      mark={
+        <StayLocationThumbnail
+          title={title}
+          address={address}
+          bookingUrl={bookingUrl}
+          photoUris={photoUris}
+          fallbackColor={accent}
+        />
+      }
       accentColor={accent}
       tintColor={tint}
       confirmationCode={details.confirmationCode}

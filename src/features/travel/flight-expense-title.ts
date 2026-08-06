@@ -1,3 +1,4 @@
+import { formatFlightRouteLabel } from '@/features/travel/flight-route-label';
 import type { TravelExpense, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 
 type RouteAirports = { origin: string; destination: string };
@@ -50,13 +51,17 @@ function flightRoutesOnItem(item: TravelItineraryItem): RouteAirports[] {
   return routes;
 }
 
-/** Parse "Flight EWR → KEF" / "Flights EWR <-> KEF" style titles. */
+/** Parse "Flight EWR → KEF" / "Flight GUA → IAH → LGA" / "Flights EWR <-> KEF". */
 export function parseFlightRouteTitle(title: string): RouteAirports | undefined {
   const match = title
     .trim()
-    .match(/^Flights?\s+([A-Za-z]{3})\s*(?:→|<->|↔|⇄|->|–|—)\s*([A-Za-z]{3})\b/i);
-  if (!match) return undefined;
-  return routeFromAirports(match[1], match[2]);
+    .match(
+      /^Flights?\s+((?:[A-Za-z]{3}\s*(?:→|<->|↔|⇄|->|–|—)\s*)+[A-Za-z]{3})\b/i,
+    );
+  if (!match?.[1]) return undefined;
+  const codes = match[1].match(/[A-Za-z]{3}/g);
+  if (!codes || codes.length < 2) return undefined;
+  return routeFromAirports(codes[0], codes[codes.length - 1]);
 }
 
 export function hasReciprocalFlightRoute(
@@ -145,11 +150,15 @@ export function flightExpenseTitleFromSegments(
     );
   });
   if (connected) {
-    const route = routeFromAirports(
-      segments[0]?.flight?.departureAirport,
-      segments[segments.length - 1]?.flight?.arrivalAirport,
-    );
-    if (route) return formatOneWayFlightTitle(route);
+    const route = formatFlightRouteLabel({
+      departureAirport: segments[0]?.flight?.departureAirport,
+      arrivalAirport: segments[segments.length - 1]?.flight?.arrivalAirport,
+      legs: segments.map((segment) => ({
+        departureAirport: segment.flight?.departureAirport ?? '',
+        arrivalAirport: segment.flight?.arrivalAirport ?? '',
+      })),
+    });
+    if (route) return `Flight ${route}`;
   }
   const first = segments[0];
   const oneWay = routeFromAirports(

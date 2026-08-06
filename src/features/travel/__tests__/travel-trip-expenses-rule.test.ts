@@ -5,9 +5,14 @@ const migrationPath = path.join(
   process.cwd(),
   'supabase/migrations/202608020002_travel_trip_expenses.sql',
 );
+const lwwFixPath = path.join(
+  process.cwd(),
+  'supabase/migrations/202608050002_fix_travel_expense_lww_timestamp.sql',
+);
 
 describe('travel trip expenses migration', () => {
   const migration = fs.readFileSync(migrationPath, 'utf8');
+  const lwwFix = fs.readFileSync(lwwFixPath, 'utf8');
 
   it('creates a shared expenses document with host/member RPCs', () => {
     expect(migration).toContain('create table if not exists public.travel_trip_expenses');
@@ -26,5 +31,11 @@ describe('travel trip expenses migration', () => {
 
   it('extends resolve_travel_invite with tripId for member hostTripId', () => {
     expect(migration).toContain("jsonb_build_object('tripId', invite.trip_id)");
+  });
+
+  it('caps client expense timestamps so far-future LWW cannot lock the doc', () => {
+    expect(lwwFix).toContain('now() + interval \'2 minutes\'');
+    expect(lwwFix).toContain('publish_at');
+    expect(lwwFix).toContain('least(');
   });
 });

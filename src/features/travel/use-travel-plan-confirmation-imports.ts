@@ -26,6 +26,7 @@ import {
     type FlightLegScheduleDraft,
     type FlightTripType,
 } from '@/features/travel/flight-roundtrip-draft';
+import { formatFlightTitle } from '@/features/travel/flight-route-label';
 import { enrichFlightConfirmationTerminals } from '@/features/travel/flight-status-client';
 import {
     importRentalConfirmation,
@@ -37,11 +38,13 @@ import {
     type StayConfirmationImportSource,
 } from '@/features/travel/stay-confirmation-import';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { applyStayExpenseFromImport } from '@/features/travel/stay-expense-from-import';
 import { DETAILS_MAX_LENGTH } from '@/features/travel/travel-itinerary-form';
 import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
 import { TRAVEL_EXPENSE_SELF_ID } from '@/features/travel/types';
 import { newId } from '@/store/schedule';
+import { useTravel } from '@/store/travel';
 
 type SetStr = Dispatch<SetStateAction<string>>;
 type SetOptStr = Dispatch<SetStateAction<string | undefined>>;
@@ -256,6 +259,13 @@ export function useTravelPlanConfirmationImports({
         const roundTrip = Boolean(directions);
         addSheet.setFlightTripType(roundTrip ? 'round-trip' : 'one-way');
         const outboundSegments = directions?.outbound ?? imported.segments;
+        const outboundDetails = mergeFlightConfirmationDraftDetails(
+          emptyFlightDetailsDraft(),
+          {
+            ...imported,
+            segments: outboundSegments,
+          },
+        );
         addSheet.setFlightDetails((current) =>
           mergeFlightConfirmationDraftDetails(current, {
             ...imported,
@@ -274,18 +284,17 @@ export function useTravelPlanConfirmationImports({
             ),
           );
           addSheet.setReturnFlightTitle(
-            directions.returning[0]?.title?.trim() ||
+            formatFlightTitle(returnDetails) ||
+              directions.returning[0]?.title?.trim() ||
               returnFlightTitle(returnDetails),
           );
         }
-        // Round-trip review shows the outbound direction; title stays route-level when present.
-        if (imported.title) {
-          addSheet.setTitle(
-            roundTrip
-              ? outboundSegments[0]?.title || imported.title
-              : imported.title,
-          );
-        }
+        // Prefer the merged draft route (includes connection hubs) over the first leg title.
+        const reviewTitle =
+          formatFlightTitle(outboundDetails) ||
+          imported.title ||
+          outboundSegments[0]?.title;
+        if (reviewTitle) addSheet.setTitle(reviewTitle);
         applyFlightScheduleToAddSheet(
           addSheet,
           directions
@@ -311,9 +320,18 @@ export function useTravelPlanConfirmationImports({
       }
 
       if (target !== 'new') {
+        const latest =
+          useTravel.getState().plans.find((entry) => entry.id === plan.id) ??
+          plan;
+        if (!latest.itinerary.some((item) => item.id === target)) {
+          edit.setEditedFlightDetailsError(
+            'That flight is no longer on this trip.',
+          );
+          return;
+        }
         updatePlan(
           applyImportedFlightsToPlan({
-            plan,
+            plan: latest,
             imported,
             createId: () => newId('trip-item'),
             targetItemId: target,
@@ -379,9 +397,18 @@ export function useTravelPlanConfirmationImports({
           ));
       if (!imported) return;
       if (target !== 'new') {
+        const latest =
+          useTravel.getState().plans.find((entry) => entry.id === plan.id) ??
+          plan;
+        if (!latest.itinerary.some((item) => item.id === target)) {
+          edit.setEditedRentalDetailsError(
+            'That rental is no longer on this trip.',
+          );
+          return;
+        }
         updatePlan(
           applyImportedRentalToPlan({
-            plan,
+            plan: latest,
             imported,
             createId: () => newId('trip-item'),
             targetItemId: target,
@@ -402,7 +429,9 @@ export function useTravelPlanConfirmationImports({
         if (imported.startMinutes !== undefined) addSheet.setStartMinutes(imported.startMinutes);
         if (imported.rental.dropoffDate) addSheet.setEndDate(imported.rental.dropoffDate);
         const dropMinutes = Number(imported.rental.dropoffMinutes);
-        if (dropMinutes > 0) addSheet.setEndMinutes(dropMinutes);
+        if (Number.isFinite(dropMinutes) && dropMinutes >= 0) {
+          addSheet.setEndMinutes(dropMinutes);
+        }
         if (imported.amount !== undefined && imported.amount > 0) {
           prepareImportedExpenseDraft(
             imported.amount,
@@ -486,7 +515,11 @@ export function useTravelPlanConfirmationImports({
             : imported.stay.reservationEmail || current.reservationEmail,
         checkoutDate: imported.stay.checkoutDate || current.checkoutDate,
         checkoutMinutes:
-          imported.stay.checkoutMinutes || current.checkoutMinutes,
+          imported.stay.checkoutMinutes !== undefined &&
+          imported.stay.checkoutMinutes !== null &&
+          imported.stay.checkoutMinutes !== ''
+            ? String(imported.stay.checkoutMinutes)
+            : current.checkoutMinutes,
         confirmationUris: imported.confirmationUris.length
           ? imported.confirmationUris
           : current.confirmationUris,
@@ -507,15 +540,23 @@ export function useTravelPlanConfirmationImports({
           addSheet.setStartMinutes(imported.startMinutes);
         }
         if (imported.stay.checkoutDate) addSheet.setEndDate(imported.stay.checkoutDate);
-        if (imported.stay.checkoutMinutes) {
+        if (imported.stay.checkoutMinutes !== undefined) {
           const minutes = Number(imported.stay.checkoutMinutes);
-          if (Number.isFinite(minutes)) addSheet.setEndMinutes(minutes);
+          if (Number.isFinite(minutes) && minutes >= 0) {
+            addSheet.setEndMinutes(minutes);
+          }
         }
         if (imported.details) {
           addSheet.setDetails(imported.details.slice(0, DETAILS_MAX_LENGTH));
         }
         if (imported.bookingUrl) addSheet.setBookingUrl(imported.bookingUrl);
       } else {
+        const latest =
+          useTravel.getState().plans.find((entry) => entry.id === plan.id) ??
+          plan;
+        if (imported.amount !== undefined && imported.amount > 0) {
+          updatePlan(applyStayExpenseFromImport(latest, imported));
+        }
         edit.setEditedStayDetails((current) => mergeImportedDetails(current));
         edit.setEditedStayFileName(imported.fileName);
       }

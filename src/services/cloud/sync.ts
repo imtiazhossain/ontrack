@@ -17,9 +17,11 @@ import { deletePlant } from '@/services/plants/schedule';
 import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
 import { pullAllTravelTripExpenses } from '@/services/travel/expense-collaboration';
 import { loadAllSharedVehicles } from '@/services/vehicles/collaboration';
+import { useAccountFlags } from '@/store/account-flags';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 import { useFriends } from '@/store/friends';
+import { useHealth } from '@/store/health';
 import { useNutrition } from '@/store/nutrition';
 import { usePlants } from '@/store/plants';
 import { usePreferences } from '@/store/preferences';
@@ -282,9 +284,42 @@ let stopSubscriptions: (() => void) | undefined;
 let activeUserId: string | undefined;
 let activeEmail: string | undefined;
 let pendingRemote: Map<SyncDomainName, JsonObject> | undefined;
+/** When true, domain change subscriptions do not push (Dev Mode sandbox). */
+let cloudSyncPushPaused = false;
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Sync failed.';
+}
+
+export function isCloudSyncPushPaused() {
+  return cloudSyncPushPaused;
+}
+
+/** Pause/resume automatic cloud pushes without tearing down the session. */
+export function setCloudSyncPushPaused(paused: boolean) {
+  cloudSyncPushPaused = paused;
+}
+
+/** Capture synced domain payloads for Dev Mode restore. */
+export function snapshotSyncedDomains(): Record<SyncDomainName, JsonObject> {
+  const out = {} as Record<SyncDomainName, JsonObject>;
+  for (const domain of domains) {
+    out[domain.name] = domain.read();
+  }
+  return out;
+}
+
+/** Restore synced domain payloads after leaving Dev Mode. */
+export function restoreSyncedDomains(snapshot: Partial<Record<SyncDomainName, JsonObject>>) {
+  stopSubscriptions?.();
+  stopSubscriptions = undefined;
+  for (const domain of domains) {
+    const payload = snapshot[domain.name];
+    if (payload) domain.write(payload);
+  }
+  if (activeUserId) {
+    startSubscriptions(activeUserId, activeEmail);
+  }
 }
 
 const CLOUD_WRITE_BATCH_SIZE = 100;
@@ -345,12 +380,14 @@ function startSubscriptions(userId: string, email?: string) {
   const timers = new Map<SyncDomainName, ReturnType<typeof setTimeout>>();
 
   const armPush = (domain: (typeof domains)[number]) => {
+    if (cloudSyncPushPaused) return;
     const current = timers.get(domain.name);
     if (current) clearTimeout(current);
     timers.set(
       domain.name,
       setTimeout(() => {
         timers.delete(domain.name);
+        if (cloudSyncPushPaused) return;
         const lastInteraction = useUI.getState().lastPageInteractionAt;
         if (
           lastInteraction > 0 &&
@@ -426,15 +463,24 @@ async function resetLocalDomains() {
   await deleteAppOwnedMedia();
   domains.forEach((domain) => domain.reset());
   useNutrition.getState().reset();
+  // Device-only Health stays off cloud sync, but must not leak across accounts
+  // on the same device after sign-out / delete / unexpected session expiry.
+  useHealth.getState().reset();
 }
 
-async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
+async function applyRemote(
+  remote: Map<SyncDomainName, JsonObject>,
+  isCurrent: () => boolean = () => true,
+) {
   const resolved = new Map<SyncDomainName, JsonObject>();
   await Promise.all(
     [...remote.entries()].map(async ([name, payload]) => {
       resolved.set(name, await resolveCloudMedia(payload));
     }),
   );
+  if (!isCurrent()) {
+    throw new Error('Sign-in was cancelled.');
+  }
   stopSubscriptions?.();
   stopSubscriptions = undefined;
 
@@ -450,8 +496,15 @@ async function applyRemote(remote: Map<SyncDomainName, JsonObject>) {
     visionBoard: replacing.some((domain) => domain.name === 'vision-board'),
     mealImages: replacingPlants || replacingSchedule,
   });
+  if (!isCurrent()) {
+    throw new Error('Sign-in was cancelled.');
+  }
   for (const domain of replacing) {
-    domain.reset();
+    // Preferences write merges cloud fields only. A full resetAll would wipe
+    // device-only homeLocation / avatar that are not in app_state.
+    if (domain.name !== 'preferences') {
+      domain.reset();
+    }
     domain.write(resolved.get(domain.name)!);
   }
   // Refresh any signed URLs still living in retained local domains (e.g. an
@@ -492,6 +545,7 @@ export async function prepareAccountSync(
   userId: string,
   email: string | undefined,
   localCanConflict: boolean,
+  isCurrent: () => boolean = () => true,
 ): Promise<InitialSyncResult> {
   const client = getSupabaseClient();
   if (!client) throw new Error('Cloud sync is not configured for this build.');
@@ -505,6 +559,10 @@ export async function prepareAccountSync(
     .select('domain,payload')
     .eq('user_id', userId);
   if (error) throw error;
+  if (!isCurrent()) {
+    cancelAccountSync();
+    throw new Error('Sign-in was cancelled.');
+  }
 
   const remote = new Map<SyncDomainName, JsonObject>();
   for (const row of data ?? []) {
@@ -516,6 +574,10 @@ export async function prepareAccountSync(
 
   const decision = decideAccountData(remote.size, localCanConflict, localCanConflict);
   if (decision === 'upload-device') {
+    if (!isCurrent()) {
+      cancelAccountSync();
+      throw new Error('Sign-in was cancelled.');
+    }
     try {
       await pushDomains(userId, domains);
     } catch (uploadError) {
@@ -525,13 +587,37 @@ export async function prepareAccountSync(
       throw uploadError;
     }
   } else if (decision === 'resolve-conflict') {
+    if (!isCurrent()) {
+      cancelAccountSync();
+      throw new Error('Sign-in was cancelled.');
+    }
     pendingRemote = remote;
     return 'conflict';
   } else {
-    const retained = await applyRemote(remote);
-    if (retained.length > 0) {
-      await pushDomains(userId, retained);
+    if (!isCurrent()) {
+      cancelAccountSync();
+      throw new Error('Sign-in was cancelled.');
     }
+    try {
+      const retained = await applyRemote(remote, isCurrent);
+      if (!isCurrent()) {
+        cancelAccountSync();
+        throw new Error('Sign-in was cancelled.');
+      }
+      if (retained.length > 0) {
+        await pushDomains(userId, retained);
+      }
+    } catch (applyError) {
+      if (!isCurrent()) {
+        cancelAccountSync();
+      }
+      throw applyError;
+    }
+  }
+
+  if (!isCurrent()) {
+    cancelAccountSync();
+    throw new Error('Sign-in was cancelled.');
   }
 
   pendingRemote = undefined;
@@ -546,16 +632,31 @@ export async function prepareAccountSync(
   return 'ready';
 }
 
-export async function resolveAccountSync(choice: 'cloud' | 'device') {
+export async function resolveAccountSync(
+  choice: 'cloud' | 'device',
+  isCurrent: () => boolean = () => true,
+) {
   if (!activeUserId || !pendingRemote) throw new Error('There is no data choice to resolve.');
   useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
+  if (!isCurrent()) {
+    cancelAccountSync();
+    throw new Error('Sign-in was cancelled.');
+  }
   if (choice === 'cloud') {
-    const retained = await applyRemote(pendingRemote);
+    const retained = await applyRemote(pendingRemote, isCurrent);
+    if (!isCurrent()) {
+      cancelAccountSync();
+      throw new Error('Sign-in was cancelled.');
+    }
     if (retained.length > 0) {
       await pushDomains(activeUserId, retained);
     }
   } else {
     await pushDomains(activeUserId, domains);
+  }
+  if (!isCurrent()) {
+    cancelAccountSync();
+    throw new Error('Sign-in was cancelled.');
   }
   pendingRemote = undefined;
   await loadEntitlements(activeUserId);
@@ -580,6 +681,7 @@ export function cancelAccountSync() {
 
 export async function flushCloudSync() {
   if (!activeUserId) return;
+  if (cloudSyncPushPaused) return;
   stopSubscriptions?.();
   stopSubscriptions = undefined;
   useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
@@ -616,16 +718,19 @@ export async function refreshAppData() {
 
   const userId = activeUserId;
   const email = activeEmail;
+  const stillActive = () => activeUserId === userId;
   useCloudSyncStatus.setState({ state: 'syncing', email, message: undefined });
 
   try {
     await flushCloudSync().catch(() => undefined);
+    if (!stillActive()) return;
 
     const { data, error } = await client
       .from('app_state')
       .select('domain,payload')
       .eq('user_id', userId);
     if (error) throw error;
+    if (!stillActive()) return;
 
     const remote = new Map<SyncDomainName, JsonObject>();
     for (const row of data ?? []) {
@@ -636,16 +741,21 @@ export async function refreshAppData() {
     }
 
     if (remote.size > 0) {
-      const retained = await applyRemote(remote);
+      const retained = await applyRemote(remote, stillActive);
+      if (!stillActive()) return;
       if (retained.length > 0) {
         await pushDomains(userId, retained).catch(() => undefined);
       }
-      if (activeUserId === userId) {
+      if (stillActive()) {
         startSubscriptions(userId, email);
       }
     }
 
+    if (!stillActive()) return;
+
     await loadEntitlements(userId).catch(() => undefined);
+    if (!stillActive()) return;
+
     await Promise.all([
       loadAllSharedTodoLists().catch(() => undefined),
       loadAllSharedVehicles().catch(() => undefined),
@@ -653,7 +763,7 @@ export async function refreshAppData() {
       useFriends.getState().refresh().catch(() => undefined),
     ]);
 
-    if (activeUserId === userId) {
+    if (stillActive()) {
       useCloudSyncStatus.setState({
         state: 'synced',
         email,
@@ -662,13 +772,13 @@ export async function refreshAppData() {
       });
     }
   } catch (error) {
-    if (activeUserId === userId) {
-      useCloudSyncStatus.setState({
-        state: 'error',
-        email,
-        message: errorMessage(error),
-      });
-    }
+    // Sign-out mid-refresh invalidates stillActive — exit quietly.
+    if (!stillActive()) return;
+    useCloudSyncStatus.setState({
+      state: 'error',
+      email,
+      message: errorMessage(error),
+    });
     throw error;
   }
 }
@@ -684,6 +794,7 @@ export async function clearLocalAccountData() {
   pendingRemote = undefined;
   stopCloudSync();
   await resetLocalDomains();
+  useAccountFlags.getState().reset();
   useCloudSyncStatus.setState({
     state: getSupabaseClient() ? 'signed-out' : 'disabled',
     email: undefined,

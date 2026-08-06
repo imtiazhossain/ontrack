@@ -1,7 +1,8 @@
 import {
-  isTrivagoDealsMyTripsUrl,
-  resolveStayBookingOpen,
-  trivagoFindBookingInjectScript,
+    canAutofillTrivagoStayBooking,
+    isTrivagoDealsMyTripsUrl,
+    resolveStayBookingOpen,
+    trivagoFindBookingInjectScript,
 } from '../booking-open';
 
 describe('booking-open', () => {
@@ -19,56 +20,34 @@ describe('booking-open', () => {
     expect(isTrivagoDealsMyTripsUrl('https://www.trivago.deals/faq')).toBe(false);
   });
 
-  it('packages webview open when trivago url + email + confirmation exist', () => {
+  it('opens trivago booking links in the browser (inject requires a future WebView)', () => {
     expect(
-      resolveStayBookingOpen(
-        {
-          bookingUrl: trivagoUrl,
-          stay: {
-            confirmationCode: '13460175',
-            reservationEmail: 'imtihoss@gmail.com',
-          },
+      resolveStayBookingOpen({
+        bookingUrl: trivagoUrl,
+        stay: {
+          confirmationCode: '13460175',
+          reservationEmail: 'alex.rivera@example.com',
         },
-      ),
-    ).toEqual({
-      mode: 'webview',
-      url: trivagoUrl,
-      email: 'imtihoss@gmail.com',
-      bookingNumber: '13460175',
-    });
+      }),
+    ).toEqual({ mode: 'browser', url: trivagoUrl });
   });
 
-  it('uses fallback email when stay reservation email is missing', () => {
+  it('detects when trivago credentials are available for a future autofill WebView', () => {
     expect(
-      resolveStayBookingOpen(
+      canAutofillTrivagoStayBooking(
         {
           bookingUrl: trivagoUrl,
           stay: { confirmationCode: '13460175' },
         },
         { fallbackEmail: 'Host@Example.COM' },
       ),
-    ).toEqual({
-      mode: 'webview',
-      url: trivagoUrl,
-      email: 'host@example.com',
-      bookingNumber: '13460175',
-    });
-  });
-
-  it('falls back to browser when credentials are incomplete', () => {
+    ).toBe(true);
     expect(
-      resolveStayBookingOpen({
+      canAutofillTrivagoStayBooking({
         bookingUrl: trivagoUrl,
         stay: { confirmationCode: '13460175' },
       }),
-    ).toEqual({ mode: 'browser', url: trivagoUrl });
-
-    expect(
-      resolveStayBookingOpen({
-        bookingUrl: trivagoUrl,
-        stay: { reservationEmail: 'a@b.com' },
-      }),
-    ).toEqual({ mode: 'browser', url: trivagoUrl });
+    ).toBe(false);
   });
 
   it('opens non-trivago https booking links in the browser', () => {
@@ -93,10 +72,10 @@ describe('booking-open', () => {
 
   it('builds an inject script that embeds credentials safely', () => {
     const script = trivagoFindBookingInjectScript(
-      'imtihoss@gmail.com',
+      'alex.rivera@example.com',
       '13460175',
     );
-    expect(script).toContain('"imtihoss@gmail.com"');
+    expect(script).toContain('"alex.rivera@example.com"');
     expect(script).toContain('"13460175"');
     expect(script).toContain('find my booking');
     expect(script).toContain('__onTrackTrivagoSubmitted');

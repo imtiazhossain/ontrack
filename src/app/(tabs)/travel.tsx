@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { appPrompt, EmptyState, Screen, ScreenHeader, useSafeAreaChrome } from '@/components/primitives';
+import { appPrompt, EmptyState, Screen, useSafeAreaChrome } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
@@ -19,6 +19,7 @@ import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
+import { TravelScreenHeader } from '@/features/travel/travel-screen-header';
 import {
     travelSafeAreaBackground,
     TravelSectionLabel,
@@ -234,12 +235,15 @@ function TravelScreenContent() {
     setDatesPlanId(undefined);
   };
 
+  const creatingPlanRef = useRef(false);
   const createPlan = () => {
+    if (creatingPlanRef.current) return;
     setError(undefined);
     const detailsValidation = validateTravelPlanDetails({ title, destination, notes });
     if (!detailsValidation.ok) return setError(detailsValidation.error);
     const validation = validateTravelDateRange(startDate, endDate);
     if (validation.error) return setError(validation.error);
+    creatingPlanRef.current = true;
     const now = new Date().toISOString();
     const planId = newId('trip');
     const basePlan: TravelPlan = {
@@ -265,6 +269,7 @@ function TravelScreenContent() {
       : basePlan;
     const saved = savePlan(withFlights);
     if (!saved) {
+      creatingPlanRef.current = false;
       setError('Couldn’t create this trip. Your details are still here—please try again.');
       return;
     }
@@ -279,6 +284,7 @@ function TravelScreenContent() {
     flightImport.clearPendingImport();
     setPendingCreatedTripId(planId);
     setShowForm(false);
+    creatingPlanRef.current = false;
   };
 
   const beginEditingDetails = (plan: TravelPlan) => {
@@ -415,7 +421,7 @@ function TravelScreenContent() {
       style={travelStyle}
       refresh={!showForm}
       contentStyle={{ gap: rs.sm }}>
-      <ScreenHeader
+      <TravelScreenHeader
         title="Travel"
         subtitle="Plan. Explore. Remember."
         style={{ paddingBottom: rs.sm }}
@@ -481,7 +487,6 @@ function TravelScreenContent() {
         return (
           <TravelSurfaceCard
             key={plan.id}
-            stripe
             padding={0}
             onLayout={(event) => rememberTripOffset(plan.id, event.nativeEvent.layout.y)}>
             <View style={[styles.tripCardBody, { padding: rs.md, gap: rs.md }]}>

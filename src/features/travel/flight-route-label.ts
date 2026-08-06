@@ -26,6 +26,17 @@ export function formatFlightRouteLabel(
   return route.join(' → ') || undefined;
 }
 
+/** Prefixed title for import/review forms: `Flight GUA → IAH → LGA`. */
+export function formatFlightTitle(
+  flight?: Parameters<typeof formatFlightRouteLabel>[0],
+  fallback?: string,
+): string | undefined {
+  const route = formatFlightRouteLabel(flight);
+  if (route) return `Flight ${route}`;
+  const trimmed = fallback?.trim();
+  return trimmed || undefined;
+}
+
 /** Timeline / transport card title from structured airports (includes connection). */
 export function flightItemDisplayTitle(item: TravelItineraryItem): string {
   if (item.kind !== 'flight') return item.title;

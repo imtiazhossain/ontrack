@@ -9,7 +9,9 @@ describe('button leading/label alignment invariant', () => {
 
     expect(button).toMatch(/base:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
     expect(button).toContain('<AppText');
-    expect(button).toContain('flexShrink: 1');
+    expect(button).toContain('numberOfLines={1}');
+    // Self-sized Button labels must not use AppText fit (Android truncates e.g. "Add Activity").
+    expect(button).not.toMatch(/<AppText\b[^>]*\bfit\b/);
     expect(button).not.toContain('labelSlot');
     expect(button).not.toContain('leadingHeight');
     expect(button).not.toContain('translateY');

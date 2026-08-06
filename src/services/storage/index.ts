@@ -7,6 +7,7 @@ import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 export const STORAGE_KEYS = {
   schedule: 'ontrack/schedule/v1',
   preferences: 'ontrack/preferences/v1',
+  themeOverrides: 'ontrack/theme-overrides/v1',
   plants: 'ontrack/plants/v1',
   addons: 'ontrack/addons/v1',
   agents: 'ontrack/agents/v1',
@@ -17,6 +18,9 @@ export const STORAGE_KEYS = {
   vehicles: 'ontrack/vehicles/v1',
   health: 'ontrack/health/v1',
   flightParserMemory: 'ontrack/travel-flight-parser-memory/v1',
+  usageAnalytics: 'ontrack/usage-analytics/v1',
+  /** Dev Mode toggle + live-account snapshot (sandbox isolation). */
+  devMode: 'ontrack/dev-mode/v1',
 } as const;
 
 const MIGRATION_FLAG = 'ontrack/storage/mmkv-migrated/v1';

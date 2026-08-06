@@ -4,26 +4,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  ErrorMessage,
-  LoadingBlock,
-  Screen,
-  Symbol,
+    AppText,
+    Button,
+    ErrorMessage,
+    LoadingBlock,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
 import { mergeResolvedTravelOpenJoinPlan } from '@/features/travel/open-join-plan';
 import {
-  createInstalledTravelOpenJoinUrl,
-  isOpenTravelJoinCode,
-  loadTravelOpenJoinStatus,
-  ONTRACK_APP_STORE_URL,
-  previewTravelOpenJoin,
-  requestTravelOpenJoin,
-  resolveTravelOpenJoin,
-  travelInviteLocalId,
+    createInstalledTravelOpenJoinUrl,
+    isOpenTravelJoinCode,
+    loadTravelOpenJoinStatus,
+    ONTRACK_APP_STORE_URL,
+    previewTravelOpenJoin,
+    requestTravelOpenJoin,
+    resolveTravelOpenJoin,
+    travelInviteLocalId,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
@@ -38,7 +38,6 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
   const router = useRouter();
   const { user, continueWithProvider, workingProvider } = useAuthSession();
   const hasOnboarded = usePreferences((state) => state.hasOnboarded);
-  const plans = useTravel((state) => state.plans);
   const savePlan = useTravel((state) => state.savePlan);
   const replaceTravelActivities = useSchedule((state) => state.replaceTravelActivities);
   const setAddonEnabled = useAddons((state) => state.setEnabled);
@@ -63,13 +62,16 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
     try {
       const resolved = await resolveTravelOpenJoin(code);
       const chatCode = resolved.grantedInviteCode ?? grantedInviteCode;
+      // Prefer the store after the network round-trip so edits made while
+      // resolving are not restored from a stale closure snapshot.
+      const latestPlans = useTravel.getState().plans;
       const existing =
         (chatCode
-          ? plans.find((plan) => plan.chatAccessCode === chatCode) ??
-            plans.find((plan) => plan.id === travelInviteLocalId(chatCode))
+          ? latestPlans.find((plan) => plan.chatAccessCode === chatCode) ??
+            latestPlans.find((plan) => plan.id === travelInviteLocalId(chatCode))
           : undefined) ??
-        plans.find((plan) => plan.id === travelInviteLocalId(code)) ??
-        plans.find((plan) => plan.id === resolved.tripId);
+        latestPlans.find((plan) => plan.id === travelInviteLocalId(code)) ??
+        latestPlans.find((plan) => plan.id === resolved.tripId);
 
       if (existing) {
         savePlan(
@@ -123,7 +125,6 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
     code,
     grantedInviteCode,
     hasOnboarded,
-    plans,
     replaceTravelActivities,
     router,
     savePlan,
@@ -201,7 +202,7 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
   }, [code, isWeb, openApprovedTrip, status, user]);
 
   const sendJoinRequest = async () => {
-    if (!code) return;
+    if (!code || !validCode) return;
     setBusy(true);
     setActionError(undefined);
     try {
@@ -282,6 +283,20 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
     );
   }
 
+  if (!validCode || previewMessage) {
+    return (
+      <Screen contentStyle={styles.center}>
+        <Symbol name="airplane" size={44} />
+        <ErrorMessage
+          message={previewMessage ?? 'This join link is invalid or incomplete.'}
+          variant="heading"
+          align="center"
+        />
+        <Button onPress={() => router.replace('/' as never)}>Go to onTrack</Button>
+      </Screen>
+    );
+  }
+
   if (!user) {
     const returnTo = code ? `/j/${code}` : '/travel';
     return (
@@ -318,16 +333,6 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
     return (
       <Screen contentStyle={styles.center}>
         <LoadingBlock label="Loading trip…" />
-      </Screen>
-    );
-  }
-
-  if (previewError) {
-    return (
-      <Screen contentStyle={styles.center}>
-        <Symbol name="airplane" size={44} />
-        <ErrorMessage message={previewError} variant="heading" align="center" />
-        <Button onPress={() => router.replace('/' as never)}>Go to onTrack</Button>
       </Screen>
     );
   }

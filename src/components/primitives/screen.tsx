@@ -1,4 +1,5 @@
 import type { PropsWithChildren, RefObject } from 'react';
+import { useRef } from 'react';
 import {
   Platform,
   ScrollView,
@@ -12,6 +13,7 @@ import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
+import { useAgentUiScrollContainer } from '@/utils/agent-ui/use-agent-ui-scroll-container';
 
 interface ScreenProps extends PropsWithChildren {
   /** Scrollable content (default) or a fixed layout */
@@ -50,6 +52,8 @@ export function Screen({
   const { spacing, layout } = useResponsive();
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);
   const pull = usePullToRefresh(onRefresh);
+  const viewportRef = useRef<View>(null);
+  const agentScroll = useAgentUiScrollContainer(scrollRef, viewportRef);
 
   const paddingStyle: ViewStyle = {
     // The app shell owns the non-scrolling top safe area.
@@ -80,10 +84,12 @@ export function Screen({
 
   return (
     <View
+      ref={viewportRef}
       onTouchStart={notifyPageInteraction}
+      collapsable={false}
       style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
       <ScrollView
-        ref={scrollRef}
+        ref={agentScroll.scrollRef}
         automaticallyAdjustKeyboardInsets
         scrollEnabled={scrollEnabled}
         contentInsetAdjustmentBehavior="never"
@@ -91,6 +97,8 @@ export function Screen({
         showsVerticalScrollIndicator={false}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
+        onScroll={agentScroll.onScroll}
+        scrollEventThrottle={agentScroll.scrollEventThrottle}
         refreshControl={refresh ? pull.refreshControl : undefined}>
         {children}
       </ScrollView>

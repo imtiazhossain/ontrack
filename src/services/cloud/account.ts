@@ -108,15 +108,32 @@ export function oauthCodeFromUrl(url: string, expectedRedirect = oauthRedirectUr
   return code;
 }
 
+/** Test helper — clears in-flight callback dedupe between cases. */
+export function resetOAuthCallbackExchangeForTests() {
+  lastCallbackCode = undefined;
+  lastCallbackExchange = undefined;
+}
+
 export async function exchangeOAuthCallback(url: string) {
   const code = oauthCodeFromUrl(url);
   if (lastCallbackCode !== code || !lastCallbackExchange) {
     lastCallbackCode = code;
     lastCallbackExchange = requireClient().auth.exchangeCodeForSession(code);
   }
-  const { data, error } = await lastCallbackExchange;
-  if (error) throw new CloudAccountError(error.message);
-  return data.session;
+  try {
+    const { data, error } = await lastCallbackExchange;
+    if (error) throw new CloudAccountError(error.message);
+    if (!data.session) {
+      throw new CloudAccountError('Sign-in did not establish a session. Please try again.');
+    }
+    return data.session;
+  } catch (exchangeError) {
+    // Do not cache a failed exchange forever — a retry with the same code
+    // (after a transient network blip) must hit Supabase again.
+    lastCallbackCode = undefined;
+    lastCallbackExchange = undefined;
+    throw exchangeError;
+  }
 }
 
 export async function beginBrowserSignIn(provider: AuthProvider) {
@@ -170,6 +187,9 @@ export async function beginNativeAppleSignIn() {
       nonce: rawNonce,
     });
     if (error) throw new CloudAccountError(error.message);
+    if (!data.session) {
+      throw new CloudAccountError('Sign-in did not establish a session. Please try again.');
+    }
     if (metadata && data.user) {
       const { error: metadataError } = await requireClient().auth.updateUser({
         data: {
@@ -198,7 +218,8 @@ export async function signOutLocalSession() {
 
 /**
  * Permanently deletes the signed-in auth user and cascaded cloud data.
- * Call while a session is still active; the session is invalid afterward.
+ * Call while a session is still active; local tokens are cleared afterward
+ * so a relaunch cannot resurrect a zombie session for the deleted user.
  */
 export async function deleteOwnCloudAccount() {
   const { error } = await requireClient().rpc('delete_own_account');
@@ -206,5 +227,10 @@ export async function deleteOwnCloudAccount() {
     throw new CloudAccountError(
       error.message || 'Account deletion could not be completed. Try again in a moment.',
     );
+  }
+  try {
+    await signOutLocalSession();
+  } catch {
+    // Server already deleted the user; local sign-out may report an error.
   }
 }

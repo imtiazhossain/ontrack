@@ -49,6 +49,12 @@ describe('confirmation attachments', () => {
     expect(resolveConfirmationUris([])).toEqual([]);
   });
 
+  it('keeps Android content:// confirmation URIs openable', () => {
+    expect(resolveConfirmationUris(['content://media/external/document/123'])).toEqual([
+      'content://media/external/document/123',
+    ]);
+  });
+
   it('does not borrow another item\'s confirmation when none is stored', () => {
     expect(confirmationUrisForDisplay(undefined, 'flight')).toEqual([]);
     expect(confirmationUrisForDisplay([], 'stay')).toEqual([]);

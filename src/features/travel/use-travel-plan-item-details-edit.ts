@@ -28,6 +28,7 @@ import {
     type TravelRangeScheduleDraft,
 } from '@/features/travel/travel-range-schedule';
 import type { TravelPlan } from '@/features/travel/types';
+import { useTravel } from '@/store/travel';
 
 type ItineraryItem = TravelPlan['itinerary'][number];
 
@@ -44,6 +45,8 @@ export function useTravelPlanItemDetailsEdit({
   itinerary: TravelPlan['itinerary'];
   updatePlan: (next: TravelPlan) => void;
 }) {
+  const latestPlan = () =>
+    useTravel.getState().plans.find((entry) => entry.id === plan.id) ?? plan;
   const [editingFlightItemId, setEditingFlightItemId] = useState<string>();
   const [editedFlightDetails, setEditedFlightDetails] = useState<FlightDetailsDraft>(
     () => emptyFlightDetailsDraft(),
@@ -85,9 +88,10 @@ export function useTravelPlanItemDetailsEdit({
     if (!scheduleValidation.ok) {
       return setEditedFlightDetailsError(scheduleValidation.error);
     }
+    const current = latestPlan();
     updatePlan({
-      ...plan,
-      itinerary: itinerary.map((item) =>
+      ...current,
+      itinerary: current.itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -137,9 +141,10 @@ export function useTravelPlanItemDetailsEdit({
     if (!scheduleValidation.ok) {
       return setEditedRentalDetailsError(scheduleValidation.error);
     }
+    const current = latestPlan();
     updatePlan({
-      ...plan,
-      itinerary: itinerary.map((item) =>
+      ...current,
+      itinerary: current.itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -184,9 +189,10 @@ export function useTravelPlanItemDetailsEdit({
     if (!scheduleValidation.ok) {
       return setEditedStayDetailsError(scheduleValidation.error);
     }
+    const current = latestPlan();
     updatePlan({
-      ...plan,
-      itinerary: itinerary.map((item) =>
+      ...current,
+      itinerary: current.itinerary.map((item) =>
         item.id === itemId
           ? {
               ...item,

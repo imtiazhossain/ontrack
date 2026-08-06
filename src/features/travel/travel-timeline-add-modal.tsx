@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Card, SheetScaffold, Symbol } from '@/components/primitives';
+import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import { kindChrome, kindIcon } from '@/features/travel/travel-kind-chrome';
 import { travelMainCardFill } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
@@ -87,6 +88,7 @@ export function TravelTimelineAddModal({
       eyebrow="Itinerary"
       title="Add to Timeline"
       subtitle="Choose what you’d like to add."
+      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel="Close add to timeline"
       closeTestID={AgentUiIds.travel.timelineAdd.close}>

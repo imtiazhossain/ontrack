@@ -95,7 +95,7 @@ export function TravelItineraryAddSheet({
         style={styles.backdrop}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
         pointerEvents="box-none"
         style={styles.modalRoot}>

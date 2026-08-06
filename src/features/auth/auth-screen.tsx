@@ -32,6 +32,7 @@ export function AuthScreen({
   const { height, width } = useWindowDimensions();
   const {
     phase,
+    session,
     workingProvider,
     error,
     continueWithProvider,
@@ -42,9 +43,17 @@ export function AuthScreen({
   const [translateY] = useState(() => new Animated.Value(16));
   const reduceMotion = useReducedMotion();
   const busy = phase === 'authenticating';
+  // A half-open account init leaves `session` set on the error screen — another
+  // provider bind could merge the wrong graph. Guest remains available so the
+  // user can abandon the stuck session (continueAsGuest signs out locally).
+  const providersLocked = busy || Boolean(session);
   const guestAgent = useAgentUiTarget(variant === 'welcome' ? AgentUiIds.auth.guest : undefined, {
     label: 'Continue as Guest',
     onPress: busy ? undefined : () => { void continueAsGuest(); },
+  });
+  const dismissErrorAgent = useAgentUiTarget(error ? AgentUiIds.auth.dismissError : undefined, {
+    label: 'Dismiss sign-in error',
+    onPress: clearError,
   });
   const hour = new Date().getHours();
   const gradient = timeOfDayGradient(theme, hour);
@@ -132,14 +141,14 @@ export function AuthScreen({
           <View style={styles.providers}>
             <AppleProviderButton
               dark={theme.name === 'dark'}
-              disabled={busy}
+              disabled={providersLocked}
               testID={AgentUiIds.auth.apple}
               onPress={() => void continueWithProvider('apple', returnTo)}
             />
             <ProviderButton
               icon={<GoogleMark />}
               onPress={() => void continueWithProvider('google', returnTo)}
-              disabled={busy}
+              disabled={providersLocked}
               testID={AgentUiIds.auth.google}
               backgroundColor="#FFFFFF"
               borderColor="#DADCE0"
@@ -153,14 +162,16 @@ export function AuthScreen({
             <View accessibilityLiveRegion="assertive">
               <ErrorMessage message={error} variant="caption" />
               <Pressable
-                ref={guestAgent.ref}
-                testID={AgentUiIds.auth.guest}
-                onLayout={guestAgent.onLayout}
+                ref={dismissErrorAgent.ref}
+                testID={AgentUiIds.auth.dismissError}
+                onLayout={dismissErrorAgent.onLayout}
                 accessibilityRole="button"
                 accessibilityLabel="Dismiss sign-in error"
                 onPress={clearError}
                 style={styles.dismiss}>
-                <AppText variant="caption" color="accent">Dismiss</AppText>
+                <AppText variant="caption" color="accent">
+                  {session ? 'Try opening account again' : 'Dismiss'}
+                </AppText>
               </Pressable>
             </View>
           ) : null}
@@ -173,6 +184,9 @@ export function AuthScreen({
                 <View style={[styles.divider, { backgroundColor: theme.separator }]} />
               </View>
               <Pressable
+                ref={guestAgent.ref}
+                testID={AgentUiIds.auth.guest}
+                onLayout={guestAgent.onLayout}
                 accessibilityRole="button"
                 accessibilityLabel="Continue as Guest"
                 disabled={busy}

@@ -67,6 +67,20 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
+  'travel-demo-add-flight-connecting': [
+    { op: 'seed', to: 'travel-demo' },
+    {
+      op: 'goto',
+      to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/flight?importFlight=connecting`,
+    },
+    {
+      op: 'wait',
+      prefix: 'ontrack.travel.itineraryAdd.',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    // Import prefills settle after mount (parse + setTitle).
+    { op: 'wait', ms: 350 },
+  ],
   'travel-demo-add-flight-roundtrip': [
     { op: 'seed', to: 'travel-demo' },
     {

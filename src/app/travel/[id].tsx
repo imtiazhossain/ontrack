@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 
-import { TravelPlanDetail } from '@/features/travel/travel-plan-detail';
 import type { TravelImportResult } from '@/features/travel/travel-import-result-modal';
+import { TravelPlanDetail } from '@/features/travel/travel-plan-detail';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useTheme } from '@/hooks/use-theme';
@@ -60,7 +60,9 @@ export default function TravelPlanScreen() {
         ? { stage: 'expense-saved' }
         : undefined;
   const initialFlightImportFixture =
-    __DEV__ && importFlight === 'roundtrip' ? ('roundtrip' as const) : undefined;
+    __DEV__ && (importFlight === 'roundtrip' || importFlight === 'connecting')
+      ? (importFlight as 'roundtrip' | 'connecting')
+      : undefined;
 
   // DEV-only: deep-link `?theme=dark|light|system` for simulator QA of themed sheets.
   useEffect(() => {

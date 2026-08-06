@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppText, Symbol } from '@/components/primitives';
@@ -7,42 +8,217 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import { formatHourLabel, hourBucketMinutes } from '@/features/travel/travel-hour-label';
 import {
-  dayStripeColor,
-  kindAccent,
-  kindIcon,
-} from '@/features/travel/travel-kind-chrome';
+    TRAVEL_CARD_SHADOW,
+    TRAVEL_EDITORIAL_ACCENT,
+    travelCardFill,
+    travelPanelTint,
+} from '@/features/travel/travel-surface';
 import {
-  expandTimelineEntries,
-  groupTimelineEntriesByDate,
+    expandTimelineEntries,
+    groupTimelineEntriesByDate,
 } from '@/features/travel/travel-timeline-entries';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
-import type { TravelPlan } from '@/features/travel/types';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
-  TRAVEL_CARD_SHADOW,
-  TRAVEL_EDITORIAL_ACCENT,
-  travelCardBorder,
-  travelCardFill,
-  travelPanelTint,
-} from '@/features/travel/travel-surface';
+    isTimelineEntryPast,
+    resolveJourneyTraveler,
+    summarizeTimelineProgress,
+    timelineDayPhase,
+    type TimelineDayPhase,
+} from '@/features/travel/travel-timeline-progress';
+import {
+    TimelineNowMarker,
+    TimelineProgressStrip,
+} from '@/features/travel/travel-timeline-progress-chrome';
+import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import {
-  formatDateKeyShort,
-  formatWeekday,
-  fromDateKey,
-  type DateDisplayFormat,
+    formatDateKeyMedium,
+    formatMinutes,
+    formatWeekday,
+    fromDateKey,
+    type DateDisplayFormat,
 } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
+
+/** Per-day spine accents — blue, green, then warm/cool cycle. */
+const DAY_SPINE_LIGHT = ['#2F6FE4', '#2F9B6A', '#C47A2C', '#7B5EA7', '#2F8A8A'] as const;
+const DAY_SPINE_DARK = ['#6B9BE8', '#5BC48A', '#D4A05A', '#B394D0', '#5BB8B8'] as const;
 
 function dayNumberFor(planStartDate: string, date: string): number {
   const start = fromDateKey(planStartDate).getTime();
   const current = fromDateKey(date).getTime();
   return Math.round((current - start) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+function daySpineColor(dayIndex: number, themeName: string): string {
+  const palette = themeName === 'dark' ? DAY_SPINE_DARK : DAY_SPINE_LIGHT;
+  return palette[dayIndex % palette.length] ?? palette[0];
+}
+
+function mixHexChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+/** Lerp `#RRGGBB` colors for stepped dashed bridges between day spines. */
+function mixSpineColor(from: string, to: string, t: number): string {
+  const parse = (hex: string) => {
+    const raw = hex.replace('#', '');
+    return {
+      r: Number.parseInt(raw.slice(0, 2), 16),
+      g: Number.parseInt(raw.slice(2, 4), 16),
+      b: Number.parseInt(raw.slice(4, 6), 16),
+    };
+  };
+  const a = parse(from);
+  const b = parse(to);
+  const clamped = Math.min(1, Math.max(0, t));
+  const r = mixHexChannel(a.r, b.r, clamped);
+  const g = mixHexChannel(a.g, b.g, clamped);
+  const bl = mixHexChannel(a.b, b.b, clamped);
+  return `#${[r, g, bl].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** View-based dashed bridge — SVG stroke gradients are unreliable on thin vertical rails. */
+function TimelineDayBridge({
+  fromColor,
+  toColor,
+  height,
+  thickness,
+  dashLength,
+}: {
+  fromColor: string;
+  toColor: string;
+  height: number;
+  thickness: number;
+  dashLength: number;
+}) {
+  const count = Math.max(3, Math.floor(height / (dashLength + 2)));
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        height,
+        width: thickness,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+      {Array.from({ length: count }, (_, index) => {
+        const t = count === 1 ? 0 : index / (count - 1);
+        return (
+          <View
+            key={`dash-${index}`}
+            style={{
+              width: thickness,
+              height: dashLength,
+              borderRadius: thickness / 2,
+              backgroundColor: mixSpineColor(fromColor, toColor, t),
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+function dayPhaseChipLabel(
+  phase: TimelineDayPhase,
+  entryCount: number,
+): string {
+  if (phase === 'past') return 'Done';
+  if (phase === 'current') return 'Today';
+  return `${entryCount} ${entryCount === 1 ? 'Stop' : 'Stops'}`;
+}
+
+function TimelineDayHeader({
+  date,
+  dayNumber,
+  weekday,
+  dateLabel,
+  entryCount,
+  dayPhase,
+  dayExpanded,
+  dayTap,
+  chipBackground,
+  overlineSize,
+  overlineLineHeight,
+  onToggleDay,
+}: {
+  date: string;
+  dayNumber: number;
+  weekday: string;
+  dateLabel: string;
+  entryCount: number;
+  dayPhase: TimelineDayPhase;
+  dayExpanded: boolean;
+  dayTap: number;
+  chipBackground: string;
+  overlineSize: number;
+  overlineLineHeight: number;
+  onToggleDay: (date: string) => void;
+}) {
+  const { spacing: rs } = useResponsive();
+  const chipLabel = dayPhaseChipLabel(dayPhase, entryCount);
+  const dayTitle = `Day ${dayNumber} · ${dateLabel} · ${chipLabel}`;
+  const dayAgent = useAgentUiTarget(AgentUiIds.travel.timelineDay.toggle(date), {
+    label: dayTitle,
+    onPress: () => onToggleDay(date),
+  });
+  return (
+    <Pressable
+      ref={dayAgent.ref}
+      testID={dayAgent.testID}
+      onLayout={dayAgent.onLayout}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: dayExpanded }}
+      accessibilityLabel={dayTitle}
+      onPress={() => onToggleDay(date)}
+      hitSlop={6}
+      style={[styles.dayHeader, { minHeight: dayTap, gap: rs.xs }]}>
+      <View style={styles.dayTitleBlock}>
+        <AppText variant="callout" fit style={styles.dayNumber}>
+          Day {dayNumber}
+        </AppText>
+        <AppText
+          variant="caption"
+          color="secondary"
+          fit
+          style={[
+            travelOverlineStyle,
+            styles.dayMeta,
+            {
+              fontSize: overlineSize,
+              lineHeight: overlineLineHeight,
+            },
+          ]}>
+          {weekday} · {dateLabel}
+        </AppText>
+      </View>
+      <View
+        style={[
+          styles.countChip,
+          {
+            backgroundColor: chipBackground,
+            minHeight: Math.max(20, rs.sm + 4),
+            paddingHorizontal: rs.sm,
+            opacity: dayPhase === 'past' ? 0.72 : 1,
+          },
+        ]}>
+        <AppText
+          variant="caption"
+          color="accent"
+          fit
+          style={{ fontSize: overlineSize }}>
+          {chipLabel}
+        </AppText>
+      </View>
+    </Pressable>
+  );
 }
 
 export function TravelItineraryTimeline({
@@ -150,13 +326,47 @@ export function TravelItineraryTimeline({
 }) {
   const theme = useTheme();
   const { s, spacing: rs, typography } = useResponsive();
-  const days = groupTimelineEntriesByDate(expandTimelineEntries(items));
-  const timeWidth = Math.max(46, s(48));
-  const spineWidth = Math.max(24, s(26));
-  const dotSize = Math.max(18, s(18));
+  const [now, setNow] = useState(() => new Date());
+  const days = useMemo(
+    () => groupTimelineEntriesByDate(expandTimelineEntries(items)),
+    [items],
+  );
+  const progress = useMemo(
+    () =>
+      summarizeTimelineProgress({
+        planStartDate: plan.startDate,
+        planEndDate: plan.endDate,
+        days,
+        now,
+      }),
+    [plan.startDate, plan.endDate, days, now],
+  );
+  const traveler = useMemo(
+    () =>
+      resolveJourneyTraveler({
+        planStartDate: plan.startDate,
+        planEndDate: plan.endDate,
+        days,
+        summary: progress,
+        now,
+      }),
+    [plan.startDate, plan.endDate, days, progress, now],
+  );
+  const spineWidth = Math.max(16, s(18));
+  const dayMarkerSize = Math.max(8, s(8));
   const dayTap = Math.max(32, s(32));
-  const stripeW = Math.max(3, s(4));
-  const trailColor = theme.name === 'light' ? '#E2D0B8' : theme.accentFaint;
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const interval = setInterval(tick, 60_000);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, []);
 
   if (days.length === 0) {
     return (
@@ -193,243 +403,326 @@ export function TravelItineraryTimeline({
     );
   }
 
+  /** Compact bridge so day sections read as one joined stack. */
+  const dayGap = Math.max(16, s(18));
+  const dayBodyPadLeft = rs.sm;
+
   return (
-    <View style={[styles.timeline, { gap: rs.xs }]}>
+    <View style={styles.timeline}>
+      <TimelineProgressStrip
+        summary={progress}
+        traveler={traveler}
+        accent={TRAVEL_EDITORIAL_ACCENT}
+      />
       {days.map((day, dayIndex) => {
         const dayNumber = dayNumberFor(plan.startDate, day.date);
-        const dateLabel = formatDateKeyShort(day.date, dateDisplayFormat);
+        const dateLabel = formatDateKeyMedium(day.date);
         const weekday = formatWeekday(day.date);
         const dayExpanded = !collapsedDayDates.has(day.date);
-        const dayTitle = `Day ${dayNumber} · ${dateLabel}`;
-        const stripe = dayStripeColor(dayIndex, theme);
         const entryCount = day.entries.length;
+        const dayPhase = timelineDayPhase(day.date, day.entries, now);
+        const dayPast = dayPhase === 'past';
+        const spineColor = daySpineColor(dayIndex, theme.name);
+        const prevSpineColor =
+          dayIndex > 0 ? daySpineColor(dayIndex - 1, theme.name) : spineColor;
+        const eventRowFill =
+          theme.name === 'light' ? '#F4F6F8' : theme.backgroundSunken;
+        const firstUpcomingIndex =
+          dayPhase === 'current'
+            ? day.entries.findIndex((entry) => !isTimelineEntryPast(entry, now))
+            : -1;
         return (
-          <Animated.View
-            key={day.date}
-            entering={FadeInDown.delay(Math.min(dayIndex * 40, 200)).duration(280)}
-            style={[
-              styles.dayCard,
-              {
-                backgroundColor: travelCardFill(theme),
-                borderRadius: Math.max(8, s(9)),
-                borderCurve: 'continuous',
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: travelCardBorder(theme),
-                boxShadow: TRAVEL_CARD_SHADOW,
-                overflow: 'hidden',
-              },
-            ]}>
-            <View style={[styles.dayStripe, { width: stripeW, backgroundColor: stripe }]} />
-            <View
-              style={[
-                styles.dayContent,
-                {
-                  gap: rs.xxs,
-                  paddingTop: rs.xxs,
-                  paddingBottom: rs.sm,
-                  paddingLeft: rs.md,
-                  paddingRight: rs.sm,
-                },
-              ]}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ expanded: dayExpanded }}
-                accessibilityLabel={dayTitle}
-                onPress={() => onToggleDay(day.date)}
-                hitSlop={6}
-                style={[styles.dayHeader, { minHeight: dayTap, gap: rs.xs }]}>
-                <View style={styles.dayTitleBlock}>
-                  <AppText variant="callout" fit style={styles.dayNumber}>
-                    Day {dayNumber}
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    fit
-                    style={[
-                      travelOverlineStyle,
-                      styles.dayMeta,
-                      {
-                        fontSize: typography.overline.fontSize,
-                        lineHeight: typography.overline.lineHeight,
-                      },
-                    ]}>
-                    {weekday} · {dateLabel}
-                  </AppText>
-                </View>
+          <View key={day.date} style={{ opacity: dayPast ? 0.58 : 1 }}>
+            {dayIndex > 0 ? (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.dayConnector,
+                  {
+                    height: dayGap,
+                    paddingLeft: dayBodyPadLeft,
+                  },
+                ]}>
                 <View
                   style={[
-                    styles.countChip,
+                    styles.spineColumn,
                     {
-                      backgroundColor: travelPanelTint(theme),
-                      minHeight: Math.max(18, s(18)),
-                      paddingHorizontal: rs.sm,
+                      width: spineWidth,
+                      height: dayGap,
+                      justifyContent: 'center',
                     },
                   ]}>
-                  <AppText
-                    variant="caption"
-                    color="accent"
-                    fit
-                    style={{ fontSize: typography.overline.fontSize }}>
-                    {entryCount} {entryCount === 1 ? 'Stop' : 'Stops'}
-                  </AppText>
-                </View>
-                <View
-                  style={[
-                    styles.dayChevron,
-                    {
-                      minHeight: Math.max(18, s(18)),
-                      minWidth: Math.max(18, s(18)),
-                      borderRadius: radii.pill,
-                      backgroundColor: theme.backgroundSunken,
-                    },
-                  ]}>
-                  <Symbol
-                    name={dayExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={10}
-                    color={theme.textTertiary}
+                  <TimelineDayBridge
+                    fromColor={prevSpineColor}
+                    toColor={spineColor}
+                    height={dayGap}
+                    thickness={Math.max(2, s(2))}
+                    dashLength={Math.max(3, s(3))}
                   />
                 </View>
-              </Pressable>
-              {dayExpanded ? (
-                <View style={{ gap: rs.xs }}>
-                  {day.entries.map((entry, index) => {
-                    const { item } = entry;
-                    const accent = kindAccent(item.kind, theme);
-                    const hour = hourBucketMinutes(entry.startMinutes);
-                    const prevHour =
-                      index > 0
-                        ? hourBucketMinutes(day.entries[index - 1].startMinutes)
-                        : undefined;
-                    const showHour = prevHour !== hour;
-                    return (
+              </View>
+            ) : null}
+            <Animated.View
+              entering={FadeInDown.delay(Math.min(dayIndex * 40, 200)).duration(280)}>
+              <View
+                style={[
+                  styles.dayBody,
+                  {
+                    gap: rs.xs,
+                    paddingTop: dayIndex === 0 ? rs.xs : 0,
+                    paddingBottom: 0,
+                    paddingLeft: dayBodyPadLeft,
+                    paddingRight: rs.sm,
+                  },
+                ]}>
+                <View style={[styles.dayRow, { gap: rs.xs }]}>
+                  <View style={[styles.spineColumn, { width: spineWidth }]}>
+                    <View
+                      style={[
+                        styles.dayMarker,
+                        {
+                          width:
+                            dayPhase === 'current'
+                              ? dayMarkerSize + Math.max(2, s(2))
+                              : dayMarkerSize,
+                          height:
+                            dayPhase === 'current'
+                              ? dayMarkerSize + Math.max(2, s(2))
+                              : dayMarkerSize,
+                          borderRadius:
+                            (dayPhase === 'current'
+                              ? dayMarkerSize + Math.max(2, s(2))
+                              : dayMarkerSize) / 2,
+                          backgroundColor: spineColor,
+                          marginTop: Math.max(6, s(6)),
+                          borderWidth:
+                            dayPhase === 'current' ? Math.max(2, s(2)) : 0,
+                          borderColor: theme.backgroundElevated,
+                        },
+                      ]}
+                    />
+                    {dayExpanded ? (
                       <View
-                        key={entry.key}
-                        style={[styles.entryRow, { gap: rs.xs }]}>
-                        <View style={[styles.timeColumn, { width: timeWidth }]}>
-                          {showHour ? (
-                            <AppText
-                              variant="caption"
-                              color="tertiary"
-                              fit
-                              style={[
-                                styles.hourLabel,
-                                {
-                                  fontSize: typography.overline.fontSize,
-                                  lineHeight: typography.overline.lineHeight,
-                                },
-                              ]}>
-                              {formatHourLabel(entry.startMinutes)}
-                            </AppText>
-                          ) : null}
-                        </View>
-                        <View style={[styles.spineColumn, { width: spineWidth }]}>
-                          <View
-                            style={[
-                              styles.spineLine,
-                              {
-                                top: rs.xs + dotSize / 2,
-                                bottom: -rs.sm,
-                                backgroundColor: trailColor,
-                              },
-                            ]}
+                        style={[
+                          styles.spineLine,
+                          {
+                            top:
+                              Math.max(6, s(6)) +
+                              (dayPhase === 'current'
+                                ? dayMarkerSize + Math.max(2, s(2))
+                                : dayMarkerSize),
+                            bottom: 0,
+                            backgroundColor: spineColor,
+                            opacity: dayPast ? 0.55 : 1,
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </View>
+                  <View style={[styles.dayContent, { gap: rs.xs }]}>
+                    <TimelineDayHeader
+                      date={day.date}
+                      dayNumber={dayNumber}
+                      weekday={weekday}
+                      dateLabel={dateLabel}
+                      entryCount={entryCount}
+                      dayPhase={dayPhase}
+                      dayExpanded={dayExpanded}
+                      dayTap={dayTap}
+                      chipBackground={
+                        dayPhase === 'current'
+                          ? theme.name === 'light'
+                            ? '#DCEAF8'
+                            : travelPanelTint(theme)
+                          : theme.name === 'light'
+                            ? '#E8F1FB'
+                            : travelPanelTint(theme)
+                      }
+                      overlineSize={typography.overline.fontSize}
+                      overlineLineHeight={typography.overline.lineHeight}
+                      onToggleDay={onToggleDay}
+                    />
+                    {dayExpanded ? (
+                      <View style={{ gap: rs.xs }}>
+                        {firstUpcomingIndex === 0 ? (
+                          <TimelineNowMarker
+                            accent={spineColor}
+                            spineWidth={0}
                           />
-                          <View
-                            style={[
-                              styles.dot,
-                              {
-                                width: dotSize,
-                                height: dotSize,
-                                borderRadius: dotSize / 2,
-                                backgroundColor: accent,
-                                marginTop: rs.xs,
-                              },
-                            ]}>
-                            <Symbol
-                              name={kindIcon(item.kind)}
-                              size={10}
-                              color={theme.textOnAccent}
-                            />
-                          </View>
-                        </View>
+                        ) : null}
                         <View
                           style={[
-                            styles.cardRow,
-                            { gap: rs.xs },
+                            styles.eventStack,
+                            {
+                              backgroundColor: eventRowFill,
+                              borderRadius: Math.max(10, s(11)),
+                              borderCurve: 'continuous',
+                              overflow: 'hidden',
+                            },
                           ]}>
-                          <TravelTimelineNode
-                            item={item}
-                            plan={plan}
-                            phase={entry.phase}
-                            displayTitle={entry.title}
-                            entryDate={entry.date}
-                            entryStartMinutes={entry.startMinutes}
-                            showKindBadge={false}
-                            compact
-                            dense
-                            allowStructuredEditing={false}
-                            showStructuredDetails={false}
-                            collapsedChevron="right"
-                            expanded={!minimizedItemIds.has(entry.key)}
-                            dateDisplayFormat={dateDisplayFormat}
-                            editingFlightItemId={editingFlightItemId}
-                            editedFlightDetails={editedFlightDetails}
-                            editedFlightDetailsError={editedFlightDetailsError}
-                            editedFlightFileName={editedFlightFileName}
-                            importingFlight={importingFlightTarget === item.id}
-                            editingRentalItemId={editingRentalItemId}
-                            editedRentalDetails={editedRentalDetails}
-                            editedRentalDetailsError={editedRentalDetailsError}
-                            editedRentalFileName={editedRentalFileName}
-                            importingRental={importingRentalTarget === item.id}
-                            editingStayItemId={editingStayItemId}
-                            editedStayDetails={editedStayDetails}
-                            editedStayDetailsError={editedStayDetailsError}
-                            editedStayFileName={editedStayFileName}
-                            importingStay={importingStayTarget === item.id}
-                            planStartDate={plan.startDate}
-                            planEndDate={plan.endDate}
-                            onToggle={() => onToggle(entry.key)}
-                            onEditedFlightDetailsChange={onEditedFlightDetailsChange}
-                            onImportFlight={() => onImportFlight(item.id)}
-                            onSaveFlightDetails={(schedule) =>
-                              onSaveFlightDetails(item.id, schedule)
-                            }
-                            onCancelFlightEdit={onCancelFlightEdit}
-                            onBeginFlightEdit={() =>
-                              onBeginFlightEdit(item.id, item.flight)
-                            }
-                            onEditedRentalDetailsChange={onEditedRentalDetailsChange}
-                            onImportRental={() => onImportRental(item.id)}
-                            onSaveRentalDetails={(schedule) =>
-                              onSaveRentalDetails(item.id, schedule)
-                            }
-                            onCancelRentalEdit={onCancelRentalEdit}
-                            onBeginRentalEdit={() =>
-                              onBeginRentalEdit(item.id, item.rental)
-                            }
-                            onEditedStayDetailsChange={onEditedStayDetailsChange}
-                            onImportStay={() => onImportStay(item.id)}
-                            onSaveStayDetails={(schedule) =>
-                              onSaveStayDetails(item.id, schedule)
-                            }
-                            onCancelStayEdit={onCancelStayEdit}
-                            onBeginStayEdit={() =>
-                              onBeginStayEdit(item.id, item.stay)
-                            }
-                            onAddPhotos={() => onAddPhotos(item.id)}
-                            onRemovePhoto={(uri) => onRemovePhoto(item.id, uri)}
-                            onRemove={() => onRemove(item)}
-                            onSaveNotes={(notes) => onSaveNotes(item.id, notes)}
-                          />
+                          {day.entries.map((entry, index) => {
+                            const { item } = entry;
+                            const prevMinutes =
+                              index > 0
+                                ? day.entries[index - 1].startMinutes
+                                : undefined;
+                            const showTime = prevMinutes !== entry.startMinutes;
+                            const entryPast = isTimelineEntryPast(entry, now);
+                            const showNowBefore =
+                              firstUpcomingIndex > 0 &&
+                              index === firstUpcomingIndex;
+                            return (
+                              <View key={entry.key}>
+                                {showNowBefore ? (
+                                  <View
+                                    style={[
+                                      styles.nowInStack,
+                                      {
+                                        gap: rs.xs,
+                                        paddingHorizontal: rs.sm,
+                                        paddingVertical: Math.max(6, s(6)),
+                                        borderTopWidth: StyleSheet.hairlineWidth,
+                                        borderTopColor: theme.separator,
+                                        backgroundColor: theme.accentFaint,
+                                      },
+                                    ]}>
+                                    <View
+                                      style={{
+                                        width: Math.max(8, s(8)),
+                                        height: Math.max(8, s(8)),
+                                        borderRadius: Math.max(4, s(4)),
+                                        backgroundColor: spineColor,
+                                      }}
+                                    />
+                                    <AppText
+                                      variant="caption"
+                                      color="accent"
+                                      fit
+                                      style={styles.nowInStackLabel}>
+                                      Now
+                                    </AppText>
+                                  </View>
+                                ) : null}
+                                <View
+                                  style={[
+                                    styles.eventShell,
+                                    {
+                                      paddingLeft: rs.sm,
+                                      paddingRight: rs.xs,
+                                      paddingVertical: Math.max(6, s(6)),
+                                      minHeight: Math.max(44, s(44)),
+                                      justifyContent: 'center',
+                                      borderTopWidth:
+                                        index > 0 || showNowBefore
+                                          ? StyleSheet.hairlineWidth
+                                          : 0,
+                                      borderTopColor: theme.separator,
+                                      opacity: entryPast ? 0.55 : 1,
+                                    },
+                                  ]}>
+                                  <TravelTimelineNode
+                                    item={item}
+                                    plan={plan}
+                                    phase={entry.phase}
+                                    displayTitle={entry.title}
+                                    entryDate={entry.date}
+                                    entryStartMinutes={entry.startMinutes}
+                                    leadingTimeLabel={
+                                      showTime
+                                        ? formatMinutes(entry.startMinutes)
+                                        : ''
+                                    }
+                                    showKindBadge
+                                    compact
+                                    dense
+                                    allowStructuredEditing={false}
+                                    showStructuredDetails={false}
+                                    expanded={!minimizedItemIds.has(entry.key)}
+                                    dateDisplayFormat={dateDisplayFormat}
+                                    editingFlightItemId={editingFlightItemId}
+                                    editedFlightDetails={editedFlightDetails}
+                                    editedFlightDetailsError={
+                                      editedFlightDetailsError
+                                    }
+                                    editedFlightFileName={editedFlightFileName}
+                                    importingFlight={
+                                      importingFlightTarget === item.id
+                                    }
+                                    editingRentalItemId={editingRentalItemId}
+                                    editedRentalDetails={editedRentalDetails}
+                                    editedRentalDetailsError={
+                                      editedRentalDetailsError
+                                    }
+                                    editedRentalFileName={editedRentalFileName}
+                                    importingRental={
+                                      importingRentalTarget === item.id
+                                    }
+                                    editingStayItemId={editingStayItemId}
+                                    editedStayDetails={editedStayDetails}
+                                    editedStayDetailsError={
+                                      editedStayDetailsError
+                                    }
+                                    editedStayFileName={editedStayFileName}
+                                    importingStay={
+                                      importingStayTarget === item.id
+                                    }
+                                    planStartDate={plan.startDate}
+                                    planEndDate={plan.endDate}
+                                    onToggle={() => onToggle(entry.key)}
+                                    onEditedFlightDetailsChange={
+                                      onEditedFlightDetailsChange
+                                    }
+                                    onImportFlight={() => onImportFlight(item.id)}
+                                    onSaveFlightDetails={(schedule) =>
+                                      onSaveFlightDetails(item.id, schedule)
+                                    }
+                                    onCancelFlightEdit={onCancelFlightEdit}
+                                    onBeginFlightEdit={() =>
+                                      onBeginFlightEdit(item.id, item.flight)
+                                    }
+                                    onEditedRentalDetailsChange={
+                                      onEditedRentalDetailsChange
+                                    }
+                                    onImportRental={() => onImportRental(item.id)}
+                                    onSaveRentalDetails={(schedule) =>
+                                      onSaveRentalDetails(item.id, schedule)
+                                    }
+                                    onCancelRentalEdit={onCancelRentalEdit}
+                                    onBeginRentalEdit={() =>
+                                      onBeginRentalEdit(item.id, item.rental)
+                                    }
+                                    onEditedStayDetailsChange={
+                                      onEditedStayDetailsChange
+                                    }
+                                    onImportStay={() => onImportStay(item.id)}
+                                    onSaveStayDetails={(schedule) =>
+                                      onSaveStayDetails(item.id, schedule)
+                                    }
+                                    onCancelStayEdit={onCancelStayEdit}
+                                    onBeginStayEdit={() =>
+                                      onBeginStayEdit(item.id, item.stay)
+                                    }
+                                    onAddPhotos={() => onAddPhotos(item.id)}
+                                    onRemovePhoto={(uri) =>
+                                      onRemovePhoto(item.id, uri)
+                                    }
+                                    onRemove={() => onRemove(item)}
+                                    onSaveNotes={(notes) =>
+                                      onSaveNotes(item.id, notes)
+                                    }
+                                  />
+                                </View>
+                              </View>
+                            );
+                          })}
                         </View>
                       </View>
-                    );
-                  })}
+                    ) : null}
+                  </View>
                 </View>
-              ) : null}
-            </View>
-          </Animated.View>
+              </View>
+            </Animated.View>
+          </View>
         );
       })}
     </View>
@@ -438,11 +731,18 @@ export function TravelItineraryTimeline({
 
 const styles = StyleSheet.create({
   timeline: {},
-  dayCard: {
+  dayConnector: {
     flexDirection: 'row',
+    alignItems: 'stretch',
   },
-  dayStripe: {
-    alignSelf: 'stretch',
+  dayBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    minWidth: 0,
   },
   dayContent: {
     flex: 1,
@@ -473,30 +773,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  dayChevron: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  entryRow: {
+  eventStack: {
     width: '100%',
-    flexDirection: 'row',
-    alignItems: 'stretch',
     minWidth: 0,
   },
-  timeColumn: {
-    flexShrink: 0,
-    justifyContent: 'center',
+  nowInStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    minWidth: 0,
   },
-  hourLabel: {
+  nowInStackLabel: {
     flexShrink: 1,
     minWidth: 0,
-    textAlign: 'left',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    flex: 1,
+  eventShell: {
+    width: '100%',
     minWidth: 0,
   },
   spineColumn: {
@@ -504,14 +798,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     position: 'relative',
   },
-  dot: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  dayMarker: {
+    zIndex: 1,
   },
   spineLine: {
     position: 'absolute',
-    width: 3,
-    borderRadius: 2,
+    width: 2,
+    borderRadius: 1,
   },
   emptyCard: {
     alignItems: 'flex-start',

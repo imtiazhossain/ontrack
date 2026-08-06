@@ -3,14 +3,17 @@ import {
   parseAgentUiUrl,
 } from '../handle-agent-ui-url';
 import {
+  agentUiOverlayRoutePrefixes,
   agentUiOverlayShortLabel,
   isAgentUiOverlayEnabled,
+  isAgentUiOverlayPaintTarget,
   setAgentUiOverlayEnabled,
 } from '../overlay';
 import {
   hitAgentUiTarget,
   hitAgentUiTargets,
   registerAgentUiTarget,
+  remeasureAllAgentUiFrames,
   resetAgentUiRegistry,
 } from '../registry';
 
@@ -89,6 +92,32 @@ describe('agent-ui overlay', () => {
     expect(
       agentUiOverlayShortLabel('ontrack.travel.planDetail.section.transport'),
     ).toBe('planDetail.section.transport');
+  });
+
+  it('paints only current-route targets (plus chrome)', () => {
+    expect(agentUiOverlayRoutePrefixes('/profile')).toEqual(['profile', 'account']);
+    expect(isAgentUiOverlayPaintTarget('ontrack.profile.addon.food', '/profile')).toBe(
+      true,
+    );
+    expect(isAgentUiOverlayPaintTarget('ontrack.today.weather', '/profile')).toBe(false);
+    expect(isAgentUiOverlayPaintTarget('ontrack.tabs.profile', '/profile')).toBe(true);
+    expect(isAgentUiOverlayPaintTarget('ontrack.travel.planDetail.weather', '/travel/x')).toBe(
+      true,
+    );
+  });
+
+  it('remeasures registered node frames', () => {
+    const measureInWindow = jest.fn((cb: (x: number, y: number, w: number, h: number) => void) => {
+      cb(12, 34, 80, 44);
+    });
+    registerAgentUiTarget('ontrack.profile.homeLocation', {
+      frame: { x: 0, y: 0, width: 10, height: 10 },
+      node: { measureInWindow } as never,
+    });
+
+    expect(remeasureAllAgentUiFrames()).toBe(1);
+    expect(measureInWindow).toHaveBeenCalled();
+    expect(hitAgentUiTarget(20, 40)?.testID).toBe('ontrack.profile.homeLocation');
   });
 
   it('toggles via op=overlay', async () => {

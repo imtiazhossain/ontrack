@@ -1,4 +1,9 @@
-import { tripDayCount, validateTravelDateRange } from '../date-range';
+import {
+    daysUntilDate,
+    tripDatesBadge,
+    tripDayCount,
+    validateTravelDateRange,
+} from '../date-range';
 import type { TravelItineraryItem } from '../types';
 
 const FLIGHT: TravelItineraryItem = {
@@ -17,6 +22,41 @@ describe('tripDayCount', () => {
 
   it('treats same-day trips as 1 day', () => {
     expect(tripDayCount('2026-09-08', '2026-09-08')).toBe(1);
+  });
+});
+
+describe('tripDatesBadge', () => {
+  it('shows days until an upcoming trip starts', () => {
+    const now = new Date(2026, 7, 5, 12, 0, 0); // Aug 5 local
+    expect(daysUntilDate('2026-09-27', now)).toBe(53);
+    expect(tripDatesBadge('2026-09-27', '2026-09-30', now)).toEqual({
+      kind: 'label',
+      label: 'In 53 Days',
+    });
+  });
+
+  it('uses Tomorrow the day before start', () => {
+    expect(
+      tripDatesBadge('2026-09-27', '2026-09-30', new Date(2026, 8, 26, 9, 0, 0)),
+    ).toEqual({ kind: 'label', label: 'Tomorrow' });
+  });
+
+  it('shows inclusive days left once the trip has started', () => {
+    expect(
+      tripDatesBadge('2026-09-27', '2026-09-30', new Date(2026, 8, 27, 9, 0, 0)),
+    ).toEqual({ kind: 'label', label: '4 Days Left' });
+    expect(
+      tripDatesBadge('2026-09-27', '2026-09-30', new Date(2026, 8, 28, 12, 0, 0)),
+    ).toEqual({ kind: 'label', label: '3 Days Left' });
+    expect(
+      tripDatesBadge('2026-09-27', '2026-09-30', new Date(2026, 8, 30, 12, 0, 0)),
+    ).toEqual({ kind: 'label', label: '1 Day Left' });
+  });
+
+  it('marks the badge complete after the end date', () => {
+    expect(
+      tripDatesBadge('2026-09-27', '2026-09-30', new Date(2026, 9, 1, 9, 0, 0)),
+    ).toEqual({ kind: 'complete' });
   });
 });
 

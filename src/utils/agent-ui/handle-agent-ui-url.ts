@@ -1,9 +1,9 @@
 import { formatAgentUiSeedDetail, seedAgentUiFixture } from './fixtures';
 import { resolveAgentUiFlow } from './flows';
 import {
-  isAgentUiOverlayEnabled,
-  setAgentUiOverlayEnabled,
-  toggleAgentUiOverlay,
+    isAgentUiOverlayEnabled,
+    setAgentUiOverlayEnabled,
+    toggleAgentUiOverlay,
 } from './overlay';
 import {
     writeAgentUiDump,
@@ -23,10 +23,12 @@ import {
     getAgentUiRoute,
     resolveAgentUiDestination,
 } from './route';
+import { scrollAgentUiTargetIntoView } from './scroll-into-view';
 
 export type AgentUiOp =
   | 'dump'
   | 'tap'
+  | 'scroll'
   | 'exists'
   | 'prefix'
   | 'route'
@@ -64,6 +66,8 @@ export type AgentUiRequest = {
   refreshDump?: boolean | string | string[];
   /** Host/daemon correlation id (echoed on status). */
   nonce?: number | string | string[];
+  /** Host pin: ios | android (daemon routes per platform). */
+  platform?: string | string[];
 };
 
 export type ParsedAgentUiUrl = {
@@ -79,6 +83,7 @@ const AGENT_UI_PATH = /(?:^|\/)agent\/ui\/?$/i;
 const OPS = new Set<AgentUiOp>([
   'dump',
   'tap',
+  'scroll',
   'exists',
   'prefix',
   'route',
@@ -375,6 +380,8 @@ export async function handleAgentUiRequest(
         detail: `Wrote ${dump.count} elements.`,
         count: dump.count,
         route: dump.route,
+        // Host materializes Android dumps from status (no simctl container).
+        elements: dump.elements,
       });
     }
     return true;
@@ -501,18 +508,33 @@ export async function handleAgentUiRequest(
       }
       return false;
     }
-    const ok = agentUiNavigate(destination);
+    // Unblock the host before router.replace — on Android, solo goto/reset
+    // can stall inside navigate/Documents I/O and never post a post-nav status
+    // (batch steps skip emitStatus and still succeed). Re-post if navigate fails.
     if (emitStatus) {
       writeAgentUiStatus({
         op,
-        ok,
-        detail: ok
-          ? `Navigated to ${destination}`
-          : 'Navigator not ready (wait for app mount).',
+        ok: true,
+        detail: `Navigated to ${destination}`,
+        route: destination,
+      });
+    }
+    const ok = Boolean(agentUiNavigate(destination));
+    if (emitStatus && !ok) {
+      writeAgentUiStatus({
+        op,
+        ok: false,
+        detail: 'Navigator not ready (wait for app mount).',
         route: getAgentUiRoute(),
       });
     }
-    if (ok && refreshDump) writeAgentUiDump();
+    if (ok && refreshDump) {
+      try {
+        writeAgentUiDump();
+      } catch {
+        /* best-effort */
+      }
+    }
     return ok;
   }
 
@@ -540,6 +562,37 @@ export async function handleAgentUiRequest(
       });
     }
     return Boolean(element);
+  }
+
+  if (op === 'scroll') {
+    const scrolled = await scrollAgentUiTargetIntoView(id);
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op: 'scroll',
+        id,
+        ok: scrolled,
+        detail: scrolled
+          ? 'scrolled into view'
+          : 'not found or no active scroll container',
+        element: getAgentUiTarget(id),
+        route: getAgentUiRoute(),
+      });
+    }
+    if (scrolled && refreshDump) writeAgentUiDump();
+    return scrolled;
+  }
+
+  if (op !== 'tap') {
+    if (emitStatus) {
+      writeAgentUiStatus({
+        op,
+        id,
+        ok: false,
+        detail: `Unsupported op with id: ${op}`,
+        route: getAgentUiRoute(),
+      });
+    }
+    return false;
   }
 
   const tapped = tapAgentUiTarget(id);
@@ -613,15 +666,21 @@ function runAssert(
       });
       if (contains) {
         const label = element?.label ?? '';
-        const ok = label.toLowerCase().includes(contains.toLowerCase());
+        const value = element?.value ?? '';
+        const needle = contains.toLowerCase();
+        const inLabel = label.toLowerCase().includes(needle);
+        const inValue = value.toLowerCase().includes(needle);
+        const ok = inLabel || inValue;
         checks.push({
           op: 'label',
           id,
           ok: found && ok,
           detail: found
             ? ok
-              ? `label contains "${contains}"`
-              : `label "${label}" missing "${contains}"`
+              ? inValue && !inLabel
+                ? `value contains "${contains}"`
+                : `label contains "${contains}"`
+              : `label "${label}" value "${value}" missing "${contains}"`
             : 'missing element for label check',
           element,
           route,

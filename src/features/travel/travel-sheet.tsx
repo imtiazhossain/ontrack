@@ -1,9 +1,11 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import { SheetHeader, SheetScaffold } from '@/components/primitives';
+import { ScreenHeader, SheetScaffold } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
+import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import type { ItinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { useResponsive } from '@/hooks/use-responsive';
 
 type TravelSheetHeaderProps = {
   eyebrow: string;
@@ -18,7 +20,7 @@ type TravelSheetHeaderProps = {
   paddingTop?: number;
 };
 
-/** Travel compatibility wrapper around the canonical shared sheet header. */
+/** Travel sheet header — shared sheet contract + itinerary flight-path flourish. */
 export function TravelSheetHeader({
   eyebrow,
   title,
@@ -29,16 +31,20 @@ export function TravelSheetHeader({
   closeTestID,
   paddingTop,
 }: TravelSheetHeaderProps) {
+  const { spacing } = useResponsive();
   return (
-    <SheetHeader
+    <ScreenHeader
       eyebrow={eyebrow}
       title={title}
       subtitle={subtitle}
       subtitleIcon={subtitleIcon}
+      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel={closeAccessibilityLabel}
       closeTestID={closeTestID}
-      style={paddingTop == null ? undefined : { paddingTop }}
+      style={[
+        { paddingTop: paddingTop ?? spacing.md, paddingBottom: spacing.xl },
+      ]}
     />
   );
 }
@@ -87,6 +93,7 @@ export function TravelSheetModal({
       title={title}
       subtitle={subtitle}
       subtitleIcon={subtitleIcon}
+      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel={closeAccessibilityLabel}
       closeTestID={closeTestID}

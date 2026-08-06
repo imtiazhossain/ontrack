@@ -1,12 +1,13 @@
 import {
-  TRAVEL_EXPENSE_HOST_ID,
-  TRAVEL_EXPENSE_SELF_ID,
-  type TravelExpense,
-  type TravelParticipant,
-  type TravelPlan,
+    TRAVEL_EXPENSE_HOST_ID,
+    TRAVEL_EXPENSE_SELF_ID,
+    type TravelExpense,
+    type TravelParticipant,
+    type TravelPlan,
 } from '@/features/travel/types';
 import {
-  isTravelExpenseMemberId,
+    isTravelExpenseMemberId,
+    isTravelExpenseMemberPlan,
 } from '@/services/travel/expense-collaboration';
 import { newId } from '@/utils/id';
 
@@ -39,9 +40,7 @@ export function expensePeople(
     'id' | 'participants' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName' | 'sharedExpensePeople'
   >,
 ): ExpensePerson[] {
-  const isMember =
-    Boolean(plan.chatAccessCode) ||
-    Boolean(plan.hostTripId?.trim() && plan.hostTripId.trim() !== plan.id);
+  const isMember = isTravelExpenseMemberPlan(plan);
   const people: ExpensePerson[] = [
     { id: TRAVEL_EXPENSE_SELF_ID, name: 'You', isSelf: true },
   ];
@@ -65,8 +64,14 @@ export function expensePeople(
     );
     if (existingIndex >= 0) {
       const existing = people[existingIndex]!;
+      // Keep the local invite person id (expenses may still reference it) and
+      // attach auth userId so shared `member:<uid>` rows resolve via personName.
       if (userId && !existing.userId) {
-        people[existingIndex] = { ...existing, userId };
+        people[existingIndex] = {
+          ...existing,
+          name: person.name.trim() || existing.name,
+          userId,
+        };
       }
       continue;
     }
@@ -98,10 +103,37 @@ export function personName(
   people: ExpensePerson[],
   id: string,
 ): string {
-  return people.find((p) => p.id === id)?.name ?? 'Someone';
+  const direct = people.find((p) => p.id === id);
+  if (direct) return direct.name;
+  const userId = memberUserId(id);
+  if (userId) {
+    const byUser = people.find((p) => p.userId === userId);
+    if (byUser) return byUser.name;
+  }
+  return 'Someone';
 }
 
-/** Compact chip label: "You" stays; "Farhana Tasmin" → "FT". */
+/** Local invite person id → shared `member:<auth>` when names match. */
+export function expensePersonIdAliases(
+  plan: Pick<
+    TravelPlan,
+    'participants' | 'sharedExpensePeople'
+  >,
+): Map<string, string> {
+  const aliases = new Map<string, string>();
+  for (const shared of plan.sharedExpensePeople ?? []) {
+    if (!isTravelExpenseMemberId(shared.id)) continue;
+    const match = plan.participants.find((participant) =>
+      samePersonName(participant.name, shared.name),
+    );
+    if (match && match.id !== shared.id) {
+      aliases.set(match.id, shared.id);
+    }
+  }
+  return aliases;
+}
+
+/** Compact chip label: "You" stays; "Jordan Lee" → "JL". */
 export function abbreviatedPersonName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return name.trim();
@@ -114,8 +146,8 @@ export function abbreviatedPersonName(name: string): string {
 
 /**
  * First-name label for expense rows.
- * "You" stays; "Farhana Tasmin" → "Farhana".
- * When multiple people share a first name, append last initial: "Farhana T.".
+ * "You" stays; "Jordan Lee" → "Jordan".
+ * When multiple people share a first name, append last initial: "Jordan L.".
  */
 export function firstNamePersonLabel(name: string, allNames: string[]): string {
   const trimmed = name.trim();
@@ -192,17 +224,36 @@ export function settleBalances(
   for (const expense of expenses) {
     const amount = expenseInBase(expense, baseCurrency, rates);
     if (amount === undefined) return undefined;
-    const splitIds = expense.splitWithIds.length > 0 ? expense.splitWithIds : [expense.paidById];
-    const share = amount / splitIds.length;
+    const splitIds =
+      expense.splitWithIds.length > 0 ? expense.splitWithIds : [expense.paidById];
+    // Allocate whole cents so equal splits never leave a residual imbalance.
+    const cents = Math.round(amount * 100);
+    const baseShare = Math.floor(cents / splitIds.length);
+    let remainder = cents - baseShare * splitIds.length;
     nets.set(expense.paidById, (nets.get(expense.paidById) ?? 0) + amount);
     for (const id of splitIds) {
-      nets.set(id, (nets.get(id) ?? 0) - share);
+      const shareCents = baseShare + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder -= 1;
+      nets.set(id, (nets.get(id) ?? 0) - shareCents / 100);
     }
   }
-  return [...nets.entries()]
-    .map(([personId, net]) => ({ personId, net: Math.round(net * 100) / 100 }))
+  const rows = [...nets.entries()]
+    .map(([personId, net]) => ({
+      personId,
+      net: Math.round(net * 100) / 100,
+    }))
     .filter((row) => Math.abs(row.net) >= 0.01)
     .sort((a, b) => b.net - a.net);
+  // Absorb any leftover rounding dust on the largest creditor/debtor.
+  const total = rows.reduce((sum, row) => sum + row.net, 0);
+  const drift = Math.round(total * 100) / 100;
+  if (Math.abs(drift) >= 0.01 && rows[0]) {
+    rows[0] = {
+      ...rows[0],
+      net: Math.round((rows[0].net - drift) * 100) / 100,
+    };
+  }
+  return rows.filter((row) => Math.abs(row.net) >= 0.01);
 }
 
 export interface SettleTransfer {

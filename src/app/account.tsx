@@ -11,10 +11,13 @@ export default function AccountUpgradeScreen() {
   const { user } = useAuthSession();
 
   useEffect(() => {
-    if (user && isSafeAuthReturnTo(returnTo)) {
-      router.replace(returnTo as never);
-    }
+    if (!user) return;
+    // Already signed in — never offer a second OAuth bind that could upload
+    // this device's local graph into a different account.
+    router.replace((isSafeAuthReturnTo(returnTo) ? returnTo : '/profile') as never);
   }, [returnTo, router, user]);
+
+  if (user) return null;
 
   return <AuthScreen variant="upgrade" returnTo={returnTo} />;
 }

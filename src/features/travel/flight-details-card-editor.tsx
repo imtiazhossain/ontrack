@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
@@ -11,6 +11,16 @@ import { TravelDetailsCardActions } from '@/features/travel/travel-details-card-
 import { TravelRangeFields } from '@/features/travel/travel-range-fields';
 import type { TravelItineraryItem } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
+
+function flightScheduleKey(item: TravelItineraryItem): string {
+  return [
+    item.date,
+    item.startMinutes,
+    item.durationMinutes,
+    item.flight?.departureAirport ?? '',
+    item.flight?.arrivalAirport ?? '',
+  ].join('|');
+}
 
 export function FlightDetailsCardEditor({
   value,
@@ -37,6 +47,12 @@ export function FlightDetailsCardEditor({
 }) {
   const { spacing: rs } = useResponsive();
   const [schedule, setSchedule] = useState(() => flightScheduleDraft(item));
+  const itemScheduleKey = flightScheduleKey(item);
+
+  // Keep local schedule aligned when the itinerary item is replaced (import/sync).
+  useEffect(() => {
+    setSchedule(flightScheduleDraft(item));
+  }, [item, itemScheduleKey]);
 
   return (
     <View style={{ gap: rs.md }}>

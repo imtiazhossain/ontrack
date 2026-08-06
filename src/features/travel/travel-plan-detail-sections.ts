@@ -13,14 +13,12 @@ export function sectionDefaultExpanded(
   switch (key) {
     case 'transport':
       return counts.flights + counts.ground + counts.stays + counts.rentals > 0;
+    // Nested kinds stay open so empty-state CTAs remain discoverable.
     case 'flights':
-      return counts.flights > 0;
     case 'ground':
-      return counts.ground > 0;
     case 'stays':
-      return counts.stays > 0;
     case 'rentals':
-      return counts.rentals > 0;
+      return true;
     case 'timeline':
       return true;
   }
