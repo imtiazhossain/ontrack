@@ -6,10 +6,26 @@ describe('incoming share navigation', () => {
     expect(redirectIncomingSystemPath('ontrack://expo-sharing?id=1')).toBe('/share-event');
   });
 
-  it('preserves existing app and universal-link paths', () => {
+  it('preserves existing app paths', () => {
     expect(redirectIncomingSystemPath('/l/abc')).toBe('/l/abc');
+    expect(redirectIncomingSystemPath('ontrack:///c/abc')).toBe('ontrack:///c/abc');
+  });
+
+  it('normalizes hosted share universal / app links to app paths', () => {
     expect(redirectIncomingSystemPath('https://ontrack--links.expo.app/c/abc')).toBe(
-      'https://ontrack--links.expo.app/c/abc',
+      '/c/abc',
+    );
+    expect(redirectIncomingSystemPath('https://ontrack--links.expo.app/l/abc?x=1')).toBe(
+      '/l/abc?x=1',
+    );
+    expect(
+      redirectIncomingSystemPath('https://ontrack--links.expo.app/invite/travel?invite=s.x'),
+    ).toBe('/invite/travel?invite=s.x');
+  });
+
+  it('leaves unrelated https URLs unchanged', () => {
+    expect(redirectIncomingSystemPath('https://example.com/l/abc')).toBe(
+      'https://example.com/l/abc',
     );
   });
 });

@@ -5,6 +5,7 @@ interface AppConfig {
   expo?: {
     android?: {
       intentFilters?: {
+        autoVerify?: boolean;
         data?: { host?: string; pathPrefix?: string; scheme?: string }[];
       }[];
     };
@@ -22,8 +23,19 @@ interface AppleAppSiteAssociation {
   };
 }
 
+interface AssetLinksEntry {
+  relation?: string[];
+  target?: {
+    namespace?: string;
+    package_name?: string;
+    sha256_cert_fingerprints?: string[];
+  };
+}
+
 const SHARE_PATH_PREFIXES = ['/i/', '/j/', '/f/', '/c/', '/l/', '/v/'] as const;
 const SHARE_AASA_PATHS = ['/i/*', '/j/*', '/f/*', '/c/*', '/l/*', '/v/*'] as const;
+const SHARE_HOST = 'ontrack--links.expo.app';
+const ANDROID_PACKAGE = 'com.imtihoss.ontracknow';
 
 describe('travel invitation links', () => {
   const root = path.resolve(__dirname, '../../../..');
@@ -39,9 +51,7 @@ describe('travel invitation links', () => {
       ),
     ) as AppleAppSiteAssociation;
 
-    expect(app.expo?.ios?.associatedDomains).toContain(
-      'applinks:ontrack--links.expo.app',
-    );
+    expect(app.expo?.ios?.associatedDomains).toContain(`applinks:${SHARE_HOST}`);
     const paths =
       association.applinks?.details?.flatMap((detail) =>
         detail.components?.map((component) => component['/']) ?? [],
@@ -51,20 +61,53 @@ describe('travel invitation links', () => {
     }
   });
 
-  it('registers the hosted short-link paths on Android', () => {
+  it('registers the hosted short-link paths on Android in app.json', () => {
     const app = JSON.parse(
       fs.readFileSync(path.join(root, 'app.json'), 'utf8'),
     ) as AppConfig;
-    const data = app.expo?.android?.intentFilters?.flatMap(
-      (filter) => filter.data ?? [],
-    );
+    const filters = app.expo?.android?.intentFilters ?? [];
+    expect(filters.some((filter) => filter.autoVerify === true)).toBe(true);
+    const data = filters.flatMap((filter) => filter.data ?? []);
 
     for (const pathPrefix of SHARE_PATH_PREFIXES) {
       expect(data).toContainEqual({
         scheme: 'https',
-        host: 'ontrack--links.expo.app',
+        host: SHARE_HOST,
         pathPrefix,
       });
+    }
+  });
+
+  it('claims the same https App Link paths in the committed AndroidManifest', () => {
+    const manifest = fs.readFileSync(
+      path.join(root, 'android/app/src/main/AndroidManifest.xml'),
+      'utf8',
+    );
+
+    expect(manifest).toContain('android:autoVerify="true"');
+    expect(manifest).toContain(`android:host="${SHARE_HOST}"`);
+    for (const pathPrefix of SHARE_PATH_PREFIXES) {
+      expect(manifest).toContain(`android:pathPrefix="${pathPrefix}"`);
+    }
+  });
+
+  it('publishes Digital Asset Links for the Android package', () => {
+    const assetLinks = JSON.parse(
+      fs.readFileSync(
+        path.join(root, 'public/.well-known/assetlinks.json'),
+        'utf8',
+      ),
+    ) as AssetLinksEntry[];
+
+    const entry = assetLinks.find(
+      (item) =>
+        item.target?.namespace === 'android_app' &&
+        item.target.package_name === ANDROID_PACKAGE,
+    );
+    expect(entry?.relation).toContain('delegate_permission/common.handle_all_urls');
+    expect(entry?.target?.sha256_cert_fingerprints?.length).toBeGreaterThan(0);
+    for (const fingerprint of entry?.target?.sha256_cert_fingerprints ?? []) {
+      expect(fingerprint).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
     }
   });
 });

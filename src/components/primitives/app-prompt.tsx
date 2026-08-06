@@ -313,7 +313,7 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
                 background={background}
                 borderColor={borderColor}
                 foreground={foreground}
-                icon={destructive ? 'delete' : 'chevron-right'}
+                icon={destructive ? 'delete' : undefined}
                 onPress={() => close(action)}
                 testID={action.testID ?? AgentUiIds.prompt.action(index)}
               />
@@ -352,7 +352,7 @@ function PromptActionButton({
   background: string;
   borderColor: string;
   foreground: string;
-  icon: 'delete' | 'chevron-right';
+  icon?: 'delete';
   onPress: () => void;
   testID: string;
 }) {
@@ -380,7 +380,9 @@ function PromptActionButton({
           transform: [{ scale: pressed ? 0.992 : 1 }],
         },
       ]}>
-      {!action.hideIcon ? <Symbol name={icon} size={17} color={foreground} /> : null}
+      {icon && !action.hideIcon ? (
+        <Symbol name={icon} size={17} color={foreground} />
+      ) : null}
       <AppText
         variant="callout"
         allowFontScaling={false}
