@@ -26,6 +26,7 @@ import {
     TravelSurfaceCard,
     useTravelPageStyle,
 } from '@/features/travel/travel-surface';
+import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import { TravelTripActionGrid } from '@/features/travel/travel-trip-action-grid';
 import { TravelTripCardHeader } from '@/features/travel/travel-trip-card-header';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
@@ -120,9 +121,11 @@ function TravelScreenContent() {
   const editScrollRef = useRef<ScrollView>(null);
   const tripOffsets = useRef<Record<string, number>>({});
   const [pendingCreatedTripId, setPendingCreatedTripId] = useState<string>();
+  const [pendingFollowTripId, setPendingFollowTripId] = useState<string>();
   const [scrollTargetOffset, setScrollTargetOffset] = useState<number>();
   const focusedTripId = typeof tripId === 'string' ? tripId : undefined;
-  const scrollTargetTripId = pendingCreatedTripId ?? focusedTripId;
+  const scrollTargetTripId =
+    pendingCreatedTripId ?? pendingFollowTripId ?? focusedTripId;
   const toggleCollapsed = (planId: string) => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -135,6 +138,15 @@ function TravelScreenContent() {
     () => orderTravelPlansByRecency(plans, recentPlanIds),
     [plans, recentPlanIds],
   );
+  /** Promote a trip in the MRU list and scroll to it when it jumps to the top. */
+  const interactWithPlan = (planId: string) => {
+    const alreadyFirst = sortedPlans[0]?.id === planId;
+    recordPlanInteraction(planId);
+    if (alreadyFirst) return;
+    delete tripOffsets.current[planId];
+    setScrollTargetOffset(undefined);
+    setPendingFollowTripId(planId);
+  };
 
   useEffect(() => {
     if (!showForm) return;
@@ -170,9 +182,20 @@ function TravelScreenContent() {
     }
     const frame = requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ y: Math.max(0, offset - rs.sm), animated: true });
+      if (pendingFollowTripId === scrollTargetTripId) {
+        setPendingFollowTripId(undefined);
+      }
     });
     return () => cancelAnimationFrame(frame);
-  }, [pendingCreatedTripId, recordPlanInteraction, rs.sm, scrollTargetOffset, scrollTargetTripId, sortedPlans]);
+  }, [
+    pendingCreatedTripId,
+    pendingFollowTripId,
+    recordPlanInteraction,
+    rs.sm,
+    scrollTargetOffset,
+    scrollTargetTripId,
+    sortedPlans,
+  ]);
 
   const rememberTripOffset = (planId: string, y: number) => {
     tripOffsets.current[planId] = y;
@@ -185,7 +208,7 @@ function TravelScreenContent() {
   const friendsPlan = sortedPlans.find((plan) => plan.id === friendsPlanId);
   const datesPlan = sortedPlans.find((plan) => plan.id === datesPlanId);
   const openExpenses = (planId: string) => {
-    recordPlanInteraction(planId);
+    interactWithPlan(planId);
     setExpensesPlanId(planId);
     setExpensesVisible(true);
   };
@@ -194,7 +217,7 @@ function TravelScreenContent() {
     setExpensesVisible(false);
   };
   const openWeather = (planId: string) => {
-    recordPlanInteraction(planId);
+    interactWithPlan(planId);
     setWeatherPlanId(planId);
     setWeatherVisible(true);
   };
@@ -203,7 +226,7 @@ function TravelScreenContent() {
     setWeatherVisible(false);
   };
   const openCurrency = (planId: string) => {
-    recordPlanInteraction(planId);
+    interactWithPlan(planId);
     setCurrencyPlanId(planId);
     setCurrencyVisible(true);
   };
@@ -212,7 +235,7 @@ function TravelScreenContent() {
     setCurrencyVisible(false);
   };
   const openFriends = (planId: string) => {
-    recordPlanInteraction(planId);
+    interactWithPlan(planId);
     setExpandedCoTravelerPlanId(undefined);
     setFriendsPlanId(planId);
     setFriendsVisible(true);
@@ -288,7 +311,7 @@ function TravelScreenContent() {
   };
 
   const beginEditingDetails = (plan: TravelPlan) => {
-    recordPlanInteraction(plan.id);
+    interactWithPlan(plan.id);
     setEditingDetailsPlanId(plan.id);
     setEditTitle(plan.title);
     setEditMode(plan.mode ?? 'flight');
@@ -493,7 +516,7 @@ function TravelScreenContent() {
               <TravelTripCardHeader
                 plan={plan}
                 collapsed={collapsed}
-                onOpenCover={() => recordPlanInteraction(plan.id)}
+                onOpenCover={() => interactWithPlan(plan.id)}
                 onEdit={() => beginEditingDetails(plan)}
                 onToggleCollapsed={() => toggleCollapsed(plan.id)}>
                 <TravelTripDatesRow
@@ -502,7 +525,7 @@ function TravelScreenContent() {
                   dayCount={days}
                   testID={AgentUiIds.travel.list.editDates(plan.id)}
                   onPress={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     setDatesPlanId(plan.id);
                   }}
                 />
@@ -520,45 +543,39 @@ function TravelScreenContent() {
                   destination={plan.destination}
                   mode={plan.mode ?? 'flight'}
                   isOnCalendar={isTripOnCalendar(plan.id)}
-                  coTravelers={[
-                    { id: `${plan.id}-self`, name: selfDisplayName, isSelf: true },
-                    ...plan.participants.map((person) => ({
-                      id: person.id,
-                      name: person.name,
-                    })),
-                  ]}
+                  coTravelers={resolveTravelCoTravelerPeople(plan, selfDisplayName)}
                   coTravelersExpanded={expandedCoTravelerPlanId === plan.id}
                   onCoTravelersExpandedChange={(next) => {
-                    if (next) recordPlanInteraction(plan.id);
+                    if (next) interactWithPlan(plan.id);
                     setExpandedCoTravelerPlanId(next ? plan.id : undefined);
                   }}
                   onOpenItinerary={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     router.push({
                       pathname: '/travel/[id]',
                       params: { id: plan.id },
                     } as never);
                   }}
                   onOpenCalendar={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     addTripToCalendar(plan);
                   }}
                   onSearchFlights={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     router.push({
                       pathname: '/travel/[id]/flights',
                       params: { id: plan.id },
                     } as never);
                   }}
                   onAddTransport={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     router.push({
                       pathname: '/travel/[id]',
                       params: { id: plan.id, add: 'transport' },
                     } as never);
                   }}
                   onSearchStays={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     router.push({
                       pathname: '/travel/[id]/stays',
                       params: { id: plan.id },
@@ -568,7 +585,7 @@ function TravelScreenContent() {
                   onOpenCurrency={() => openCurrency(plan.id)}
                   onOpenExpenses={() => openExpenses(plan.id)}
                   onOpenChat={() => {
-                    recordPlanInteraction(plan.id);
+                    interactWithPlan(plan.id);
                     router.push({
                       pathname: '/travel/[id]/chat',
                       params: { id: plan.id },
