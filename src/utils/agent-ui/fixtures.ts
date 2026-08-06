@@ -142,8 +142,8 @@ export function buildAgentUiDemoTrip(
         },
       },
       {
-        // Terminals/gates live only at the booking level here, matching what the
-        // flight editor stores, so the journey endpoints must inherit them.
+        // Seed per-leg terminals/gates so opening the demo never triggers a
+        // live AeroDataBox enrichment just to paint the itinerary chips.
         id: AGENT_UI_DEMO_CONNECTING_FLIGHT_ID,
         kind: 'flight',
         title: 'UA 1907',
@@ -166,7 +166,11 @@ export function buildAgentUiDemoTrip(
               airline: 'United Airlines',
               flightNumber: 'UA1907',
               departureAirport: 'GUA',
+              departureTerminal: '1',
+              departureGate: '5',
               arrivalAirport: 'IAH',
+              arrivalTerminal: 'C',
+              arrivalGate: '41',
               aircraft: 'Boeing 737-800 Passenger',
               date: '2026-09-30',
               departureMinutes: 90,
@@ -178,7 +182,11 @@ export function buildAgentUiDemoTrip(
               airline: 'United Airlines',
               flightNumber: 'UA1697',
               departureAirport: 'IAH',
+              departureTerminal: 'C',
+              departureGate: '12',
               arrivalAirport: 'LGA',
+              arrivalTerminal: 'B',
+              arrivalGate: '22',
               aircraft: 'Boeing 737 MAX 8',
               date: '2026-09-30',
               departureMinutes: 420,

@@ -251,6 +251,9 @@ export function useTravelPlanDetailEffects({
     .join('|');
 
   useEffect(() => {
+    // Dev / agent-ui exercises reopen demo trips constantly — skip the
+    // AeroDataBox terminal probe so local testing cannot burn RapidAPI quota.
+    if (__DEV__) return;
     if (
       !terminalLookupFingerprint ||
       terminalLookupFingerprintRef.current === terminalLookupFingerprint

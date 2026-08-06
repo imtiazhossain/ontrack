@@ -28,26 +28,35 @@ function statusUrl(): string {
   });
 }
 
+const AGENT_UI_DEMO_FLIGHT_NUMBERS = new Set(['UA70', 'UA1907', 'UA1697']);
+const AGENT_UI_DEMO_FLIGHT_DATES = new Set(['2026-09-27', '2026-09-30']);
+
 /**
- * When the live status API is unreachable (guest / rate-limit), still surface
- * "On Time" for the stable agent-ui demo flights so itinerary UI can be verified.
- * Never overrides a successful provider response.
+ * Stable agent-ui demo flights never hit AeroDataBox — every travel-demo open /
+ * status tap would otherwise burn RapidAPI quota. Returns canned terminals +
+ * "On Time" so itinerary UI stays verifiable offline.
  */
-function agentUiDemoStatusFallback(
+export function agentUiDemoFlightStatusResponse(
   input: FlightStatusInput,
 ): FlightStatusResponse | undefined {
   if (typeof __DEV__ === 'undefined' || !__DEV__) return undefined;
-  if (input.mode !== 'status') return undefined;
   const number = input.flightNumber.replace(/\s/g, '').toUpperCase();
-  const demoNumbers = new Set(['UA70', 'UA1907', 'UA1697']);
-  if (!demoNumbers.has(number)) return undefined;
-  if (input.date !== '2026-09-27' && input.date !== '2026-09-30') {
-    return undefined;
+  if (!AGENT_UI_DEMO_FLIGHT_NUMBERS.has(number)) return undefined;
+  if (!AGENT_UI_DEMO_FLIGHT_DATES.has(input.date)) return undefined;
+  const checkedAt = new Date().toISOString();
+  if (input.mode === 'terminals') {
+    return {
+      departureTerminal: number === 'UA70' ? 'C' : number === 'UA1907' ? '1' : 'C',
+      arrivalTerminal: number === 'UA70' ? '1' : number === 'UA1907' ? 'C' : 'B',
+      departureGate: number === 'UA70' ? 'C71' : number === 'UA1907' ? '5' : '12',
+      arrivalGate: number === 'UA70' ? '18' : number === 'UA1907' ? '41' : '22',
+      checkedAt,
+    };
   }
   return {
     status: 'scheduled',
     statusLabel: 'On Time',
-    checkedAt: new Date().toISOString(),
+    checkedAt,
   };
 }
 
@@ -55,22 +64,18 @@ export async function lookupFlightData(
   input: FlightStatusInput,
   signal?: AbortSignal,
 ): Promise<FlightStatusResponse> {
-  try {
-    return await apiRequest<FlightStatusResponse, FlightStatusError>({
-      url: statusUrl(),
-      method: 'POST',
-      body: input,
-      signal,
-      offlineMessage: 'Flight-status data needs an internet connection.',
-      unavailableMessage: 'Free flight-status data is unavailable right now.',
-      createError: (message, code, status) =>
-        new FlightStatusError(message, code, status),
-    });
-  } catch (error) {
-    const demo = agentUiDemoStatusFallback(input);
-    if (demo) return demo;
-    throw error;
-  }
+  const demo = agentUiDemoFlightStatusResponse(input);
+  if (demo) return demo;
+  return apiRequest<FlightStatusResponse, FlightStatusError>({
+    url: statusUrl(),
+    method: 'POST',
+    body: input,
+    signal,
+    offlineMessage: 'Flight-status data needs an internet connection.',
+    unavailableMessage: 'Free flight-status data is unavailable right now.',
+    createError: (message, code, status) =>
+      new FlightStatusError(message, code, status),
+  });
 }
 
 function lookupInput(

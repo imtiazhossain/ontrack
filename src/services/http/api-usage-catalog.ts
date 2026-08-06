@@ -206,7 +206,7 @@ export const API_USAGE_CATALOG: readonly ApiUsageCatalogEntry[] = [
     usedBy: ['Live flight status', 'Terminal / gate sync'],
     metering: 'route-limit',
     limitNote:
-      'App route limit: 10 requests/min per client IP. No free health probe — status uses circuit + credentials only.',
+      'App route limit: 10 requests/min per client IP. No free health probe — status uses circuit + credentials only. Auto terminal sync is off in __DEV__; agent-ui demo flights never call RapidAPI.',
     configKey: 'aerodatabox',
     guardNames: ['aerodatabox'],
   },
