@@ -19,7 +19,7 @@ describe('responsive layout rule', () => {
     expect(read('src/components/primitives/app-text.tsx')).toContain('useResponsive');
     expect(read('src/components/primitives/app-text.tsx')).toContain('fit');
     expect(read('src/components/primitives/button.tsx')).toContain('useResponsive');
-    expect(read('src/components/primitives/button.tsx')).toContain('fit');
+    expect(read('src/components/primitives/button.tsx')).toContain('AppText');
     expect(read('src/components/primitives/input.tsx')).toContain('useResponsive');
     expect(read('src/components/primitives/screen.tsx')).toContain('useResponsive');
     expect(read('src/components/primitives/date-field.tsx')).toContain('useResponsive');
@@ -31,10 +31,14 @@ describe('responsive layout rule', () => {
     expect(agents).toContain('responsive-layout.mdc');
   });
 
-  it('is cross-linked from token-optimization so agents always see it', () => {
+  it('is cross-linked from token-optimization and ontrack-core', () => {
     const opt = read('.cursor/rules/token-optimization.mdc');
     expect(opt).toContain('alwaysApply: true');
     expect(opt).toContain('responsive-layout.mdc');
     expect(opt).toContain('useResponsive');
+
+    const core = read('.cursor/rules/ontrack-core.mdc');
+    expect(core).toContain('alwaysApply: true');
+    expect(core).toContain('responsive-layout.mdc');
   });
 });

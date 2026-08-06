@@ -239,8 +239,19 @@ agent_ui_ensure_app_up() {
   fi
 
   local device_label="simulator"
+  local reverse_was_missing=0
   if agent_ui_is_android; then
     device_label="emulator"
+    # Cheap fix first: missing adb reverse breaks 127.0.0.1 Metro + daemon.
+    agent_ui_android_lib
+    if android_emu_ensure_adb_reverse >/dev/null 2>&1; then
+      if [[ "${ANDROID_EMU_REVERSE_ADDED:-0}" == "1" ]]; then
+        reverse_was_missing=1
+      fi
+      if agent_ui_bridge_answers; then
+        return 0
+      fi
+    fi
   fi
 
   # Android: prefer soft wait over reconnect — heal drops the app onto `/`.
@@ -288,8 +299,15 @@ agent_ui_ensure_app_up() {
     sleep 0.4
   done
 
-  # Last resort heal — skip on Android when process is up (reconnect resets route).
+  # Last resort heal — skip on Android when process is up (reconnect resets route),
+  # unless adb reverse was missing (app is likely stuck on DevLauncher).
   if agent_ui_is_android && agent_ui_app_process_running; then
+    if [[ "$reverse_was_missing" == "1" ]]; then
+      echo "agent-ui: adb reverse was missing — healing packager once…" >&2
+      if agent_ui_heal_packager && agent_ui_bridge_answers; then
+        return 0
+      fi
+    fi
     echo "agent-ui: Android process up but bridge quiet — skipping force-reconnect heal" >&2
     echo "error: ${BUNDLE_ID} bridge not answering on ${device_label} (try android:ensure:start)" >&2
     return 1

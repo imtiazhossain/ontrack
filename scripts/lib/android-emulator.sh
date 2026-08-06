@@ -186,6 +186,44 @@ android_emu_wait_boot() {
   return 1
 }
 
+# Forward emulator loopback → host so advertise-127 Metro / agent-ui work.
+# Emulator 127.0.0.1 is the guest, not the Mac — without reverse, DevLauncher
+# fails with a host URL error and the agent-ui bridge times out.
+# Idempotent. Sets ANDROID_EMU_REVERSE_ADDED=1 when a new mapping was created.
+android_emu_ensure_adb_reverse() {
+  local metro_port="${METRO_PORT:-8081}"
+  local daemon_port="${AGENT_UI_HTTP_PORT:-8191}"
+  local list port added=0
+
+  ANDROID_EMU_REVERSE_ADDED=0
+
+  if ! android_emu_adb get-state >/dev/null 2>&1; then
+    echo "note: adb device not ready — skip reverse" >&2
+    return 1
+  fi
+
+  list="$(android_emu_adb reverse --list 2>/dev/null || true)"
+  for port in "$metro_port" "$daemon_port"; do
+    if printf '%s\n' "$list" | grep -qE "tcp:${port}[[:space:]]+tcp:${port}"; then
+      continue
+    fi
+    if android_emu_adb reverse "tcp:${port}" "tcp:${port}" >/dev/null 2>&1; then
+      echo "adb reverse tcp:${port} → host:${port}"
+      added=1
+    else
+      echo "error: adb reverse tcp:${port} failed" >&2
+      return 1
+    fi
+  done
+
+  if [[ "$added" == "1" ]]; then
+    ANDROID_EMU_REVERSE_ADDED=1
+  else
+    echo "adb reverse ok (Metro ${metro_port}, agent-ui ${daemon_port})"
+  fi
+  return 0
+}
+
 # Boot the preferred AVD (default: Galaxy_S26). Headless unless WINDOW=1.
 # Shutdown other emulators so `adb` / installs target one device.
 ensure_preferred_android_emulator() {
@@ -213,6 +251,7 @@ ensure_preferred_android_emulator() {
     if android_emu_wait_boot "$serial"; then
       export ANDROID_SERIAL="$serial"
       export ONTRACK_ANDROID_SERIAL="$serial"
+      android_emu_ensure_adb_reverse || true
       echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
       return 0
     fi
@@ -288,6 +327,7 @@ PY
 
   export ANDROID_SERIAL="$serial"
   export ONTRACK_ANDROID_SERIAL="$serial"
+  android_emu_ensure_adb_reverse || true
   echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
   return 0
 }

@@ -1,137 +1,40 @@
 ---
-description: Always stamp agent-ui testIDs; navigate with flow/open/tap — never dump or screenshot mid-path
-alwaysApply: true
+description: Stamp ontrack.* testIDs; navigate with verify/once/flow — never dump or screenshot mid-path
+globs:
+  - src/**/*.{ts,tsx}
+  - scripts/agent-ui*
+  - docs/agent-ui*
+  - docs/agent-routes.md
+alwaysApply: false
 ---
 
-# Agent UI selectors (mandatory)
+# Agent UI selectors
 
-Interactive controls **must** have a stable `testID`. Agents find and tap UI by id — never by guessing screenshot coordinates.
+**Full decision tree, budgets, and verify close-out:** read [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md) before simulator work.
 
-An ID is “missing” only when someone shipped an interactive control without stamping one. That is a defect: **add the ID in the same change**, do not work around it with coordinates.
+## Always add an ID
 
-## Always add an ID (authoring rule)
+When you create or edit an interactive / agent-tappable control, same change:
 
-When you **create or edit** any interactive / agent-tappable control, you **must** in the same change:
+1. Constant in [`src/utils/agent-ui/ids.ts`](../../src/utils/agent-ui/ids.ts) → `ontrack.<feature>.<surface>.<control>`
+2. `testID` / `useAgentUiTarget` / `AgentTestId`
+3. Document in [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md)
 
-1. Add a constant to [`src/utils/agent-ui/ids.ts`](../../src/utils/agent-ui/ids.ts) using `ontrack.<feature>.<surface>.<control>`
-2. Pass it as `testID` (primitives auto-register via `useAgentUiTarget`; custom `Pressable`s use `useAgentUiTarget` / `AgentTestId`)
-3. Document it in [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md)
+Layout anchors (major sections): `AgentTestId` without `onPress` → `ontrack.<feature>.<surface>.section.<name>`.
 
-**Requires a `testID`:** buttons, icon buttons, tabs, links, inputs, date/time fields, switches, rows with `onPress`, sheet/modal close/dismiss, primary/secondary CTAs, provider/list row actions, anything an agent would tap or focus.
+Coordinates are not an alternative. Screenshot bugs → [`screenshot-triage.mdc`](./screenshot-triage.mdc).
 
-**Also stamp layout anchors** (via `AgentTestId` **without** `onPress`) on major sections/panels that appear in bug screenshots — so dump / hit / overlay can resolve them to a source file. Naming: `ontrack.<feature>.<surface>.section.<name>` (see travel `planDetail.section.*`).
+## Navigation (stop at first match)
 
-**Does not need a `testID`:** tiny decorative glyphs, static body copy, non-meaningful layout spacers.
+0. Stuck → [`stuck-check-config.mdc`](./stuck-check-config.mdc)
+1. App up via `once`/`verify`/`flow` (or `ensure-packager.sh --start`)
+2. Already on route → `./scripts/agent-ui.sh verify --route …`
+3. Else `once --flow` / `agent-ui-flow.sh` / `agent-ui-open.sh` / known `agent-ui-tap.sh`
+4. Unknown id → **one** dump; else add testID
+5. Assert / `--color` then **STOP** (see [`show-simulator-screenshot.mdc`](./show-simulator-screenshot.mdc))
 
-Do not merge UI that agents must exercise without an id. Do not leave “add testID later.”
+JS key paths work (`travel.planDetail.transportSection`). Off-screen: `agent-ui-scroll` — never host CGEvent swipes.
 
-**User posted a screenshot?** Follow [`.cursor/rules/screenshot-triage.mdc`](./screenshot-triage.mdc) — `agent-ui-source.sh` / hit / overlay before broad file search.
+## Do not
 
-## Navigation decision tree (mandatory — stop at the first match)
-
-When exercising the simulator, pick **exactly one** path in order. Do not “explore” first.
-
-0. **Stuck / timeouts / wrong route?** → config triage first ([`stuck-check-config.mdc`](./stuck-check-config.mdc)): sticky `AGENT_UI_PLATFORM`, screen width vs pin, Android on `/` after reconnect. Do not heal-storm or rewrite bridge code before that.
-1. **App up first** — `once` / `verify` / `flow` / `assert` / `open` / `batch` / `seed` call `agent_ui_ensure_app_up` (device booted, app process running, bridge answers). Do not start verification when you already know the app is dead — run `./scripts/ensure-packager.sh --start` (add `--android` / `AGENT_UI_PLATFORM=android` for the emulator). Do not add a separate manual preflight when using those entry points. When iOS + Android are both up, **always** set `AGENT_UI_PLATFORM` so the daemon delivers to the intended app.
-2. **Already on the surface?** → `./scripts/agent-ui.sh verify --route <path> [--flow <name>] --exists …` (skips flow/open when route matches)
-3. **Else named flow / once chain?** → `./scripts/agent-ui.sh once --flow <name> --assert-…` or `./scripts/agent-ui-flow.sh <name>`  
-   (`travel-demo`, `travel-demo-add-flight`, `open-new-trip`, … — `./scripts/agent-ui-flow.sh --list`)
-4. **Else known surface / nested shortcut?** → `./scripts/agent-ui-open.sh <alias|path>` or one `./scripts/agent-ui-batch.sh …`
-5. **Else known `testID` in the map / `AgentUiIds`?** → `./scripts/agent-ui-tap.sh <id>` (no dump). JS key paths work: `travel.planDetail.transportSection`, and parameterized factories too: `travel.timelineItem.<itemId>.default`, `travel.flight.openConfirmation.<itemId>`
-6. **Else id truly unknown?** → **one** `./scripts/agent-ui-dump.sh --prefix ontrack.<feature>` then tap; if still missing, **add** the testID + map entry in the same change
-7. **Screenshot bug report?** → [`screenshot-triage.mdc`](./screenshot-triage.mdc): label/`agent-ui-source.sh` → hit (`./scripts/agent-ui-hit.sh`) → overlay (`./scripts/agent-ui-overlay.sh on`) → then edit the resolved file
-8. **Proof** → structural **assert** / `--color` then **STOP**. Screenshot only when assert/`--color` cannot prove the claim (see `show-simulator-screenshot.mdc`). Never screenshot to decide the next tap.
-
-Demo fixtures via `./scripts/agent-ui-seed.sh` / named `*-demo` flows — do not recreate domain data by hand:
-`travel-demo`, `checklist-demo`, `grocery-demo`, `health-demo`, `vehicle-demo`, `plants-demo`, `activity-demo`, `workouts-demo`, `vision-board-demo` (+ deep flows: `*-gym-*`, `*-anatomy`, `*-item-editor`, `*-log-watering`, `*-settings`, `games-balloon-pop`; ids in `src/utils/agent-ui/fixtures.ts`).
-
-Routes/flows: [`docs/agent-routes.md`](../../docs/agent-routes.md). IDs: [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md).
-
-## Assert-first proof (mandatory)
-
-Prefer Playwright-style asserts over screenshots when the claim is structural:
-
-```bash
-# Prefer verify when a prior step may already be on the surface
-./scripts/agent-ui.sh verify --route /travel/trip-agent-ui-demo --flow travel-demo \
-  --exists travel.planDetail.transportSection \
-  --color travel.planDetail.transportSection '#2474A8'
-
-./scripts/agent-ui.sh once --flow travel-demo \
-  --assert-exists travel.planDetail.weather \
-  --assert-route /travel/trip-agent-ui-demo
-
-./scripts/agent-ui-assert.sh --exists travel.newTrip.open
-./scripts/agent-ui-assert.sh --prefix travel.itineraryAdd.
-./scripts/agent-ui-assert.sh --contains travel.newTrip.open "New"
-./scripts/agent-ui-assert.sh --color travel.planDetail.transportSection '#2474A8'
-```
-
-- **Assert proves:** route, testID presence/absence, prefix match, accessibility label **or Input registry value** contains text (`--contains` checks both).
-- **`--color` proves:** accent/chrome hue inside a testID frame (host samples screenshot; no vision read).
-- **Screenshot proves:** broader layout / visual design that color/assert cannot see.
-- IDs accept wire (`ontrack.…`) **or** `AgentUiIds` key paths (`travel.planDetail.transportSection`).
-- Do **not** screenshot mid-flow. Do **not** use a screenshot as a substitute for `assert` when an id/route/color claim would suffice.
-
-## Per-verification budget (mandatory)
-
-Unless the first attempt **fails** (timeout, missing id, wrong screen):
-
-- **≤ 1** `agent-ui-dump.sh`
-- **≤ 1** screenshot — and **only** when the claim is visual/layout (assert covers route/id)
-- **0** mid-flow screenshots
-- **0** tab-hops when a flow/open/batch/`once` can land on the surface
-- **0** prophylactic `ensure-packager` when Metro `/status` is already 200 and the bridge responds
-
-Batch shell steps in **one** tool call when chaining (`once` / flow + assert + optional final screenshot).
-
-Run `npm run typecheck` and focused `npm test` **in parallel** with the UI once-chain — do not wait for typecheck before navigating.
-
-## Wall-clock habits (mandatory — biggest speed win)
-
-These habits dominate host/bridge micro-opts. Follow them every verification:
-
-1. **`verify` before `flow` when you may already be on the surface** — `verify --route … --flow …` skips land (~200–300ms warm). Do not re-run `travel-demo` / `once --flow` just to re-assert.
-2. **One shell chain / `verify` / `once`** — do not spend agent turns between hops. Chain `--tap` + `--assert-*` (+ optional `--screenshot`) in one `once`.
-3. **Assert-first** — use `--color` for accent claims; screenshot only for broader visual/layout. Do not vision-read a screenshot for route/id/label claims.
-4. **Never mid-flow dump or screenshot** — dumps/screenshots are for unknown ids / final visual proof only.
-5. **Never prophylactic Metro heal** — skip a standalone `ensure-packager` when `/status` is 200 and a recent `route`/`flow`/`open`/`once`/`verify` succeeded. Verification entry points already gate on `agent_ui_ensure_app_up` (launch/heal only when the app or bridge is down).
-6. **Prefer `verify` / `once` / `flow` / `batch` / in-app `wait`** — do not host-poll `exists`/`prefix` in a shell loop.
-7. **Reuse fixtures** — `travel-demo` / named seeds; do not rebuild trip/list data by hand.
-8. **Fail-fast when warm** — host budgets drop to ~2.5s simple / ~5s flow when the daemon is warm; do not raise `WAIT_SECS` unless a step legitimately needs it.
-9. **Use JS key paths** — `travel.planDetail.transportSection` and parameterized forms like `travel.timelineItem.<id>.default` resolve to `ontrack.…` wire ids; do not invent camelCase wire ids.
-10. **Expand/collapse is a toggle** — before re-tapping `timelineItem.<id>.default` (or similar), `--exists` the expanded control (e.g. `travel.flight.passenger.<id>`). A second tap collapses the card.
-11. **No re-land for handoff** — if the changed surface is already showing, assert/`--color` and stop. Do not navigate away and back to “prove” it again.
-12. **No ritual screenshot** — after a passing assert/`--color`, end the turn. Do not capture or vision-read a handoff image “for the reply.”
-
-## Required close-out shape
-
-1. Land with `once` / `flow` / `open` / `batch` (not tabs).
-2. Tap known ids from the map.
-3. Wait with in-app wait / `agent-ui-wait.sh` / assert — not dump loops.
-4. **Assert** / `--color` and **STOP**. Screenshot only if `.cursor/rules/show-simulator-screenshot.mdc` requires it for a visual claim.
-5. `ensure-packager.sh` only if the packager/bridge is actually down.
-
-## Rules
-
-- **Never** use screenshot / vision coordinates to tap when a registry id exists or can be added.
-- If dump has no matching id: **stop**, add `testID` + map entry + ids constant, then tap by id. Coordinates are not an alternative.
-- Keep `accessibilityLabel` for VoiceOver; labels alone are not unique selectors (`Close`, `Done` collide).
-- Bridge is `__DEV__` only (`dump|tap|scroll|exists|prefix|route|goto|reset|wait|seed|flow|batch|assert|hit|overlay`).
-- Source lookup: `./scripts/agent-ui-source.sh <id|keyPath>` / `--label TEXT` → [`docs/agent-ui-sources.json`](../../docs/agent-ui-sources.json).
-- **Off-screen targets:** `./scripts/agent-ui-scroll.sh <id>` or `once --scroll <id>` — scrolls the app `ScrollView` in-process. Never drag the Mac mouse / CGEvent / “swipe the Simulator window.”
-
-## Do not (failure modes)
-
-- Dump “just to be sure” before a known id.
-- Re-run `once --flow` / `agent-ui-flow.sh` when `verify --route` would skip land (already on the surface).
-- Navigate away and back (or re-seed) only to capture a handoff screenshot of a screen already showing.
-- Capture a handoff screenshot after a passing assert/`--color`.
-- Screenshot between hops, or read images to choose the next control.
-- Screenshot / vision-read for a claim that `assert --exists` / `--route` / `--prefix` / `--contains` / `--color` can prove.
-- Tab-hop when `agent-ui.sh verify` / `once` / `agent-ui-flow.sh` / `agent-ui-open.sh` / batch goto fits.
-- Recreate trip data when `seed` / `travel-demo*` flows fit.
-- Call `ensure-packager` prophylactically.
-- Invent HTML `data-*` attributes — use RN `testID`.
-- Ship new interactive UI without `ontrack.*` testIDs.
-- Drive the host cursor / CGEvent / AppleScript / `cliclick` to “swipe” the Simulator — that misses the device frame and steals the user’s mouse. Use `agent-ui-scroll` instead.
+Dump “just to be sure”; re-run `once --flow` when `verify --route` fits; mid-flow / ritual handoff screenshots; tab-hop; prophylactic `ensure-packager`; ship interactive UI without `ontrack.*` ids.

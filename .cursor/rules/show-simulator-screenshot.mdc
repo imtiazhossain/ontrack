@@ -1,45 +1,23 @@
 ---
-description: Prove UI changes with assert/--color by default; screenshot only for visual claims
-alwaysApply: true
+description: Prove UI with assert/--color by default; screenshot only for visual claims
+globs:
+  - src/**/*.{ts,tsx}
+  - scripts/agent-ui*
+alwaysApply: false
 ---
 
 # Show UI in Simulator
 
-After UI/app changes, verify on **both** iOS and Android (headless OK). Metro / Fast Refresh + dual close-out: `.cursor/rules/verify-working-app.mdc`. Prefer `./scripts/agent-ui-verify-both.sh`. Navigation budget: `.cursor/rules/agent-ui-selectors.mdc`. Android `--color`/screenshots use `adb exec-out screencap`.
+Default proof — **STOP after assert**:
 
-## Default proof — STOP after assert
-
-For route, testID presence/absence, prefix, label, or accent-color claims:
-
-1. Exercise the surface (`verify` if already on `--route`, else `once` / `flow` / `open`).
-2. Prove with `./scripts/agent-ui-assert.sh` / `once --assert-*` / `--color <id> <hex>`.
-3. **STOP.** Paste the assert output in the reply.
-
-**Do not** capture a handoff screenshot, vision-read the screen, or take a second “proof” turn after a passing assert/`--color`.
-
-Prefer adding a `testID` + `--color` (or `--contains`) over a screenshot when the claim is contrast/theme chrome or visible copy on a known control.
+1. Land (`verify` if on `--route`, else `once` / `flow` / `open`).
+2. `./scripts/agent-ui-assert.sh` / `once --assert-*` / `--color <id> <hex>`.
+3. **STOP.** Paste assert output. Dual close-out: [`verify-working-app.mdc`](./verify-working-app.mdc) / agent-ui skill.
 
 ## Screenshot budget
 
-- **Allowed:** one post-action screenshot **only** when the claim is visual/layout/pixel copy that assert/`--color` cannot prove (plus replacements if the evidence gate fails).
-- **Preferred over screenshot:** `agent-ui-assert.sh` / `once --assert-*` / `--color`.
-- **Forbidden:** mid-flow screenshots, screenshot-to-navigate, screenshot instead of `flow`/`open`/`tap`/`assert`, reading images to discover controls, or a ritual handoff screenshot after a passing assert.
-- Dumps ≤ 1 per verification (see agent-ui-selectors).
+- **Allowed:** one post-action screenshot only when assert/`--color` cannot prove a visual/layout claim.
+- **Forbidden:** mid-flow screenshots, screenshot-to-navigate, ritual handoff after passing assert, vision-read for route/id/label claims.
+- Dumps ≤ 1 per verification.
 
-## Visual evidence gate (screenshots only)
-
-When a screenshot is required:
-
-1. State the concrete visible claims.
-2. Capture **one** final `xcrun simctl io booted screenshot` and **read the image**.
-3. Every claim must be visible in that image; otherwise re-exercise and replace the final shot (still no mid-flow gallery).
-
-Empty/pre-action screens do not prove post-action field values. Prefer assert label/id when that covers the claim.
-
-## Do not
-
-- Skip simulator testing after UI/app changes.
-- End on “reload the app” without assert/`--color`/screenshot proof as appropriate.
-- Claim a visual value passed when it is absent from the screenshot.
-- Use mid-flow screenshots as navigation or progress checks.
-- Hand off splash, blank, error, or an unrelated screen.
+When a screenshot is required: state claims → one final capture → every claim visible in that image.

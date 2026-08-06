@@ -1,83 +1,25 @@
 ---
-description: Always test after changes; leave Metro + simulator working and showing the change
-alwaysApply: true
+description: Dual iOS+Android verify after app changes; keep Metro; assert then stop
+globs:
+  - src/**/*.{ts,tsx}
+  - scripts/agent-ui*
+  - scripts/ensure-packager.sh
+alwaysApply: false
 ---
 
 # Verify and hand off a working app
 
-After **any** code change that affects the running Expo app, do not end the turn until you have **tested the change on both iOS and Android** and left each platform on the changed surface in a working state (not splash, blank, error, or an unrelated tab).
+**Full procedure:** [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).
 
-onTrack ships to Android users as well as iOS — **dual-platform UI close-out is mandatory** for app-affecting changes (not Android-only optional).
-
-## Dual-platform close-out (mandatory)
-
-For JS/TS/UI/app changes, prove the changed surface on **both**:
-
-1. **iOS** — `AGENT_UI_PLATFORM=ios` (or unset; default ios). Preferred device: **iPhone 17 Pro**.
-2. **Android** — `AGENT_UI_PLATFORM=android`. Preferred AVD: **Galaxy_S26**.
-
-Prefer one helper:
+After app-affecting Expo changes, prove the surface on **both** iOS (iPhone 17 Pro) and Android (Galaxy_S26). Prefer:
 
 ```bash
 ./scripts/agent-ui-verify-both.sh --route <path> [--flow <name>] --exists <id> …
-# or: npm run agent-ui:verify-both -- --route … --exists …
 ```
 
-It runs iOS first (clears sticky android pin), then Android. Paste **both** assert outputs in the reply.
+Paste both assert outputs. Exceptions: pure docs/rules, host-only scripts, or user scoped one platform.
 
-- Pin every Android command; `unset AGENT_UI_PLATFORM` (or pass `AGENT_UI_PLATFORM=ios`) before iOS chains — sticky `android` breaks default iOS work. See `stuck-check-config.mdc`.
-- Confirm screen width matches the pin (~402 iOS / ~384 Android) before trusting a pass.
-- Android after reconnect often lands on `/` — land (`--flow` / `--open`) before `verify --route …`.
-- Exceptions (document in the reply): pure docs/rules, host-only scripts with no app UI, or the user explicitly scoped one platform.
-
-## Default devices
-
-- **iOS:** iPhone 17 Pro. Boot only when verification needs it. Headless by default (`simctl boot`; no Simulator.app unless `ONTRACK_IOS_SIMULATOR_WINDOW=1`). Override: `ONTRACK_IOS_SIMULATOR` / `_UDID`.
-- **Android:** Galaxy_S26 (`ONTRACK_ANDROID_AVD`). Headless by default; window: `ONTRACK_ANDROID_EMULATOR_WINDOW=1`. Boot/reconnect: `npm run android:ensure:start` or `ensure-packager.sh --start --android`.
-- `sessionStart` keeps Metro with `--metro-only` — devices boot on first verify.
-- Do not leave handoff on a peer iOS sim or a non-preferred AVD when the preferred device is available.
-
-## Live updates (Fast Refresh) — preferred path
-
-JS/TS/UI edits should appear in the simulator via Fast Refresh **without** killing Metro or relaunching the app.
-
-1. If Metro `/status` is already 200 **and** `ensure-packager` reports a Watchman client, **leave it running**. Do not restart with `--clear`. `/status` alone is not enough — a dead file watcher looks healthy while saves do nothing.
-2. Save the edit, wait briefly for Metro to rebundle / Fast Refresh, then exercise the changed surface: **`verify`** if already on `--route`, else `once` / `flow` / `open` / known `tap`. **Assert** (or `--color`) and **STOP** — screenshot only when `.cursor/rules/show-simulator-screenshot.mdc` requires it.
-3. Before reconnecting, run `./scripts/ensure-packager.sh` (or `npm run packager:ensure`) **only if** the bridge looks dead **or Fast Refresh is clearly not applying**. It checks Metro + Watchman client attachment, syncs local API base URL, re-enables a persisted **Fast Refresh: Off** dev-client toggle (`RCTDevMenu.hotLoadingEnabled`), and reconnects if the probe fails **or if it (re)launched Metro this run** (a new Metro always orphans the app's HMR socket even though agent-ui still answers). With `--start`, it auto-replaces dead-watcher Metro. Do not run it prophylactically when watcher+bridge are already healthy.
-4. Manual reconnect (only if the script is unavailable):  
-   `xcrun simctl openurl booted "exp+ontrack://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"`  
-   Prefer `127.0.0.1` for the iOS Simulator (survives Wi‑Fi IP churn). Use LAN IP (`--lan`) for a physical device.
-5. Prefer reconnect over `simctl terminate` / `launch`.
-
-## When Metro is down
-
-1. Use **Node 24** (see `.nvmrc`). Never start Metro with Homebrew `node@25` first on `PATH` — Node 25’s broken `localStorage` crashes Metro on Fast Refresh.
- - Prefer: `export PATH="$HOME/.nvm/versions/node/v24.12.0/bin:/opt/homebrew/bin:/usr/bin:/bin"` (or `nvm use`) before starting Metro.
-2. **Agents must not** run `npm start` / `start-metro.sh` / `expo start` in agent shells — Cursor aborts those terminals and kills Metro, which surfaces as `Failed to load app from http://127.0.0.1:8081`. Start/reconnect with the **detached** path only:
- - `npm run packager:ensure:start` (or `./scripts/ensure-packager.sh --start`; defaults to `127.0.0.1`)
- - `ensure-packager` launches Metro in a new session (`start_new_session`) so it survives agent-shell cleanup. Logs: `.cursor/metro-ensure.log`.
- - Interactive `npm start` (via `scripts/start-metro.sh`: `--lan` + advertise `127.0.0.1`) is for a human terminal you leave open — not for agents. Do not use Expo `--localhost` (can bind IPv6-only `::1`).
- - Use `npm run start:clear` only for stubborn stale-bundle cases.
-3. Keep `EXPO_PUBLIC_API_BASE_URL` in `.env.local` aligned with the packager host when it drifts (`ensure-packager.sh` does this for local Metro URLs).
-4. Prove `/status` is 200 on localhost (+ LAN when using `--lan`); on doubt, fetch the iOS entry bundle and confirm HTTP 200.
-
-## Required close-out
-
-1. **Metro must be up** (prefer reuse over restart).
-2. **Apps up on iOS and Android** before their respective verifies. Prefer `once` / `verify` / `flow` / `agent-ui-verify-both.sh` (they call `agent_ui_ensure_app_up`). If a side is dead, `ensure-packager.sh --start` (add `--android` for the emu) — do not burn a full verify timeout guessing.
-3. **Test the change on both platforms.** Run `npm run typecheck` and relevant `npm test` for touched domains **in parallel** with UI verification. Exercise via the agent-ui decision tree on each pin. Fix failures before finishing. Do not re-flow a screen you are already on.
-4. **Watch for white screens / LoadBundleFromServerError.** Reconnect the affected platform’s dev client or restart Metro (without `--clear` first) and confirm status before handing off.
-5. **Leave both preferred devices on the changed surface** when practical (headless OK). At minimum, end with a passing Android assert on the surface after iOS passed (or the reverse if Android was verified first) — not splash, blank, error boundary, or an unrelated tab on the platform you last touched.
-6. **Prove and stop.** Paste **iOS and Android** assert/`--color` output in the reply. Do **not** add a ritual handoff screenshot after passing asserts. Screenshot only when `.cursor/rules/show-simulator-screenshot.mdc` requires it. Mention Metro is up and both platforms verified.
-
-## Do not
-
-- Kill Metro or run `--clear` after routine JS/UI edits.
-- Terminate/relaunch the app just to pick up JS changes — use Fast Refresh / reconnect instead.
-- End after verifying **only** iOS (or only Android) for an app-affecting UI change.
-- Leave `AGENT_UI_PLATFORM=android` exported when starting an iOS chain (sticky pin).
-- End on “reload the app” while Metro is down or unverified.
-- Leave Fast Refresh / HMR errors as the final state — recover to a clean connected bundle first.
-- Assume a background `npm start` is healthy without checking `/status`.
-- Hand off a splash, blank, error, or unrelated screen.
-- Add a ritual handoff screenshot after a passing assert/`--color`.
+- Pin `AGENT_UI_PLATFORM=android` for Android; clear before iOS (sticky pin breaks default).
+- Reuse Metro when healthy; agents use `packager:ensure:start` — never `npm start` in agent shells.
+- Assert/`--color` then **STOP** — no ritual handoff screenshot.
+- Leave devices on the changed surface (not splash/blank/error/unrelated tab).

@@ -92,7 +92,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 
 **Screenshot bug report?** Use the triage ladder in `.cursor/rules/screenshot-triage.mdc`: `./scripts/agent-ui-source.sh` / `--label` → `./scripts/agent-ui-hit.sh` → `./scripts/agent-ui-overlay.sh on` → edit the resolved file. File index: [`agent-ui-sources.json`](./agent-ui-sources.json).
 
-**Mandatory decision tree** (also in `.cursor/rules/agent-ui-selectors.mdc`): `verify` (skip land if on route) → `once`/flow → open/batch → known tap (wire id or `AgentUiIds` path) → dump only if unknown → assert/`--color` or one final screenshot. Budget: ≤1 dump; ≤1 screenshot and only for visual claims. Fail-fast when the daemon is warm (~2.5s simple / ~5s flow). Never re-run a flow just to re-check a screen you’re already on; never prophylactic Metro heal.
+**Mandatory decision tree** (`.cursor/skills/agent-ui/SKILL.md`, stub in `.cursor/rules/agent-ui-selectors.mdc`): `verify` (skip land if on route) → `once`/flow → open/batch → known tap (wire id or `AgentUiIds` path) → dump only if unknown → assert/`--color` or one final screenshot. Budget: ≤1 dump; ≤1 screenshot and only for visual claims. Fail-fast when the daemon is warm (~2.5s simple / ~5s flow). Never re-run a flow just to re-check a screen you’re already on; never prophylactic Metro heal.
 
 ## Named flows
 

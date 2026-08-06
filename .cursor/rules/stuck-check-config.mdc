@@ -1,36 +1,20 @@
 ---
-description: When stuck on timeouts/wrong screen, check config/env pins before deep debugging
-alwaysApply: true
+description: Timeouts/wrong screen → check AGENT_UI_PLATFORM and device pins before deep debug
+globs:
+  - scripts/agent-ui*
+  - scripts/ensure-packager.sh
+  - src/utils/agent-ui/**/*
+alwaysApply: false
 ---
 
 # Stuck? Check config first
 
-When agent-ui, packager, simulator/emulator, or verify loops fail with timeouts, `route=?`, wrong screen metrics, or “bridge dead” — **do not** immediately force-reconnect, rewrite daemon code, or tab-hop. Run a **config triage** first.
+Do not force-reconnect or rewrite bridge code before config triage:
 
-## Quick triage (stop at the first solid hit)
+1. Sticky pins — `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, serials/sim overrides.
+2. `route` with pin: iOS ~402×874, Android ~384×832. Width mismatch → fix env/device.
+3. Pin Android ops; unset/`ios` before iOS. Prefer `agent-ui-verify-both.sh`.
+4. Android after reconnect often `route=/` — land before `verify --route`.
+5. Metro `:8081/status`, daemon `:8191/health`; Android `adb reverse` for 8081/8191.
 
-1. **Sticky env pins** — print `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, `ONTRACK_ANDROID_SERIAL`, `ONTRACK_PACKAGER_TARGET`, `ONTRACK_IOS_SIMULATOR`. A leftover `AGENT_UI_PLATFORM=android` sends every op to the emulator while you think you’re on iOS (or the reverse).
-2. **Which device answers** — one `route` with an explicit pin:
-   - `AGENT_UI_PLATFORM=ios` → expect ~402×874 (iPhone 17 Pro)
-   - `AGENT_UI_PLATFORM=android` → expect ~384×832 (Galaxy_S26)
-   - Unset pin defaults to **ios**. If width doesn’t match the pin, fix env/device before changing app code.
-3. **Both devices up?** — Required for dual close-out. iOS + Android both long-poll the daemon. Wrong/missing pin looks like flake. Pin every Android once-chain; use `AGENT_UI_PLATFORM=ios` or `unset` before iOS chains. Prefer `./scripts/agent-ui-verify-both.sh` so pins don’t stick.
-4. **Route vs bridge** — Android after reconnect often lands on `/`. `verify --route /travel/...` failing with `route=/` means **land first** (`--flow` / `--open` / goto), not “daemon dead”.
-5. **Metro / daemon basics** — `curl -s http://127.0.0.1:8081/status` (200) and `http://127.0.0.1:8191/health`. Confirm app process on the target device before heal storms.
-6. **Serial / sim identity** — `.cursor/android-emulator.serial` vs `adb devices`; preferred iOS name/UDID. Mismatch → screenshots/`--color`/adb hit the wrong device.
-
-## Do / Don’t
-
-```bash
-# ✅ Before “fixing” agent-ui
-echo "AGENT_UI_PLATFORM=${AGENT_UI_PLATFORM:-<unset>}"
-AGENT_UI_PLATFORM=ios WAIT_SECS=3 ./scripts/agent-ui-route.sh
-AGENT_UI_PLATFORM=android WAIT_SECS=3 ./scripts/agent-ui-route.sh
-
-# ❌ Sticky android pin while debugging iOS
-export AGENT_UI_PLATFORM=android   # then forget — every later command goes to emu
-```
-
-- Prefer **unset** the pin when returning to default iOS verification.
-- Prefer **one** soft land over repeated `--force-reconnect` (reconnect resets Android to `/`).
-- Only dig into parser/daemon/app code after triage shows the correct device, pin, and route.
+Details: [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).

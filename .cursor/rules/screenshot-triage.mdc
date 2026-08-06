@@ -1,39 +1,21 @@
 ---
-description: When the user posts a screenshot of a UI bug, triage via map/source/hit/overlay — do not broad-explore the codebase
-alwaysApply: true
+description: Screenshot bug → source/hit/overlay triage; do not broad-explore features/
+globs:
+  - src/**/*.{ts,tsx}
+  - scripts/agent-ui*
+  - docs/agent-ui*
+alwaysApply: false
 ---
 
-# Screenshot → code triage (mandatory)
+# Screenshot → code triage
 
-When the user attaches or pastes a **screenshot** of something to fix, do **not** open-ended explore the repo. Resolve a reference point first, then open that file.
+When the user attaches a **screenshot** of UI to fix — do not open-ended explore. Resolve a file first.
 
-## Triage ladder (stop at the first solid hit)
+1. Read image for chrome text / route / overlay chips.
+2. Overlay id visible → `./scripts/agent-ui-source.sh <id>` → open `file:` / `entry:`.
+3. Else label → `agent-ui-source.sh --label "…"` or `docs/agent-ui-map.md`.
+4. Else feature obvious → one `AGENTS.md` entry + domain skill.
+5. Else on-screen → `agent-ui-route.sh` + one dump **or** `agent-ui-hit.sh` → source.
+6. Still ambiguous → `agent-ui-overlay.sh on`, one overlay shot, then off.
 
-1. **Read the image** for visible chrome text, route clues, and any overlay chips (`planDetail.section.transport`, route path, etc.).
-2. **If overlay ids are visible** → copy the short/wire id → `./scripts/agent-ui-source.sh <id>` → open the printed `file:` / `entry:`.
-3. **Else match visible label text** → `./scripts/agent-ui-source.sh --label "<text>"` or grep [`docs/agent-ui-map.md`](../../docs/agent-ui-map.md) / `AgentUiIds` key paths.
-4. **Else feature is obvious** → open the one [`AGENTS.md`](../../AGENTS.md) feature entry (and domain skill) — not sibling giants.
-5. **Else sim is still on that screen** → `./scripts/agent-ui-route.sh` + one `./scripts/agent-ui-dump.sh --prefix ontrack.<feature>` **or** estimate a point and run `./scripts/agent-ui-hit.sh <x> <y>` (logical points) / `--pixel` for screenshot pixels. Then `agent-ui-source.sh` on the hit id.
-6. **Still ambiguous** → `./scripts/agent-ui-overlay.sh on`, leave the sim on the surface, capture/read one overlay screenshot, then turn overlay off when done.
-
-## Source of truth pointers
-
-| Pointer | Where |
-|---------|--------|
-| Wire / key-path ids | `src/utils/agent-ui/ids.ts`, `docs/agent-ui-map.md` |
-| Id → files | `docs/agent-ui-sources.json` via `./scripts/agent-ui-source.sh` |
-| Routes / flows | `docs/agent-routes.md` |
-| Feature entry | `AGENTS.md` table + `.cursor/skills/<domain>/` |
-
-## Rules
-
-- Prefer **id → source** over reading many unrelated screens.
-- Hit/overlay coordinates are for **lookup only** — never tap by screenshot coordinates; tap by `ontrack.*` testID.
-- If a control/region is missing an id, **add** `AgentUiIds` + `testID` / `AgentTestId` (layout anchors may omit `onPress`) + map row in the same change.
-- Do not regenerate the whole sources index unless you added/renamed many ids — then `npm run agent-ui:sources`.
-
-## Do not
-
-- Grep the whole `src/features/` tree hoping to recognize the screenshot.
-- Tab-hop or re-seed just to identify a screen when route/dump/hit/overlay fits.
-- Treat a screenshot as a substitute for `agent-ui-assert` when the claim is structural.
+Id → file: `docs/agent-ui-sources.json` via `agent-ui-source.sh`. Hit/overlay = lookup only; tap by `ontrack.*` testID. Missing id → add in same change. Full flow: agent-ui skill.

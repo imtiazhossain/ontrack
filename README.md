@@ -36,7 +36,8 @@ src/
 
 - Keep any source file under **700 lines**.
 - Never use hard‑coded pixel values like `12px`; use design‑system tokens (`useResponsive()`, `AppText fit`, etc.).
-- See `.cursor/rules/token-optimization.mdc` for detailed guidance.
+- Always-on agent context is intentionally slim (`.cursor/rules/ontrack-core.mdc`). Heavy agent-ui / verify detail lives in `.cursor/skills/agent-ui/` and glob-scoped rules — load only for UI work.
+- See `.cursor/rules/token-optimization.mdc` for maintenance habits.
 - Example of good usage:
   ```tsx
   <AppText style={appTextStyle('body')}>Hello</AppText>

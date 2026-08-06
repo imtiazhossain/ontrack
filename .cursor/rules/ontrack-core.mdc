@@ -1,0 +1,25 @@
+---
+description: Slim always-on onTrack session essentials (read agent-ui skill for UI work)
+alwaysApply: true
+---
+
+# onTrack session (always-on)
+
+Keep this file short on purpose. Load detail only when the task needs it.
+
+## When to load more
+
+| Task | Read |
+|------|------|
+| App UI / simulator / screenshot bug | `.cursor/skills/agent-ui/SKILL.md` **before** verify |
+| Domain feature work | `.cursor/skills/<domain>/` (travel, todos, workouts, …) + `AGENTS.md` feature table |
+| Form field icons / numeric inputs / migrations | matching `.cursor/rules/*` via globs |
+
+## Non-negotiables (every session)
+
+- **No personal identifiers** in source — see `no-personal-identifiers.mdc`.
+- **App-affecting JS/UI** → dual iOS + Android close-out (`agent-ui-verify-both`); assert/`--color` then stop. Docs/rules/host-only → skip simulator.
+- **New/edited interactive controls** → `ontrack.*` `testID` + `ids.ts` + `docs/agent-ui-map.md` in the same change.
+- **Metro** → `npm run packager:ensure:start` (never `npm start` in agent shells). Prefer Fast Refresh; do not kill Metro / `--clear` after routine edits. Node 24.
+- **Locality** → smallest entry file first; extract if touched file would stay >700 lines; prefer Shared patterns in `AGENTS.md`.
+- **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).

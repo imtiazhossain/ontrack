@@ -1,48 +1,14 @@
 ---
-description: Keep onTrack optimized for AI token locality and shared patterns
+description: Prefer shared helpers and small entry files; keep always-on context slim
 alwaysApply: true
 ---
 
 # Token & maintenance optimization
 
-Future agents must leave the codebase *more* optimized than they found it when the change is in scope. Do not only fix the asked bug/feature and ignore obvious locality debt in touched files.
+- Prefer Shared patterns in `AGENTS.md` over new copies (id, parse, pick-image, image-persist, api-client, vision-transport, confirm-destructive, `useResponsive` / `AppText fit`, agent-ui).
+- Open the smallest feature entry first; domain maps live in `.cursor/skills/<domain>/`.
+- Touched screen >700 lines + non-trivial UI → extract a colocated panel.
+- UI changes: [`responsive-layout.mdc`](./responsive-layout.mdc) + agent-ui skill for verify.
+- After substantive edits: `npm run typecheck` + focused tests; dual-platform verify for app UI.
 
-## Before writing code
-
-1. Read `AGENTS.md` feature entry points and Shared patterns.
-  - See the README's **Token Budget & Optimisation Guidelines** section for concrete examples and limits.
-2. Prefer existing helpers over new copies: `@/utils/id`, `@/utils/parse`, `@/utils/pick-image` (`pickCameraImage` / `pickLibraryImage` / `pickLibraryImages`), `@/utils/image-persist`, `@/utils/confirm-destructive`, `@/services/http/api-url` + `api-client`, `@/services/ai/vision-transport`, `useResponsive` / `AppText fit` / `typeConfig` + `appTextStyle`, `LoadingBlock`, `DateField`, `FieldLeadingIcon` / `fieldLeadingIconRowStyle`, `appPrompt`, `@/utils/agent-ui` (`AgentUiIds` / `useAgentUiTarget` / `testID`).
-3. Open the smallest entry file first; do not load sibling giants unless needed.
-4. For any UI change, follow `.cursor/rules/responsive-layout.mdc` — scale with `useResponsive()`, keep chrome on one line with `fit`.
-5. Typography: use `typeConfig` / `appTextStyle` / `AppText`. One UI font; regular weight by default — only `bold` when explicitly required.
-6. Leading field icons: use `FieldLeadingIcon` + `fieldLeadingIconRowStyle` (vertically centered — see `.cursor/rules/field-icon-centering.mdc`).
-7. Simulator UI taps: use `testID` + `scripts/agent-ui-dump.sh` / `agent-ui-tap.sh` (see `.cursor/rules/agent-ui-selectors.mdc`), not screenshot coordinates. **Always add an `ontrack.*` testID** when creating or editing an interactive control (ids.ts + map + `testID` prop).
-
-## When editing large screens
-
-- If a touched screen/module is **>700 lines** and you add non-trivial UI, extract a focused panel/helper into a colocated file instead of growing the monolith.
-- Keep orchestration (state, store calls, navigation) in the screen; move presentational sections + their styles out.
-- Update the `AGENTS.md` feature entry table with a **one-line pointer** when you add a top-level entry module. Do not dump module lists into always-on AGENTS.md — put encyclopedic maps in `.cursor/skills/<domain>/` (e.g. travel).
-
-## Never reintroduce
-
-- Personal emails, full names, or email allowlists in source (see `.cursor/rules/no-personal-identifiers.mdc`)
-- Raw `Alert` / `ActionSheetIOS` for app UI
-- Ad-hoc UUID/`Date.now()` ID generators when `@/utils/id` fits
-- Duplicate camera/library permission + picker flows
-- Duplicate Cancel+destructive `appPrompt.alert` when `confirmDestructiveAction` fits
-- Parallel API URL/fetch helpers when `resolveExpoApiUrl` / `apiRequest` fit
-- Parallel OpenAI/Ollama vision transport when `vision-transport` fits
-- Persisting image-picker cache URIs (always re-encode via image helpers)
-- Hard-coded chrome `fontSize` / control padding that ignores `useResponsive()` / `AppText fit`
-- Ad-hoc `fontFamily` / medium-bold `fontWeight` for UI text when `typeConfig` / `appTextStyle` / `AppText` fits (bold only when explicitly requested)
-- `AppText fit` / shrink-to-fit for initials inside `ProfileAvatar` (use `avatarInitialsFontSize` + RN `Text`)
-- Ad-hoc letter-stripping for number fields when `sanitizeNumericInput` / `numericOnChangeText` / `Input` numeric keyboards fit
-- Top-aligned / `paddingTop`-nudged leading field icons when `fieldLeadingIconRowStyle` fits
-- Screenshot-coordinate taps when an `ontrack.*` `testID` / agent-ui dump entry fits (or when one should be added)
-- Interactive controls without an `ontrack.*` `testID` when agents (or users) can tap/focus them
-
-## After substantive edits
-
-- Run `npm run typecheck` and relevant `npm test` for touched domains.
-- If you discovered a reusable pattern used in 3+ places while fixing something else, extract it in the same change when safe.
+Do not reintroduce: personal identifiers, raw `Alert`, ad-hoc IDs, hard-coded chrome `fontSize`, interactive controls without `ontrack.*` testIDs, screenshot-coordinate taps.

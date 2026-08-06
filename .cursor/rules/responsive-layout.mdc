@@ -1,34 +1,20 @@
 ---
-description: REQUIRED for all agents — screen-responsive typography and control sizing
+description: REQUIRED — screen-responsive typography and control sizing (useResponsive + AppText fit)
 alwaysApply: true
 ---
 
-# Responsive layout & text fit (mandatory)
+# Responsive layout & text fit
 
-**All agents must follow this on every UI change.** Do not ship screens that overflow, clip labels, or wrap chrome text onto a second line on compact phones.
+On every UI change: no overflow/clip; chrome stays one line.
 
-## Required patterns
-
-1. **Scale from tokens**, not hard-coded pixels. Use `useResponsive()` (`s` / `ms` / scaled `typography` / `spacing` / `layout`) or primitives that already do (`AppText`, `Button`, `Input`, `Screen`, `DateField`, `SectionHeader`, `SettingsRow`, `Symbol`).
-2. **Chrome stays one line.** Tab labels, button labels, field labels, section titles, chips, and tight-row headers use `AppText` with `fit` (or `numberOfLines={1}` + `adjustsFontSizeToFit`). Prefer shrinking over wrapping when wrapping would break layout rhythm.
-3. **Controls resize with the screen.** Buttons, inputs, and fields use scaled `minHeight` / padding from `useResponsive()` — keep tap targets ≥ 44pt.
-4. **Rows need shrink room.** In horizontal layouts set `flexShrink: 1` and `minWidth: 0` on the text column so `fit` can actually shrink.
-5. **Cap Dynamic Type on chrome.** Fit labels use a tighter `maxFontSizeMultiplier` (AppText defaults ~1.15 when fitting).
-
-## Do / Don't
+1. Scale via `useResponsive()` / scaled primitives — not hard-coded chrome `fontSize`/padding.
+2. Chrome (`AppText` + `fit`): tabs, buttons, field labels, section titles, chips — shrink, don’t wrap.
+3. Controls: scaled `minHeight`/padding; tap targets ≥ 44pt.
+4. Horizontal text rows: `flexShrink: 1`, `minWidth: 0`.
 
 ```tsx
-// ✅
 const { spacing, s } = useResponsive();
 <AppText variant="callout" fit>{label}</AppText>
-<Pressable style={{ minHeight: Math.max(44, s(48)), paddingHorizontal: spacing.lg }}>…
-
-// ❌ Hard-coded type/padding that overflows on SE widths
-<Text style={{ fontSize: 18 }}>Long button label</Text>
 ```
 
-## When editing screens
-
-- Prefer `AppText` / design-system primitives over raw `Text` / ad-hoc `fontSize`.
-- If a touched StyleSheet hard-codes `fontSize` for chrome, switch it to scaled tokens + `fit`.
-- Body/paragraph copy may wrap; chrome and controls must not disrupt layout by wrapping.
+Body copy may wrap. Prefer `AppText` over raw `Text` for chrome.

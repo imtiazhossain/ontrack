@@ -1,16 +1,15 @@
 ---
 description: Avoid duplicate controls that perform the same local action
-alwaysApply: true
+globs:
+  - src/**/*.{ts,tsx}
+alwaysApply: false
 ---
 
 # One outcome, one control
 
 Do not render multiple nearby interactive controls that produce the same outcome.
 
-- If a row, card, image, label, or field is already tappable, do not add a separate icon or button that repeats its action.
-- Prefer one accessible hit target around the meaningful content when the whole region has one action.
+- If a row, card, image, label, or field is already tappable, do not add a separate icon/button that repeats its action.
 - Editable inputs do not need an adjacent edit/focus button.
-- Keep a second control only when it performs a distinct action. A non-interactive chevron or status icon may communicate affordance without becoming another control.
-- Give the surviving control one accurate accessibility label and one stable `ontrack.*` testID.
-
-When touching a screen, scan the local section for repeated handlers, duplicated accessibility labels, and action copy that describes an already-adjacent button. Consolidate confirmed duplicates without removing distinct destructive, cancel, navigation, or secondary actions.
+- Keep a second control only for a distinct action. Non-interactive chevrons/status icons are fine.
+- Surviving control: one accessibility label + one `ontrack.*` testID.

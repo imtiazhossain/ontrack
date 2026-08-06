@@ -4,6 +4,7 @@
 # Default (iOS simulator-friendly):
 #   - Prefer packager host 127.0.0.1 (survives Wi-Fi / DHCP IP churn)
 #   - Start Metro via scripts/start-metro.sh (--lan bind + advertise 127.0.0.1)
+#   - Android: adb reverse Metro + agent-ui ports so emulator 127.0.0.1 reaches the host
 #   - Align EXPO_PUBLIC_API_BASE_URL in .env.local when it looks like a local Metro URL
 #   - Probe via agent-ui dump; reconnect the dev client if the probe fails
 #     or if this run (re)launched Metro (new Metro = app's HMR socket is gone,
@@ -660,6 +661,12 @@ reconnect_dev_client() {
     fi
     if ! app_installed; then
       echo "error: ${BUNDLE_ID} is not installed on the preferred emulator ($(android_emu_preferred_name))" >&2
+      print_packager_diagnostics "$host"
+      exit 1
+    fi
+    # Belt-and-suspenders: reverse can drop after adb reconnect / emu restart.
+    # Without it, 127.0.0.1 Metro URLs never leave the guest and DevLauncher hangs.
+    if ! android_emu_ensure_adb_reverse; then
       print_packager_diagnostics "$host"
       exit 1
     fi
