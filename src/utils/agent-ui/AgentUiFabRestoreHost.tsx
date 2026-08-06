@@ -22,7 +22,7 @@ type Props = {
 
 /**
  * When the Agent UI FAB is dismissed, a page-wide long-press restores it —
- * only for developer-flagged accounts with Dev Mode on (__DEV__).
+ * only for developer-flagged accounts with Dev Mode on (agent-ui still __DEV__).
  * Wraps app content (not FullWindowOverlay) so touches stay pass-through.
  */
 export function AgentUiFabRestoreHost({ children }: Props) {

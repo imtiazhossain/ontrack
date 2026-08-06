@@ -547,7 +547,7 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.profile.developer`        | Open Developer Tools hub |
 | `ontrack.profile.usageAnalytics`   | Toggle first-party usage analytics |
 
-### Developer Tools (`/developer`, `__DEV__` + `account_flags.developer_tools`)
+### Developer Tools (`/developer`, `account_flags.developer_tools`)
 
 | ID | Control |
 |----|---------|

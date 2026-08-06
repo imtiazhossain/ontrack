@@ -13,21 +13,26 @@ describe('dev-access', () => {
   });
 
   it('denies developer tools until the server flag is granted', () => {
+    expect(hasDeveloperToolsFlag()).toBe(false);
+    expect(canUseDeveloperTools()).toBe(false);
+
+    useAccountFlags.getState().replaceFlags({
+      developerTools: true,
+      analyticsAdmin: false,
+    });
+    expect(hasDeveloperToolsFlag()).toBe(true);
+    expect(canUseDeveloperTools()).toBe(true);
+  });
+
+  it('allows developer tools in non-__DEV__ builds when the server flag is set', () => {
     const originalDev = (global as { __DEV__?: boolean }).__DEV__;
     try {
-      (global as { __DEV__?: boolean }).__DEV__ = true;
-      expect(hasDeveloperToolsFlag()).toBe(false);
-      expect(canUseDeveloperTools()).toBe(false);
-
       useAccountFlags.getState().replaceFlags({
         developerTools: true,
         analyticsAdmin: false,
       });
-      expect(hasDeveloperToolsFlag()).toBe(true);
-      expect(canUseDeveloperTools()).toBe(true);
-
       (global as { __DEV__?: boolean }).__DEV__ = false;
-      expect(canUseDeveloperTools()).toBe(false);
+      expect(canUseDeveloperTools()).toBe(true);
     } finally {
       (global as { __DEV__?: boolean }).__DEV__ = originalDev;
     }
