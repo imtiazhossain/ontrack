@@ -1,33 +1,72 @@
+import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import { Platform, Share } from 'react-native';
+import { Platform } from 'react-native';
 
-import { addressMapUrl } from '@/features/travel/address-map-link';
+import { appPrompt } from '@/components/primitives';
+import {
+  addressMapUrl,
+  appleMapsUrl,
+  googleMapsUrl,
+} from '@/features/travel/address-map-link';
+
+function openUrl(url: string | undefined): void {
+  if (!url) return;
+  void Linking.openURL(url);
+}
 
 /**
- * Open a stay address via the system chooser:
- * - iOS: share sheet with Apple Maps URL so Maps / Google Maps / Waze lead
- * - Android: `geo:` intent (system Open with… when multiple apps handle it)
- * - web: open the default map search URL
+ * Open a stay address via an in-app maps chooser (map apps first).
+ * Avoids the system share sheet, which ranks browsers/share targets over Maps.
  */
 export function openAddressWithMapsChooser(address: string): void {
   const trimmed = address.trim();
   if (!trimmed) return;
 
-  const url = addressMapUrl(
-    trimmed,
-    Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
-  );
-  if (!url) return;
+  const appleUrl = appleMapsUrl(trimmed);
+  const googleUrl = googleMapsUrl(trimmed);
+  const androidGeoUrl = addressMapUrl(trimmed, 'android');
 
   if (Platform.OS === 'ios') {
-    // `url` must be a maps URL (not a google.com web search) so map apps rank first.
-    // Keep `message` as the plain address — duplicating the URL as message shows "2 Links".
-    void Share.share({
-      url,
-      message: trimmed,
-    });
+    appPrompt.alert('Open Address', trimmed, [
+      {
+        text: 'Apple Maps',
+        onPress: () => openUrl(appleUrl),
+      },
+      {
+        text: 'Google Maps',
+        onPress: () => openUrl(googleUrl),
+      },
+      {
+        text: 'Copy Address',
+        onPress: () => {
+          void Clipboard.setStringAsync(trimmed);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
     return;
   }
 
-  void Linking.openURL(url);
+  if (Platform.OS === 'android') {
+    appPrompt.alert('Open Address', trimmed, [
+      {
+        text: 'Maps',
+        onPress: () => openUrl(androidGeoUrl),
+      },
+      {
+        text: 'Google Maps',
+        onPress: () => openUrl(googleUrl),
+      },
+      {
+        text: 'Copy Address',
+        onPress: () => {
+          void Clipboard.setStringAsync(trimmed);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+    return;
+  }
+
+  openUrl(googleUrl);
 }

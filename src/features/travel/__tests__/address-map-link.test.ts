@@ -1,9 +1,22 @@
-import { addressMapUrl } from '../address-map-link';
+import {
+  addressMapUrl,
+  appleMapsUrl,
+  googleMapsUrl,
+} from '../address-map-link';
 
 describe('address map link', () => {
   const address = 'Laugavegur 120, 105 Reykjavik, Reykjavík, Iceland';
   const encodedAddress =
     'Laugavegur%20120%2C%20105%20Reykjavik%2C%20Reykjav%C3%ADk%2C%20Iceland';
+
+  it('builds Apple Maps and Google Maps search URLs', () => {
+    expect(appleMapsUrl(address)).toBe(
+      `http://maps.apple.com/?q=${encodedAddress}`,
+    );
+    expect(googleMapsUrl(address)).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
+    );
+  });
 
   it('opens Apple Maps on iOS', () => {
     expect(addressMapUrl(address, 'ios')).toBe(
@@ -25,5 +38,7 @@ describe('address map link', () => {
 
   it('does not create a link for an empty address', () => {
     expect(addressMapUrl('   ', 'ios')).toBeUndefined();
+    expect(appleMapsUrl('   ')).toBeUndefined();
+    expect(googleMapsUrl('   ')).toBeUndefined();
   });
 });
