@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
     Keyboard,
@@ -43,6 +43,9 @@ import {
 } from '@/features/travel/travel-chat-chrome';
 import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import {
+    listMyTravelChatAccess,
+    matchTravelChatAccessCapability,
+    planPatchFromTravelChatCapability,
     planPatchFromTravelChatRoster,
     resolveTravelChatAccessFromRoster,
     resolveTravelChatMembersFromRoster,
@@ -60,6 +63,7 @@ import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { AgentUiIds } from '@/utils/agent-ui';
 import { newId } from '@/utils/id';
+import { goBackOrReplace } from '@/utils/navigation';
 
 type OptimisticTravelChatMessage = TravelChatMessage & { pending?: boolean };
 
@@ -87,6 +91,12 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const [loading, setLoading] = useState(Boolean(localAccessCode));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string>();
+  const closeChat = () => {
+    const fallback: Href = planId
+      ? { pathname: '/travel/[id]', params: { id: planId } }
+      : ('/(tabs)/travel' as Href);
+    goBackOrReplace(router, fallback);
+  };
   const [notificationsAvailable, setNotificationsAvailable] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
@@ -150,26 +160,75 @@ export function TravelChatScreen({ planId }: { planId: string }) {
 
     let active = true;
     setRosterReady(false);
-    void listTravelTripRoster(canonicalTripId)
-      .then((people) => {
-        if (!active) return;
-        const latest = useTravel.getState().plans.find((item) => item.id === planId);
-        if (!latest) return;
-        setRoster(people);
-        const recovered = resolveTravelChatAccessFromRoster({
-          plan: latest,
+
+    const recoverChat = async () => {
+      const latest = useTravel.getState().plans.find((item) => item.id === planId);
+      if (!latest || !active) return;
+
+      let working = latest;
+      let people: TravelTripRosterPerson[] = [];
+      try {
+        people = await listTravelTripRoster(canonicalTravelTripId(working));
+      } catch {
+        people = [];
+      }
+      if (!active) return;
+
+      // Always scan memberships. First-trip forks can look like a local host
+      // roster (unlocking the wrong trip’s chat) while the real shared trip is
+      // the one where this account is an accepted member.
+      const capabilities = await listMyTravelChatAccess();
+      if (!active) return;
+      const matched = matchTravelChatAccessCapability(working, capabilities);
+      let recovered =
+        matched?.role === 'member'
+          ? matched.accessCode
+          : resolveTravelChatAccessFromRoster({
+              plan: working,
+              roster: people,
+              selfUserId: user?.id,
+            });
+
+      if (matched && (matched.role === 'member' || !recovered)) {
+        recovered = matched.accessCode;
+        const remapped = planPatchFromTravelChatCapability({
+          plan: working,
+          capability: matched,
+        });
+        if (remapped) {
+          working = remapped;
+          savePlan(remapped);
+        }
+        if (matched.tripId !== canonicalTravelTripId(latest)) {
+          try {
+            people = await listTravelTripRoster(matched.tripId);
+          } catch {
+            // Keep prior roster (may be empty).
+          }
+        }
+      }
+
+      if (!recovered) {
+        recovered = resolveTravelChatAccessFromRoster({
+          plan: working,
           roster: people,
           selfUserId: user?.id,
         });
-        setRosterAccessCode(recovered);
-        const patched = planPatchFromTravelChatRoster({
-          plan: latest,
-          roster: people,
-          selfUserId: user?.id,
-          accessCode: recovered,
-        });
-        if (patched) savePlan(patched);
-      })
+      }
+
+      if (!active) return;
+      setRoster(people);
+      setRosterAccessCode(recovered);
+      const patched = planPatchFromTravelChatRoster({
+        plan: working,
+        roster: people,
+        selfUserId: user?.id,
+        accessCode: recovered,
+      });
+      if (patched) savePlan(patched);
+    };
+
+    void recoverChat()
       .catch(() => {
         if (!active) return;
         setRoster([]);
@@ -347,7 +406,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           closeAccessibilityLabel="Close Group Chat"
           closeTestID={AgentUiIds.travel.chat.close}
           paddingTop={rs.sm}
-          onClose={() => router.back()}
+          onClose={closeChat}
         />
         <EmptyState icon="chat" title="Trip Not Found" message="This trip is no longer available." />
       </View>
@@ -376,7 +435,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             closeAccessibilityLabel="Close Group Chat"
             closeTestID={AgentUiIds.travel.chat.close}
             paddingTop={rs.sm}
-            onClose={() => router.back()}
+            onClose={closeChat}
           />
           <TravelChatMemberStack members={members} />
         </View>
@@ -424,7 +483,7 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           closeAccessibilityLabel="Close Group Chat"
           closeTestID={AgentUiIds.travel.chat.close}
           paddingTop={rs.sm}
-          onClose={() => router.back()}
+          onClose={closeChat}
         />
         <View style={{ marginTop: -rs.md, marginBottom: rs.md }}>
           <TravelChatMemberStack members={members} />

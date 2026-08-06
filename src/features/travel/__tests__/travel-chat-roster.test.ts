@@ -1,4 +1,6 @@
 import {
+  matchTravelChatAccessCapability,
+  planPatchFromTravelChatCapability,
   planPatchFromTravelChatRoster,
   resolveTravelChatAccessFromRoster,
   resolveTravelChatMembersFromRoster,
@@ -142,5 +144,66 @@ describe('planPatchFromTravelChatRoster', () => {
         email: 'jordan@example.com',
       }),
     ]);
+  });
+});
+
+describe('matchTravelChatAccessCapability', () => {
+  const memberCap = {
+    tripId: 'trip-shared',
+    accessCode: 'cccccccccccccccccccc',
+    role: 'member' as const,
+    title: 'Iceland',
+    destination: 'Reykjavík',
+    startDate: '2026-09-08',
+    endDate: '2026-09-14',
+  };
+  const hostForkCap = {
+    tripId: 'trip-invite-fork',
+    accessCode: 'dddddddddddddddddddd',
+    role: 'host' as const,
+    title: 'Iceland',
+    destination: 'Reykjavík',
+    startDate: '2026-09-08',
+    endDate: '2026-09-14',
+  };
+
+  it('prefers an accepted membership over a same-titled host fork', () => {
+    expect(
+      matchTravelChatAccessCapability(
+        {
+          id: 'trip-invite-fork',
+          title: 'Iceland',
+          startDate: '2026-09-08',
+          endDate: '2026-09-14',
+        },
+        [hostForkCap, memberCap],
+      ),
+    ).toEqual(memberCap);
+  });
+});
+
+describe('planPatchFromTravelChatCapability', () => {
+  it('rewires a forked local plan onto the shared member trip', () => {
+    const patched = planPatchFromTravelChatCapability({
+      plan: {
+        ...basePlan,
+        id: 'trip-invite-fork',
+        openJoinCode: 'eeeeeeeeeeeeeeeeeeee',
+      },
+      capability: {
+        tripId: 'trip-shared',
+        accessCode: 'cccccccccccccccccccc',
+        role: 'member',
+        title: 'Iceland',
+        destination: 'Reykjavík',
+        startDate: '2026-09-08',
+        endDate: '2026-09-14',
+      },
+    });
+    expect(patched).toMatchObject({
+      chatAccessCode: 'cccccccccccccccccccc',
+      hostTripId: 'trip-shared',
+    });
+    expect(patched?.openJoinCode).toBeUndefined();
   });
 });

@@ -4,7 +4,19 @@ import type {
   TravelChatMember,
 } from '@/features/travel/travel-chat-chrome';
 import type { TravelPlan, TravelTripRosterPerson } from '@/features/travel/types';
+import { getSupabaseClient } from '@/services/cloud/supabase';
+import { asNonEmptyString, asString } from '@/utils/parse';
 import { newId } from '@/utils/id';
+
+export type TravelChatAccessCapability = {
+  tripId: string;
+  accessCode: string;
+  role: 'host' | 'member';
+  title: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+};
 
 /**
  * Chat capability from local plan fields, or recovered from the live server
@@ -156,6 +168,132 @@ export function planPatchFromTravelChatRoster(input: {
     }
     if (participants !== next.participants) {
       next = { ...next, participants };
+    }
+  }
+
+  if (!changed) return undefined;
+  return { ...next, updatedAt: new Date().toISOString() };
+}
+
+function parseTravelChatAccessCapability(
+  value: unknown,
+): TravelChatAccessCapability | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const tripId = asNonEmptyString(row.tripId);
+  const accessCode = asNonEmptyString(asString(row.accessCode));
+  const role = row.role === 'host' || row.role === 'member' ? row.role : undefined;
+  if (!tripId || !accessCode || !role) return undefined;
+  if (!/^[a-f0-9]{20}$/.test(accessCode)) return undefined;
+  return {
+    tripId,
+    accessCode,
+    role,
+    title: asString(row.title)?.trim() ?? '',
+    destination: asString(row.destination)?.trim() ?? '',
+    startDate: asString(row.startDate)?.trim() ?? '',
+    endDate: asString(row.endDate)?.trim() ?? '',
+  };
+}
+
+export async function listMyTravelChatAccess(): Promise<TravelChatAccessCapability[]> {
+  const client = getSupabaseClient();
+  if (!client) return [];
+  const { data, error } = await client.rpc('list_my_travel_chat_access');
+  if (error || !Array.isArray(data)) return [];
+  return data
+    .map(parseTravelChatAccessCapability)
+    .filter((row): row is TravelChatAccessCapability => Boolean(row));
+}
+
+/**
+ * Prefer an accepted membership over a same-titled host fork (the Iceland
+ * first-trip failure mode: local plan id is the invite local id / a forked
+ * host trip, while chat lives on the friend's canonical trip).
+ */
+export function matchTravelChatAccessCapability(
+  plan: Pick<TravelPlan, 'id' | 'hostTripId' | 'title' | 'startDate' | 'endDate'>,
+  capabilities: TravelChatAccessCapability[],
+): TravelChatAccessCapability | undefined {
+  if (capabilities.length === 0) return undefined;
+
+  const hostTripId = plan.hostTripId?.trim();
+  const byExactId = capabilities.find(
+    (item) => item.tripId === hostTripId || item.tripId === plan.id,
+  );
+  if (byExactId?.role === 'member') return byExactId;
+
+  const title = plan.title.trim().toLowerCase();
+  const byIdentity = capabilities.filter(
+    (item) =>
+      item.title.trim().toLowerCase() === title &&
+      item.startDate === plan.startDate &&
+      item.endDate === plan.endDate,
+  );
+  const memberMatch = byIdentity.find((item) => item.role === 'member');
+  if (memberMatch) return memberMatch;
+  if (byExactId) return byExactId;
+  return byIdentity[0];
+}
+
+/** Rewire an orphan local copy onto the shared trip + chat capability. */
+export function planPatchFromTravelChatCapability(input: {
+  plan: TravelPlan;
+  capability: TravelChatAccessCapability;
+}): TravelPlan | undefined {
+  const { plan, capability } = input;
+  let next = plan;
+  let changed = false;
+
+  if (capability.role === 'member') {
+    if (plan.chatAccessCode !== capability.accessCode) {
+      next = { ...next, chatAccessCode: capability.accessCode };
+      changed = true;
+    }
+    if (plan.hostTripId !== capability.tripId) {
+      next = { ...next, hostTripId: capability.tripId };
+      changed = true;
+    }
+    if (plan.openJoinCode) {
+      next = { ...next, openJoinCode: undefined };
+      changed = true;
+    }
+  } else {
+    // Host capability: unlock via accepted participant invite, never chatAccessCode.
+    const existing = next.participants.find(
+      (person) => person.inviteCode === capability.accessCode,
+    );
+    if (!existing) {
+      const now = new Date().toISOString();
+      next = {
+        ...next,
+        participants: [
+          ...next.participants,
+          {
+            id: newId('trip-person'),
+            name: 'Trip member',
+            inviteCode: capability.accessCode,
+            invitedAt: now,
+            acceptedAt: now,
+          },
+        ],
+      };
+      changed = true;
+    } else if (!existing.acceptedAt) {
+      next = {
+        ...next,
+        participants: next.participants.map((person) =>
+          person.inviteCode === capability.accessCode
+            ? { ...person, acceptedAt: person.acceptedAt ?? new Date().toISOString() }
+            : person,
+        ),
+      };
+      changed = true;
+    }
+    if (plan.hostTripId && plan.hostTripId !== plan.id && plan.hostTripId !== capability.tripId) {
+      // Keep hostTripId aligned to the hosted server trip when known.
+      next = { ...next, hostTripId: capability.tripId };
+      changed = true;
     }
   }
 
