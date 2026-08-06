@@ -25,6 +25,7 @@ import {
 } from '@/features/travel/travel-atmosphere';
 import { selectTravelAtmospherePlan } from '@/features/travel/travel-atmosphere-model';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
+import { useApplyOtaUpdate } from '@/hooks/use-apply-ota-update';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
 import { useRootStartupEffects } from '@/hooks/use-root-startup-effects';
@@ -44,6 +45,7 @@ export { RouteErrorBoundary as ErrorBoundary };
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
+  useApplyOtaUpdate();
   const theme = useTheme();
   const hydrated = useHydrated();
   const pathname = usePathname();
