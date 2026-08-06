@@ -1,15 +1,23 @@
 import {
-  flushCloudSync,
-  restoreSyncedDomains,
-  setCloudSyncPushPaused,
-  snapshotSyncedDomains,
+    flushCloudSync,
+    restoreSyncedDomains,
+    setCloudSyncPushPaused,
+    snapshotSyncedDomains,
 } from '@/services/cloud/sync';
 import { useDevMode, type DevModeLiveSnapshot } from '@/store/dev-mode';
 import { useHealth } from '@/store/health';
 
+function deepCloneJson<T>(value: T): T {
+  try {
+    return structuredClone(value);
+  } catch {
+    return JSON.parse(JSON.stringify(value)) as T;
+  }
+}
+
 function readHealthSnapshot(): Record<string, unknown> {
   const state = useHealth.getState();
-  return {
+  return deepCloneJson({
     version: state.version,
     accessReviewed: state.accessReviewed,
     stateOfMindSyncEnabled: state.stateOfMindSyncEnabled,
@@ -22,7 +30,7 @@ function readHealthSnapshot(): Record<string, unknown> {
     moodEntries: state.moodEntries,
     playbooks: state.playbooks,
     playbookRuns: state.playbookRuns,
-  };
+  });
 }
 
 function writeHealthSnapshot(payload: Record<string, unknown> | undefined) {
@@ -51,15 +59,20 @@ function writeHealthSnapshot(payload: Record<string, unknown> | undefined) {
 function captureLiveSnapshot(): DevModeLiveSnapshot {
   return {
     capturedAt: new Date().toISOString(),
-    domains: snapshotSyncedDomains(),
+    // Deep clone so sandbox seeds cannot mutate the snapshot via shared refs.
+    domains: deepCloneJson(snapshotSyncedDomains()),
     health: readHealthSnapshot(),
   };
 }
 
 function activateSandbox(snapshot: DevModeLiveSnapshot) {
-  useDevMode.getState().setLiveSnapshot(snapshot);
-  useDevMode.getState().setEnabledFlag(true);
+  useDevMode.setState({ enabled: true, liveSnapshot: snapshot });
   setCloudSyncPushPaused(true);
+}
+
+function clearSandboxFlag() {
+  useDevMode.setState({ enabled: false, liveSnapshot: null });
+  setCloudSyncPushPaused(false);
 }
 
 /**
@@ -84,9 +97,13 @@ export async function exitDevMode(): Promise<void> {
     restoreSyncedDomains(liveSnapshot.domains);
     writeHealthSnapshot(liveSnapshot.health);
   }
-  useDevMode.getState().setLiveSnapshot(null);
-  useDevMode.getState().setEnabledFlag(false);
-  setCloudSyncPushPaused(false);
+  // Reserved agent-ui ids must never stick on a live account — even when the
+  // snapshot was already polluted or missing after a prior failed sandbox.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { purgeAgentUiDemoFixtures } =
+    require('@/utils/agent-ui/fixtures') as typeof import('@/utils/agent-ui/fixtures');
+  purgeAgentUiDemoFixtures();
+  clearSandboxFlag();
 }
 
 export async function setDevModeEnabled(enabled: boolean): Promise<void> {
@@ -100,7 +117,7 @@ export async function setDevModeEnabled(enabled: boolean): Promise<void> {
  */
 export function ensureDevModeSandboxSync(): void {
   const state = useDevMode.getState();
-  if (state.enabled) {
+  if (state.enabled && state.liveSnapshot) {
     setCloudSyncPushPaused(true);
     return;
   }

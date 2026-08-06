@@ -9,6 +9,10 @@ export { AgentUiFabRestoreHost } from './AgentUiFabRestoreHost';
 export { AgentUiOverlay } from './AgentUiOverlay';
 export { AgentUiRouteSync } from './AgentUiRouteSync';
 export {
+    dismissAgentUiOverlays,
+    isAgentUiDismissTargetId
+} from './dismiss-overlays';
+export {
     AGENT_UI_DEMO_ACTIVITY_ID, AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
     AGENT_UI_DEMO_CHASE_RETURN_ID,
     AGENT_UI_DEMO_CHECKLIST_LIST_ID,
@@ -35,6 +39,7 @@ export {
     createIdFromAgentUiItemIds,
     formatAgentUiSeedDetail,
     normalizeFixtureName,
+    purgeAgentUiDemoFixtures,
     seedAgentUiFixture,
     type AgentUiFixtureName,
     type AgentUiSeedResult
@@ -48,10 +53,6 @@ export {
     type AgentUiFlowName,
     type AgentUiFlowStep
 } from './flows';
-export {
-    dismissAgentUiOverlays,
-    isAgentUiDismissTargetId,
-} from './dismiss-overlays';
 export {
     handleAgentUiRequest,
     handleAgentUiUrl,

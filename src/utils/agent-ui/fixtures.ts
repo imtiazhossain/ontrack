@@ -770,3 +770,65 @@ export function formatAgentUiSeedDetail(seeded: AgentUiSeedResult): string {
   if (seeded.itemId) parts.push(`itemId=${seeded.itemId}`);
   return parts.join(' ');
 }
+
+/** Reserved Today / schedule activity ids from agent-ui demo seeds. */
+const AGENT_UI_DEMO_ACTIVITY_IDS = [
+  AGENT_UI_DEMO_ACTIVITY_ID,
+  AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
+  AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
+  AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
+] as const;
+
+const AGENT_UI_DEMO_TODO_LIST_IDS = [
+  AGENT_UI_DEMO_CHECKLIST_LIST_ID,
+  AGENT_UI_DEMO_GROCERY_LIST_ID,
+] as const;
+
+/**
+ * Strip reserved agent-ui demo entities from local stores.
+ * Safe for live accounts — these ids are never used by real user data.
+ * Does not touch shared sample content (plant sample / vision-board sample).
+ */
+export function purgeAgentUiDemoFixtures(): void {
+  // Lazy requires keep fixture unit tests free of the full store graph.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTravel } = require('@/store/travel') as typeof import('@/store/travel');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTodos } = require('@/store/todos') as typeof import('@/store/todos');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useSchedule } =
+    require('@/store/schedule') as typeof import('@/store/schedule');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useHealth } = require('@/store/health') as typeof import('@/store/health');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useVehicles } =
+    require('@/store/vehicles') as typeof import('@/store/vehicles');
+
+  if (useTravel.getState().plans.some((plan) => plan.id === AGENT_UI_DEMO_TRIP_ID)) {
+    useTravel.getState().removePlan(AGENT_UI_DEMO_TRIP_ID);
+  }
+
+  for (const listId of AGENT_UI_DEMO_TODO_LIST_IDS) {
+    if (useTodos.getState().lists.some((list) => list.id === listId)) {
+      useTodos.getState().deleteList(listId);
+    }
+  }
+
+  for (const activityId of AGENT_UI_DEMO_ACTIVITY_IDS) {
+    if (useSchedule.getState().activities.some((activity) => activity.id === activityId)) {
+      useSchedule.getState().deleteActivity(activityId);
+    }
+  }
+
+  const health = useHealth.getState();
+  if (health.factors.some((factor) => factor.id === AGENT_UI_DEMO_HEALTH_FACTOR_ID)) {
+    health.removeFactor(AGENT_UI_DEMO_HEALTH_FACTOR_ID);
+  }
+  if (health.moodEntries.some((entry) => entry.id === AGENT_UI_DEMO_HEALTH_MOOD_ID)) {
+    health.removeMoodEntry(AGENT_UI_DEMO_HEALTH_MOOD_ID);
+  }
+
+  if (useVehicles.getState().vehicles.some((vehicle) => vehicle.id === AGENT_UI_DEMO_VEHICLE_ID)) {
+    useVehicles.getState().removeVehicle(AGENT_UI_DEMO_VEHICLE_ID);
+  }
+}

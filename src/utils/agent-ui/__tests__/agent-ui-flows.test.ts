@@ -5,12 +5,12 @@ import {
     AGENT_UI_DEMO_CHECKLIST_LIST_ID,
     AGENT_UI_DEMO_CHECKLIST_TASK_PLAN_ID,
     AGENT_UI_DEMO_FLIGHT_ID,
+    AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
     AGENT_UI_DEMO_GROCERY_LIST_ID,
     AGENT_UI_DEMO_GROCERY_RECIPE_ID,
     AGENT_UI_DEMO_HEALTH_FACTOR_ID,
     AGENT_UI_DEMO_HEALTH_MOOD_ID,
     AGENT_UI_DEMO_PLANT_ID,
-    AGENT_UI_DEMO_FOOD_ACTIVITY_ID,
     AGENT_UI_DEMO_PLANT_WATERING_ACTIVITY_ID,
     AGENT_UI_DEMO_TRIP_ID,
     AGENT_UI_DEMO_VEHICLE_ID,
@@ -44,6 +44,10 @@ const mockSaveEvent = jest.fn((payload: { id?: string }) => ({
   id: payload.id ?? 'activity-random',
 }));
 const mockReplaceVisionBoardData = jest.fn();
+
+jest.mock('@/features/account/dev-mode-controller', () => ({
+  ensureDevModeSandboxSync: jest.fn(),
+}));
 
 jest.mock('@/store/travel', () => ({
   useTravel: {
