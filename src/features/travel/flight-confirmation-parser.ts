@@ -150,8 +150,9 @@ function findRoute(text: string): {
   departureAirport: string;
   arrivalAirport: string;
 } {
+  // Allow OCR line breaks inside city names ("New\\nYork (LGA)").
   const parenthesizedRoute =
-    /\(([A-Z]{3})\)\s*(?:→|->|–|—|-|\bTO\b)\s*(?:[A-Za-z .'’/&-]{0,80}\s*)?\(([A-Z]{3})\)/i.exec(
+    /\(([A-Z]{3})\)\s*(?:→|->|–|—|-|\bTO\b)\s*[\s\S]{0,80}?\(([A-Z]{3})\)/i.exec(
       text,
     );
   if (

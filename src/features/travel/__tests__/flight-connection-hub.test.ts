@@ -1,7 +1,12 @@
 import { airportCodeForCityName } from '../airport-catalog';
+import {
+    ANDROID_CHASE_CONNECTING_OCR_FIRST_LEG_ONLY,
+    ANDROID_CHASE_CONNECTING_OCR_MISSING_FINAL,
+} from '../fixtures/android-chase-connecting-ocr';
 import { mergeFlightConfirmationDraftDetails } from '../flight-confirmation-draft';
 import { parseFlightConfirmation } from '../flight-confirmation-parser';
 import {
+    findItinerarySummaryRoute,
     findLayoverCityAirportCode,
     repairConnectingSegments,
     resolveConnectingHub,
@@ -129,5 +134,69 @@ describe('flight connection hub', () => {
 
     expect(resolveConnectingHub(repaired)).toBeUndefined();
     expect(repaired[0].layoverMinutesAfter).toBeUndefined();
+  });
+
+  it('reads summary routes when Android OCR breaks the destination city across lines', () => {
+    expect(
+      findItinerarySummaryRoute(`
+        Guatemala City (GUA) → New
+        York (LGA)
+      `),
+    ).toEqual({ departureAirport: 'GUA', arrivalAirport: 'LGA' });
+  });
+
+  it('fills LGA from the summary when Android OCR drops the final arrival line', () => {
+    const parsed = parseFlightConfirmation(
+      ANDROID_CHASE_CONNECTING_OCR_MISSING_FINAL,
+      { startDate: '2026-09-27', endDate: '2026-09-27' },
+    );
+
+    expect(parsed.segments).toHaveLength(2);
+    expect(parsed.segments[0]).toMatchObject({
+      layoverMinutesAfter: 99,
+      flight: {
+        departureAirport: 'GUA',
+        arrivalAirport: 'IAH',
+        flightNumber: 'UA 1907',
+      },
+    });
+    expect(parsed.segments[1].flight).toMatchObject({
+      departureAirport: 'IAH',
+      arrivalAirport: 'LGA',
+      flightNumber: 'UA 1697',
+    });
+
+    const draft = mergeFlightConfirmationDraftDetails(
+      emptyFlightDetailsDraft(),
+      parsed,
+    );
+    expect(draft).toMatchObject({
+      departureAirport: 'GUA',
+      arrivalAirport: 'LGA',
+      connectionAirport: 'IAH',
+      layoverMinutesAfter: '1h 39m',
+    });
+    expect(formatFlightTitle(draft)).toBe('Flight GUA → IAH → LGA');
+  });
+
+  it('expands a first-leg-only Android OCR read into GUA → IAH → LGA', () => {
+    const parsed = parseFlightConfirmation(
+      ANDROID_CHASE_CONNECTING_OCR_FIRST_LEG_ONLY,
+      { startDate: '2026-09-27', endDate: '2026-09-27' },
+    );
+
+    expect(parsed.segments).toHaveLength(2);
+    const draft = mergeFlightConfirmationDraftDetails(
+      emptyFlightDetailsDraft(),
+      parsed,
+    );
+    expect(draft).toMatchObject({
+      departureAirport: 'GUA',
+      arrivalAirport: 'LGA',
+      connectionAirport: 'IAH',
+      layoverMinutesAfter: '1h 39m',
+      flightNumber: 'UA 1907',
+    });
+    expect(formatFlightTitle(draft)).toBe('Flight GUA → IAH → LGA');
   });
 });

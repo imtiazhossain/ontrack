@@ -21,6 +21,7 @@ import {
 } from '@/components/primitives';
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import { layout, radii, spacing } from '@/design-system';
+import { useAuthSession } from '@/features/auth/auth-provider';
 import {
     buildTravelChatListItems,
     chatNotificationsAreEnabled,
@@ -40,8 +41,19 @@ import {
     travelChatPalette,
     type TravelChatMember,
 } from '@/features/travel/travel-chat-chrome';
+import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
+import {
+    planPatchFromTravelChatRoster,
+    resolveTravelChatAccessFromRoster,
+    resolveTravelChatMembersFromRoster,
+} from '@/features/travel/travel-chat-roster';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
+import {
+    canonicalTravelTripId,
+    listTravelTripRoster,
+} from '@/features/travel/trip-roster';
+import type { TravelTripRosterPerson } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
@@ -61,12 +73,18 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const listRef =
     useRef<ComponentRef<typeof FlashList<TravelChatListItem>>>(null);
   const plan = useTravel((state) => state.plans.find((item) => item.id === planId));
+  const savePlan = useTravel((state) => state.savePlan);
+  const { user } = useAuthSession();
   const senderName = usePreferences((state) => state.name).trim() || 'Trip member';
-  const accessCode = plan ? travelChatAccessCode(plan) : undefined;
+  const localAccessCode = plan ? travelChatAccessCode(plan) : undefined;
+  const [roster, setRoster] = useState<TravelTripRosterPerson[]>([]);
+  const [rosterAccessCode, setRosterAccessCode] = useState<string>();
+  const [rosterReady, setRosterReady] = useState(false);
+  const accessCode = localAccessCode ?? rosterAccessCode;
   const [deviceId, setDeviceId] = useState('');
   const [messages, setMessages] = useState<OptimisticTravelChatMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [loading, setLoading] = useState(Boolean(accessCode));
+  const [loading, setLoading] = useState(Boolean(localAccessCode));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string>();
   const [notificationsAvailable, setNotificationsAvailable] = useState(true);
@@ -74,24 +92,35 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   const [enablingNotifications, setEnablingNotifications] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const listItems = buildTravelChatListItems(messages);
+  const canonicalTripId = plan ? canonicalTravelTripId(plan) : undefined;
 
-  const members = useMemo<TravelChatMember[]>(() => {
+  const fallbackMembers = useMemo<TravelChatMember[]>(() => {
     if (!plan) return [];
-    return [
-      { id: `${plan.id}-self`, name: senderName, isSelf: true },
-      ...plan.participants.map((person) => ({
-        id: person.id,
-        name: person.name,
-      })),
-    ];
+    return resolveTravelCoTravelerPeople(plan, senderName).map((person) => ({
+      id: person.id,
+      name: person.name,
+      isSelf: person.isSelf,
+      userId: person.userId,
+    }));
   }, [plan, senderName]);
+
+  const members = useMemo(
+    () =>
+      resolveTravelChatMembersFromRoster({
+        roster,
+        selfUserId: user?.id,
+        selfDisplayName: senderName,
+        fallback: fallbackMembers,
+      }),
+    [fallbackMembers, roster, senderName, user?.id],
+  );
 
   const memberSubtitle = useMemo(() => {
     if (!plan) return 'Plan Together · Stay Connected';
     if (plan.id === ALL_ACCOUNTS_TEST_TRIP.id) return 'Shared Test Chat · Plan Together';
-    const count = plan.participants.length + 1;
+    const count = Math.max(members.length, plan.participants.length + 1);
     return `${count} ${count === 1 ? 'Trip Member' : 'Trip Members'} · Plan Together`;
-  }, [plan]);
+  }, [members.length, plan]);
 
   const refresh = useCallback(async () => {
     if (!accessCode) return;
@@ -112,22 +141,75 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   }, [accessCode]);
 
   useEffect(() => {
+    if (!planId || !canonicalTripId) {
+      setRoster([]);
+      setRosterAccessCode(undefined);
+      setRosterReady(true);
+      return;
+    }
+
+    let active = true;
+    setRosterReady(false);
+    void listTravelTripRoster(canonicalTripId)
+      .then((people) => {
+        if (!active) return;
+        const latest = useTravel.getState().plans.find((item) => item.id === planId);
+        if (!latest) return;
+        setRoster(people);
+        const recovered = resolveTravelChatAccessFromRoster({
+          plan: latest,
+          roster: people,
+          selfUserId: user?.id,
+        });
+        setRosterAccessCode(recovered);
+        const patched = planPatchFromTravelChatRoster({
+          plan: latest,
+          roster: people,
+          selfUserId: user?.id,
+          accessCode: recovered,
+        });
+        if (patched) savePlan(patched);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRoster([]);
+        setRosterAccessCode(undefined);
+      })
+      .finally(() => {
+        if (active) setRosterReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [canonicalTripId, planId, savePlan, user?.id]);
+
+  useEffect(() => {
     let active = true;
     void getTravelChatDeviceId().then((value) => {
       if (active) setDeviceId(value);
     });
-    const initialTimer = setTimeout(() => {
-      void refresh().then(() => {
-        if (active) setLoading(false);
-      });
-    }, 0);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!accessCode) {
+      if (rosterReady) setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    void refresh().then(() => {
+      if (active) setLoading(false);
+    });
     const timer = setInterval(() => void refresh(), 5000);
     return () => {
       active = false;
-      clearTimeout(initialTimer);
       clearInterval(timer);
     };
-  }, [refresh]);
+  }, [accessCode, refresh, rosterReady]);
 
   useEffect(() => {
     if (!accessCode || !deviceId) return;
@@ -273,6 +355,12 @@ export function TravelChatScreen({ planId }: { planId: string }) {
   }
 
   if (!accessCode) {
+    const waitingOnRoster = !rosterReady;
+    const signedInElsewhere =
+      rosterReady &&
+      Boolean(user?.id) &&
+      roster.length > 0 &&
+      !roster.some((person) => person.userId === user?.id);
     return (
       <View
         style={[
@@ -293,11 +381,23 @@ export function TravelChatScreen({ planId }: { planId: string }) {
           <TravelChatMemberStack members={members} />
         </View>
         <View style={[styles.center, { zIndex: 1 }]}>
-          <EmptyState
-            icon="people"
-            title="Chat Opens When a Friend Joins"
-            message="Invite someone to this trip. Once they accept, everyone can start planning here."
-          />
+          {waitingOnRoster ? (
+            <LoadingBlock label="Opening trip chat…" />
+          ) : (
+            <EmptyState
+              icon="people"
+              title={
+                signedInElsewhere
+                  ? 'Sign In With the Account That Joined'
+                  : 'Chat Opens When a Friend Joins'
+              }
+              message={
+                signedInElsewhere
+                  ? 'This trip is linked to a different onTrack account on this device. Sign in with the account that accepted the invite, or open the join link again.'
+                  : 'Invite someone to this trip. Once they accept, everyone can start planning here.'
+              }
+            />
+          )}
         </View>
       </View>
     );

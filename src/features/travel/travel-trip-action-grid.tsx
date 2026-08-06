@@ -52,6 +52,7 @@ function ActionGroup({
           color="secondary"
           bold
           fit
+          align="center"
           numberOfLines={1}
           style={styles.groupTitle}>
           {title}
@@ -217,19 +218,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   groupHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    justifyContent: 'center',
+    gap: spacing.xs,
     minHeight: 32,
     overflow: 'visible',
     zIndex: 4,
   },
   groupTitle: {
+    alignSelf: 'stretch',
+    width: '100%',
+    textAlign: 'center',
     flexShrink: 1,
     minWidth: 0,
   },
   groupTrailing: {
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
     overflow: 'visible',
   },

@@ -9,6 +9,7 @@ import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import expo.modules.kotlin.modules.Module
@@ -24,9 +25,8 @@ class TravelDocumentReaderModule : Module() {
       val context = appContext.reactContext
         ?: throw IllegalStateException("The app is not ready to read documents.")
       val uri = Uri.parse(uriValue)
-      val file = uri.path?.let(::File)
-        ?: throw IllegalArgumentException("The shared document could not be opened.")
-      when (file.extension.lowercase()) {
+      val file = resolveReadableFile(uri)
+      when (file?.extension?.lowercase()) {
         "txt", "eml" -> file.readText()
         "pdf" -> recognizePdf(file)
         else -> recognizeImage(InputImage.fromFilePath(context, uri))
@@ -39,7 +39,7 @@ class TravelDocumentReaderModule : Module() {
       val first = uris.firstOrNull()
         ?: throw IllegalArgumentException("The shared document could not be opened.")
       val parsed = Uri.parse(first)
-      val file = parsed.path?.let(::File)
+      val file = resolveReadableFile(parsed)
         ?: throw IllegalArgumentException("The shared document could not be opened.")
       if (!file.exists()) {
         throw IllegalArgumentException("The shared document could not be opened.")
@@ -63,6 +63,17 @@ class TravelDocumentReaderModule : Module() {
       }
       context.startActivity(intent)
     }
+  }
+
+  private fun resolveReadableFile(uri: Uri): File? {
+    val path = uri.path ?: return null
+    val direct = File(path)
+    if (direct.exists()) return direct
+    // content:// and file:// URIs sometimes expose a decoded path segment.
+    return uri.pathSegments
+      .lastOrNull()
+      ?.let { File(it) }
+      ?.takeIf { it.exists() }
   }
 
   private fun recognizePdf(file: File): String {
@@ -99,14 +110,33 @@ class TravelDocumentReaderModule : Module() {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     return try {
       val result = Tasks.await(recognizer.process(image))
-      if (result.text.isBlank()) {
+      val text = orderedOcrText(result)
+      if (text.isBlank()) {
         throw IllegalArgumentException(
           "No readable text was found in this document."
         )
       }
-      result.text
+      text
     } finally {
       recognizer.close()
     }
+  }
+
+  /**
+   * ML Kit's default `text` join order can scramble vertical timeline UIs
+   * (Chase/United connecting itineraries). Sort lines top-to-bottom, then
+   * left-to-right — matching iOS Vision — so the JS parser sees dep → hub → arr.
+   */
+  private fun orderedOcrText(result: Text): String {
+    val lines = result.textBlocks
+      .flatMap { block -> block.lines }
+      .sortedWith(
+        compareBy<Text.Line> { it.boundingBox?.centerY() ?: 0 }
+          .thenBy { it.boundingBox?.left ?: 0 },
+      )
+      .map { it.text.trim() }
+      .filter { it.isNotEmpty() }
+    if (lines.isNotEmpty()) return lines.joinToString("\n")
+    return result.text.trim()
   }
 }
