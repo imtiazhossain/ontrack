@@ -102,7 +102,7 @@ describe('canonical travel sheet design', () => {
     expect(grid).toContain('badgeIcon="repeat"');
     expect(grid).toContain('Sync changes for ${tripTitle} with Calendar');
     expect(travelTab).toMatch(
-      /onOpenCalendar=\{\(\) => \{\s*(?:recordPlanInteraction\(plan\.id\);\s*)?addTripToCalendar\(plan\);\s*\}\}/,
+      /onOpenCalendar=\{\(\) => \{\s*(?:(?:recordPlanInteraction|interactWithPlan)\(plan\.id\);\s*)?addTripToCalendar\(plan\);\s*\}\}/,
     );
   });
 

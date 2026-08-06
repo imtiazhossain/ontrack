@@ -14,7 +14,11 @@ import {
 import { spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { travelCalendarDrafts } from '@/features/travel/calendar';
-import { mergeResolvedTravelOpenJoinPlan } from '@/features/travel/open-join-plan';
+import {
+    buildOpenJoinMemberPlan,
+    findExistingOpenJoinPlan,
+    mergeResolvedTravelOpenJoinPlan,
+} from '@/features/travel/open-join-plan';
 import {
     createInstalledTravelOpenJoinUrl,
     isOpenTravelJoinCode,
@@ -23,10 +27,10 @@ import {
     previewTravelOpenJoin,
     requestTravelOpenJoin,
     resolveTravelOpenJoin,
-    travelInviteLocalId,
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
+import { listTravelTripRoster } from '@/features/travel/trip-roster';
 import type { TravelOpenJoinPreview, TravelOpenJoinStatus } from '@/features/travel/types';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
@@ -61,48 +65,72 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
     setActionError(undefined);
     try {
       const resolved = await resolveTravelOpenJoin(code);
+      const status = resolved.status === 'host' ? 'host' : 'approved';
       const chatCode = resolved.grantedInviteCode ?? grantedInviteCode;
+      if (status === 'approved' && !chatCode) {
+        throw new Error(
+          'Your join was approved, but the trip invite is missing. Ask the host to share the link again.',
+        );
+      }
+
+      let hostDisplayName: string | undefined;
+      if (status === 'approved') {
+        try {
+          const roster = await listTravelTripRoster(resolved.tripId);
+          hostDisplayName = roster.find((person) => person.role === 'host')
+            ?.displayName;
+        } catch {
+          // Roster is best-effort; chat access + hostTripId still unlock the trip.
+        }
+      }
+
       // Prefer the store after the network round-trip so edits made while
       // resolving are not restored from a stale closure snapshot.
       const latestPlans = useTravel.getState().plans;
-      const existing =
-        (chatCode
-          ? latestPlans.find((plan) => plan.chatAccessCode === chatCode) ??
-            latestPlans.find((plan) => plan.id === travelInviteLocalId(chatCode))
-          : undefined) ??
-        latestPlans.find((plan) => plan.id === travelInviteLocalId(code)) ??
-        latestPlans.find((plan) => plan.id === resolved.tripId);
+      const existing = findExistingOpenJoinPlan(latestPlans, {
+        status,
+        tripId: resolved.tripId,
+        openJoinCode: code,
+        chatAccessCode: chatCode,
+      });
+      const now = new Date().toISOString();
 
       if (existing) {
-        savePlan(
-          mergeResolvedTravelOpenJoinPlan(existing, {
-            status: resolved.status === 'host' ? 'host' : 'approved',
-            tripId: resolved.tripId,
-            chatAccessCode: chatCode,
-            updatedAt: new Date().toISOString(),
-          }),
-        );
+        const merged = mergeResolvedTravelOpenJoinPlan(existing, {
+          status,
+          tripId: resolved.tripId,
+          chatAccessCode: chatCode,
+          hostDisplayName,
+          updatedAt: now,
+        });
+        savePlan(merged);
         setAddonEnabled('travel', true);
         router.replace(
           hasOnboarded
-            ? (`/travel/${existing.id}` as never)
+            ? (`/travel/${merged.id}` as never)
             : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
         );
         return;
       }
 
-      const now = new Date().toISOString();
-      const planId = chatCode
-        ? travelInviteLocalId(chatCode)
-        : travelInviteLocalId(code);
-      const plan = {
-        ...resolved.plan,
-        id: planId,
-        ...(chatCode ? { chatAccessCode: chatCode } : {}),
-        hostTripId: resolved.tripId,
-        createdAt: now,
-        updatedAt: now,
-      };
+      if (status === 'host') {
+        // Host opened their own link with no local plan match — send them home.
+        setAddonEnabled('travel', true);
+        router.replace(
+          hasOnboarded
+            ? (`/travel/${resolved.tripId}` as never)
+            : ({ pathname: '/onboarding', params: { returnTo: '/travel' } } as never),
+        );
+        return;
+      }
+
+      const plan = buildOpenJoinMemberPlan({
+        resolvedPlan: resolved.plan,
+        tripId: resolved.tripId,
+        chatAccessCode: chatCode!,
+        hostDisplayName,
+        now,
+      });
       savePlan(plan);
       replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
       setAddonEnabled('travel', true);

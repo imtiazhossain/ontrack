@@ -18,6 +18,7 @@ import {
     travelExpenseMemberId,
 } from '@/services/travel/expense-collaboration';
 import { useTravel } from '@/store/travel';
+import { newId } from '@/utils/id';
 
 type SetOptStr = Dispatch<SetStateAction<string | undefined>>;
 
@@ -160,7 +161,7 @@ export function useTravelFriendsSheetSync({
 
       // Keep local invite labels in sync with roster names so trip-card
       // initials match Co-Travelers (e.g. "Jordan Lee" vs truncated "Jordan").
-      const participants = next.participants.map((person) => {
+      let participants = next.participants.map((person) => {
         const match = people.find(
           (member) =>
             (member.role === 'member' || member.role === 'cohost') &&
@@ -173,6 +174,37 @@ export function useTravelFriendsSheetSync({
         changed = true;
         return { ...person, name: match.displayName };
       });
+
+      // Host plans: rebuild missing accepted friends from the server roster so
+      // trip-card + Co-Travelers stay mutual after invite-status races.
+      if (!isTravelMemberPlan(next)) {
+        const now = new Date().toISOString();
+        for (const member of people) {
+          if (member.role !== 'member' && member.role !== 'cohost') continue;
+          if (!member.inviteCode) continue;
+          const exists = participants.some(
+            (person) =>
+              person.inviteCode === member.inviteCode ||
+              (member.email &&
+                person.email &&
+                person.email.toLowerCase() === member.email.toLowerCase()),
+          );
+          if (exists) continue;
+          changed = true;
+          participants = [
+            ...participants,
+            {
+              id: newId('trip-person'),
+              name: member.displayName,
+              ...(member.email ? { email: member.email } : {}),
+              inviteCode: member.inviteCode,
+              invitedAt: member.acceptedAt ?? now,
+              acceptedAt: member.acceptedAt ?? now,
+            },
+          ];
+        }
+      }
+
       if (changed) {
         savePlan({
           ...next,
@@ -182,19 +214,30 @@ export function useTravelFriendsSheetSync({
       }
     };
 
-    void refreshRoster(canonicalId).then((people) => {
-      if (!active || !people) return;
-      syncRosterIntoPlan(people);
-    });
+    const reconcileInviteStatuses = (people: TravelTripRosterPerson[]) => {
+      if (isMember) return;
+      const inviteCodes = (
+        useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest
+      ).participants.map((person) => person.inviteCode);
+      if (inviteCodes.length === 0) return;
 
-    const inviteCodes = latest.participants.map((person) => person.inviteCode);
-    if (inviteCodes.length > 0 && !isMember) {
       void loadTravelInviteStatuses(inviteCodes)
         .then((statuses) => {
           // Empty `{}` is meaningful: every accepted invite may have been revoked.
           if (!active) return;
           const current =
-            useTravel.getState().plans.find((item) => item.id === plan.id) ?? latest;
+            useTravel.getState().plans.find((item) => item.id === plan.id) ??
+            latest;
+          const rosterCodes = new Set(
+            people
+              .map((person) => person.inviteCode)
+              .filter((value): value is string => Boolean(value)),
+          );
+          const rosterEmails = new Set(
+            people
+              .map((person) => person.email?.trim().toLowerCase())
+              .filter((value): value is string => Boolean(value)),
+          );
           let changed = false;
           const participants = current.participants.flatMap((person) => {
             const acceptedAt = statuses[person.inviteCode];
@@ -204,8 +247,15 @@ export function useTravelFriendsSheetSync({
               return [{ ...person, acceptedAt }];
             }
             // Statuses only include live accepted invites. Drop friends who left
-            // or were revoked so host chat doesn't keep using a dead code.
+            // or were revoked — but never drop someone still on the server roster.
             if (person.acceptedAt) {
+              const email = person.email?.trim().toLowerCase();
+              if (
+                rosterCodes.has(person.inviteCode) ||
+                (email && rosterEmails.has(email))
+              ) {
+                return [person];
+              }
               changed = true;
               return [];
             }
@@ -220,7 +270,16 @@ export function useTravelFriendsSheetSync({
           }
         })
         .catch(() => undefined);
-    }
+    };
+
+    const refreshFriends = () =>
+      void refreshRoster(canonicalId).then((people) => {
+        if (!active || !people) return;
+        syncRosterIntoPlan(people);
+        reconcileInviteStatuses(people);
+      });
+
+    refreshFriends();
 
     if (!isMember) {
       const alreadyHaveCode = Boolean(latest.openJoinCode);
@@ -267,11 +326,7 @@ export function useTravelFriendsSheetSync({
 
     const poll = setInterval(() => {
       if (!active) return;
-      void refreshRoster(canonicalId).then((people) => {
-        if (!active || !people) return;
-        syncRosterIntoPlan(people);
-      });
-      if (!active) return;
+      refreshFriends();
       if (!isMember) void refreshJoinRequests(canonicalId);
     }, 5000);
 
