@@ -492,6 +492,8 @@ def build_payload(args: argparse.Namespace) -> dict:
         return {"op": "batch", "ops": ops}
     if op == "overlay":
         return {"op": "overlay", "to": args.to or "toggle"}
+    if op == "devmode":
+        return {"op": "devmode", "to": args.to or "status"}
     if op == "hit":
         payload = {"op": "hit"}
         if getattr(args, "x", None) is not None:

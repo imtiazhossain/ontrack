@@ -45,7 +45,7 @@ function travelTopWash(theme: Theme): string {
     : lightTravelTheme.backgroundPrimary;
 }
 
-/** Page paper under the Travel wash — cool gray (light) / deep navy (dark). */
+/** Page paper under the Travel wash — cool gray (light) / black (dark). */
 function travelPagePaper(theme: Theme): string {
   return theme.name === 'dark' ? darkTravelTheme.backgroundPrimary : '#F8F9FA';
 }

@@ -286,43 +286,65 @@ export function stayCoverCandidates(
 export async function fetchPlaceCoverUri(
   candidates: string[],
 ): Promise<string | undefined> {
-  const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
-  if (!places.length) return undefined;
+  const uris = await fetchPlaceCoverUris(candidates, 1);
+  return uris[0];
+}
 
-  const key = `place-v3|${places.join('|').toLowerCase()}`;
-  const cached = coverCache.get(key);
-  if (cached?.kind === 'hit') return toClientDisplayCoverUri(cached.uri);
+/**
+ * Resolve up to `limit` remote place photos across ordered query candidates.
+ * Used by Travel home atmosphere so each open can pick a different scene.
+ */
+export async function fetchPlaceCoverUris(
+  candidates: string[],
+  limit: number = DESTINATION_COVER_MAX,
+): Promise<string[]> {
+  const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
+  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, Math.floor(limit)));
+  if (!places.length) return [];
+
+  const key = `place-pool-v1|${capped}|${places.join('|').toLowerCase()}`;
+  const cached = heroCache.get(key);
+  if (cached?.kind === 'hit') {
+    return orderHeroUrisForClient(cached.uris).map(toClientDisplayCoverUri);
+  }
   if (cached?.kind === 'miss') {
-    if (cached.expiresAt > Date.now()) return undefined;
-    coverCache.delete(key);
+    if (cached.expiresAt > Date.now()) return [];
+    heroCache.delete(key);
   }
 
-  const pending = inflight.get(key);
-  if (pending) return pending;
+  const pending = heroInflight.get(key);
+  if (pending) {
+    const uris = await pending;
+    return orderHeroUrisForClient(uris).map(toClientDisplayCoverUri);
+  }
 
   const request = (async () => {
+    const collected: string[] = [];
     try {
       for (const place of places) {
-        const next = await resolveRemoteCover(place);
-        if (next) {
-          coverCache.set(key, { kind: 'hit', uri: next });
-          return toClientDisplayCoverUri(next);
-        }
+        if (collected.length >= capped) break;
+        const next = await resolveRemoteCovers(place, capped - collected.length);
+        for (const uri of next) pushUniqueUri(collected, uri);
       }
-      coverCache.set(key, {
-        kind: 'miss',
-        expiresAt: Date.now() + COVER_MISS_TTL_MS,
-      });
-      return undefined;
+      if (collected.length > 0) {
+        heroCache.set(key, { kind: 'hit', uris: collected });
+      } else {
+        heroCache.set(key, {
+          kind: 'miss',
+          expiresAt: Date.now() + COVER_MISS_TTL_MS,
+        });
+      }
+      return collected;
     } catch {
-      return undefined;
+      return collected;
     } finally {
-      inflight.delete(key);
+      heroInflight.delete(key);
     }
   })();
 
-  inflight.set(key, request);
-  return request;
+  heroInflight.set(key, request);
+  const uris = await request;
+  return orderHeroUrisForClient(uris).map(toClientDisplayCoverUri);
 }
 
 /** Resolve a remote destination cover URL (cached per destination query). */

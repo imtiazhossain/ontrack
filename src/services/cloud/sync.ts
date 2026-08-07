@@ -16,6 +16,7 @@ import type { VisionBoardCategory, VisionBoardItem } from '@/features/vision-boa
 import { deletePlant } from '@/services/plants/schedule';
 import { loadAllSharedTodoLists } from '@/services/todos/collaboration';
 import { pullAllTravelTripExpenses } from '@/services/travel/expense-collaboration';
+import { pullAllTravelTripItineraries } from '@/services/travel/itinerary-collaboration';
 import { loadAllSharedVehicles } from '@/services/vehicles/collaboration';
 import { useAccountFlags } from '@/store/account-flags';
 import { useAddons } from '@/store/addons';
@@ -760,6 +761,7 @@ export async function refreshAppData() {
       loadAllSharedTodoLists().catch(() => undefined),
       loadAllSharedVehicles().catch(() => undefined),
       pullAllTravelTripExpenses().catch(() => undefined),
+      pullAllTravelTripItineraries().catch(() => undefined),
       useFriends.getState().refresh().catch(() => undefined),
     ]);
 

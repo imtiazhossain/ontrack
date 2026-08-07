@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { rehydrateDevModeSyncGate } from '@/features/account/dev-mode-controller';
+import { settleDevModeAfterRehydrate } from '@/features/account/dev-mode-controller';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
 import { useAuthAccess } from '@/store/auth-access';
@@ -70,8 +70,9 @@ export function useHydrated(): boolean {
       rehydrateStore(() => useVehicles.persist.rehydrate()),
       rehydrateStore(() => useHealth.persist.rehydrate()),
       rehydrateStore(() => useDevMode.persist.rehydrate()),
-    ]).then(() => {
-      rehydrateDevModeSyncGate();
+    ]).then(async () => {
+      // Agent sandboxes must not stick across cold start (Dev Mode off by default).
+      await settleDevModeAfterRehydrate();
       release();
     });
 

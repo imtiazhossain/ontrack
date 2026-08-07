@@ -2,7 +2,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -24,7 +24,6 @@ import {
     useTravelRouteAtmosphere,
 } from '@/features/travel/travel-atmosphere';
 import { selectTravelAtmospherePlan } from '@/features/travel/travel-atmosphere-model';
-import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { useApplyOtaUpdate } from '@/hooks/use-apply-ota-update';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useMealPhotoMigration } from '@/hooks/use-meal-photo-migration';
@@ -60,10 +59,24 @@ export default function RootLayout() {
     travelRoute && hydrated,
   );
 
+  // Keep navigator chrome transparent so AppSafeArea washes (Travel atmosphere,
+  // Today time-of-day) continue under the status bar without a hairline seam
+  // from React Navigation's default rgb(242,242,242) screen fill.
+  const navigationTheme = useMemo(() => {
+    const base = theme.name === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: 'transparent',
+      },
+    };
+  }, [theme.name]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <ThemeProvider value={theme.name === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={navigationTheme}>
           <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
           <TravelAtmosphereProvider atmosphere={atmosphere}>
             <AppSafeArea>
@@ -81,7 +94,6 @@ export default function RootLayout() {
 
 function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const theme = useTheme();
-  const travelStyle = useTravelPageStyle(theme);
   const router = useRouter();
   const { phase } = useAuthSession();
   const seedIfNeeded = useSchedule((state) => state.seedIfNeeded);
@@ -176,7 +188,10 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           name="(tabs)"
           options={{
             headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            // Transparent so Travel’s AppSafeArea chrome atmosphere can paint
+            // continuously under the status bar without a seam at the inset.
+            // Tab screens still fill with their own Screen backgrounds.
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
         <Stack.Screen
@@ -231,7 +246,10 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           name="travel"
           options={{
             headerShown: false,
-            contentStyle: { ...travelStyle, paddingTop: 0 },
+            // Transparent like "(tabs)" so the itinerary header sky painted on
+            // AppSafeArea chrome shows through below the status bar. Travel
+            // screens still fill via the nested stack's travelStyle content.
+            contentStyle: { backgroundColor: 'transparent', paddingTop: 0 },
           }}
         />
         <Stack.Screen name="nutrition-profile" />

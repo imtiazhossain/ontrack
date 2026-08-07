@@ -33,6 +33,33 @@ const DIRECT_CLIENT_COVER_HOST_SUFFIXES = [
   'staticflickr.com',
 ] as const;
 
+/** Dominant plate colors from Unsplash search hits (uri / photo-id → #hex). */
+const unsplashCoverColorByUri = new Map<string, string>();
+
+function unsplashPhotoId(uri: string): string | undefined {
+  const match = uri.match(/photo-([a-zA-Z0-9_-]+)/);
+  return match?.[1];
+}
+
+/** Average / dominant Unsplash color when the URI was resolved via search. */
+export function peekUnsplashCoverColor(uri: string): string | undefined {
+  const key = uri.trim();
+  if (!key) return undefined;
+  const direct = unsplashCoverColorByUri.get(key);
+  if (direct) return direct;
+  const photoId = unsplashPhotoId(key);
+  return photoId ? unsplashCoverColorByUri.get(`id:${photoId}`) : undefined;
+}
+
+function rememberUnsplashCoverColor(uri: string | undefined, color: unknown) {
+  const nextUri = uri?.trim();
+  const nextColor = typeof color === 'string' ? color.trim() : '';
+  if (!nextUri || !/^#[0-9a-fA-F]{3,8}$/.test(nextColor)) return;
+  unsplashCoverColorByUri.set(nextUri, nextColor);
+  const photoId = unsplashPhotoId(nextUri);
+  if (photoId) unsplashCoverColorByUri.set(`id:${photoId}`, nextColor);
+}
+
 /** Skip flags/maps, non-HTTPS assets, and watermarked Unsplash+ previews. */
 export function isUsableDestinationPhotoUrl(url: string): boolean {
   const trimmed = url.trim();
@@ -231,6 +258,7 @@ async function fetchUnsplashCovers(
         results?: Array<{
           plus?: boolean;
           premium?: boolean;
+          color?: string;
           urls?: { regular?: string; small?: string };
         }>;
       }
@@ -240,7 +268,10 @@ async function fetchUnsplashCovers(
   for (const hit of body.results ?? []) {
     if (out.length >= limit) break;
     if (hit.plus || hit.premium) continue;
-    pushUniqueUrl(out, pickDestinationPhotoUrl(hit.urls?.regular, hit.urls?.small));
+    const photoUrl = pickDestinationPhotoUrl(hit.urls?.regular, hit.urls?.small);
+    if (!photoUrl) continue;
+    rememberUnsplashCoverColor(photoUrl, hit.color);
+    pushUniqueUrl(out, photoUrl);
   }
   return out;
 }

@@ -15,6 +15,8 @@ export const AgentUiIds = {
     games: 'ontrack.tabs.games',
     vehicles: 'ontrack.tabs.vehicles',
     health: 'ontrack.tabs.health',
+    carouselPrev: 'ontrack.tabs.carousel.prev',
+    carouselNext: 'ontrack.tabs.carousel.next',
   },
   health: {
     settings: 'ontrack.health.settings',
@@ -417,6 +419,8 @@ export const AgentUiIds = {
     chrome: {
       /** Layout anchor — itinerary flight-path flourish behind travel page titles. */
       flightPath: 'ontrack.travel.chrome.flightPath',
+      /** Layout anchor — night stars / day sunshine behind travel page titles. */
+      skyDecor: 'ontrack.travel.chrome.skyDecor',
     },
     tripMode: (mode: string) => `ontrack.travel.tripMode.${mode}`,
     flight: {
@@ -513,7 +517,11 @@ export const AgentUiIds = {
       notesSection: (tripId: string) =>
         `ontrack.travel.list.notesSection.${tripId}`,
       sectionYourTrips: 'ontrack.travel.list.section.yourTrips',
+      atmosphereLocation: 'ontrack.travel.list.section.atmosphereLocation',
+      search: 'ontrack.travel.list.search',
+      searchClear: 'ontrack.travel.list.searchClear',
       emptyCreate: 'ontrack.travel.list.empty.create',
+      emptySearch: 'ontrack.travel.list.empty.search',
     },
     hub: {
       close: 'ontrack.travel.hub.close',
@@ -526,6 +534,11 @@ export const AgentUiIds = {
       end: 'ontrack.travel.dates.end',
       calendar: 'ontrack.travel.dates.calendar',
       save: 'ontrack.travel.dates.save',
+    },
+    planNotes: {
+      close: 'ontrack.travel.planNotes.close',
+      field: 'ontrack.travel.planNotes.field',
+      save: 'ontrack.travel.planNotes.save',
     },
     photoViewer: {
       dismiss: (tripId: string) =>
@@ -568,6 +581,8 @@ export const AgentUiIds = {
     weather: {
       close: 'ontrack.travel.weather.close',
       done: 'ontrack.travel.weather.done',
+      /** Live conditions at the trip destination (layout anchor). */
+      current: 'ontrack.travel.weather.current',
     },
     friendRow: {
       action: (target: string, action: string) =>
@@ -590,11 +605,12 @@ export const AgentUiIds = {
       confirmDelete: 'ontrack.travel.notes.confirmDelete',
     },
     planDetail: {
-      /** Unused — weather/currency live on the list card (`list.tripWeather` / `list.currency`). */
+      /** Unused — prefer `list.tripWeather`. */
       weather: 'ontrack.travel.planDetail.weather',
       /** Unused — prefer `list.currency`. */
       currency: 'ontrack.travel.planDetail.currency',
       addToTimeline: 'ontrack.travel.planDetail.addToTimeline',
+      toolsSection: 'ontrack.travel.planDetail.section.tools',
       transportSection: 'ontrack.travel.planDetail.section.transport',
       flightsSection: 'ontrack.travel.planDetail.section.flights',
       groundSection: 'ontrack.travel.planDetail.section.ground',
@@ -602,11 +618,13 @@ export const AgentUiIds = {
       rentalsSection: 'ontrack.travel.planDetail.section.rentals',
       timelineSection: 'ontrack.travel.planDetail.section.timeline',
       notesSection: 'ontrack.travel.planDetail.section.notes',
+      editNotes: 'ontrack.travel.planDetail.editNotes',
       weatherCard: 'ontrack.travel.planDetail.weatherCard',
       addFlight: 'ontrack.travel.planDetail.addFlight',
       addTransport: 'ontrack.travel.planDetail.addTransport',
       addStay: 'ontrack.travel.planDetail.addStay',
       addRental: 'ontrack.travel.planDetail.addRental',
+      backToTravel: 'ontrack.travel.planDetail.backToTravel',
     },
     timelineAdd: {
       dismiss: 'ontrack.travel.timelineAdd.dismiss',
@@ -630,6 +648,17 @@ export const AgentUiIds = {
         `ontrack.travel.timelineItem.${itemId}.editFlight`,
       openAddress: (itemId: string) =>
         `ontrack.travel.timelineItem.${itemId}.openAddress`,
+      share: (itemId: string) =>
+        `ontrack.travel.timelineItem.${itemId}.share`,
+    },
+    itineraryShare: {
+      sheet: 'ontrack.travel.itineraryShare.sheet',
+      close: 'ontrack.travel.itineraryShare.close',
+      save: 'ontrack.travel.itineraryShare.save',
+      mode: (mode: 'private' | 'trip' | 'selected') =>
+        `ontrack.travel.itineraryShare.mode.${mode}`,
+      person: (userId: string) =>
+        `ontrack.travel.itineraryShare.person.${userId}`,
     },
     flightSearch: {
       back: 'ontrack.travel.flightSearch.back',

@@ -1,9 +1,14 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppText } from '@/components/primitives';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
+import { travelHomeSoloTripCardShadow } from '@/features/travel/travel-home-atmosphere-ink';
+import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
+import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
     TravelHomeLocationPin,
@@ -11,6 +16,7 @@ import {
 } from '@/features/travel/travel-home-icons';
 import {
     travelHomeFontFamily,
+    travelHomeImageHeight,
     travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
 import { TravelHomeTravelerStack } from '@/features/travel/travel-home-traveler-stack';
@@ -29,6 +35,15 @@ export type TravelHomeTripCardProps = {
   onViewTravelers: (tripId: string) => void;
   onActiveImageChange?: (tripId: string, uri: string | undefined) => void;
   onLayoutY?: (tripId: string, y: number) => void;
+  /** Stagger entrance like Today activity cards. */
+  index?: number;
+  /**
+   * Only trip on the launcher — stronger bottom lift tinted by the
+   * Travel home atmosphere plate so the card grounds on empty paper.
+   */
+  soloAtmosphereShadow?: boolean;
+  /** Atmosphere plate average color (`#RRGGBB`) for the solo lift. */
+  atmosphereAverageColor?: string;
 };
 
 /** Compact landscape trip card — hero, travelers, dates, View Itinerary. */
@@ -41,6 +56,9 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   onViewTravelers,
   onActiveImageChange,
   onLayoutY,
+  index = 0,
+  soloAtmosphereShadow = false,
+  atmosphereAverageColor,
 }: TravelHomeTripCardProps) {
   const theme = useTheme();
   const { s, spacing: rs, width: layoutWidth } = useResponsive();
@@ -50,19 +68,38 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       layoutWidth - travelHomeTokens.spacing.screenHorizontal * 2,
     ),
   );
+  const [heroPager, setHeroPager] = useState({ index: 0, count: 0 });
+  /** Active remote hero URI — Android glass frosts this plate in the scoop. */
+  const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
+  useEffect(() => {
+    setHeroPager({ index: 0, count: 0 });
+    setHeroFrostUri(undefined);
+  }, [plan.id]);
   const destination = plan.destination.trim();
   const destinationLabel = destination || plan.title;
-  const ink =
-    theme.name === 'dark' ? theme.textPrimary : travelHomeTokens.colors.ink;
-  const muted =
-    theme.name === 'dark' ? theme.textSecondary : travelHomeTokens.colors.inkMuted;
-  const brand =
-    theme.name === 'dark' ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
+  const dark = theme.name === 'dark';
+  const ink = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
+  const muted = dark ? theme.textSecondary : travelHomeTokens.colors.inkMuted;
+  const brand = dark ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
   const titleSize = Math.max(24, s(travelHomeTokens.sizes.tripTitle));
   const compact = layoutWidth < 360;
   const radius = travelHomeTokens.radius.tripCard;
+  const heroHeight = travelHomeImageHeight(cardWidth);
+  const bodyOverlap = travelHomeTokens.spacing.bodyOverlap;
+  const fixtureFrost = __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
+  const androidFrostSource = heroFrostUri
+    ? { uri: heroFrostUri }
+    : fixtureFrost;
+  const cardShadow = soloAtmosphereShadow
+    ? travelHomeSoloTripCardShadow({
+        averageColor: atmosphereAverageColor,
+        dark,
+      })
+    : dark
+      ? travelHomeTokens.colors.cardShadowDark
+      : travelHomeTokens.colors.cardShadow;
 
-  const openHub = () => {
+  const openTrip = () => {
     haptics.tap();
     onOpenTrip(plan.id);
   };
@@ -90,18 +127,46 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     ),
   );
   const labelSize = Math.max(13, s(travelHomeTokens.type.button));
-  // Light: navy fill + white ink. Dark: location-pin blue fill + navy ink.
-  const dark = theme.name === 'dark';
-  const itineraryFg = dark
-    ? travelHomeTokens.colors.countCircle
-    : '#FFFFFF';
-  const itineraryBg = dark ? brand : travelHomeTokens.colors.countCircle;
-  const itineraryBorder = dark ? brand : travelHomeTokens.colors.countCircle;
+  // Light: inverted dark glass + white ink (spec navy CTA). Dark: brand blue +
+  // white — medium-grey glass + black ink reads as a disabled control.
+  const itineraryFg = '#FFFFFF';
+  const itineraryFill = dark ? travelHomeTokens.colors.brandBlue : undefined;
+  const itineraryPadH = Math.max(
+    12,
+    s(travelHomeTokens.sizes.itineraryHorizontalPadding),
+  );
+  const itineraryIconSize = Math.max(16, s(travelHomeTokens.sizes.itineraryIcon));
+  const itineraryContent = (
+    <>
+      <TravelHomeRouteIcon size={itineraryIconSize} color={itineraryFg} />
+      <Text
+        allowFontScaling
+        maxFontSizeMultiplier={1.05}
+        numberOfLines={1}
+        style={{
+          color: itineraryFg,
+          fontSize: labelSize,
+          lineHeight: labelSize * 1.1,
+          fontWeight: '400',
+          fontFamily: travelHomeFontFamily,
+          flexShrink: 1,
+          minWidth: 0,
+        }}>
+        View Itinerary
+      </Text>
+    </>
+  );
+  const showStepper = heroPager.count > 1;
+  const stepperLift = Math.max(
+    10,
+    Math.round(travelHomeTokens.spacing.bodyOverlap * 0.55),
+  );
 
   return (
     // Shadow and overflow:hidden cannot share one view on iOS — split so the
     // large mock corner radii actually clip the destination hero.
-    <View
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}
       onLayout={(event) => {
         const { width, y } = event.nativeEvent.layout;
         if (width > 0 && Math.abs(width - cardWidth) > 1) setCardWidth(width);
@@ -111,10 +176,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
         styles.shadow,
         {
           borderRadius: radius,
-          boxShadow:
-            theme.name === 'dark'
-              ? travelHomeTokens.colors.cardShadowDark
-              : travelHomeTokens.colors.cardShadow,
+          boxShadow: cardShadow,
           width: '100%',
         },
       ]}>
@@ -122,7 +184,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
         style={[
           styles.clip,
           {
-            backgroundColor: theme.name === 'light' ? '#FFFFFF' : theme.backgroundElevated,
+            backgroundColor: 'transparent',
             borderRadius: radius,
           },
         ]}>
@@ -130,37 +192,83 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           plan={plan}
           width={cardWidth}
           onEdit={() => onEditTrip(plan.id)}
-          onActiveImageChange={(uri) => onActiveImageChange?.(plan.id, uri)}
+          onActiveImageChange={(uri, index, pageCount) => {
+            setHeroPager((previous) =>
+              previous.index === index && previous.count === pageCount
+                ? previous
+                : { index, count: pageCount },
+            );
+            setHeroFrostUri(uri);
+            onActiveImageChange?.(plan.id, uri);
+          }}
         />
 
         {/*
-          White meta panel overlaps the hero with large top radii — the curves
-          in the user mock (photo shows through the corner wedges).
+          Glass meta panel overlaps the hero with large top radii. iOS uses
+          BlurView; Android frosts a blurred hero plate + light tint so the
+          scoop reads as glass (not clear plastic, not opaque milk).
+          Page stepper sits on the glass in the overlap scoop.
         */}
-        <View
+        <TravelHomeGlass
+          frost={
+            Platform.OS === 'android' && androidFrostSource
+              ? {
+                  source: androidFrostSource,
+                  heroHeight,
+                  overlap: bodyOverlap,
+                }
+              : undefined
+          }
           style={[
             styles.metaPanel,
             {
-              marginTop: -travelHomeTokens.spacing.bodyOverlap,
+              marginTop: -bodyOverlap,
               borderTopLeftRadius: travelHomeTokens.radius.bodyTop,
               borderTopRightRadius: travelHomeTokens.radius.bodyTop,
-              backgroundColor:
-                theme.name === 'light' ? '#FFFFFF' : theme.backgroundElevated,
+              borderBottomLeftRadius: radius,
+              borderBottomRightRadius: radius,
             },
           ]}>
+          {/*
+            Always mount this slot as a Fabric sibling of BlurView. Toggling it
+            with showStepper caused iOS SIGABRT:
+            `unmountChildComponentView` index mismatch on the meta glass plate
+            (child y≈-12, pointerEvents=none — this stepper).
+          */}
+          <View
+            collapsable={false}
+            pointerEvents="none"
+            style={
+              showStepper
+                ? [
+                    styles.stepperSlot,
+                    {
+                      marginTop: -stepperLift,
+                      marginBottom: Math.max(2, s(4)),
+                    },
+                  ]
+                : styles.stepperSlotCollapsed
+            }>
+            <TravelHomeCarouselStepper
+              count={heroPager.count}
+              index={heroPager.index}
+            />
+          </View>
           <AgentTestId
             testID={AgentUiIds.travel.list.openHub(plan.id)}
             label={`Open ${plan.title}`}
-            onPress={openHub}>
+            onPress={openTrip}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Open ${plan.title}`}
-              onPress={openHub}
+              onPress={openTrip}
               style={({ pressed }) => [
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingTop: travelHomeTokens.spacing.bodyTop,
+                  paddingTop: showStepper
+                    ? Math.max(6, s(8))
+                    : travelHomeTokens.spacing.bodyTop,
                   paddingBottom: travelHomeTokens.spacing.locationToDivider,
                   gap: travelHomeTokens.spacing.titleToLocation,
                   opacity: pressed ? 0.92 : 1,
@@ -241,9 +349,20 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               styles.footer,
               {
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                paddingBottom: travelHomeTokens.spacing.cardBottom,
-                paddingTop: travelHomeTokens.spacing.dividerToMeta,
-                gap: Math.max(10, rs.sm),
+                // iOS TNR footer ink sits optically low — give the band equal air
+                // so the dates cluster + CTA share one centered midline.
+                paddingBottom:
+                  Platform.OS === 'ios'
+                    ? Math.max(16, travelHomeTokens.spacing.cardBottom + 4)
+                    : travelHomeTokens.spacing.cardBottom,
+                paddingTop:
+                  Platform.OS === 'ios'
+                    ? Math.max(14, travelHomeTokens.spacing.dividerToMeta + 6)
+                    : travelHomeTokens.spacing.dividerToMeta,
+                gap: Math.max(
+                  Platform.OS === 'ios' ? 14 : 10,
+                  rs.sm,
+                ),
                 flexDirection: compact ? 'column' : 'row',
                 alignItems: compact ? 'stretch' : 'center',
               },
@@ -258,7 +377,12 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                       theme.name === 'dark'
                         ? 'rgba(255,255,255,0.14)'
                         : travelHomeTokens.colors.divider,
-                    height: Math.max(28, s(32)),
+                    // Span the date line + label cluster optical mid — not the full
+                    // footer height — so the rule matches the shorter, centered read.
+                    height:
+                      Platform.OS === 'ios'
+                        ? Math.max(28, s(30))
+                        : Math.max(24, s(26)),
                   },
                 ]}
               />
@@ -272,17 +396,10 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               onPress={viewItinerary}
               hitSlop={buttonHitSlop}
               style={({ pressed }) => [
-                styles.itineraryButton,
+                styles.itineraryHit,
                 {
                   height: buttonHeight,
-                  paddingHorizontal: Math.max(
-                    12,
-                    s(travelHomeTokens.sizes.itineraryHorizontalPadding),
-                  ),
                   borderRadius: travelHomeTokens.radius.itineraryButton,
-                  backgroundColor: itineraryBg,
-                  borderColor: itineraryBorder,
-                  boxShadow: travelHomeTokens.colors.itineraryButtonShadow,
                   opacity: pressed ? 0.88 : 1,
                   alignSelf: compact ? 'stretch' : 'center',
                   maxWidth: compact
@@ -290,30 +407,41 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                     : Math.max(168, s(travelHomeTokens.sizes.itineraryButtonMaxWidth + 12)),
                 },
               ]}>
-              <TravelHomeRouteIcon
-                size={Math.max(16, s(travelHomeTokens.sizes.itineraryIcon))}
-                color={itineraryFg}
-              />
-              <Text
-                allowFontScaling
-                maxFontSizeMultiplier={1.05}
-                numberOfLines={1}
-                style={{
-                  color: itineraryFg,
-                  fontSize: labelSize,
-                  lineHeight: labelSize * 1.1,
-                  fontWeight: '400',
-                  fontFamily: travelHomeFontFamily,
-                  flexShrink: 1,
-                  minWidth: 0,
-                }}>
-                View Itinerary
-              </Text>
+              {itineraryFill ? (
+                <View
+                  style={[
+                    styles.itineraryButton,
+                    {
+                      height: buttonHeight,
+                      paddingHorizontal: itineraryPadH,
+                      borderRadius: travelHomeTokens.radius.itineraryButton,
+                      backgroundColor: itineraryFill,
+                      boxShadow: travelHomeTokens.colors.itineraryButtonShadowDark,
+                    },
+                  ]}>
+                  {itineraryContent}
+                </View>
+              ) : (
+                <TravelHomeGlass
+                  inverted
+                  intensity={44}
+                  style={[
+                    styles.itineraryButton,
+                    {
+                      height: buttonHeight,
+                      paddingHorizontal: itineraryPadH,
+                      borderRadius: travelHomeTokens.radius.itineraryButton,
+                      boxShadow: travelHomeTokens.colors.itineraryButtonShadow,
+                    },
+                  ]}>
+                  {itineraryContent}
+                </TravelHomeGlass>
+              )}
             </Pressable>
           </View>
-        </View>
+        </TravelHomeGlass>
       </View>
-    </View>
+    </Animated.View>
   );
 });
 
@@ -328,6 +456,20 @@ const styles = StyleSheet.create({
   metaPanel: {
     zIndex: 1,
     borderCurve: 'continuous',
+  },
+  stepperSlot: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Above Android frost underlays in TravelHomeGlass.
+    zIndex: 3,
+  },
+  stepperSlotCollapsed: {
+    height: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    overflow: 'hidden',
+    opacity: 0,
+    zIndex: 3,
   },
   body: {
     width: '100%',
@@ -358,6 +500,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignSelf: 'center',
   },
+  itineraryHit: {
+    flexGrow: 0,
+    flexShrink: 0,
+    overflow: 'hidden',
+    borderCurve: 'continuous',
+  },
   itineraryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,6 +513,6 @@ const styles = StyleSheet.create({
     gap: 7,
     flexGrow: 0,
     flexShrink: 0,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
   },
 });

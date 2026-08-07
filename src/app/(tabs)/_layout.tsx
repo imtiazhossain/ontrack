@@ -18,8 +18,11 @@ export default function TabsLayout() {
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        freezeOnBlur: true,
+        // Keep switches snappy — freezing blurred tabs adds a visible hitch
+        // when hopping between sections in the floating rail.
+        freezeOnBlur: false,
         lazy: true,
+        animation: 'none',
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
           position: 'absolute',

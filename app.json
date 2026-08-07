@@ -24,6 +24,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "onTrack uses the camera to capture meal, activity, plant-care, and vision-board photos.",
         "NSPhotoLibraryUsageDescription": "onTrack accesses your photo library so you can attach meal, activity, plant-care, and vision-board photos.",
+        "NSMotionUsageDescription": "onTrack uses device motion for activity features and so the travel sky can twinkle and shimmer as you move your phone.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "F5HRXF5795"
@@ -118,6 +119,12 @@
       "expo-web-browser",
       "expo-apple-authentication",
       "expo-secure-store",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "onTrack uses device motion for activity features and so the travel sky can twinkle and shimmer as you move your phone."
+        }
+      ],
       "./plugins/with-ontrack-healthkit.js",
       [
         "expo-location",

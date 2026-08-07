@@ -86,10 +86,11 @@ export const AGENT_UI_FLOWS = {
   'travel-demo-hub': [
     { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
+    // Legacy hub route redirects onto plan detail where tools now live.
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}/hub` },
     {
       op: 'wait',
-      id: `ontrack.travel.hub.section.${AGENT_UI_DEMO_TRIP_ID}`,
+      id: 'ontrack.travel.planDetail.section.tools',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
@@ -180,6 +181,38 @@ export const AGENT_UI_FLOWS = {
     {
       op: 'wait',
       id: `ontrack.travel.detailsEditor.save.${AGENT_UI_DEMO_FLIGHT_ID}`,
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
+  'travel-demo-share-flight': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-demo' },
+    { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
+    {
+      op: 'wait',
+      prefix: 'ontrack.travel.planDetail.',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    {
+      op: 'tap',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.default`,
+    },
+    {
+      op: 'wait',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.share`,
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    {
+      op: 'scroll',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.share`,
+    },
+    {
+      op: 'tap',
+      id: `ontrack.travel.timelineItem.${AGENT_UI_DEMO_FLIGHT_ID}.share`,
+    },
+    {
+      op: 'wait',
+      id: 'ontrack.travel.itineraryShare.sheet',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],

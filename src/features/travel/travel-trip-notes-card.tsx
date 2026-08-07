@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
 import { TRAVEL_TITLE_ICON_GAP } from '@/features/travel/travel-chrome';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { travelMainCardFill } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -13,50 +13,77 @@ import { haptics } from '@/utils/haptics';
 
 const NOTES_CARD_SHADOW = '0 2px 8px rgba(17, 74, 110, 0.10)';
 
-/** Trip notes strip — matches the dates row: cream card, teal note well, labeled body. */
+/** Trip notes strip — glass card matching the dates row. */
 export function TravelTripNotesCard({
   notes,
   toggleTestID,
+  editTestID,
+  onEdit,
   defaultExpanded = true,
+  expanded: expandedProp,
+  onExpandedChange,
 }: {
   notes: string;
   toggleTestID?: string;
+  editTestID?: string;
+  onEdit?: () => void;
   defaultExpanded?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const noteTone = chrome.icons.note;
   const { s, spacing: rs, typography } = useResponsive();
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [uncontrolled, setUncontrolled] = useState(defaultExpanded);
+  const expanded = expandedProp ?? uncontrolled;
   const trimmed = notes.trim();
-  if (!trimmed) return null;
+  const canEdit = Boolean(onEdit);
+  if (!trimmed && !canEdit) return null;
 
   const iconBox = Math.max(26, s(28));
   const titleIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
   const tap = Math.max(44, s(44));
   const chevronBox = Math.max(24, s(24));
-  const label = 'Notes';
   const accessibilityLabel = expanded ? `Notes, expanded` : `Notes, collapsed`;
+  const bodyLabel = trimmed
+    ? canEdit
+      ? `Edit notes: ${trimmed}`
+      : `Notes: ${trimmed}`
+    : 'Add trip notes';
+  const bodyCopy = trimmed || 'Tap to add notes…';
 
+  const setExpanded = (next: boolean) => {
+    if (expandedProp === undefined) setUncontrolled(next);
+    onExpandedChange?.(next);
+  };
   const toggle = () => {
     haptics.select();
-    setExpanded((next) => !next);
+    setExpanded(!expanded);
+  };
+  const openEdit = () => {
+    if (!onEdit) return;
+    haptics.tap();
+    onEdit();
   };
   const agent = useAgentUiTarget(toggleTestID, {
     label: accessibilityLabel,
     onPress: toggle,
   });
+  const editAgent = useAgentUiTarget(editTestID, {
+    label: bodyLabel,
+    onPress: canEdit ? openEdit : undefined,
+  });
+  const radius = Math.max(12, s(14));
 
   return (
-    <View
+    <TravelHomeGlass
+      clear
       style={[
         styles.card,
         {
-          backgroundColor: travelMainCardFill(theme),
-          borderColor: chrome.fieldBorder,
           boxShadow: NOTES_CARD_SHADOW,
-          borderRadius: Math.max(12, s(14)),
-          overflow: 'hidden',
+          borderRadius: radius,
         },
       ]}>
       <Pressable
@@ -123,23 +150,34 @@ export function TravelTripNotesCard({
         </View>
       </Pressable>
       {expanded ? (
-        <View
-          accessibilityRole="text"
-          accessibilityLabel={`Notes: ${trimmed}`}
-          style={[
+        <Pressable
+          ref={editAgent.ref}
+          testID={editTestID}
+          onLayout={editAgent.onLayout}
+          accessibilityRole={canEdit ? 'button' : 'text'}
+          accessibilityLabel={bodyLabel}
+          accessibilityHint={canEdit ? 'Opens the trip notes editor' : undefined}
+          disabled={!canEdit}
+          onPress={canEdit ? openEdit : undefined}
+          style={({ pressed }) => [
             styles.bodyWrap,
             {
-              borderTopColor: chrome.fieldBorder,
+              borderTopColor:
+                theme.name === 'dark'
+                  ? 'rgba(255,255,255,0.12)'
+                  : 'rgba(255,255,255,0.45)',
               // Align note copy with the "Notes" title (after icon + gap).
               paddingLeft: rs.md + iconBox + titleIconGap,
               paddingRight: rs.md,
               paddingTop: rs.sm,
               paddingBottom: Math.max(rs.md, s(14)),
+              minHeight: tap,
             },
+            canEdit && pressed && styles.pressed,
           ]}>
           <AppText
             variant="callout"
-            color="secondary"
+            color={trimmed ? 'secondary' : 'tertiary'}
             style={[
               styles.body,
               {
@@ -147,17 +185,16 @@ export function TravelTripNotesCard({
                 lineHeight: Math.max(20, typography.callout.lineHeight + 1),
               },
             ]}>
-            {trimmed}
+            {bodyCopy}
           </AppText>
-        </View>
+        </Pressable>
       ) : null}
-    </View>
+    </TravelHomeGlass>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderCurve: 'continuous',
   },
   header: {
@@ -184,6 +221,7 @@ const styles = StyleSheet.create({
   bodyWrap: {
     width: '100%',
     borderTopWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
   },
   label: {
     fontFamily: fontFamilies.serif,

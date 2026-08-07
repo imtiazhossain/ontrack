@@ -8,6 +8,10 @@ import { normalizeStayDetails } from './stay-details';
 import { normalizeTransportDetails } from './transport-details';
 import { TRAVEL_PLAN_MODE_VALUES } from './travel-mode';
 import { normalizeTravelPhotoUris } from './travel-moment-media';
+import {
+    normalizeSharedWithUserIds,
+    normalizeTravelItemShareMode,
+} from './itinerary-visibility';
 import type {
     TravelExpense,
     TravelExpenseCategory,
@@ -78,6 +82,19 @@ export function normalizeTravelItineraryItem(
 
   const photoUris = normalizeTravelPhotoUris(item.photoUris);
   const notes = normalizeTravelItemNotes(item.notes);
+  const shareMode = normalizeTravelItemShareMode(item.shareMode);
+  const sharedWithUserIds =
+    shareMode === 'selected'
+      ? normalizeSharedWithUserIds(item.sharedWithUserIds)
+      : undefined;
+  const ownerUserId =
+    typeof item.ownerUserId === 'string' && item.ownerUserId.trim()
+      ? item.ownerUserId.trim()
+      : undefined;
+  const sharedUpdatedAt =
+    typeof item.sharedUpdatedAt === 'string' && item.sharedUpdatedAt.trim()
+      ? item.sharedUpdatedAt.trim()
+      : undefined;
 
   return {
     id: item.id,
@@ -90,6 +107,10 @@ export function normalizeTravelItineraryItem(
     bookingUrl: isMoment ? undefined : asString(item.bookingUrl),
     ...(photoUris ? { photoUris } : {}),
     ...(notes ? { notes } : {}),
+    ...(ownerUserId ? { ownerUserId } : {}),
+    shareMode,
+    ...(sharedWithUserIds ? { sharedWithUserIds } : {}),
+    ...(sharedUpdatedAt ? { sharedUpdatedAt } : {}),
     flight: kind === 'flight' ? normalizeFlightDetails(item.flight) : undefined,
     transport:
       kind === 'transport' ? normalizeTransportDetails(item.transport) : undefined,

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/primitives';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
     travelHomeFontFamily,
     travelHomeTokens,
@@ -84,9 +85,10 @@ export function TravelHomeTravelerStack({
         </View>
       ))}
       {remainder > 0 ? (
-        <View
+        <TravelHomeGlass
           accessible
           accessibilityLabel={`${remainder} more travelers`}
+          intensity={theme.name === 'dark' ? 40 : 48}
           style={[
             styles.count,
             {
@@ -94,12 +96,9 @@ export function TravelHomeTravelerStack({
               height: size,
               left: shown.length * (size - overlap),
               zIndex: 0,
-              backgroundColor:
-                theme.name === 'dark'
-                  ? theme.backgroundSunken
-                  : travelHomeTokens.colors.avatarCountSurface,
-              borderColor: border,
+              borderRadius: size / 2,
               borderWidth: travelHomeTokens.sizes.avatarBorder,
+              borderColor: border,
             },
           ]}>
           <AppText
@@ -117,7 +116,7 @@ export function TravelHomeTravelerStack({
             }}>
             +{remainder}
           </AppText>
-        </View>
+        </TravelHomeGlass>
       ) : null}
     </View>
   );

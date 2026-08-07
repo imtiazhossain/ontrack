@@ -16,6 +16,7 @@ import type {
   TravelPlan,
 } from '@/features/travel/types';
 import { getSupabaseClient } from '@/services/cloud/supabase';
+import { publishTravelTripItinerary } from '@/services/travel/itinerary-collaboration';
 import { formatDateLong } from '@/utils/date';
 
 export function isOpenTravelJoinCode(value: string): boolean {
@@ -81,6 +82,8 @@ export async function ensureTravelOpenJoinLink(plan: TravelPlan): Promise<string
       error?.message ?? 'The open join link could not be created. Please try again.',
     );
   }
+  // Link creation establishes host membership for itinerary RPCs.
+  await publishTravelTripItinerary(plan).catch(() => undefined);
   return data;
 }
 

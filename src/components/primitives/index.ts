@@ -34,7 +34,11 @@ export type { MetaListItem } from './meta-list';
 export { PanelTitle } from './panel-title';
 export { ProgressRing } from './progress-ring';
 export { RouteErrorBoundary } from './route-error-boundary';
-export { SafeAreaChrome, useSafeAreaChrome } from './safe-area-chrome';
+export {
+  SafeAreaChrome,
+  useSafeAreaChrome,
+  useSafeAreaChromeOverlay,
+} from './safe-area-chrome';
 export { Screen } from './screen';
 export { ScreenHeader, type ScreenHeaderProps } from './screen-header';
 export { SectionHeader } from './section-header';

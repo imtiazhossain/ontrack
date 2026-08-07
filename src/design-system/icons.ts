@@ -148,7 +148,7 @@ export const appIcons = {
   camera: { ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' },
   calendar: { ios: 'calendar', android: 'calendar_month', web: 'calendar_month' },
   'calendar-add': { ios: 'calendar.badge.plus', android: 'calendar_add_on', web: 'calendar_add_on' },
-  health: { ios: 'heart.text.square.fill', android: 'monitor_heart', web: 'monitor_heart' },
+  health: { ios: 'heart.fill', android: 'favorite', web: 'favorite' },
   favorite: { ios: 'heart', android: 'favorite_border', web: 'favorite_border' },
   'nutrition-profiles': { ios: 'heart.text.clipboard', android: 'clinical_notes', web: 'clinical_notes' },
   play: { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' },

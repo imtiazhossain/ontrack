@@ -136,13 +136,18 @@ function compactItineraryItem(item: TravelItineraryItem) {
 }
 
 export function encodeTravelInvite(plan: TravelPlan): string {
+  // Bootstrap only trip-wide shared stops. Private / selected items sync live
+  // after join and must not leak through the invite snapshot.
+  const shareableItinerary = plan.itinerary.filter(
+    (item) => (item.shareMode ?? 'private') === 'trip',
+  );
   const compactPlan = [
     plan.title,
     plan.destination,
     plan.startDate,
     plan.endDate,
     plan.notes,
-    plan.itinerary.map(compactItineraryItem),
+    shareableItinerary.map(compactItineraryItem),
     plan.mode ?? 'flight',
     plan.origin,
   ];

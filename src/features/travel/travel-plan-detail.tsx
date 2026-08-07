@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
@@ -30,7 +31,13 @@ import {
     resolveCollapsedTimelineDates,
     timelineDaysFromItems,
 } from '@/features/travel/travel-timeline-progress';
-import type { TravelItemKind, TravelPlan } from '@/features/travel/types';
+import { visibleItineraryForViewer } from '@/features/travel/itinerary-visibility';
+import type {
+  TravelItemKind,
+  TravelItineraryItem,
+  TravelPlan,
+} from '@/features/travel/types';
+import { useRecoverReservedTravelPlan } from '@/features/travel/use-recover-reserved-travel-plan';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import { useTravelPlanDetailAddForm } from '@/features/travel/use-travel-plan-detail-add-form';
 import { useTravelPlanDetailAddItem } from '@/features/travel/use-travel-plan-detail-add-item';
@@ -39,9 +46,17 @@ import { buildTravelPlanDetailItemHandlers } from '@/features/travel/use-travel-
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  publishTravelTripItinerary,
+  shouldSyncTravelItinerary,
+  stampOwnedItineraryDefaults,
+  touchItineraryItemShare,
+} from '@/services/travel/itinerary-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
+import { useTravelPlanUi } from '@/store/travel-plan-ui';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 type TravelPlanDetailProps = {
   planId: string;
@@ -63,8 +78,16 @@ type TravelPlanDetailProps = {
 export function TravelPlanDetail(props: TravelPlanDetailProps) {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
+  const router = useRouter();
+  const planId =
+    typeof props.planId === 'string'
+      ? props.planId
+      : Array.isArray(props.planId)
+        ? String(props.planId[0] ?? '')
+        : '';
+  useRecoverReservedTravelPlan(planId || undefined);
   const plan = useTravel((state) =>
-    state.plans.find((item) => item.id === props.planId),
+    planId ? state.plans.find((item) => item.id === planId) : undefined,
   );
   if (!plan) {
     return (
@@ -73,11 +96,14 @@ export function TravelPlanDetail(props: TravelPlanDetailProps) {
           icon="flight"
           title="Trip Not Found"
           message="This trip may have been removed on another device."
+          actionLabel="Back to Travel"
+          actionTestID={AgentUiIds.travel.planDetail.backToTravel}
+          onAction={() => router.replace('/travel' as never)}
         />
       </Screen>
     );
   }
-  return <TravelPlanDetailLoaded {...props} plan={plan} />;
+  return <TravelPlanDetailLoaded {...props} planId={planId} plan={plan} />;
 }
 
 function TravelPlanDetailLoaded({
@@ -101,15 +127,21 @@ function TravelPlanDetailLoaded({
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const { user } = useAuthSession();
   const accountEmail = user?.email?.trim().toLowerCase() || undefined;
+  const localUserId = user?.id;
   const itinerary = Array.isArray(plan.itinerary) ? plan.itinerary : [];
+  const [sharingItemId, setSharingItemId] = useState<string | undefined>();
 
   const updatePlan = (next: TravelPlan) => {
-    const saved = savePlan(next);
+    const stamped = stampOwnedItineraryDefaults(next, localUserId);
+    const saved = savePlan(stamped);
     if (!saved) return;
     // Calendar membership is opt-in from the Travel tab — never auto-create
     // events when editing itinerary, expenses, or notes on plan detail.
-    if (isTravelPlanOnCalendar(activities, next.id)) {
-      replaceTravelActivities(next.id, travelCalendarDrafts(next));
+    if (isTravelPlanOnCalendar(activities, stamped.id)) {
+      replaceTravelActivities(stamped.id, travelCalendarDrafts(stamped));
+    }
+    if (shouldSyncTravelItinerary(stamped)) {
+      void publishTravelTripItinerary(stamped).catch(() => undefined);
     }
   };
   const form = useTravelPlanDetailAddForm({
@@ -143,6 +175,7 @@ function TravelPlanDetailLoaded({
   });
   const [openExpenseSheet, setOpenExpenseSheet] = useState(initialOpenExpenses);
   const [editingTripDates, setEditingTripDates] = useState(false);
+  const [editingTripNotes, setEditingTripNotes] = useState(false);
   const [expenseDraft, setExpenseDraft] = useState<ExpenseFormState>();
   const [preparedExpenseDraft, setPreparedExpenseDraft] =
     useState<ExpenseFormState>();
@@ -236,30 +269,47 @@ function TravelPlanDetailLoaded({
     maybeShowImportedAddPrompt: expenseImport.maybeShowImportedAddPrompt,
   });
 
-  const [minimizedItemIds, setMinimizedItemIds] = useState<Set<string>>();
-  const [sectionExpanded, setSectionExpanded] = useState<
-    Partial<Record<DetailSectionKey, boolean>>
-  >({});
-  const [collapsedDayDates, setCollapsedDayDates] = useState<Set<string>>(
-    () => new Set(),
+  const planUi = useTravelPlanUi((state) => state.byPlanId[planId]);
+  const patchPlanUi = useTravelPlanUi((state) => state.patchPlanUi);
+  const sectionExpanded = planUi?.sectionExpanded ?? {};
+  const dayCollapseTouched = useMemo(
+    () => new Set(planUi?.dayCollapseTouched ?? []),
+    [planUi?.dayCollapseTouched],
   );
-  const [dayCollapseTouched, setDayCollapseTouched] = useState<Set<string>>(
-    () => new Set(),
+  const persistedCollapsedDays = useMemo(
+    () => new Set(planUi?.collapsedDayDates ?? []),
+    [planUi?.collapsedDayDates],
   );
   const [timelineNow, setTimelineNow] = useState(() => new Date());
   const sortedItinerary = useMemo(
     () =>
-      [...itinerary].sort(
+      visibleItineraryForViewer(itinerary, localUserId).sort(
         (left, right) =>
           left.date.localeCompare(right.date) ||
           left.startMinutes - right.startMinutes,
       ),
-    [itinerary],
+    [itinerary, localUserId],
+  );
+  const sharingItem = useMemo(
+    () =>
+      sharingItemId
+        ? itinerary.find((item) => item.id === sharingItemId)
+        : undefined,
+    [itinerary, sharingItemId],
   );
   const timelineDays = useMemo(
     () => timelineDaysFromItems(sortedItinerary),
     [sortedItinerary],
   );
+  const collapsedDayDates = useMemo(() => {
+    const autoCollapsed = autoCollapsedTimelineDates(timelineDays, timelineNow);
+    return resolveCollapsedTimelineDates({
+      days: timelineDays,
+      autoCollapsed,
+      currentCollapsed: persistedCollapsedDays,
+      userTouched: dayCollapseTouched,
+    });
+  }, [timelineDays, timelineNow, persistedCollapsedDays, dayCollapseTouched]);
 
   useEffect(() => {
     const tick = () => setTimelineNow(new Date());
@@ -273,17 +323,17 @@ function TravelPlanDetailLoaded({
     };
   }, []);
 
+  // Keep persisted day collapse in sync with clock-driven auto-collapse for
+  // untouched days so remounts don't flash a stale open/closed set.
   useEffect(() => {
-    const autoCollapsed = autoCollapsedTimelineDates(timelineDays, timelineNow);
-    setCollapsedDayDates((current) =>
-      resolveCollapsedTimelineDates({
-        days: timelineDays,
-        autoCollapsed,
-        currentCollapsed: current,
-        userTouched: dayCollapseTouched,
-      }),
-    );
-  }, [timelineDays, timelineNow, dayCollapseTouched]);
+    const next = [...collapsedDayDates].sort();
+    const current = [...persistedCollapsedDays].sort();
+    if (next.length === current.length && next.every((date, i) => date === current[i])) {
+      return;
+    }
+    patchPlanUi(planId, { collapsedDayDates: next });
+  }, [collapsedDayDates, persistedCollapsedDays, patchPlanUi, planId]);
+
   const transportCounts = {
     flights: sortedItinerary.filter((item) => item.kind === 'flight').length,
     ground: sortedItinerary.filter((item) => item.kind === 'transport').length,
@@ -293,37 +343,41 @@ function TravelPlanDetailLoaded({
   const isSectionExpanded = (key: DetailSectionKey) =>
     sectionExpanded[key] ?? sectionDefaultExpanded(key, transportCounts);
   const toggleSection = (key: DetailSectionKey) => {
-    setSectionExpanded((current) => ({
-      ...current,
-      [key]: !(current[key] ?? sectionDefaultExpanded(key, transportCounts)),
-    }));
+    patchPlanUi(planId, {
+      sectionExpanded: {
+        ...sectionExpanded,
+        [key]: !(sectionExpanded[key] ?? sectionDefaultExpanded(key, transportCounts)),
+      },
+    });
   };
   const defaultCollapsedItemIds = () =>
     new Set([
       ...itinerary.map((item) => item.id),
       ...expandTimelineEntries(itinerary).map((entry) => entry.key),
     ]);
-  const collapsedItemIds = minimizedItemIds ?? defaultCollapsedItemIds();
+  const collapsedItemIds = planUi?.minimizedItemIds
+    ? new Set(planUi.minimizedItemIds)
+    : defaultCollapsedItemIds();
   const toggleItineraryItem = (itemId: string) => {
-    setMinimizedItemIds((current) => {
-      const next = new Set(current ?? defaultCollapsedItemIds());
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
+    const next = new Set(planUi?.minimizedItemIds ?? defaultCollapsedItemIds());
+    if (next.has(itemId)) next.delete(itemId);
+    else next.add(itemId);
+    patchPlanUi(planId, { minimizedItemIds: [...next] });
   };
   const toggleDay = (date: string) => {
-    setDayCollapseTouched((current) => {
-      const next = new Set(current);
-      next.add(date);
-      return next;
+    const nextTouched = new Set(dayCollapseTouched);
+    nextTouched.add(date);
+    const nextCollapsed = new Set(collapsedDayDates);
+    if (nextCollapsed.has(date)) nextCollapsed.delete(date);
+    else nextCollapsed.add(date);
+    patchPlanUi(planId, {
+      dayCollapseTouched: [...nextTouched],
+      collapsedDayDates: [...nextCollapsed],
     });
-    setCollapsedDayDates((current) => {
-      const next = new Set(current);
-      if (next.has(date)) next.delete(date);
-      else next.add(date);
-      return next;
-    });
+  };
+  const notesExpanded = planUi?.notesExpanded ?? true;
+  const setNotesExpanded = (expanded: boolean) => {
+    patchPlanUi(planId, { notesExpanded: expanded });
   };
   const itemEditHandlers = buildTravelPlanDetailItemHandlers({
     planId,
@@ -337,10 +391,13 @@ function TravelPlanDetailLoaded({
     updatePlan,
     setExpenseDraft,
     setOpenExpenseSheet,
+    onShare: (item: TravelItineraryItem) => setSharingItemId(item.id),
   });
   const chooseAddKind = (kind: TravelItemKind) =>
     form.chooseAddKind(kind, () =>
-      setSectionExpanded((current) => ({ ...current, timeline: true })),
+      patchPlanUi(planId, {
+        sectionExpanded: { ...sectionExpanded, timeline: true },
+      }),
     );
   const cancelAddToTimeline = () =>
     form.cancelAddToTimeline(confirmationImports.importInProgressRef, () =>
@@ -361,6 +418,10 @@ function TravelPlanDetailLoaded({
         onAddPress={() => form.setIsChoosingAddKind(true)}
         onAddKind={chooseAddKind}
         onEditDates={() => setEditingTripDates(true)}
+        onEditNotes={() => setEditingTripNotes(true)}
+        onOpenExpenses={() => setOpenExpenseSheet(true)}
+        notesExpanded={notesExpanded}
+        onNotesExpandedChange={setNotesExpanded}
       />
       <TravelPlanDetailOverlays
         plan={plan}
@@ -370,6 +431,8 @@ function TravelPlanDetailLoaded({
         itemMedia={itemMedia}
         editingTripDates={editingTripDates}
         setEditingTripDates={setEditingTripDates}
+        editingTripNotes={editingTripNotes}
+        setEditingTripNotes={setEditingTripNotes}
         openExpenseSheet={openExpenseSheet}
         setOpenExpenseSheet={setOpenExpenseSheet}
         expenseDraft={expenseDraft}
@@ -385,6 +448,32 @@ function TravelPlanDetailLoaded({
         addItem={addItem}
         goToItinerarySafely={goToItinerarySafely}
         openImportedExpenseReview={expenseImport.openImportedExpenseReview}
+        sharingItem={sharingItem}
+        localUserId={localUserId}
+        onCloseShare={() => setSharingItemId(undefined)}
+        onSaveShare={(draft) => {
+          if (!sharingItem) return;
+          const latest =
+            useTravel.getState().plans.find((entry) => entry.id === planId) ??
+            plan;
+          updatePlan({
+            ...latest,
+            itinerary: latest.itinerary.map((item) =>
+              item.id === sharingItem.id
+                ? touchItineraryItemShare(
+                    item,
+                    {
+                      shareMode: draft.shareMode,
+                      sharedWithUserIds: draft.sharedWithUserIds,
+                    },
+                    localUserId,
+                  )
+                : item,
+            ),
+            updatedAt: new Date().toISOString(),
+          });
+          setSharingItemId(undefined);
+        }}
       />
     </View>
   );

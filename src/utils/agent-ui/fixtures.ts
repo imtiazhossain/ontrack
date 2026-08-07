@@ -1,5 +1,16 @@
+import {
+    TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    TRAVEL_HOME_ICELAND_TRIP_ID,
+    TRAVEL_HOME_THIRD_TRIP_ID,
+} from '@/features/travel/fixtures/travel-home';
 import type { TravelPlan } from '@/features/travel/types';
 import type { TodoList, TodoRecipe, TodoTask } from '@/store/todos-types';
+
+export {
+    TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    TRAVEL_HOME_ICELAND_TRIP_ID,
+    TRAVEL_HOME_THIRD_TRIP_ID,
+};
 
 /** Stable __DEV__ plan id — agents can deep-link without creating trips. */
 export const AGENT_UI_DEMO_TRIP_ID = 'trip-agent-ui-demo';
@@ -81,6 +92,7 @@ export function createIdFromAgentUiItemIds(
 export type AgentUiFixtureName =
   | 'travel-demo'
   | 'travel-home'
+  | 'travel-restore-documents'
   | 'checklist-demo'
   | 'grocery-demo'
   | 'health-demo'
@@ -91,11 +103,77 @@ export type AgentUiFixtureName =
   | 'workouts-demo'
   | 'vision-board-demo';
 
-export {
-    TRAVEL_HOME_ANTIGUA_TRIP_ID,
-    TRAVEL_HOME_ICELAND_TRIP_ID,
-    TRAVEL_HOME_THIRD_TRIP_ID
-} from '@/features/travel/fixtures/travel-home';
+/** Reserved sandbox / agent-ui trip ids — never keep these on a live account. */
+export const AGENT_UI_RESERVED_TRIP_IDS: readonly string[] = [
+  AGENT_UI_DEMO_TRIP_ID,
+  TRAVEL_HOME_ICELAND_TRIP_ID,
+  TRAVEL_HOME_ANTIGUA_TRIP_ID,
+  TRAVEL_HOME_THIRD_TRIP_ID,
+];
+
+export function isReservedAgentUiTripId(id: string): boolean {
+  return AGENT_UI_RESERVED_TRIP_IDS.includes(id);
+}
+
+/** Fixture that (re)creates a reserved trip id for DEV sandboxes. */
+export function fixtureNameForReservedTripId(
+  id: string,
+): AgentUiFixtureName | null {
+  if (id === AGENT_UI_DEMO_TRIP_ID) return 'travel-demo';
+  if (
+    id === TRAVEL_HOME_ICELAND_TRIP_ID ||
+    id === TRAVEL_HOME_ANTIGUA_TRIP_ID ||
+    id === TRAVEL_HOME_THIRD_TRIP_ID
+  ) {
+    return 'travel-home';
+  }
+  return null;
+}
+
+/**
+ * After sandbox exit/purge: leave `/travel/<reserved-id>…` so plan detail is
+ * not stuck on Trip Not Found with a wiped fixture.
+ */
+export function leaveReservedAgentUiTravelRouteIfNeeded(
+  route: string | null = null,
+): boolean {
+  // Lazy require avoids fixtures ↔ route cycles in unit tests.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { agentUiNavigate, getAgentUiRoute, travelPlanIdFromRoute } =
+    require('@/utils/agent-ui/route') as typeof import('@/utils/agent-ui/route');
+  const resolved = route ?? getAgentUiRoute();
+  const tripId = travelPlanIdFromRoute(resolved);
+  if (!tripId || !isReservedAgentUiTripId(tripId)) return false;
+  return agentUiNavigate('/travel');
+}
+
+/**
+ * Reserved demo route with no plan: re-seed while a sandbox is still on;
+ * otherwise leave Travel so cold start / verify-both release cannot stick.
+ * Returns true when the plan exists after recovery.
+ */
+export function recoverMissingReservedTravelPlan(planId: string): boolean {
+  if (!planId || !isReservedAgentUiTripId(planId)) return false;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTravel } = require('@/store/travel') as typeof import('@/store/travel');
+  if (useTravel.getState().plans.some((plan) => plan.id === planId)) return true;
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useDevMode } = require('@/store/dev-mode') as typeof import('@/store/dev-mode');
+  if (__DEV__ && useDevMode.getState().enabled) {
+    const fixture = fixtureNameForReservedTripId(planId);
+    if (fixture) {
+      seedAgentUiFixture(fixture);
+      if (useTravel.getState().plans.some((plan) => plan.id === planId)) return true;
+    }
+  }
+
+  leaveReservedAgentUiTravelRouteIfNeeded(`/travel/${planId}`);
+  return useTravel.getState().plans.some((plan) => plan.id === planId);
+}
+
+/** Dropped after a successful live restore (host places the file in Documents). */
+const TRAVEL_RESTORE_DOCUMENTS_FILENAME = 'travel-plans-restore.json';
 
 export type AgentUiSeedResult = {
   fixture: AgentUiFixtureName;
@@ -238,6 +316,11 @@ export function buildAgentUiDemoTrip(
           arrivalGate: '18',
           confirmationCode: 'AGENTUI',
           passengerCount: 1,
+          // Durable cloud marker — proves the View Confirmation control survives
+          // normalize/sync (local file:// alone was previously stripped on pull).
+          confirmationUris: [
+            'ontrack-media:agent-ui/travel/demo-flight-confirmation.pdf',
+          ],
         },
       },
       {
@@ -464,11 +547,59 @@ function upsertTodoFixtureLists(input: {
   }));
 }
 
+/** Live-account recovery from Documents — must not enter the Dev Mode sandbox. */
+export async function restoreTravelPlansFromDocuments(): Promise<AgentUiSeedResult | null> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTravel } = require('@/store/travel') as typeof import('@/store/travel');
+  const file = new File(Paths.document, TRAVEL_RESTORE_DOCUMENTS_FILENAME);
+  if (!file.exists) return null;
+  let parsed: unknown;
+  try {
+    parsed = await file.json();
+  } catch {
+    return null;
+  }
+  const plans = Array.isArray(parsed) ? parsed : [];
+  let primaryId: string | undefined;
+  for (const plan of plans) {
+    if (!plan || typeof plan !== 'object') continue;
+    const id = (plan as { id?: unknown }).id;
+    if (typeof id !== 'string' || isReservedAgentUiTripId(id)) continue;
+    if (!useTravel.getState().savePlan(plan as TravelPlan)) continue;
+    primaryId ??= id;
+    useTravel.getState().recordPlanInteraction(id);
+  }
+  if (!primaryId) return null;
+  // Strip reserved sandbox fixtures that may already be on the live account.
+  for (const tripId of AGENT_UI_RESERVED_TRIP_IDS) {
+    if (useTravel.getState().plans.some((plan) => plan.id === tripId)) {
+      useTravel.getState().removePlan(tripId);
+    }
+  }
+  try {
+    file.delete();
+  } catch {
+    // Best-effort cleanup of the one-shot restore payload.
+  }
+  return {
+    fixture: 'travel-restore-documents',
+    primaryId,
+    planId: primaryId,
+  };
+}
+
 export function seedAgentUiFixture(
   name: string | undefined,
 ): AgentUiSeedResult | null {
   const fixture = normalizeFixtureName(name);
   if (!fixture) return null;
+
+  // Async-only recovery path — use restoreTravelPlansFromDocuments() / agent-ui seed.
+  if (fixture === 'travel-restore-documents') {
+    return null;
+  }
 
   // Snapshot + pause cloud push so demo data never lands on the live account.
   // Lazy require keeps pure fixture unit tests free of the controller graph.
@@ -805,6 +936,13 @@ export function normalizeFixtureName(
     return 'travel-home';
   }
   if (
+    key === 'travel-restore-documents' ||
+    key === 'travel-restore' ||
+    key === 'restore-travel'
+  ) {
+    return 'travel-restore-documents';
+  }
+  if (
     key === 'checklist-demo' ||
     key === 'checklist' ||
     key === AGENT_UI_DEMO_CHECKLIST_LIST_ID
@@ -874,6 +1012,7 @@ export function normalizeFixtureName(
   return null;
 }
 
+/** Fixtures shown in Developer Hub / listed for routine seeding. */
 export const AGENT_UI_FIXTURE_NAMES = [
   'travel-demo',
   'travel-home',
@@ -939,8 +1078,10 @@ export function purgeAgentUiDemoFixtures(): void {
   const { useVehicles } =
     require('@/store/vehicles') as typeof import('@/store/vehicles');
 
-  if (useTravel.getState().plans.some((plan) => plan.id === AGENT_UI_DEMO_TRIP_ID)) {
-    useTravel.getState().removePlan(AGENT_UI_DEMO_TRIP_ID);
+  for (const tripId of AGENT_UI_RESERVED_TRIP_IDS) {
+    if (useTravel.getState().plans.some((plan) => plan.id === tripId)) {
+      useTravel.getState().removePlan(tripId);
+    }
   }
 
   for (const listId of AGENT_UI_DEMO_TODO_LIST_IDS) {

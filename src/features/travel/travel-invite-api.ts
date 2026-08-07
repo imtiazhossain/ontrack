@@ -8,6 +8,10 @@ import {
 } from '@/features/travel/travel-invite-codec';
 import type { TravelPlan } from '@/features/travel/types';
 import { getSupabaseClient } from '@/services/cloud/supabase';
+import {
+  markInviteSnapshotItinerary,
+  publishTravelTripItinerary,
+} from '@/services/travel/itinerary-collaboration';
 import { formatDateLong } from '@/utils/date';
 
 const SHORT_INVITE_PREFIX = 's.';
@@ -45,6 +49,8 @@ export async function publishTravelInvite(
   invitee: TravelInvitee,
 ): Promise<string> {
   const client = await requireAuthenticatedInviteClient();
+  // Create the invite first so `is_travel_trip_host` is true, then push live
+  // itinerary rows (invite payload stays a trip-shared bootstrap only).
   const { data, error } = await client.rpc('create_travel_invite', {
     invite_payload: { invite: encodeTravelInvite(plan) },
     invite_trip_id: plan.id,
@@ -56,6 +62,7 @@ export async function publishTravelInvite(
       error?.message ?? 'The invitation could not be created. Please try again.',
     );
   }
+  await publishTravelTripItinerary(plan).catch(() => undefined);
   return data;
 }
 
@@ -77,7 +84,11 @@ export async function resolveTravelInvite(
   const plan = decodeTravelInvite(payload);
   if (!plan) return undefined;
   const tripId = typeof row.tripId === 'string' ? row.tripId.trim() : '';
-  return tripId ? { ...plan, hostTripId: tripId } : plan;
+  const stamped = {
+    ...plan,
+    itinerary: markInviteSnapshotItinerary(plan.itinerary, 'host'),
+  };
+  return tripId ? { ...stamped, hostTripId: tripId } : stamped;
 }
 
 export async function acceptTravelInvite(value: string): Promise<boolean> {

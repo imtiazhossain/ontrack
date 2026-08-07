@@ -23,7 +23,10 @@ function TravelStack() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: travelStyle,
+        // Transparent by default so itinerary sky chrome / in-header art can
+        // show; screens that need the travel wash set contentStyle locally
+        // (or inherit via TravelPlanDetailBody pageWash below the sky band).
+        contentStyle: { ...travelStyle, backgroundColor: 'transparent' },
       }}
     />
   );

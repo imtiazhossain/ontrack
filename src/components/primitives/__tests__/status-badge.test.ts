@@ -7,6 +7,6 @@ describe('statusBadgeToneColor', () => {
     expect(statusBadgeToneColor('success', lightTheme)).toBe(lightTheme.success);
     expect(statusBadgeToneColor('warning', lightTheme)).toBe(lightTheme.warning);
     expect(statusBadgeToneColor('danger', lightTheme)).toBe(lightTheme.danger);
-    expect(statusBadgeToneColor('neutral', lightTheme)).toBe(lightTheme.textTertiary);
+    expect(statusBadgeToneColor('neutral', lightTheme)).toBe(lightTheme.accentPrimary);
   });
 });

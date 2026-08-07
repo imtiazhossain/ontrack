@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
@@ -41,14 +42,22 @@ export function TravelHeaderFlourish({
   children,
   style,
   contentStyle,
+  /** When false, caller paints {@link TravelHeaderSkyDecor} on a wider row. */
+  sky = true,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   /** Applied to the foreground title stack (gap, padding). */
   contentStyle?: StyleProp<ViewStyle>;
+  sky?: boolean;
 }) {
   return (
     <View style={[styles.wrap, style]}>
+      {sky ? (
+        <View style={styles.skyBehind} pointerEvents="none">
+          <TravelHeaderSkyDecor />
+        </View>
+      ) : null}
       <View style={styles.flourishBehind} pointerEvents="none">
         <TravelFlightPathArc />
       </View>
@@ -71,6 +80,10 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     minWidth: 0,
     flexShrink: 1,
+  },
+  skyBehind: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 0,
   },
   flourishBehind: {
     position: 'absolute',

@@ -1,5 +1,6 @@
-import type { TravelPlan } from '@/features/travel/types';
 import { travelInviteLocalId } from '@/features/travel/travel-invite-codec';
+import type { TravelPlan } from '@/features/travel/types';
+import { markInviteSnapshotItinerary } from '@/services/travel/itinerary-collaboration';
 
 /**
  * Merge an approved open-join resolution into an existing local plan.
@@ -82,6 +83,7 @@ export function buildOpenJoinMemberPlan(input: {
   tripId: string;
   chatAccessCode: string;
   hostDisplayName?: string;
+  hostUserId?: string;
   now: string;
 }): TravelPlan {
   return {
@@ -89,6 +91,10 @@ export function buildOpenJoinMemberPlan(input: {
     id: travelInviteLocalId(input.chatAccessCode),
     chatAccessCode: input.chatAccessCode,
     hostTripId: input.tripId,
+    itinerary: markInviteSnapshotItinerary(
+      input.resolvedPlan.itinerary,
+      input.hostUserId ?? 'host',
+    ),
     ...(input.hostDisplayName?.trim()
       ? { hostDisplayName: input.hostDisplayName.trim() }
       : {}),

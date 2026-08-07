@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-07T02:04:12Z",
-  "idCount": 430,
+  "generatedAt": "2026-08-07T09:36:09Z",
+  "idCount": 447,
   "byId": {
     "ontrack.activityForm.analyzePhoto": {
       "feature": "activityForm",
@@ -480,9 +480,9 @@
         "src/app/detail/sleep/[id].tsx",
         "src/app/plants/[id].tsx",
         "src/app/plants/[id]/check-in.tsx",
-        "src/app/travel/[id]/hub.tsx",
         "src/components/primitives/app-prompt.tsx",
-        "src/components/primitives/collapsible-section.tsx"
+        "src/components/primitives/collapsible-section.tsx",
+        "src/components/primitives/danger-zone.tsx"
       ],
       "keyPaths": [
         "actions",
@@ -993,15 +993,15 @@
         "src/app/(tabs)/profile.tsx",
         "src/app/_layout.tsx",
         "src/components/primitives/app-prompt.tsx",
+        "src/components/primitives/app-safe-area.tsx",
         "src/components/primitives/date-field.tsx",
         "src/components/primitives/dropdown-layout.ts",
         "src/components/primitives/dropdown.tsx",
+        "src/components/primitives/safe-area-chrome.tsx",
         "src/components/primitives/sheet-scaffold.tsx",
         "src/components/primitives/time-field.ios.tsx",
         "src/design-system/shadows.ts",
-        "src/design-system/themes.ts",
-        "src/features/account/developer-hub.tsx",
-        "src/features/games/balloon-pop/balloon-pop-screen.tsx"
+        "src/design-system/themes.ts"
       ],
       "keyPaths": [
         "developer.overlay",
@@ -1080,7 +1080,7 @@
         "src/components/primitives/back-button.tsx",
         "src/features/account/developer-hub.tsx",
         "src/features/social/social-hub-screen.tsx",
-        "src/features/travel/travel-trip-hub-screen.tsx",
+        "src/features/travel/travel-plan-trip-tools.tsx",
         "src/utils/agent-ui/flows.ts",
         "src/utils/agent-ui/handle-agent-ui-url.ts",
         "src/utils/agent-ui/route.ts",
@@ -1146,6 +1146,8 @@
         "src/components/primitives/action-chip.tsx",
         "src/features/account/dev-mode-controller.ts",
         "src/features/account/developer-hub.tsx",
+        "src/features/travel/travel-home-atmosphere-queries.ts",
+        "src/features/travel/travel-home-hero-carousel.tsx",
         "src/utils/agent-ui/fixtures.ts"
       ],
       "keyPaths": [
@@ -1926,22 +1928,10 @@
       "entry": null,
       "skill": null,
       "files": [
-        "src/addons/registry.ts",
-        "src/agents/registry.ts",
-        "src/agents/types.ts",
-        "src/app/activity-form-editors.tsx",
-        "src/app/api/destination-cover+api.ts",
-        "src/app/api/destination-cover-image+api.ts",
-        "src/app/api/movies/[id]+api.ts",
-        "src/app/api/movies/search+api.ts",
-        "src/app/api/stay-brand+api.ts",
-        "src/app/api/vehicles/parts/search+api.ts",
-        "src/app/api/vehicles/vin-decode+api.ts",
-        "src/app/nutrition-insights+api.ts"
+        "src/features/social/people-picker.tsx"
       ],
       "keyPaths": [
-        "peoplePicker.search",
-        "search"
+        "peoplePicker.search"
       ]
     },
     "ontrack.plants.detail.adjustSchedule": {
@@ -2127,13 +2117,13 @@
         "src/app/_layout.tsx",
         "src/app/agents.tsx",
         "src/design-system/icons.ts",
+        "src/features/account/dev-mode-controller.ts",
         "src/features/account/developer-storage.ts",
         "src/features/agents/agent-manager.tsx",
         "src/features/auth/auth-provider.tsx",
         "src/features/design-system/design-system-catalog.ts",
         "src/hooks/use-hydrated.ts",
-        "src/services/analytics/surfaces.ts",
-        "src/services/cloud/entitlements.ts"
+        "src/services/analytics/surfaces.ts"
       ],
       "keyPaths": [
         "agents",
@@ -2213,6 +2203,7 @@
         "src/app/(tabs)/profile.tsx",
         "src/features/daily-tracking/home-location-sheet.tsx",
         "src/features/daily-tracking/use-home-weather.ts",
+        "src/features/travel/use-travel-home-atmosphere-image.ts",
         "src/services/cloud/sync.ts",
         "src/store/preferences.ts"
       ],
@@ -2640,14 +2631,14 @@
         "src/features/account/terms-of-use-content.ts",
         "src/features/todos/recipe-import-screen.tsx",
         "src/features/travel/calendar.ts",
+        "src/features/travel/destination-cover.ts",
         "src/features/travel/flight-arrival.ts",
         "src/features/travel/flight-confirmation-itinerary.ts",
         "src/features/travel/flight-connection-hub.ts",
         "src/features/travel/flight-journey-card.tsx",
         "src/features/travel/flight-journey-chrome.tsx",
         "src/features/travel/flight-journey-model.ts",
-        "src/features/travel/flight-route-label.ts",
-        "src/features/travel/flights/flight-search-presentational.tsx"
+        "src/features/travel/flight-route-label.ts"
       ],
       "keyPaths": [
         "recipeImport.stop",
@@ -2898,10 +2889,10 @@
         "src/design-system/font-presets.ts",
         "src/design-system/index.ts",
         "src/design-system/theme-overrides.ts",
+        "src/features/account/dev-mode-controller.ts",
         "src/features/account/iconify-search.ts",
         "src/features/account/profile-avatar-model.ts",
-        "src/features/auth/auth-provider.tsx",
-        "src/features/calendar/month-grid.tsx"
+        "src/features/auth/auth-provider.tsx"
       ],
       "keyPaths": [
         "empty",
@@ -2926,6 +2917,30 @@
       "files": [],
       "keyPaths": [
         "tabs.calendar"
+      ]
+    },
+    "ontrack.tabs.carousel.next": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/components/navigation/floating-tab-bar.tsx"
+      ],
+      "keyPaths": [
+        "carouselNext",
+        "tabs.carouselNext"
+      ]
+    },
+    "ontrack.tabs.carousel.prev": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/components/navigation/floating-tab-bar.tsx"
+      ],
+      "keyPaths": [
+        "carouselPrev",
+        "tabs.carouselPrev"
       ]
     },
     "ontrack.tabs.checklists": {
@@ -3230,7 +3245,7 @@
         "src/app/plants/new.tsx",
         "src/app/share-event.tsx",
         "src/app/share-import.tsx",
-        "src/components/primitives/error-message.tsx"
+        "src/components/navigation/floating-tab-bar.tsx"
       ],
       "keyPaths": [
         "clear",
@@ -3496,6 +3511,18 @@
       "keyPaths": [
         "flightPath",
         "travel.chrome.flightPath"
+      ]
+    },
+    "ontrack.travel.chrome.skyDecor": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-header-sky-decor.tsx"
+      ],
+      "keyPaths": [
+        "skyDecor",
+        "travel.chrome.skyDecor"
       ]
     },
     "ontrack.travel.confirmation.close": {
@@ -4194,11 +4221,11 @@
         "src/features/travel/flight-confirmation-fields.ts",
         "src/features/travel/flight-journey-card.tsx",
         "src/features/travel/flights/flight-search-screen.tsx",
+        "src/features/travel/itinerary-visibility.ts",
         "src/features/travel/provider.ts",
         "src/features/travel/stays/stay-provider-screen.tsx",
         "src/features/travel/travel-cotraveler-stack.tsx",
-        "src/features/travel/travel-home-traveler-stack.tsx",
-        "src/features/travel/travel-home-trip-card.tsx"
+        "src/features/travel/travel-home-traveler-stack.tsx"
       ],
       "keyPaths": [
         "travel.flightSearch.travelers",
@@ -4370,6 +4397,7 @@
         "src/app/api/stay-brand+api.ts",
         "src/features/travel/booking-open.ts",
         "src/features/travel/calendar.ts",
+        "src/features/travel/itinerary-visibility.ts",
         "src/features/travel/normalize.ts",
         "src/features/travel/stay-brand-lookup.ts",
         "src/features/travel/stay-company.ts",
@@ -4377,8 +4405,7 @@
         "src/features/travel/stay-details-summary.tsx",
         "src/features/travel/stay-location-thumbnail.tsx",
         "src/features/travel/travel-invite-codec.ts",
-        "src/features/travel/travel-itinerary-form.tsx",
-        "src/features/travel/travel-plan-detail-overlays.tsx"
+        "src/features/travel/travel-itinerary-form.tsx"
       ],
       "keyPaths": [
         "bookingUrl",
@@ -4647,14 +4674,14 @@
         "src/agents/types.ts",
         "src/app/(tabs)/profile.tsx",
         "src/app/(tabs)/travel.tsx",
+        "src/app/_layout.tsx",
         "src/app/activity-form-editors.tsx",
         "src/app/activity-form.tsx",
         "src/app/api/destination-cover-image+api.ts",
         "src/app/detail/gym-active/[id].tsx",
         "src/app/detail/movie/[id].tsx",
         "src/app/nutrition-insights+api.ts",
-        "src/app/nutrition-profile+api.ts",
-        "src/app/nutrition-targets/[id]/approve+api.ts"
+        "src/app/nutrition-profile+api.ts"
       ],
       "keyPaths": [
         "time",
@@ -4672,6 +4699,51 @@
         "travel.itineraryAdd.title"
       ]
     },
+    "ontrack.travel.itineraryShare.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-share-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryShare.close"
+      ]
+    },
+    "ontrack.travel.itineraryShare.save": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-itinerary-share-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.itineraryShare.save"
+      ]
+    },
+    "ontrack.travel.itineraryShare.sheet": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/profile.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/travel/[id].tsx",
+        "src/app/vehicles/[id].tsx",
+        "src/components/primitives/date-field.tsx",
+        "src/components/primitives/field-leading-icon.tsx",
+        "src/components/primitives/index.ts",
+        "src/components/primitives/input.tsx",
+        "src/components/primitives/screen-header.tsx",
+        "src/components/primitives/sheet-scaffold.tsx",
+        "src/components/primitives/time-field.types.ts",
+        "src/features/account/profile-avatar-editor-sheet.tsx"
+      ],
+      "keyPaths": [
+        "sheet",
+        "travel.itineraryShare.sheet"
+      ]
+    },
     "ontrack.travel.list.empty.create": {
       "feature": "travel",
       "entry": "src/app/(tabs)/travel.tsx",
@@ -4682,6 +4754,54 @@
       "keyPaths": [
         "emptyCreate",
         "travel.list.emptyCreate"
+      ]
+    },
+    "ontrack.travel.list.empty.search": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx"
+      ],
+      "keyPaths": [
+        "emptySearch",
+        "travel.list.emptySearch"
+      ]
+    },
+    "ontrack.travel.list.search": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-home-section-header.tsx",
+        "src/features/travel/travel-trip-action-grid.tsx"
+      ],
+      "keyPaths": [
+        "travel.list.search"
+      ]
+    },
+    "ontrack.travel.list.searchClear": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-home-section-header.tsx"
+      ],
+      "keyPaths": [
+        "searchClear",
+        "travel.list.searchClear"
+      ]
+    },
+    "ontrack.travel.list.section.atmosphereLocation": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-home-header.tsx"
+      ],
+      "keyPaths": [
+        "atmosphereLocation",
+        "travel.list.atmosphereLocation"
       ]
     },
     "ontrack.travel.list.section.yourTrips": {
@@ -4751,13 +4871,13 @@
         "src/app/detail/food/[id].tsx",
         "src/app/share-import.tsx",
         "src/app/travel/flights/search+api.ts",
+        "src/design-system/themes.ts",
         "src/features/account/avatar-color-picker.tsx",
         "src/features/design-system/design-system-fonts-panel.tsx",
         "src/features/social/social-feed.tsx",
         "src/features/todos/todo-invites-screen.tsx",
         "src/features/travel/apply-imported-flights.ts",
-        "src/features/travel/date-range.ts",
-        "src/features/travel/destination-cover-lookup.ts"
+        "src/features/travel/confirmation-attachments.ts"
       ],
       "keyPaths": [
         "dates",
@@ -5000,6 +5120,17 @@
         "travel.planDetail.addTransport"
       ]
     },
+    "ontrack.travel.planDetail.backToTravel": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-detail.tsx"
+      ],
+      "keyPaths": [
+        "travel.planDetail.backToTravel"
+      ]
+    },
     "ontrack.travel.planDetail.currency": {
       "feature": "travel",
       "entry": "src/app/(tabs)/travel.tsx",
@@ -5009,6 +5140,19 @@
       ],
       "keyPaths": [
         "travel.planDetail.currency"
+      ]
+    },
+    "ontrack.travel.planDetail.editNotes": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/travel.tsx",
+        "src/features/travel/travel-plan-hero.tsx"
+      ],
+      "keyPaths": [
+        "editNotes",
+        "travel.planDetail.editNotes"
       ]
     },
     "ontrack.travel.planDetail.section.flights": {
@@ -5084,6 +5228,19 @@
         "travel.planDetail.timelineSection"
       ]
     },
+    "ontrack.travel.planDetail.section.tools": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-plan-trip-tools.tsx",
+        "src/utils/agent-ui/flows.ts"
+      ],
+      "keyPaths": [
+        "toolsSection",
+        "travel.planDetail.toolsSection"
+      ]
+    },
     "ontrack.travel.planDetail.section.transport": {
       "feature": "travel",
       "entry": "src/app/(tabs)/travel.tsx",
@@ -5116,6 +5273,51 @@
       "keyPaths": [
         "travel.planDetail.weatherCard",
         "weatherCard"
+      ]
+    },
+    "ontrack.travel.planNotes.close": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.planNotes.close"
+      ]
+    },
+    "ontrack.travel.planNotes.field": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/activity-form-editors.tsx",
+        "src/app/share-import.tsx",
+        "src/components/primitives/action-chip.tsx",
+        "src/components/primitives/collapsible-section.tsx",
+        "src/components/primitives/date-field.tsx",
+        "src/components/primitives/dropdown.tsx",
+        "src/components/primitives/field-leading-icon-style.ts",
+        "src/components/primitives/field-leading-icon.tsx",
+        "src/components/primitives/field-title-case.ts",
+        "src/components/primitives/form-section.tsx",
+        "src/components/primitives/index.ts",
+        "src/components/primitives/input.tsx"
+      ],
+      "keyPaths": [
+        "field",
+        "travel.planNotes.field"
+      ]
+    },
+    "ontrack.travel.planNotes.save": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/features/travel/travel-trip-notes-sheet.tsx"
+      ],
+      "keyPaths": [
+        "travel.planNotes.save"
       ]
     },
     "ontrack.travel.removeConfirm.cancel": {
@@ -5210,7 +5412,6 @@
       "skill": ".cursor/skills/travel/SKILL.md",
       "files": [
         "src/addons/registry.ts",
-        "src/components/navigation/floating-tab-bar.tsx",
         "src/components/primitives/index.ts",
         "src/components/primitives/loading-spinner.tsx",
         "src/components/primitives/progress-ring.tsx",
@@ -5220,6 +5421,7 @@
         "src/features/todos/grocery-list-screen.tsx",
         "src/features/todos/todo-list-header.tsx",
         "src/features/todos/todo-list-screen.tsx",
+        "src/features/travel/travel-home-carousel-stepper.tsx",
         "src/features/travel/travel-itinerary-timeline.tsx"
       ],
       "keyPaths": [
@@ -5266,8 +5468,8 @@
         "src/features/travel/flight-journey-card.tsx",
         "src/features/travel/flight-journey-model.ts",
         "src/features/travel/flights/flight-search-screen.tsx",
-        "src/features/travel/provider.ts",
-        "src/features/travel/stays/stay-provider-screen.tsx"
+        "src/features/travel/itinerary-visibility.ts",
+        "src/features/travel/provider.ts"
       ],
       "keyPaths": [
         "travel.timeline.traveler",
@@ -5421,6 +5623,7 @@
         "src/features/travel/transport-details-editor.tsx",
         "src/features/travel/transport-details-summary.tsx",
         "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-home-carousel-stepper.tsx",
         "src/features/travel/travel-invite-codec.ts",
         "src/features/travel/types.ts",
         "src/services/plants/server.ts"
@@ -5538,10 +5741,10 @@
         "src/features/travel/transport-details-editor.tsx",
         "src/features/travel/transport-details-summary.tsx",
         "src/features/travel/transport-details.ts",
+        "src/features/travel/travel-home-date-block.tsx",
         "src/features/travel/travel-home-tokens.ts",
         "src/features/travel/types.ts",
-        "src/hooks/use-responsive.ts",
-        "src/services/cloud/account.ts"
+        "src/hooks/use-responsive.ts"
       ],
       "keyPaths": [
         "platform",
@@ -5644,6 +5847,29 @@
       ],
       "keyPaths": [
         "travel.weather.close"
+      ]
+    },
+    "ontrack.travel.weather.current": {
+      "feature": "travel",
+      "entry": "src/app/(tabs)/travel.tsx",
+      "skill": ".cursor/skills/travel/SKILL.md",
+      "files": [
+        "src/app/(tabs)/insights.tsx",
+        "src/app/(tabs)/travel.tsx",
+        "src/app/(tabs)/workouts.tsx",
+        "src/app/+native-intent.ts",
+        "src/app/activity-form-editors.tsx",
+        "src/app/activity-form.tsx",
+        "src/app/agent/ui.tsx",
+        "src/app/auth/callback.tsx",
+        "src/app/detail/gym-active/[id].tsx",
+        "src/app/plant-analysis/check-in+api.ts",
+        "src/app/plants/[id]/check-in.tsx",
+        "src/app/plants/new.tsx"
+      ],
+      "keyPaths": [
+        "current",
+        "travel.weather.current"
       ]
     },
     "ontrack.travel.weather.done": {
@@ -6526,6 +6752,8 @@
       "skill": null,
       "ids": [
         "ontrack.tabs.calendar",
+        "ontrack.tabs.carousel.next",
+        "ontrack.tabs.carousel.prev",
         "ontrack.tabs.checklists",
         "ontrack.tabs.games",
         "ontrack.tabs.health",
@@ -6574,6 +6802,7 @@
         "ontrack.travel.chat.enableNotifications",
         "ontrack.travel.chat.send",
         "ontrack.travel.chrome.flightPath",
+        "ontrack.travel.chrome.skyDecor",
         "ontrack.travel.confirmation.close",
         "ontrack.travel.currency.close",
         "ontrack.travel.currency.done",
@@ -6653,7 +6882,14 @@
         "ontrack.travel.itineraryAdd.submit",
         "ontrack.travel.itineraryAdd.time",
         "ontrack.travel.itineraryAdd.title",
+        "ontrack.travel.itineraryShare.close",
+        "ontrack.travel.itineraryShare.save",
+        "ontrack.travel.itineraryShare.sheet",
         "ontrack.travel.list.empty.create",
+        "ontrack.travel.list.empty.search",
+        "ontrack.travel.list.search",
+        "ontrack.travel.list.searchClear",
+        "ontrack.travel.list.section.atmosphereLocation",
         "ontrack.travel.list.section.yourTrips",
         "ontrack.travel.newTrip.calendar",
         "ontrack.travel.newTrip.cancel",
@@ -6679,16 +6915,22 @@
         "ontrack.travel.planDetail.addStay",
         "ontrack.travel.planDetail.addToTimeline",
         "ontrack.travel.planDetail.addTransport",
+        "ontrack.travel.planDetail.backToTravel",
         "ontrack.travel.planDetail.currency",
+        "ontrack.travel.planDetail.editNotes",
         "ontrack.travel.planDetail.section.flights",
         "ontrack.travel.planDetail.section.ground",
         "ontrack.travel.planDetail.section.notes",
         "ontrack.travel.planDetail.section.rentals",
         "ontrack.travel.planDetail.section.stays",
         "ontrack.travel.planDetail.section.timeline",
+        "ontrack.travel.planDetail.section.tools",
         "ontrack.travel.planDetail.section.transport",
         "ontrack.travel.planDetail.weather",
         "ontrack.travel.planDetail.weatherCard",
+        "ontrack.travel.planNotes.close",
+        "ontrack.travel.planNotes.field",
+        "ontrack.travel.planNotes.save",
         "ontrack.travel.removeConfirm.cancel",
         "ontrack.travel.removeConfirm.close",
         "ontrack.travel.removeConfirm.confirm",
@@ -6725,6 +6967,7 @@
         "ontrack.travel.transport.serviceNumber",
         "ontrack.travel.transport.vehicle",
         "ontrack.travel.weather.close",
+        "ontrack.travel.weather.current",
         "ontrack.travel.weather.done"
       ]
     },

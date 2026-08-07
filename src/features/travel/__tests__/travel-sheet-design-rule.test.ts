@@ -70,23 +70,25 @@ describe('canonical travel sheet design', () => {
     expect(detail).not.toMatch(/screen:\s*\{[^}]*paddingTop:\s*0/);
   });
 
-  it('keeps Travel action buttons compact and arrow-free', () => {
+  it('keeps Travel action buttons compact, glass, and arrow-free', () => {
     const actions = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-list-actions.tsx'),
       'utf8',
     );
 
     expect(actions).not.toContain('chevron-right');
-    expect(actions).toContain('variant="secondary"');
-    expect(actions).toContain('shape="rounded"');
-    expect(actions).toContain('borderWidth: StyleSheet.hairlineWidth');
+    expect(actions).toContain('TravelHomeGlass');
+    expect(actions).toContain('clear');
     expect(actions).toContain('backgroundColor: iconTone.bg');
-    // Grid tiles left-align icon+label; full-width itinerary CTA stays centered.
-    expect(actions).toMatch(/action:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s);
-    expect(actions).toMatch(/actionWide:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
+    // Grid tiles left-align icon+label; wide CTA centers via glass justifyContent.
+    expect(actions).toMatch(
+      /actionGlass:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s,
+    );
+    expect(actions).toMatch(
+      /justifyContent:\s*wide\s*\?\s*['"]center['"]\s*:\s*['"]flex-start['"]/,
+    );
     // Icon+label share one centered row (not Button leading/label split).
     expect(actions).toMatch(/actionContent:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
-    expect(actions).toContain('{null}');
     expect(actions).not.toContain('translateY');
   });
 
@@ -95,17 +97,16 @@ describe('canonical travel sheet design', () => {
       join(process.cwd(), 'src/features/travel/travel-trip-action-grid.tsx'),
       'utf8',
     );
-    const travelTab = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+    const tools = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-trip-tools.tsx'),
       'utf8',
     );
 
     expect(grid).toContain('icon="calendar"');
     expect(grid).toContain('badgeIcon="repeat"');
     expect(grid).toContain('Sync changes for ${tripTitle} with Calendar');
-    expect(travelTab).toMatch(
-      /onOpenCalendar=\{\(\) => \{\s*(?:(?:recordPlanInteraction|interactWithPlan)\(plan\.id\);\s*)?addTripToCalendar\(plan\);\s*\}\}/,
-    );
+    expect(tools).toContain('travelCalendarDrafts(plan)');
+    expect(tools).toContain('replaceTravelActivities');
   });
 
   it('keeps Travel CTA buttons at the shared default size', () => {

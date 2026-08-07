@@ -14,11 +14,12 @@ import {
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
 import { formatDateKey } from '@/utils/date';
 
-import { getTravelWeather } from './provider';
-import type { TemperatureUnit, TravelWeather } from './types';
+import { getDestinationCurrentWeather, getTravelWeather, weatherIconForCode } from './provider';
+import type { DestinationCurrentWeather, TemperatureUnit, TravelWeather } from './types';
 
 interface TravelWeatherCardProps {
   destination: string;
@@ -59,22 +60,66 @@ export function TravelWeatherCard({
   const [result, setResult] = useState<{
     key: string;
     weather?: TravelWeather;
-    error?: string;
+    current?: DestinationCurrentWeather;
+    forecastError?: string;
+    currentError?: string;
   }>({ key: '' });
-  const weather = result.key === requestKey ? result.weather : undefined;
-  const error = result.key === requestKey ? result.error : undefined;
+  const matched = result.key === requestKey;
+  const weather = matched ? result.weather : undefined;
+  const current = matched ? result.current : undefined;
+  const forecastError = matched ? result.forecastError : undefined;
+  const currentError = matched ? result.currentError : undefined;
+  const loading = !matched || (!weather && !forecastError) || (!current && !currentError);
 
   useEffect(() => {
     const controller = new AbortController();
+    let forecastSettled = false;
+    let currentSettled = false;
+    let nextWeather: TravelWeather | undefined;
+    let nextCurrent: DestinationCurrentWeather | undefined;
+    let nextForecastError: string | undefined;
+    let nextCurrentError: string | undefined;
+
+    const publish = () => {
+      if (controller.signal.aborted) return;
+      if (!forecastSettled || !currentSettled) return;
+      setResult({
+        key: requestKey,
+        weather: nextWeather,
+        current: nextCurrent,
+        forecastError: nextForecastError,
+        currentError: nextCurrentError,
+      });
+    };
+
     void getTravelWeather(destination, startDate, endDate, temperatureUnit, controller.signal)
-      .then((nextWeather) => setResult({ key: requestKey, weather: nextWeather }))
+      .then((value) => {
+        nextWeather = value;
+      })
       .catch((reason: unknown) => {
         if (controller.signal.aborted) return;
-        setResult({
-          key: requestKey,
-          error: reason instanceof Error ? reason.message : 'Weather is temporarily unavailable.',
-        });
+        nextForecastError =
+          reason instanceof Error ? reason.message : 'Weather is temporarily unavailable.';
+      })
+      .finally(() => {
+        forecastSettled = true;
+        publish();
       });
+
+    void getDestinationCurrentWeather(destination, temperatureUnit, controller.signal)
+      .then((value) => {
+        nextCurrent = value;
+      })
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return;
+        nextCurrentError =
+          reason instanceof Error ? reason.message : 'Current conditions are unavailable.';
+      })
+      .finally(() => {
+        currentSettled = true;
+        publish();
+      });
+
     return () => controller.abort();
   }, [destination, endDate, requestKey, startDate, temperatureUnit]);
 
@@ -85,7 +130,8 @@ export function TravelWeatherCard({
   const hiddenDayCount = Math.max(0, (weather?.days.length ?? 0) - shownDays.length);
   const iconSize = Math.max(44, s(48));
   const accent = light ? TRAVEL_EDITORIAL_ACCENT : chrome.ctaFrom;
-  const locationLabel = weather?.locationLabel ?? destination;
+  const locationLabel = current?.locationLabel ?? weather?.locationLabel ?? destination;
+  const error = currentError && forecastError ? forecastError : forecastError;
 
   return (
     <View
@@ -112,7 +158,11 @@ export function TravelWeatherCard({
               backgroundColor: light ? '#EFE6D8' : chrome.icons.clock.bg,
             },
           ]}>
-          <Symbol name="weather" size="md" color={accent} />
+          <Symbol
+            name={current ? weatherIconForCode(current.weatherCode) : 'weather'}
+            size="md"
+            color={accent}
+          />
         </View>
         <View style={styles.flex}>
           <AppText
@@ -141,8 +191,18 @@ export function TravelWeatherCard({
             {locationLabel}
           </AppText>
         </View>
-        {!weather && !error ? <LoadingSpinner color={accent} /> : null}
+        {loading ? <LoadingSpinner color={accent} /> : null}
       </View>
+
+      {current ? (
+        <CurrentWeatherBlock current={current} theme={theme} accent={accent} />
+      ) : null}
+
+      {currentError && !current ? (
+        <AppText variant="caption" color="secondary">
+          {currentError}
+        </AppText>
+      ) : null}
 
       {weather?.availability === 'too-early' ? (
         <TypicalWeatherBlock
@@ -234,6 +294,94 @@ export function TravelWeatherCard({
         </View>
       ) : null}
     </View>
+  );
+}
+
+function CurrentWeatherBlock({
+  current,
+  theme,
+  accent,
+}: {
+  current: DestinationCurrentWeather;
+  theme: Theme;
+  accent: string;
+}) {
+  const chrome = itinerarySheetChrome(theme);
+  const { s, spacing: rs } = useResponsive();
+  const light = theme.name === 'light';
+  const iconSize = Math.max(52, s(56));
+
+  return (
+    <AgentTestId testID={AgentUiIds.travel.weather.current} label="Current destination weather">
+      <View
+        accessibilityLabel={`Right now ${current.temperature}${unitSymbol(current.temperatureUnit)}, ${current.condition}`}
+        style={[
+          styles.currentBox,
+          {
+            backgroundColor: travelCardFill(theme),
+            borderColor: travelCardBorder(theme),
+            borderRadius: Math.max(16, s(18)),
+            padding: Math.max(16, rs.md),
+            gap: Math.max(12, rs.sm + 2),
+            boxShadow: light ? '0 2px 10px rgba(51, 39, 28, 0.06)' : undefined,
+          },
+        ]}>
+        <AppText
+          variant="caption"
+          fit
+          numberOfLines={1}
+          style={{
+            color: accent,
+            fontSize: s(13),
+            lineHeight: s(17),
+            letterSpacing: 0.6,
+            textTransform: 'uppercase',
+          }}>
+          Right now
+        </AppText>
+        <View style={[styles.currentRow, { gap: rs.md }]}>
+          <View
+            style={[
+              styles.iconBadge,
+              {
+                width: iconSize,
+                height: iconSize,
+                borderRadius: iconSize / 2,
+                backgroundColor: light ? '#EFE6D8' : chrome.icons.clock.bg,
+              },
+            ]}>
+            <Symbol name={weatherIconForCode(current.weatherCode)} size="lg" color={accent} />
+          </View>
+          <View style={styles.flex}>
+            <AppText
+              variant="title"
+              fit
+              numberOfLines={1}
+              style={{
+                color: chrome.title,
+                fontFamily: fontFamilies.serif,
+                fontSize: s(36),
+                lineHeight: s(40),
+                fontWeight: '400',
+              }}>
+              {current.temperature}
+              {unitSymbol(current.temperatureUnit)}
+            </AppText>
+            <AppText
+              variant="callout"
+              fit
+              numberOfLines={1}
+              style={{
+                color: chrome.subtitle,
+                fontSize: s(16),
+                lineHeight: s(21),
+              }}>
+              {current.condition}
+            </AppText>
+          </View>
+        </View>
+      </View>
+    </AgentTestId>
   );
 }
 
@@ -350,6 +498,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
   },
+  currentBox: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderCurve: 'continuous',
+  },
+  currentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
   days: { flexDirection: 'row', flexWrap: 'wrap' },
   day: {
     minWidth: 108,
@@ -381,32 +538,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontFamily: fontFamilies.serif,
     fontWeight: '400',
-  },
-  typicalWeatherRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  typicalWeatherStatWrap: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
-    marginVertical: 2,
-  },
-  typicalWeatherStat: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  typicalWeatherValue: {
-    fontFamily: fontFamilies.serif,
-    fontWeight: '400',
-    textAlign: 'center',
   },
   diamondRule: {
     flexDirection: 'row',

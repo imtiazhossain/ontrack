@@ -32,6 +32,7 @@ import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelSurfaceCard } from '@/features/travel/travel-surface';
 import { listTravelTripRoster } from '@/features/travel/trip-roster';
 import type { TravelOpenJoinPreview, TravelOpenJoinStatus } from '@/features/travel/types';
+import { pullTravelTripItinerary } from '@/services/travel/itinerary-collaboration';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -104,6 +105,7 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
           updatedAt: now,
         });
         savePlan(merged);
+        void pullTravelTripItinerary(merged).catch(() => undefined);
         setAddonEnabled('travel', true);
         router.replace(
           hasOnboarded
@@ -132,6 +134,7 @@ export function TravelOpenJoinLanding({ code }: { code?: string }) {
         now,
       });
       savePlan(plan);
+      void pullTravelTripItinerary(plan).catch(() => undefined);
       replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
       setAddonEnabled('travel', true);
       router.replace(

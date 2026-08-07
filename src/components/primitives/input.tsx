@@ -23,7 +23,7 @@ interface InputProps extends TextInputProps {
   label?: string;
   /** Leading icon inside the field, matching DateField / TimeField chrome. */
   icon?: AppIconName;
-  /** Persistent label above the value when `icon` is set (sheet stacked chrome). */
+  /** Persistent label above the value (sheet stacked chrome; icon optional). */
   stackedLabel?: string;
   /** Align stacked label + value (`center` for short numeric fields). */
   stackedAlign?: 'start' | 'center';
@@ -107,7 +107,7 @@ export function Input({
     verticalPadding: spacing.sm,
   });
   const hasIcon = Boolean(icon);
-  const stacked = Boolean(stackedLabel && icon);
+  const stacked = Boolean(stackedLabel);
   const stackedCentered = stacked && stackedAlign === 'center';
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -134,7 +134,7 @@ export function Input({
     onBlur?.(event);
   };
 
-  if (hasIcon && icon) {
+  if (hasIcon || stacked) {
     return (
       <View
         ref={agent.ref}
@@ -166,11 +166,13 @@ export function Input({
               backgroundColor: fill,
             }),
           ]}>
-          <FieldLeadingIcon
-            name={icon}
-            backgroundColor={iconBackground}
-            color={iconColor}
-          />
+          {icon ? (
+            <FieldLeadingIcon
+              name={icon}
+              backgroundColor={iconBackground}
+              color={iconColor}
+            />
+          ) : null}
           {stacked ? (
             <View
               style={[

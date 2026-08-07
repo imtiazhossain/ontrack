@@ -67,23 +67,30 @@ export function useTravelPlanDetailEffects({
     useCallback(() => {
       const current = useTravel.getState().plans.find((item) => item.id === planId);
       const normalized = normalizeTravelPlan(current);
+      let working = current;
       if (
         current &&
         normalized &&
         JSON.stringify(normalized) !== JSON.stringify(current)
       ) {
-        const next = { ...normalized, updatedAt: new Date().toISOString() };
-        useTravel.getState().savePlan(next);
+        working = { ...normalized, updatedAt: new Date().toISOString() };
+        useTravel.getState().savePlan(working);
         const schedule = useSchedule.getState();
         if (
-          schedule.activities.some((activity) => activity.travelPlanId === next.id)
+          schedule.activities.some(
+            (activity) => activity.travelPlanId === working!.id,
+          )
         ) {
-          schedule.replaceTravelActivities(next.id, travelCalendarDrafts(next));
+          schedule.replaceTravelActivities(
+            working.id,
+            travelCalendarDrafts(working),
+          );
         }
-        return;
       }
-      if (current) {
-        const repaired = attachOrphanedFlightConfirmationUris(current, {
+      // Always attempt orphan re-link after normalize — sync pull can strip
+      // confirmation URIs (https → dropped) before this remints ontrack-media.
+      if (working) {
+        const repaired = attachOrphanedFlightConfirmationUris(working, {
           allPlans: useTravel.getState().plans,
         });
         if (repaired) useTravel.getState().savePlan(repaired);

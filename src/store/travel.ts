@@ -10,6 +10,7 @@ import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { normalizeTravelPlan, normalizeTravelPlans } from '@/features/travel/normalize';
 import type { TravelPlan } from '@/features/travel/types';
 import { useSchedule } from '@/store/schedule';
+import { useTravelPlanUi } from '@/store/travel-plan-ui';
 
 interface TravelState {
   plans: TravelPlan[];
@@ -65,7 +66,10 @@ export const useTravel = create<TravelState>()(
           plans: keepPlan ? state.plans : state.plans.filter((item) => item.id !== id),
           recentPlanIds: state.recentPlanIds.filter((planId) => planId !== id),
         }));
-        if (!keepPlan) useSchedule.getState().removeTravelActivities([id]);
+        if (!keepPlan) {
+          useSchedule.getState().removeTravelActivities([id]);
+          useTravelPlanUi.getState().clearPlanUi(id);
+        }
       },
       replacePlans: (plans) => {
         const nextPlans = withAllAccountsTestTrip(normalizeTravelPlans(plans));
@@ -78,8 +82,16 @@ export const useTravel = create<TravelState>()(
           recentPlanIds: state.recentPlanIds.filter((id) => nextIds.has(id)),
         }));
         useSchedule.getState().removeTravelActivities(droppedIds);
+        useTravelPlanUi.getState().retainPlanIds([...nextIds]);
       },
-      reset: () => set({ plans: withAllAccountsTestTrip([]), recentPlanIds: [] }),
+      reset: () => {
+        set({ plans: withAllAccountsTestTrip([]), recentPlanIds: [] });
+        useTravelPlanUi
+          .getState()
+          .retainPlanIds(
+            withAllAccountsTestTrip([]).map((plan) => plan.id),
+          );
+      },
     }),
     {
       name: STORAGE_KEYS.travel,

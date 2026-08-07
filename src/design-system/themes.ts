@@ -100,15 +100,17 @@ export const lightTravelTheme: Theme = {
 
 export const darkTravelTheme: Theme = {
   ...darkTheme,
-  // Deep navy itinerary wash with slightly lighter elevated cards.
-  backgroundPrimary: '#0B1221',
-  backgroundSecondary: '#101A2B',
-  backgroundElevated: '#162238',
-  backgroundSunken: '#121C2C',
-  separator: '#243247',
+  // Pure black base with slightly lifted elevated cards.
+  backgroundPrimary: '#000000',
+  backgroundSecondary: '#0A0A0A',
+  backgroundElevated: '#141414',
+  backgroundSunken: '#0A0A0A',
+  separator: '#2A2A2A',
   textPrimary: '#F2F6FA',
-  textSecondary: '#A8B8C8',
-  textTertiary: '#7A8FA3',
+  // Brighter secondary/tertiary so itinerary meta (times, day dates) stays
+  // readable on near-black cards — old #A8B8C8 / #7A8FA3 read as mud in dark.
+  textSecondary: '#C8D5E2',
+  textTertiary: '#A8B8C8',
   accentPrimary: palette.travelBlueDark,
   accentSoft: palette.travelBlueSoftDark,
   accentFaint: palette.travelBlueFaintDark,

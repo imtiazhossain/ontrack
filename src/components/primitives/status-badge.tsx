@@ -18,7 +18,8 @@ export function statusBadgeToneColor(tone: StatusBadgeTone, theme: Theme): strin
     case 'danger':
       return theme.danger;
     default:
-      return theme.textTertiary;
+      // Neutral sits on accentFaint — accent ink keeps contrast in dark travel.
+      return theme.accentPrimary;
   }
 }
 

@@ -84,7 +84,7 @@ export function TimelineProgressStrip({
               label={daysDoneLabel}>
               <AppText
                 variant="caption"
-                color="tertiary"
+                color="secondary"
                 fit
                 align="right"
                 style={styles.stripMetaText}>

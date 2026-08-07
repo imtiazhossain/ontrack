@@ -384,12 +384,12 @@ export function TravelHomeDestinationPlaceholder({
       <Rect width="1200" height="800" fill="url(#travelHomePlaceholderG)" />
       <Path
         d="M0 610L260 360L430 515L650 290L920 515L1200 340V800H0Z"
-        fill="#183B70"
+        fill="#000000"
         opacity={0.18}
       />
       <Path
         d="M0 690L300 500L520 620L720 470L990 610L1200 500V800H0Z"
-        fill="#0B2E63"
+        fill="#000000"
         opacity={0.12}
       />
     </Svg>

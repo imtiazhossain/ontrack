@@ -3,13 +3,8 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
 import { spacing } from '@/design-system';
-import {
-  TravelCoTravelerStack,
-  type CoTravelerAvatarPerson,
-} from '@/features/travel/travel-cotraveler-stack';
 import { promotesFlightSearch } from '@/features/travel/travel-mode';
 import type { TravelPlanMode } from '@/features/travel/types';
-import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 import { TravelSheetAction } from './travel-list-actions';
@@ -20,10 +15,9 @@ interface TravelTripActionGridProps {
   destination: string;
   mode: TravelPlanMode;
   isOnCalendar: boolean;
-  coTravelers: CoTravelerAvatarPerson[];
-  coTravelersExpanded: boolean;
-  onCoTravelersExpandedChange: (expanded: boolean) => void;
-  onOpenItinerary: () => void;
+  /** When false, hide the Trip Itinerary CTA (already on plan detail). */
+  showItineraryAction?: boolean;
+  onOpenItinerary?: () => void;
   onOpenCalendar: () => void;
   onSearchFlights: () => void;
   onAddTransport: () => void;
@@ -37,18 +31,16 @@ interface TravelTripActionGridProps {
 
 function ActionGroup({
   title,
-  trailing,
   children,
 }: {
   title: string;
-  trailing?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <View style={styles.group}>
       <View style={styles.groupHeader}>
         <AppText
-          variant="callout"
+          variant="overline"
           color="secondary"
           bold
           fit
@@ -57,7 +49,6 @@ function ActionGroup({
           style={styles.groupTitle}>
           {title}
         </AppText>
-        {trailing ? <View style={styles.groupTrailing}>{trailing}</View> : null}
       </View>
       <View style={styles.grid}>{children}</View>
     </View>
@@ -71,9 +62,7 @@ export function TravelTripActionGrid({
   destination,
   mode,
   isOnCalendar,
-  coTravelers,
-  coTravelersExpanded,
-  onCoTravelersExpandedChange,
+  showItineraryAction = true,
   onOpenItinerary,
   onOpenCalendar,
   onSearchFlights,
@@ -85,23 +74,21 @@ export function TravelTripActionGrid({
   onOpenChat,
   onOpenCoTravelers,
 }: TravelTripActionGridProps) {
-  const { s } = useResponsive();
-  // Keep the stacked chip budget tight so many travelers overlap beside the title.
-  const coTravelerPackWidth = Math.max(72, s(96));
-
   return (
     <View style={styles.container}>
-      <View style={styles.itineraryAction}>
-        <TravelSheetAction
-          label="Trip Itinerary"
-          icon="list"
-          tone="flight"
-          wide
-          testID={AgentUiIds.travel.list.itinerary(tripId)}
-          onPress={onOpenItinerary}
-          accessibilityLabel="Trip Itinerary"
-        />
-      </View>
+      {showItineraryAction && onOpenItinerary ? (
+        <View style={styles.itineraryAction}>
+          <TravelSheetAction
+            label="Trip Itinerary"
+            icon="list"
+            tone="flight"
+            wide
+            testID={AgentUiIds.travel.list.itinerary(tripId)}
+            onPress={onOpenItinerary}
+            accessibilityLabel="Trip Itinerary"
+          />
+        </View>
+      ) : null}
 
       <ActionGroup title="Book & Organize">
         <TravelSheetAction
@@ -173,18 +160,7 @@ export function TravelTripActionGrid({
         />
       </ActionGroup>
 
-      <ActionGroup
-        title="Travel Together"
-        trailing={
-          coTravelers.length > 0 ? (
-            <TravelCoTravelerStack
-              people={coTravelers}
-              expanded={coTravelersExpanded}
-              maxPackedWidth={coTravelerPackWidth}
-              onExpandedChange={onCoTravelersExpandedChange}
-            />
-          ) : null
-        }>
+      <ActionGroup title="Travel Together">
         <TravelSheetAction
           label="Group Chat"
           icon="chat"
@@ -208,22 +184,19 @@ export function TravelTripActionGrid({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   itineraryAction: {
     width: '75%',
     alignSelf: 'center',
   },
   group: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   groupHeader: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    minHeight: 32,
-    overflow: 'visible',
-    zIndex: 4,
+    minHeight: 22,
   },
   groupTitle: {
     alignSelf: 'stretch',
@@ -232,15 +205,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
-  groupTrailing: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    overflow: 'visible',
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
 });

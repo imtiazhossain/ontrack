@@ -1,7 +1,9 @@
 import {
     ensureDevModeSandboxSync,
     enterDevMode,
+    exitAgentDevModeIfNeeded,
     exitDevMode,
+    settleDevModeAfterRehydrate,
 } from '@/features/account/dev-mode-controller';
 import {
     isCloudSyncPushPaused,
@@ -24,13 +26,13 @@ jest.mock('@/services/cloud/sync', () => {
 
 describe('dev-mode-controller', () => {
   beforeEach(() => {
-    useDevMode.setState({ enabled: false, liveSnapshot: null });
+    useDevMode.setState({ enabled: false, source: null, liveSnapshot: null });
     setCloudSyncPushPaused(false);
     useTravel.getState().reset();
   });
 
   afterEach(() => {
-    useDevMode.setState({ enabled: false, liveSnapshot: null });
+    useDevMode.setState({ enabled: false, source: null, liveSnapshot: null });
     setCloudSyncPushPaused(false);
     useTravel.getState().reset();
   });
@@ -51,12 +53,13 @@ describe('dev-mode-controller', () => {
 
     await enterDevMode();
     expect(useDevMode.getState().enabled).toBe(true);
+    expect(useDevMode.getState().source).toBe('user');
     expect(isCloudSyncPushPaused()).toBe(true);
     expect(useDevMode.getState().liveSnapshot?.domains.travel).toBeTruthy();
 
     useTravel.getState().replacePlans([
       {
-        id: 'trip-demo',
+        id: AGENT_UI_DEMO_TRIP_ID,
         title: 'Demo Pollution',
         mode: 'flight',
         origin: 'A',
@@ -66,10 +69,11 @@ describe('dev-mode-controller', () => {
         itinerary: [],
       },
     ]);
-    expect(useTravel.getState().plans[0]?.id).toBe('trip-demo');
+    expect(useTravel.getState().plans[0]?.id).toBe(AGENT_UI_DEMO_TRIP_ID);
 
     await exitDevMode();
     expect(useDevMode.getState().enabled).toBe(false);
+    expect(useDevMode.getState().source).toBeNull();
     expect(isCloudSyncPushPaused()).toBe(false);
     expect(useTravel.getState().plans.map((plan) => plan.id)).toEqual(['trip-live']);
   });
@@ -132,12 +136,122 @@ describe('dev-mode-controller', () => {
     );
   });
 
-  it('ensureDevModeSandboxSync is idempotent', () => {
+  it('keeps real trips created while Dev Mode is on', async () => {
+    useTravel.getState().replacePlans([]);
+    await enterDevMode();
+
+    useTravel.getState().replacePlans([
+      {
+        id: 'trip-invite-real-iceland',
+        title: 'Iceland',
+        mode: 'flight',
+        origin: 'EWR',
+        destination: 'Reykjavík, Iceland',
+        startDate: '2026-09-08',
+        endDate: '2026-09-14',
+        itinerary: [],
+      },
+      {
+        id: AGENT_UI_DEMO_TRIP_ID,
+        title: 'Demo',
+        mode: 'flight',
+        origin: 'A',
+        destination: 'B',
+        startDate: '2026-01-01',
+        endDate: '2026-01-02',
+        itinerary: [],
+      },
+    ]);
+
+    await exitDevMode();
+    const ids = useTravel.getState().plans.map((plan) => plan.id);
+    expect(ids).toContain('trip-invite-real-iceland');
+    expect(ids).not.toContain(AGENT_UI_DEMO_TRIP_ID);
+  });
+
+  it('keeps sandbox edits to an existing live trip', async () => {
+    useTravel.getState().replacePlans([
+      {
+        id: 'trip-live',
+        title: 'Live Trip',
+        mode: 'flight',
+        origin: 'NYC',
+        destination: 'Lisbon',
+        startDate: '2026-09-01',
+        endDate: '2026-09-05',
+        itinerary: [],
+      },
+    ]);
+    await enterDevMode();
+    useTravel.getState().savePlan({
+      id: 'trip-live',
+      title: 'Live Trip Edited',
+      mode: 'flight',
+      origin: 'NYC',
+      destination: 'Lisbon',
+      startDate: '2026-09-01',
+      endDate: '2026-09-05',
+      itinerary: [],
+    });
+    await exitDevMode();
+    expect(useTravel.getState().plans.find((plan) => plan.id === 'trip-live')?.title).toBe(
+      'Live Trip Edited',
+    );
+  });
+
+  it('ensureDevModeSandboxSync is idempotent and marks source=agent', () => {
     ensureDevModeSandboxSync();
     const first = useDevMode.getState().liveSnapshot?.capturedAt;
+    expect(useDevMode.getState().source).toBe('agent');
     ensureDevModeSandboxSync();
     expect(useDevMode.getState().enabled).toBe(true);
+    expect(useDevMode.getState().source).toBe('agent');
     expect(useDevMode.getState().liveSnapshot?.capturedAt).toBe(first);
     expect(isCloudSyncPushPaused()).toBe(true);
+  });
+
+  it('does not downgrade a user sandbox to agent', async () => {
+    await enterDevMode('user');
+    ensureDevModeSandboxSync();
+    expect(useDevMode.getState().source).toBe('user');
+  });
+
+  it('exitAgentDevModeIfNeeded releases agent sandboxes only', async () => {
+    ensureDevModeSandboxSync();
+    expect(await exitAgentDevModeIfNeeded()).toBe(true);
+    expect(useDevMode.getState().enabled).toBe(false);
+
+    await enterDevMode('user');
+    expect(await exitAgentDevModeIfNeeded()).toBe(false);
+    expect(useDevMode.getState().enabled).toBe(true);
+    expect(useDevMode.getState().source).toBe('user');
+  });
+
+  it('settleDevModeAfterRehydrate exits agent leftovers and keeps user sandboxes', async () => {
+    ensureDevModeSandboxSync();
+    await settleDevModeAfterRehydrate();
+    expect(useDevMode.getState().enabled).toBe(false);
+    expect(isCloudSyncPushPaused()).toBe(false);
+
+    await enterDevMode('user');
+    await settleDevModeAfterRehydrate();
+    expect(useDevMode.getState().enabled).toBe(true);
+    expect(useDevMode.getState().source).toBe('user');
+    expect(isCloudSyncPushPaused()).toBe(true);
+  });
+
+  it('settleDevModeAfterRehydrate exits pre-migration enabled state without source', async () => {
+    useDevMode.setState({
+      enabled: true,
+      source: null,
+      liveSnapshot: {
+        capturedAt: new Date().toISOString(),
+        domains: {},
+      },
+    });
+    setCloudSyncPushPaused(true);
+    await settleDevModeAfterRehydrate();
+    expect(useDevMode.getState().enabled).toBe(false);
+    expect(isCloudSyncPushPaused()).toBe(false);
   });
 });

@@ -12,6 +12,8 @@ Keep this file short on purpose. Load detail only when the task needs it.
 | Task | Read |
 |------|------|
 | App UI / simulator / screenshot bug | `.cursor/skills/agent-ui/SKILL.md` **before** verify |
+| Design / polish / “make it cool” | `~/.cursor/skills/think-cool/SKILL.md` |
+| Cleanup / “optimize the code” | `~/.cursor/skills/optimize-code/SKILL.md` |
 | Domain feature work | `.cursor/skills/<domain>/` (travel, todos, workouts, …) + `AGENTS.md` feature table |
 | Form field icons / numeric inputs / migrations | matching `.cursor/rules/*` via globs |
 
@@ -19,6 +21,7 @@ Keep this file short on purpose. Load detail only when the task needs it.
 
 - **No personal identifiers** in source — see `no-personal-identifiers.mdc`.
 - **App-affecting JS/UI** → `./scripts/agent-ui-verify-both.sh --route … [--flow <name>] --exists …` (named flow when not already on route). Assert/`--color` then stop. Docs/rules/host-only → skip simulator.
+- **Dev Mode** → off by default. Seeds/flows may turn it on for mock data; `verify-both` / `agent-ui.sh devmode release` turn agent sandboxes off again. Do not leave it on.
 - **Glyph / icon orientation** → fix from source (`Symbol`, `design-system/icons.ts`, platform maps, transforms). Never screenshot→vision loops for micro-glyphs; do not force-reconnect to “re-check” icons.
 - **New/edited interactive controls** → `ontrack.*` `testID` + `ids.ts` + `docs/agent-ui-map.md` in the same change.
 - **Dump = debt** → ≤1 dump to discover; same turn stamp id/map and/or named flow so that dump is never needed again (agent-ui skill).
@@ -26,4 +29,6 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **Stuck / slow step** → stop grinding. Prefer fixing the cause (often config/env/device pin / iOS system sheet) over long debug or repeated verify retries — see `stuck-check-config.mdc`.
 - **Locality** → smallest entry file first; extract if touched file would stay >700 lines; prefer Shared patterns in `AGENTS.md`.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).
+- **Think cool** → UI should feel crafted/delightful (presence, one idea, restraint); for design/polish read `~/.cursor/skills/think-cool/SKILL.md`.
+- **Optimize the code** → cleanup/rename/reuse/token-slim/temp removal; read `~/.cursor/skills/optimize-code/SKILL.md`.
 - **Push / ship script** → when the user says “run the push script”, “push script”, or “ship push”, run `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Flow: commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK. Use `--ota-apk-only` to reship current main; `--skip-ota` / `--skip-apk` for partial runs.

@@ -16,6 +16,7 @@ import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-h
 import {
     travelHomeAtmosphereSource,
 } from '@/features/travel/travel-home-background';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelHomeEditIcon } from '@/features/travel/travel-home-icons';
 import {
     travelHomeImageHeight,
@@ -31,10 +32,14 @@ type TravelHomeHeroCarouselProps = {
   plan: TravelPlan;
   width: number;
   onEdit: () => void;
-  onActiveImageChange?: (uri: string | undefined, index: number) => void;
+  onActiveImageChange?: (
+    uri: string | undefined,
+    index: number,
+    pageCount: number,
+  ) => void;
 };
 
-/** Horizontal paging hero (1–3 images) with edit control + page dots. */
+/** Horizontal paging hero (1–3 images) with edit control. Page control lives on glass. */
 export function TravelHomeHeroCarousel({
   plan,
   width,
@@ -67,17 +72,16 @@ export function TravelHomeHeroCarousel({
     setUris([]);
     setFailedUris({});
     scrollRef.current?.scrollTo({ x: 0, animated: false });
+    // Fixture plate is the scenic underlay while remotes load (and if they miss).
+    // Still fetch heroes so multi-page glass steppers work on travel-home seeds.
     if (fixtureSource) {
-      onActiveImageChange?.(undefined, 0);
-      return () => {
-        active = false;
-      };
+      onActiveImageChange?.(undefined, 0, 0);
     }
     void fetchDestinationHeroUris(plan).then((next) => {
       if (!active) return;
       setFailedUris({});
       setUris(next);
-      onActiveImageChange?.(next[0], 0);
+      onActiveImageChange?.(next[0], 0, next.length);
       if (next[1]) {
         void Image.prefetch(next[1]).catch(() => undefined);
       }
@@ -90,13 +94,17 @@ export function TravelHomeHeroCarousel({
 
   useEffect(() => {
     if (visibleUris.length === 0) {
-      onActiveImageChange?.(undefined, 0);
+      onActiveImageChange?.(undefined, 0, 0);
       return;
     }
     const nextIndex = Math.min(index, visibleUris.length - 1);
     if (nextIndex !== index) setIndex(nextIndex);
     scrollRef.current?.scrollTo({ x: nextIndex * heroWidth, animated: false });
-    onActiveImageChange?.(visibleUris[nextIndex], nextIndex);
+    onActiveImageChange?.(
+      visibleUris[nextIndex],
+      nextIndex,
+      visibleUris.length,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to failure/uri changes
   }, [failedUris, uris, heroWidth]);
 
@@ -104,7 +112,11 @@ export function TravelHomeHeroCarousel({
     const next = Math.round(event.nativeEvent.contentOffset.x / heroWidth);
     const clamped = Math.max(0, Math.min(visibleUris.length - 1, next));
     setIndex(clamped);
-    onActiveImageChange?.(visibleUris[clamped], clamped);
+    onActiveImageChange?.(
+      visibleUris[clamped],
+      clamped,
+      visibleUris.length,
+    );
     const prefetchUri = visibleUris[clamped + 1];
     if (prefetchUri) {
       void Image.prefetch(prefetchUri).catch(() => undefined);
@@ -119,8 +131,6 @@ export function TravelHomeHeroCarousel({
     editVisual,
   );
   const editInset = Math.max(10, s(travelHomeTokens.spacing.editInset));
-  const activeDot = Math.max(6, s(travelHomeTokens.sizes.carouselActiveDot));
-  const inactiveDot = Math.max(4, s(travelHomeTokens.sizes.carouselInactiveDot));
   const heroSurface =
     theme.name === 'dark'
       ? theme.backgroundSunken
@@ -132,8 +142,15 @@ export function TravelHomeHeroCarousel({
     borderTopRightRadius: heroTopRadius,
   } as const;
 
+  const hasRemoteHeroes = visibleUris.length > 0;
+  const scrollInteractive = hasRemoteHeroes && visibleUris.length > 1;
+  // Keep ScrollView mounted with stable index-keyed page shells. Slot count
+  // tracks visible URIs (min 1 placeholder) so users can't page into blanks.
+  const heroPageSlots = Math.max(1, visibleUris.length);
+
   return (
     <View
+      collapsable={false}
       style={[
         styles.hero,
         imageRadiusStyle,
@@ -143,72 +160,116 @@ export function TravelHomeHeroCarousel({
           backgroundColor: heroSurface,
         },
       ]}>
-      {/* Scenic photo plate — shown while remote heroes load or if they fail. */}
-      <Image
-        source={fallbackSource}
-        style={[
-          styles.fallback,
-          imageRadiusStyle,
-          { width: heroWidth, height },
-        ]}
-        contentFit="cover"
-        contentPosition={{ top: '35%', left: '50%' }}
-        pointerEvents="none"
-        accessible={false}
-        importantForAccessibility="no"
-      />
-      {fixtureSource ? (
+      {/*
+        Hero Fabric children are ONLY Views (media → edit → dots). expo-image as
+        a direct sibling was unmounting out of sync and SIGABRTing
+        `unmountChildComponentView` on this 362×199 plate. Images stay nested
+        inside the non-collapsible media slot; ScrollView stays mounted.
+      */}
+      <View
+        collapsable={false}
+        pointerEvents="box-none"
+        style={[StyleSheet.absoluteFill, imageRadiusStyle, { backgroundColor: heroSurface }]}>
+        {/* Scenic plate while remote heroes load / fail. */}
         <Image
-          source={fixtureSource}
+          source={fallbackSource}
           style={[
-            StyleSheet.absoluteFill,
+            styles.fallback,
             imageRadiusStyle,
-            { width: heroWidth, height, backgroundColor: heroSurface },
+            { width: heroWidth, height },
           ]}
           contentFit="cover"
-          transition={180}
+          contentPosition={{ top: '35%', left: '50%' }}
+          pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
         />
-      ) : visibleUris.length > 0 ? (
         <ScrollView
           ref={scrollRef}
           horizontal
           pagingEnabled
+          scrollEnabled={scrollInteractive}
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={onScrollEnd}
           scrollEventThrottle={16}
-          style={[StyleSheet.absoluteFill, imageRadiusStyle]}
+          style={[
+            StyleSheet.absoluteFill,
+            imageRadiusStyle,
+            { opacity: hasRemoteHeroes ? 1 : 0 },
+          ]}
+          pointerEvents={hasRemoteHeroes ? 'auto' : 'none'}
+          accessibilityElementsHidden={!hasRemoteHeroes}
+          importantForAccessibility={
+            hasRemoteHeroes ? 'yes' : 'no-hide-descendants'
+          }
           accessibilityRole="adjustable"
           accessibilityLabel={`${destinationLabel} destination photos`}
           accessibilityValue={{
             min: 1,
             max: Math.max(1, visibleUris.length),
             now: index + 1,
-            text: `Photo ${index + 1} of ${visibleUris.length}`,
+            text:
+              visibleUris.length > 0
+                ? `Photo ${index + 1} of ${visibleUris.length}`
+                : 'Loading destination photos',
           }}>
-          {visibleUris.map((uri) => (
-            <Image
-              key={uri}
-              source={{ uri }}
-              style={[
-                imageRadiusStyle,
-                { width: heroWidth, height, backgroundColor: heroSurface },
-              ]}
-              contentFit="cover"
-              transition={180}
-              recyclingKey={uri}
-              accessible={false}
-              importantForAccessibility="no"
-              onError={() => {
-                setFailedUris((previous) =>
-                  previous[uri] ? previous : { ...previous, [uri]: true },
-                );
-              }}
-            />
-          ))}
+          {Array.from({ length: heroPageSlots }, (_, pageIndex) => {
+            const uri = visibleUris[pageIndex];
+            return (
+              <View
+                key={`hero-page-${pageIndex}`}
+                collapsable={false}
+                style={{ width: heroWidth, height }}>
+                <Image
+                  source={uri ? { uri } : fallbackSource}
+                  style={[
+                    imageRadiusStyle,
+                    {
+                      width: heroWidth,
+                      height,
+                      backgroundColor: heroSurface,
+                      opacity: uri ? 1 : 0,
+                    },
+                  ]}
+                  contentFit="cover"
+                  transition={uri ? 180 : 0}
+                  recyclingKey={uri ?? `hero-page-empty-${pageIndex}`}
+                  accessible={false}
+                  importantForAccessibility="no"
+                  onError={() => {
+                    if (!uri) return;
+                    setFailedUris((previous) =>
+                      previous[uri] ? previous : { ...previous, [uri]: true },
+                    );
+                  }}
+                />
+              </View>
+            );
+          })}
         </ScrollView>
-      ) : null}
+        {/*
+          Dev fixture plate is opacity-toggled — never swaps ScrollView out.
+        */}
+        <Image
+          source={fixtureSource ?? fallbackSource}
+          style={[
+            StyleSheet.absoluteFill,
+            imageRadiusStyle,
+            {
+              width: heroWidth,
+              height,
+              backgroundColor: heroSurface,
+              // Hide once remotes paint — otherwise the fixture plate masks paging.
+              opacity: fixtureSource && !hasRemoteHeroes ? 1 : 0,
+            },
+          ]}
+          contentFit="cover"
+          transition={180}
+          pointerEvents="none"
+          accessible={false}
+          importantForAccessibility="no"
+        />
+      </View>
 
       {/*
         Absolute layout lives on this View (not only AgentTestId) so the pencil
@@ -216,6 +277,7 @@ export function TravelHomeHeroCarousel({
         wrapper when style is omitted.
       */}
       <View
+        collapsable={false}
         pointerEvents="box-none"
         style={[
           styles.editWrap,
@@ -248,63 +310,35 @@ export function TravelHomeHeroCarousel({
                 width: editVisual,
                 height: editVisual,
                 borderRadius: editVisual / 2,
-                backgroundColor:
-                  theme.name === 'dark' ? theme.backgroundElevated : '#FFFFFF',
-                borderColor:
-                  theme.name === 'dark'
-                    ? theme.separator
-                    : travelHomeTokens.colors.circleFabBorder,
+                opacity: pressed ? 0.72 : 1,
+              },
+            ]}>
+            <TravelHomeGlass
+              intensity={theme.name === 'dark' ? 44 : 56}
+              style={{
+                width: editVisual,
+                height: editVisual,
+                borderRadius: editVisual / 2,
+                alignItems: 'center',
+                justifyContent: 'center',
                 boxShadow:
                   theme.name === 'dark'
                     ? undefined
                     : travelHomeTokens.colors.circleFabShadow,
-                opacity: pressed ? 0.72 : 1,
-              },
-            ]}>
-            <TravelHomeEditIcon
-              size={Math.max(16, s(18))}
-              color={
-                theme.name === 'dark'
-                  ? theme.textPrimary
-                  : travelHomeTokens.colors.ink
-              }
-            />
+              }}>
+              <TravelHomeEditIcon
+                size={Math.max(16, s(18))}
+                color={
+                  theme.name === 'dark'
+                    ? theme.textPrimary
+                    : travelHomeTokens.colors.ink
+                }
+              />
+            </TravelHomeGlass>
           </Pressable>
         </AgentTestId>
       </View>
 
-      {!fixtureSource && visibleUris.length > 1 ? (
-        <View
-          pointerEvents="none"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={[
-            styles.dots,
-            {
-              bottom: Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset)),
-              gap: travelHomeTokens.sizes.carouselDotGap,
-            },
-          ]}>
-          {visibleUris.map((uri, dotIndex) => {
-            const selected = dotIndex === index;
-            return (
-              <View
-                key={uri}
-                style={[
-                  styles.dot,
-                  {
-                    width: selected ? activeDot : inactiveDot,
-                    height: selected ? activeDot : inactiveDot,
-                    backgroundColor: selected
-                      ? '#FFFFFF'
-                      : 'rgba(255,255,255,0.45)',
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -333,17 +367,5 @@ const styles = StyleSheet.create({
   editButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  dots: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    borderRadius: 999,
   },
 });
