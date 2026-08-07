@@ -116,6 +116,8 @@ describe('travel header sky décor', () => {
     expect(hero).toContain('useSafeAreaChrome');
     expect(hero).toContain('useSafeAreaChromeOverlay');
     expect(hero).toContain('headerSkyChromeColor');
+    expect(hero).toContain('resolveAtmosphereHeaderInk');
+    expect(hero).toContain('atmosphereHeaderInkColors');
     expect(hero).toContain('statusBandRatio');
     expect(hero).toContain('priority: 1');
     expect(hero).not.toContain('skyOnHeader');

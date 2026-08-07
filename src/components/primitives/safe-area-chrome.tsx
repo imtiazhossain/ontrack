@@ -26,6 +26,7 @@ type SafeAreaChromeOptions = {
    * React runs child focus effects before parents, so without priority the
    * layout wash would overwrite the screen (e.g. travel stack black over
    * itinerary night sky). Default `0`; leaf screens that must win use `1+`.
+   * `Screen` registers page fill at `-1` so feature washes still override.
    */
   priority?: number;
 };
@@ -69,6 +70,18 @@ type SafeAreaChromeOverlayRegistry = {
   remove: (id: string) => void;
 };
 
+type PageSurfaceEntry = {
+  id: string;
+  color: string;
+  priority: number;
+  seq: number;
+};
+
+type PageSurfaceRegistry = {
+  upsert: (entry: Omit<PageSurfaceEntry, 'seq'>) => void;
+  remove: (id: string) => void;
+};
+
 const EMPTY_CHROME: SafeAreaChromeState = {
   color: undefined,
   backgroundImage: undefined,
@@ -90,6 +103,17 @@ const SafeAreaChromeOverlayStateContext =
   createContext<SafeAreaChromeOverlayState>(EMPTY_OVERLAY);
 const SafeAreaChromeOverlayRegistryContext =
   createContext<SafeAreaChromeOverlayRegistry | null>(null);
+
+const PageSurfaceColorContext = createContext<string | undefined>(undefined);
+const PageSurfaceRegistryContext = createContext<PageSurfaceRegistry | null>(
+  null,
+);
+
+/** True for paintables the tab dock / shell can match (rejects `transparent`). */
+export function isPageSurfaceColor(color: string | undefined): color is string {
+  if (!color) return false;
+  return color.trim().toLowerCase() !== 'transparent';
+}
 
 function pickActiveChrome(entries: SafeAreaChromeEntry[]): SafeAreaChromeState {
   const best = pickRankedEntry(entries);
@@ -123,6 +147,9 @@ export function SafeAreaChromeProvider({ children }: PropsWithChildren) {
   const [entries, setEntries] = useState<SafeAreaChromeEntry[]>([]);
   const [overlayEntries, setOverlayEntries] = useState<
     SafeAreaChromeOverlayEntry[]
+  >([]);
+  const [pageSurfaceEntries, setPageSurfaceEntries] = useState<
+    PageSurfaceEntry[]
   >([]);
   const seqRef = useRef(0);
 
@@ -170,10 +197,38 @@ export function SafeAreaChromeProvider({ children }: PropsWithChildren) {
     [],
   );
 
+  const pageSurfaceRegistry = useMemo<PageSurfaceRegistry>(
+    () => ({
+      upsert: (entry) => {
+        setPageSurfaceEntries((prev) => {
+          const idx = prev.findIndex((item) => item.id === entry.id);
+          if (idx >= 0) {
+            const existing = prev[idx]!;
+            const next = prev.slice();
+            next[idx] = { ...entry, seq: existing.seq };
+            return next;
+          }
+          seqRef.current += 1;
+          return [...prev, { ...entry, seq: seqRef.current }];
+        });
+      },
+      remove: (id) => {
+        setPageSurfaceEntries((prev) =>
+          prev.filter((item) => item.id !== id),
+        );
+      },
+    }),
+    [],
+  );
+
   const state = useMemo(() => pickActiveChrome(entries), [entries]);
   const overlayState = useMemo(
     () => pickActiveOverlay(overlayEntries),
     [overlayEntries],
+  );
+  const pageSurfaceColor = useMemo(
+    () => pickRankedEntry(pageSurfaceEntries)?.color,
+    [pageSurfaceEntries],
   );
 
   return (
@@ -181,7 +236,11 @@ export function SafeAreaChromeProvider({ children }: PropsWithChildren) {
       <SafeAreaChromeStateContext.Provider value={state}>
         <SafeAreaChromeOverlayRegistryContext.Provider value={overlayRegistry}>
           <SafeAreaChromeOverlayStateContext.Provider value={overlayState}>
-            {children}
+            <PageSurfaceRegistryContext.Provider value={pageSurfaceRegistry}>
+              <PageSurfaceColorContext.Provider value={pageSurfaceColor}>
+                {children}
+              </PageSurfaceColorContext.Provider>
+            </PageSurfaceRegistryContext.Provider>
           </SafeAreaChromeOverlayStateContext.Provider>
         </SafeAreaChromeOverlayRegistryContext.Provider>
       </SafeAreaChromeStateContext.Provider>
@@ -215,6 +274,37 @@ export function useSafeAreaChromeBackground(): {
 /** Decorative React overlay (stars / sun) painted under the status bar. */
 export function useSafeAreaChromeOverlayLayer(): SafeAreaChromeOverlayState {
   return useContext(SafeAreaChromeOverlayStateContext);
+}
+
+/**
+ * Focused page fill under the bottom nav bar (separate from status-bar wash).
+ * Today’s night paper, Travel’s trip paper, Screen backgrounds, etc.
+ */
+export function usePageSurfaceBackgroundColor(): string | undefined {
+  return useContext(PageSurfaceColorContext);
+}
+
+/**
+ * While focused, publish the page fill the bottom nav bar should match.
+ * Skips `transparent` so scenic / washed screens can register a solid paper
+ * separately (e.g. Travel home paper under a transparent Screen).
+ */
+export function usePageSurfaceBackground(
+  color: string | undefined,
+  options?: { priority?: number },
+) {
+  const registry = useContext(PageSurfaceRegistryContext);
+  const id = useId();
+  const priority = options?.priority ?? 0;
+  const paint = isPageSurfaceColor(color) ? color : undefined;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!registry || !paint) return;
+      registry.upsert({ id, color: paint, priority });
+      return () => registry.remove(id);
+    }, [id, paint, priority, registry]),
+  );
 }
 
 /**

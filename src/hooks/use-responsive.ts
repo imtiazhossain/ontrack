@@ -103,7 +103,7 @@ export function useResponsive(): ResponsiveTokens {
         maxContentWidth: baseLayout.maxContentWidth,
         minTapTarget: Math.max(44, s(baseLayout.minTapTarget)),
         tabBarInset: ms(baseLayout.tabBarInset),
-        floatingTabBarBaseHeight: ms(baseLayout.floatingTabBarBaseHeight),
+        bottomNavBarBaseHeight: ms(baseLayout.bottomNavBarBaseHeight),
       } satisfies LayoutScale,
       iconSizes: scaleRecord(baseIconSizes, s) as IconSizeScale,
     };

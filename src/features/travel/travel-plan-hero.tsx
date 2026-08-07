@@ -16,6 +16,10 @@ import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
 import { TRAVEL_HEADER_SKY_CONTENT_BAND } from '@/features/travel/travel-header-sky-height';
+import {
+  atmosphereHeaderInkColors,
+  resolveAtmosphereHeaderInk,
+} from '@/features/travel/travel-home-atmosphere-ink';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import {
@@ -35,12 +39,15 @@ import { goBackOrReplace } from '@/utils/navigation';
 function TravelHeroGlassIconButton({
   icon,
   size,
+  color,
   accessibilityLabel,
   testID,
   onPress,
 }: {
   icon: 'back' | 'add';
   size: number;
+  /** Sky-aware ink so glyphs stay readable over night / day washes. */
+  color: string;
   accessibilityLabel: string;
   testID?: string;
   onPress: () => void;
@@ -81,7 +88,7 @@ function TravelHeroGlassIconButton({
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Symbol name={icon} size="md" color={theme.textPrimary} />
+          <Symbol name={icon} size="md" color={color} />
         </TravelHomeGlass>
       </Pressable>
     </AgentTestId>
@@ -114,7 +121,7 @@ export function TravelPlanHero({
   const showPin =
     destination.length > 0 &&
     destination.toLowerCase() !== placeName.toLowerCase();
-  const pinMute = theme.textSecondary;
+  const themeDark = theme.name === 'dark';
 
   // One continuous sky plate on app-shell chrome (status bar + header).
   // Stack content stays transparent over this band so aurora/day washes stay live.
@@ -124,7 +131,7 @@ export function TravelPlanHero({
     skyChromeHeight > 0 ? insets.top / skyChromeHeight : 0;
   const skyDestination = destination || atmosphere.destination || '';
   const skyCondition = resolveHeaderSkyCondition({
-    themeDark: theme.name === 'dark',
+    themeDark,
     timeOfDay: atmosphere.timeOfDay,
     weatherCode: atmosphere.weatherCode,
     timezone: atmosphere.timezone,
@@ -132,10 +139,17 @@ export function TravelPlanHero({
     latitude: atmosphere.latitude,
   });
   const skyChrome = headerSkyChromeColor({
-    themeDark: theme.name === 'dark',
+    themeDark,
     look: skyCondition.look,
     destination: skyDestination,
   });
+  // Same luminance ink as Travel Home — white over night/aurora, black over bright day.
+  const { ink: skyInk, muted: skyInkMuted } = atmosphereHeaderInkColors(
+    resolveAtmosphereHeaderInk({
+      themeDark,
+      averageColor: skyChrome,
+    }),
+  );
   useSafeAreaChrome(skyChrome, { priority: 1 });
   const skyOverlay = useMemo(
     () => (
@@ -178,6 +192,7 @@ export function TravelPlanHero({
           <TravelHeroGlassIconButton
             icon="back"
             size={Math.max(32, s(32))}
+            color={skyInk}
             accessibilityLabel="Go Back"
             testID={AgentUiIds.chrome.back}
             onPress={() => goBackOrReplace(router, '/(tabs)/travel' as Href)}
@@ -190,14 +205,18 @@ export function TravelPlanHero({
                 travelOverlineStyle,
                 styles.serif,
                 {
-                  color: theme.textPrimary,
+                  color: skyInkMuted,
                   fontSize: Math.max(12, typography.caption.fontSize),
                   lineHeight: Math.max(16, s(16)),
                 },
               ]}>
               Itinerary
             </AppText>
-            <TravelPlanTitle title={placeName} fontSize={Math.max(32, s(34))} />
+            <TravelPlanTitle
+              title={placeName}
+              fontSize={Math.max(32, s(34))}
+              style={{ color: skyInk }}
+            />
             {showPin ? (
               <View
                 style={[
@@ -211,7 +230,7 @@ export function TravelPlanHero({
                 <Symbol
                   name="location"
                   size={Math.max(12, s(13))}
-                  color={pinMute}
+                  color={skyInkMuted}
                 />
                 <AppText
                   variant="caption"
@@ -221,7 +240,7 @@ export function TravelPlanHero({
                     styles.serif,
                     styles.pinLabel,
                     {
-                      color: pinMute,
+                      color: skyInkMuted,
                       fontSize: Math.max(13, typography.caption.fontSize),
                       lineHeight: Math.max(17, s(17)),
                     },
@@ -235,6 +254,7 @@ export function TravelPlanHero({
             <TravelHeroGlassIconButton
               icon="add"
               size={Math.max(32, s(32))}
+              color={skyInk}
               accessibilityLabel="Add to Timeline"
               testID={AgentUiIds.travel.planDetail.addToTimeline}
               onPress={onAddPress}

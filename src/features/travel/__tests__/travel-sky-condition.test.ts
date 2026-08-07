@@ -7,6 +7,10 @@ import {
 import { destinationSkyAccents } from '@/features/travel/travel-sky-accents';
 import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 import {
+  atmosphereHeaderInkColors,
+  resolveAtmosphereHeaderInk,
+} from '@/features/travel/travel-home-atmosphere-ink';
+import {
   headerSkyChromeColor,
   resolveHeaderSkyCondition,
 } from '@/features/travel/travel-sky-condition';
@@ -230,5 +234,30 @@ describe('headerSkyChromeColor', () => {
     expect(
       headerSkyChromeColor({ themeDark: false, look: 'sunrise' }),
     ).toBe('#E8B896');
+  });
+
+  it('maps chrome luminance to readable hero ink (white on night, black on bright day)', () => {
+    const nightInk = atmosphereHeaderInkColors(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: headerSkyChromeColor({
+          themeDark: false,
+          look: 'night-clear',
+          destination: 'Reykjavík, Iceland',
+        }),
+      }),
+    );
+    expect(nightInk.ink).toBe('#FFFFFF');
+
+    const dayInk = atmosphereHeaderInkColors(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: headerSkyChromeColor({
+          themeDark: false,
+          look: 'sunny',
+        }),
+      }),
+    );
+    expect(dayInk.ink).toBe('#000000');
   });
 });

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, IconButton, LoadingBlock, Symbol } from '@/components/primitives';
@@ -245,6 +246,8 @@ export function SocialFriendsCard({
   );
 }
 
+const QUICK_ACTION_COLUMNS = 5;
+
 export function SocialQuickActions({
   onAction,
 }: {
@@ -253,9 +256,14 @@ export function SocialQuickActions({
   const theme = useTheme();
   const chrome = socialChrome(theme);
   const { spacing, width, layout, s } = useResponsive();
-  const available = width - layout.screenPadding * 2 - spacing.xs * 4;
-  // Leave a tiny pixel-rounding reserve so five columns stay on one row at @3x.
-  const tileWidth = Math.max(52, Math.floor(available / 5) - 2);
+  const gap = spacing.xs;
+  const [gridWidth, setGridWidth] = useState(0);
+  // Prefer measured row width so tiles fill the content area edge-to-edge.
+  const rowWidth = gridWidth > 0 ? gridWidth : width - layout.screenPadding * 2;
+  const tileWidth = Math.max(
+    52,
+    Math.floor((rowWidth - gap * (QUICK_ACTION_COLUMNS - 1)) / QUICK_ACTION_COLUMNS),
+  );
   const labelPadX = Math.max(2, spacing.xs - 1);
   // Shared size for every tile — sized so the longest single word still fits.
   const labelFontSize = Math.max(10, Math.min(11.5, Math.floor((tileWidth - labelPadX * 2) / 5.6)));
@@ -267,7 +275,12 @@ export function SocialQuickActions({
       <AppText variant="heading" style={{ color: chrome.ink }} bold fit>
         Quick Actions
       </AppText>
-      <View style={[styles.quickGrid, { gap: spacing.xs }]}>
+      <View
+        style={[styles.quickGrid, { rowGap: gap }]}
+        onLayout={(event) => {
+          const next = event.nativeEvent.layout.width;
+          setGridWidth((prev) => (Math.abs(prev - next) < 0.5 ? prev : next));
+        }}>
         {SOCIAL_QUICK_ACTIONS.map((action) => {
           const tone = socialActionTones[action.tone];
           const a11yLabel = action.label.replace(/\n/g, ' ');
@@ -618,8 +631,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickGrid: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   quickTile: {
     alignItems: 'center',

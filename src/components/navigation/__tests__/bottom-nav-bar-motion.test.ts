@@ -3,9 +3,9 @@ import {
   rebasePosition,
   routeIndexForPosition,
   shortestTargetPosition,
-} from '../floating-tab-bar-motion';
+} from '../bottom-nav-bar-motion';
 
-describe('floating tab bar motion', () => {
+describe('bottom nav bar motion', () => {
   const n = 12;
 
   it('centers the expected route at the canonical position', () => {

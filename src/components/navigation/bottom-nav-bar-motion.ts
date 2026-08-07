@@ -1,4 +1,4 @@
-/** Pure carousel position math for the floating tab rail (JS-thread). */
+/** Pure carousel position math for the bottom nav rail (JS-thread). */
 
 export function canonicalPositionForRoute(index: number, routeCount: number) {
   if (routeCount <= 0) return 0;

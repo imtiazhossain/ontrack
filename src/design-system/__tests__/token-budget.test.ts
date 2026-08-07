@@ -32,7 +32,7 @@ describe('Token budget enforcement', () => {
   ];
   // Whitelist files that intentionally contain pixel values
   const pixelWhitelist = [
-    '/src/components/navigation/floating-tab-bar.tsx',
+    '/src/components/navigation/bottom-nav-bar.tsx',
     '/src/components/primitives/app-prompt.tsx',
     '/src/design-system/__tests__/token-budget.test.ts',
     '/src/design-system/shadows.ts',
@@ -66,7 +66,7 @@ describe('Token budget enforcement', () => {
     '/src/features/workouts/muscle-focus-exercises.tsx',
     '/src/features/workouts/muscle-summary-panel.tsx',
     '/src/features/workouts/workouts-screen-header.tsx',
-    '/src/utils/__tests__/floating-tab-bar-rule.test.ts',
+    '/src/utils/__tests__/bottom-nav-bar-rule.test.ts',
   ];
 
   test('no source file exceeds 700 lines', () => {

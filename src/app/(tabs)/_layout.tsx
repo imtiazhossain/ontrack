@@ -1,6 +1,6 @@
 import { Redirect, Tabs } from 'expo-router';
 
-import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
+import { BottomNavBar } from '@/components/navigation/bottom-nav-bar';
 import { usePreferences } from '@/store/preferences';
 import { useUI } from '@/store/ui';
 import { todayKey } from '@/utils/date';
@@ -15,11 +15,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <BottomNavBar {...props} />}
       screenOptions={{
         headerShown: false,
         // Keep switches snappy — freezing blurred tabs adds a visible hitch
-        // when hopping between sections in the floating rail.
+        // when hopping between sections in the bottom nav rail.
         freezeOnBlur: false,
         lazy: true,
         animation: 'none',

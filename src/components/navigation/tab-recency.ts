@@ -1,4 +1,4 @@
-/** Pure tab-order helpers for the floating bottom-nav carousel. */
+/** Pure tab-order helpers for the bottom-nav carousel. */
 
 /** Cold-start / never-visited fallback — matches `(tabs)/_layout` screen order. */
 export const DEFAULT_TAB_ORDER = [

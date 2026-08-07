@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('social tab registration', () => {
-  it('registers Social in the tabs layout and floating tab meta', () => {
+  it('registers Social in the tabs layout and bottom nav meta', () => {
     const tabsLayout = readFileSync(
       join(process.cwd(), 'src/app/(tabs)/_layout.tsx'),
       'utf8',
     );
     const tabBar = readFileSync(
-      join(process.cwd(), 'src/components/navigation/floating-tab-bar.tsx'),
+      join(process.cwd(), 'src/components/navigation/bottom-nav-bar.tsx'),
       'utf8',
     );
 
