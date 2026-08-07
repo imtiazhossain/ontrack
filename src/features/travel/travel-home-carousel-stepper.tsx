@@ -21,6 +21,9 @@ type TravelHomeCarouselStepperProps = {
 
 const MAX_SLOTS = 3;
 const SETTLE_MS = 220;
+/** Soft dark halo so white ticks stay readable on bright roofs / sky. */
+const TICK_SHADOW =
+  '0 1px 3px rgba(0,0,0,0.55), 0 0 6px rgba(0,0,0,0.35)';
 
 /**
  * Compact page ticks for Travel Home heroes — small thin lines overlaid on the
@@ -88,20 +91,7 @@ export function TravelHomeCarouselStepper({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[styles.wrap, { paddingTop: padY }, style]}>
-      <View
-        style={[
-          styles.row,
-          {
-            gap,
-            height: lineH,
-            // Soft lift so white ticks stay readable on pale sky / bright plates.
-            shadowColor: '#000',
-            shadowOpacity: 0.45,
-            shadowRadius: 2,
-            shadowOffset: { width: 0, height: 1 },
-            elevation: 2,
-          },
-        ]}>
+      <View style={[styles.row, { gap, height: lineH }]}>
         {Array.from({ length: pageCount }, (_, slot) => (
           <Tick
             key={`tick-${slot}`}
@@ -143,21 +133,32 @@ function Tick({
   }));
 
   return (
+    // Shadow lives on an unclipped host — overflow:hidden on the fill would
+    // eat the drop shadow, and the trip card’s clip ancestor still lets an
+    // inward halo read on busy destination plates.
     <View
       style={{
         width,
         height,
         borderRadius: 1,
-        backgroundColor: inactiveColor,
-        overflow: 'hidden',
+        boxShadow: TICK_SHADOW,
       }}>
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: activeColor, borderRadius: 1 },
-          activeStyle,
-        ]}
-      />
+      <View
+        style={{
+          width,
+          height,
+          borderRadius: 1,
+          backgroundColor: inactiveColor,
+          overflow: 'hidden',
+        }}>
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: activeColor, borderRadius: 1 },
+            activeStyle,
+          ]}
+        />
+      </View>
     </View>
   );
 }

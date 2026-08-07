@@ -71,7 +71,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const [heroPager, setHeroPager] = useState({ index: 0, count: 0 });
   /** Continuous hero page position for smooth glass tick crossfades. */
   const heroScrollProgress = useSharedValue(0);
-  /** Active remote hero URI — Android glass frosts this plate in the scoop. */
+  /** Active remote hero URI — glass frosts this plate in the scoop (iOS + Android). */
   const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
   useEffect(() => {
     setHeroPager({ index: 0, count: 0 });
@@ -90,7 +90,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const heroHeight = travelHomeImageHeight(cardWidth);
   const bodyOverlap = travelHomeTokens.spacing.bodyOverlap;
   const fixtureFrost = __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
-  const androidFrostSource = heroFrostUri
+  const heroFrostSource = heroFrostUri
     ? { uri: heroFrostUri }
     : fixtureFrost;
   const cardShadow = soloAtmosphereShadow
@@ -229,15 +229,14 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
         </View>
 
         {/*
-          Glass meta panel overlaps the hero with large top radii. iOS uses
-          BlurView; Android frosts a blurred hero plate + light tint so the
-          scoop reads as glass (not clear plastic, not opaque milk).
+          Glass meta panel scoops into the hero so the title sits on frost.
+          Hero-aligned plate + milk-out (iOS BlurView / Android photo blur).
         */}
         <TravelHomeGlass
           frost={
-            Platform.OS === 'android' && androidFrostSource
+            heroFrostSource
               ? {
-                  source: androidFrostSource,
+                  source: heroFrostSource,
                   heroHeight,
                   overlap: bodyOverlap,
                 }
