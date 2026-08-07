@@ -30,6 +30,7 @@ import type { AppIconName } from '@/design-system';
 import { radii } from '@/design-system';
 import { palette } from '@/design-system/colors';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
@@ -80,6 +81,7 @@ export function BottomNavBar({
 }: BottomNavBarProps) {
   'use no memo';
   const theme = useTheme();
+  const { allowsBlur } = usePerformanceTier();
   const pageSurface = usePageSurfaceBackgroundColor();
   const barBackground = pageSurface ?? theme.backgroundPrimary;
   const router = useRouter();
@@ -480,12 +482,14 @@ export function BottomNavBar({
                 overflow: 'hidden',
               },
             ]}>
-            <BlurView
-              intensity={dark ? 40 : 52}
-              tint={dark ? 'dark' : 'light'}
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
-            />
+            {allowsBlur ? (
+              <BlurView
+                intensity={dark ? 40 : 52}
+                tint={dark ? 'dark' : 'light'}
+                pointerEvents="none"
+                style={StyleSheet.absoluteFill}
+              />
+            ) : null}
             <Symbol
               name={isPrev ? 'chevron-left' : 'chevron-right'}
               size={arrowIconSize}

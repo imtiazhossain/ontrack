@@ -8,6 +8,7 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 
 import { durations, easings } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 import { AppText } from './app-text';
 
@@ -34,22 +35,28 @@ export function ProgressRing({
   sublabel,
 }: ProgressRingProps) {
   const theme = useTheme();
+  const { allowsAnimatedSvgProps } = usePerformanceTier();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(Math.max(progress, 0), 1);
   const hasWideLabel = (label?.length ?? 0) >= 4;
   const labelFontSize = Math.min(
     22,
     Math.max(hasWideLabel ? 11 : 13, size * (hasWideLabel ? 0.23 : 0.26)),
   );
   const sublabelFontSize = Math.min(12.5, Math.max(9, size * 0.17));
-  const animated = useSharedValue(0);
+  const animated = useSharedValue(clamped);
 
   useEffect(() => {
-    animated.value = withTiming(Math.min(Math.max(progress, 0), 1), {
+    if (!allowsAnimatedSvgProps) {
+      animated.value = clamped;
+      return;
+    }
+    animated.value = withTiming(clamped, {
       duration: durations.slow,
       easing: easings.enter,
     });
-  }, [progress, animated]);
+  }, [allowsAnimatedSvgProps, animated, clamped]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - animated.value),
@@ -58,8 +65,13 @@ export function ProgressRing({
   return (
     <View
       accessibilityRole="progressbar"
-      accessibilityValue={{ now: Math.round(progress * 100), min: 0, max: 100 }}
-      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      accessibilityValue={{ now: Math.round(clamped * 100), min: 0, max: 100 }}
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle
           cx={size / 2}
@@ -69,18 +81,33 @@ export function ProgressRing({
           strokeWidth={strokeWidth}
           fill="none"
         />
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={color ?? theme.accentPrimary}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={circumference}
-          animatedProps={animatedProps}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
+        {allowsAnimatedSvgProps ? (
+          <AnimatedCircle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color ?? theme.accentPrimary}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={circumference}
+            animatedProps={animatedProps}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        ) : (
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color ?? theme.accentPrimary}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - clamped)}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        )}
       </Svg>
       <View style={styles.labelStack}>
         {label ? (

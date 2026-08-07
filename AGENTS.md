@@ -81,6 +81,7 @@ Domain depth → `.cursor/skills/` (**travel**, **todos**, **workouts**, **visio
 - **Parse / numeric:** `@/utils/parse` (`sanitizeNumericInput`, …); see `numeric-input.mdc`
 - **Persist:** `@/services/storage` `createPersistStorage`
 - **List equality / idle:** `@/utils/list-equality`, `@/utils/defer-until-idle`
+- **Perf / capability:** `@/utils/device-capability` + `usePerformanceTier` — gate blur, loop motion, sensors, SharedTransition; travel sky uses `planTravelSkyFx`
 - **API / vision:** `@/services/http/api-url` + `api-client`; `@/services/ai/vision-transport`
 - **Images:** `@/utils/image-persist`, `@/utils/pick-image`
 - **Destructive:** `@/utils/confirm-destructive`

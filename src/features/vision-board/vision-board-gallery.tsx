@@ -7,6 +7,7 @@ import Animated, {
 
 import { AppText, EmptyState } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 
 import { splitMasonryColumns } from './selectors';
 import type { VisionBoardCategory, VisionBoardItem } from './types';
@@ -23,6 +24,7 @@ export function VisionBoardGallery({
   category: VisionBoardCategory;
   items: VisionBoardItem[];
 }) {
+  const { allowsSharedElement } = usePerformanceTier();
   if (items.length === 0) {
     return (
       <EmptyState
@@ -50,7 +52,7 @@ export function VisionBoardGallery({
             {column.map((item) => (
               <Animated.View
                 key={item.id}
-                {...(Platform.OS === 'web'
+                {...(Platform.OS === 'web' || !allowsSharedElement
                   ? {}
                   : {
                       sharedTransitionTag: `vision-item-${item.id}`,

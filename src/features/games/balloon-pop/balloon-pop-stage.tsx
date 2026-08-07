@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 import { newId } from '@/utils/id';
@@ -11,7 +12,8 @@ import { spawnBalloonPositions, stepBalloons } from './physics';
 import type { Balloon, FanConfig, LevelConfig, StageBounds } from './types';
 
 const BALLOON_RADIUS = 28;
-const TICK_MS = 1000 / 30;
+const TICK_MS_FULL = 1000 / 30;
+const TICK_MS_REDUCED = 1000 / 18;
 
 interface BalloonPopStageProps {
   level: LevelConfig;
@@ -29,6 +31,9 @@ export function BalloonPopStage({
   onTargetsCleared,
 }: BalloonPopStageProps) {
   const theme = useTheme();
+  const { tier, particleScale, allowsLoopMotion } = usePerformanceTier();
+  const tickMs =
+    tier === 'full' ? TICK_MS_FULL : tier === 'reduced' ? TICK_MS_REDUCED : 0;
   const [bounds, setBounds] = useState<StageBounds>({ width: 0, height: 0 });
   const [balloons, setBalloons] = useState<Balloon[]>([]);
   const balloonsRef = useRef<Balloon[]>([]);
@@ -43,7 +48,13 @@ export function BalloonPopStage({
   useEffect(() => {
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    const total = level.targetCount + level.distractorCount;
+    const budget = Math.max(
+      level.targetCount,
+      Math.round((level.targetCount + level.distractorCount) * Math.max(0.35, particleScale || 0.35)),
+    );
+    const targets = Math.min(level.targetCount, budget);
+    const distractors = Math.max(0, budget - targets);
+    const total = targets + distractors;
     const positions = spawnBalloonPositions(
       total,
       bounds,
@@ -52,7 +63,7 @@ export function BalloonPopStage({
     );
     const distractorPool = level.colorPool.filter((id) => id !== level.targetColorId);
     const next: Balloon[] = positions.map((pos, index) => {
-      const isTarget = index < level.targetCount;
+      const isTarget = index < targets;
       const colorId = isTarget
         ? level.targetColorId
         : (distractorPool[index % Math.max(1, distractorPool.length)] ??
@@ -67,24 +78,26 @@ export function BalloonPopStage({
     });
     balloonsRef.current = next;
     setBalloons(next);
-  }, [bounds, level]);
+  }, [bounds, level, particleScale]);
 
   useEffect(() => {
-    if (!playing || bounds.width <= 0) return;
+    if (!playing || bounds.width <= 0 || !allowsLoopMotion || tickMs <= 0) {
+      return;
+    }
 
     const id = setInterval(() => {
       const stepped = stepBalloons(
         balloonsRef.current,
         level.fans,
         bounds,
-        TICK_MS / 1000,
+        tickMs / 1000,
       );
       balloonsRef.current = stepped;
       setBalloons(stepped);
-    }, TICK_MS);
+    }, tickMs);
 
     return () => clearInterval(id);
-  }, [playing, bounds, level.fans]);
+  }, [allowsLoopMotion, playing, bounds, level.fans, tickMs]);
 
   const handlePop = useCallback(
     (balloon: Balloon) => {

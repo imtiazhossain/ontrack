@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { radii } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { ANATOMY_BEIGE } from './anatomy-art';
 import type { AnatomySex, MuscleKey } from './muscle-data';
 
@@ -37,12 +38,14 @@ export function FrontPlankAnimation({
 }) {
   const progress = useSharedValue(0);
   const reduceMotion = useReducedMotion();
+  const { allowsLoopMotion } = usePerformanceTier();
+  const stillPose = reduceMotion || !allowsLoopMotion;
   const source = anatomySex === 'female' ? FEMALE_PLANK : MALE_PLANK;
 
   useEffect(() => {
     cancelAnimation(progress);
 
-    if (reduceMotion) {
+    if (stillPose) {
       progress.value = 0.55;
       return;
     }
@@ -59,7 +62,7 @@ export function FrontPlankAnimation({
     );
 
     return () => cancelAnimation(progress);
-  }, [playing, progress, reduceMotion]);
+  }, [playing, progress, stillPose]);
 
   const figureMotion = useAnimatedStyle(() => {
     const p = smoothStep(progress.value);

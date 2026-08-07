@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -71,6 +72,7 @@ export function TravelHomeGlass({
   ...rest
 }: TravelHomeGlassProps) {
   const theme = useTheme();
+  const { allowsBlur } = usePerformanceTier();
   const darkPlate = inverted
     ? theme.name !== 'dark'
     : theme.name === 'dark';
@@ -91,7 +93,8 @@ export function TravelHomeGlass({
 
   if (Platform.OS === 'android') {
     // Glide BlurTransformation caps at 25 — use the max for strongest frost.
-    const imageBlurRadius = 25;
+    // Skip photo blur on constrained tiers (tint-only wash).
+    const imageBlurRadius = allowsBlur ? 25 : 0;
 
     return (
       <View
@@ -108,7 +111,7 @@ export function TravelHomeGlass({
           },
           style,
         ]}>
-        {frost ? (
+        {frost && allowsBlur ? (
           <Image
             pointerEvents="none"
             source={
@@ -171,17 +174,23 @@ export function TravelHomeGlass({
             ? 'rgba(255,255,255,0.16)'
             : 'rgba(255,255,255,0.65)',
           backgroundColor: darkPlate
-            ? 'rgba(0, 0, 0, 0.32)'
-            : 'rgba(255, 255, 255, 0.32)',
+            ? allowsBlur
+              ? 'rgba(0, 0, 0, 0.32)'
+              : 'rgba(0, 0, 0, 0.55)'
+            : allowsBlur
+              ? 'rgba(255, 255, 255, 0.32)'
+              : 'rgba(255, 255, 255, 0.78)',
         },
         style,
       ]}>
-      <BlurView
-        intensity={intensity ?? (darkPlate ? 40 : 52)}
-        tint={darkPlate ? 'dark' : 'light'}
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      />
+      {allowsBlur ? (
+        <BlurView
+          intensity={intensity ?? (darkPlate ? 40 : 52)}
+          tint={darkPlate ? 'dark' : 'light'}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       {children}
     </View>
   );

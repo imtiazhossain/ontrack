@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { radii } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
@@ -41,6 +42,7 @@ export function VisionBoardCanvasItem({
   onGestureActive: (active: boolean) => void;
 }) {
   const theme = useTheme();
+  const { allowsSharedElement } = usePerformanceTier();
   const agent = useAgentUiTarget(AgentUiIds.vision.canvasItem(item.id), {
     label: `${item.kind} card on ${category.name} board`,
     onPress: onSelect,
@@ -164,8 +166,12 @@ export function VisionBoardCanvasItem({
         accessibilityRole="adjustable"
         accessibilityLabel={`${item.kind} card on ${category.name} board`}
         accessibilityHint="Drag to move, pinch to resize, or rotate with two fingers. Select for accessible controls."
-        sharedTransitionTag={`vision-item-${item.id}`}
-        sharedTransitionStyle={sharedTransition}
+        {...(allowsSharedElement
+          ? {
+              sharedTransitionTag: `vision-item-${item.id}`,
+              sharedTransitionStyle: sharedTransition,
+            }
+          : {})}
         style={[
           styles.item,
           {
