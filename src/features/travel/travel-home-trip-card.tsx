@@ -95,9 +95,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
    * this bleed (zIndex) so footer never gets clipped by the scoop.
    */
   const frostFadeBleed = Math.max(16, s(18));
-  /** Keep ticks on the visible photo band, clear of the frost scoop. */
-  const stepperBottom =
-    bodyOverlap + Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset + 4));
+  /** Keep ticks on the visible photo band, inset from the card top edge. */
+  const stepperTop = Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset + 4));
   const titleToLocation = Math.max(4, travelHomeTokens.spacing.titleToLocation);
   const locationToDivider = Math.max(6, travelHomeTokens.spacing.locationToDivider - 2);
   const footerPadV = Math.max(10, travelHomeTokens.spacing.cardBottom);
@@ -290,7 +289,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           <View
             collapsable={false}
             pointerEvents="none"
-            style={[styles.stepperOverlay, { bottom: stepperBottom }]}>
+            style={[styles.stepperOverlay, { top: stepperTop }]}>
             <TravelHomeCarouselStepper
               count={heroPager.count}
               index={heroPager.index}
