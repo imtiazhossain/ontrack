@@ -157,10 +157,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     </>
   );
   const showStepper = heroPager.count > 1;
-  const stepperLift = Math.max(
-    10,
-    Math.round(travelHomeTokens.spacing.bodyOverlap * 0.55),
-  );
 
   return (
     // Shadow and overflow:hidden cannot share one view on iOS — split so the
@@ -207,7 +203,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           Glass meta panel overlaps the hero with large top radii. iOS uses
           BlurView; Android frosts a blurred hero plate + light tint so the
           scoop reads as glass (not clear plastic, not opaque milk).
-          Page stepper sits on the glass in the overlap scoop.
+          Page dashes sit flush on the top edge of the glass scoop.
         */}
         <TravelHomeGlass
           frost={
@@ -240,13 +236,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             pointerEvents="none"
             style={
               showStepper
-                ? [
-                    styles.stepperSlot,
-                    {
-                      marginTop: -stepperLift,
-                      marginBottom: Math.max(2, s(4)),
-                    },
-                  ]
+                ? [styles.stepperSlot, { marginBottom: Math.max(2, s(4)) }]
                 : styles.stepperSlotCollapsed
             }>
             <TravelHomeCarouselStepper
@@ -458,11 +448,12 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   stepperSlot: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
     // Above Android frost underlays in TravelHomeGlass.
     zIndex: 3,
   },
+
   stepperSlotCollapsed: {
     height: 0,
     marginTop: 0,
