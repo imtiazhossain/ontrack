@@ -9,10 +9,7 @@ import { Platform } from 'react-native';
 
 export const TRAVEL_HOME_REFERENCE_WIDTH = 853;
 
-/**
- * Temporary preview face for Travel Home copy (title → cards).
- * iOS ships Times New Roman; Android falls back to platform serif.
- */
+/** Travel Home display face — iOS Times New Roman; Android platform serif. */
 export const travelHomeFontFamily = Platform.select({
   ios: 'Times New Roman',
   android: 'serif',
@@ -21,13 +18,10 @@ export const travelHomeFontFamily = Platform.select({
 
 export const travelHomeTokens = {
   colors: {
-    /** Title / primary ink — black (replaces prior navy). */
-    navy: '#000000',
-    blue: '#2F6FED',
-    blueStrong: '#1E4FC4',
-    blueTint: '#E8F1FF',
     ink: '#000000',
-    /** Secondary / meta ink — neutral gray (was slate-blue). */
+    /** @deprecated Prefer `ink` — kept for fixture snapshot keys. */
+    navy: '#000000',
+    /** Secondary / meta ink — neutral gray. */
     inkMuted: '#5A5A5A',
     /** Atmosphere-band copy over the photo wash (title / tagline / section). */
     atmosphereInk: '#000000',

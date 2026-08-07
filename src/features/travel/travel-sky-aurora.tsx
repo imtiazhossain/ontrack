@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -25,16 +26,26 @@ export function TravelSkyAurora({
   statusBand,
   motion,
   muted,
+  liveFx = true,
 }: {
   statusBand: number;
   motion: TiltSkyMotion;
   /** Dim under clouds / rain. */
   muted?: boolean;
+  /** When false, hold a static veil (no pulse/drift loops yet). */
+  liveFx?: boolean;
 }) {
-  const pulse = useSharedValue(0);
-  const drift = useSharedValue(0);
+  const pulse = useSharedValue(liveFx ? 0 : 0.7);
+  const drift = useSharedValue(0.5);
 
   useEffect(() => {
+    if (!liveFx) {
+      cancelAnimation(pulse);
+      cancelAnimation(drift);
+      pulse.value = 0.7;
+      drift.value = 0.5;
+      return;
+    }
     pulse.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
@@ -54,14 +65,21 @@ export function TravelSkyAurora({
         false,
       ),
     );
-  }, [drift, pulse]);
+    return () => {
+      cancelAnimation(pulse);
+      cancelAnimation(drift);
+    };
+  }, [drift, liveFx, pulse]);
 
   const style = useAnimatedStyle(() => {
     const base = muted ? 0.28 : 0.55;
     return {
       opacity: interpolate(pulse.value, [0, 1], [base * 0.65, base]),
       transform: [
-        { translateX: interpolate(drift.value, [0, 1], [-6, 8]) + motion.tiltX.value * 5 },
+        {
+          translateX:
+            interpolate(drift.value, [0, 1], [-6, 8]) + motion.tiltX.value * 5,
+        },
         { translateY: motion.tiltY.value * 3 },
       ],
     };

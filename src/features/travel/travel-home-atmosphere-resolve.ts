@@ -15,10 +15,8 @@ import type { TravelAtmosphereHeaderInk } from '@/features/travel/travel-home-at
 import {
   atmosphereDestinationKey,
   mergeAtmospherePlaces,
-  normalizeTripAtmosphereDestinations,
   pickAtmosphereDestination,
   pickRotatingIndex,
-  rememberRecentKeys,
   travelHomeAtmosphereSearchQueries,
   type TravelHomeAtmosphereQueryInput,
 } from '@/features/travel/travel-home-atmosphere-queries';
@@ -144,5 +142,3 @@ export async function resolveTravelHomeAtmosphereImage(
     ? { ...curated, destinationKey, label: curated.label ?? place }
     : curated;
 }
-
-export { mergeAtmospherePlaces, normalizeTripAtmosphereDestinations, rememberRecentKeys };

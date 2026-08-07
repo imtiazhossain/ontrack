@@ -20,7 +20,6 @@ import {
   relativeLuminanceFromHex,
   resolveAtmosphereHeaderInk,
   travelHomeAtmosphereHeaderScrimColors,
-  travelHomeAtmosphereTextShadowStyle,
   travelHomeSoloTripCardShadow,
 } from '../travel-home-atmosphere-ink';
 import {
@@ -254,12 +253,6 @@ describe('Travel home atmosphere resolve', () => {
     expect(
       pickCuratedTravelHomeAtmosphere('night', 0, [], 0).curatedHeaderTone,
     ).toBe('light');
-  });
-
-  it('drops atmosphere text shadows — chrome scrim owns contrast', () => {
-    expect(travelHomeAtmosphereTextShadowStyle('light', '#E8EEF5')).toBeNull();
-    expect(travelHomeAtmosphereTextShadowStyle('light', '#0A1520')).toBeNull();
-    expect(travelHomeAtmosphereTextShadowStyle('dark', '#E8EEF5')).toBeNull();
   });
 
   it('adds a soft opposing header scrim when the plate washes out ink', () => {

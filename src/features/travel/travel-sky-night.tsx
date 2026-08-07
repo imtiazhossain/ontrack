@@ -1,9 +1,9 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   interpolate,
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -32,6 +32,9 @@ import {
 import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 import { TravelSkyAurora } from '@/features/travel/travel-sky-aurora';
 import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
+import {
+  MotionLayer as SharedMotionLayer,
+} from '@/features/travel/travel-sky-motion-layer';
 import { PhaseMoon } from '@/features/travel/travel-phase-moon';
 import {
   SKY_CELESTIAL_CLEARANCE,
@@ -39,66 +42,28 @@ import {
   SKY_VIEW_H,
   SKY_VIEW_W,
 } from '@/features/travel/travel-sky-plate';
+import type { TravelSkyFxPlan } from '@/features/travel/travel-sky-quality';
 import { TravelSkyWeatherFx } from '@/features/travel/travel-sky-weather-fx';
 import type { TiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
+/** Night defaults: stable opacity + slightly deeper tilt than day. */
 function MotionLayer({
-  depth,
-  energy,
-  tiltX,
-  tiltY,
-  driftAmp = 0,
   driftMs = 32000,
-  delayMs = 0,
-  children,
-}: {
-  depth: number;
-  energy: SharedValue<number>;
-  tiltX: SharedValue<number>;
-  tiltY: SharedValue<number>;
-  driftAmp?: number;
-  driftMs?: number;
-  delayMs?: number;
-  children: ReactNode;
-}) {
-  const drift = useSharedValue(0);
-  useEffect(() => {
-    if (driftAmp <= 0) return;
-    drift.value = 0;
-    drift.value = withDelay(
-      delayMs,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [delayMs, drift, driftAmp, driftMs]);
-
-  // Stable plate opacity — per-star shimmer carries the sparkle; a layer-wide
-  // breathe made the whole field pulse in lockstep. Clouds optionally glide.
-  const style = useAnimatedStyle(() => {
-    const lift = interpolate(energy.value, [0, 1], [0.94, 1]);
-    const glide = driftAmp > 0 ? interpolate(drift.value, [0, 1], [-driftAmp, driftAmp]) : 0;
-    return {
-      opacity: lift,
-      transform: [
-        { translateX: tiltX.value * 16 * depth + glide },
-        {
-          translateY:
-            tiltY.value * 10 * depth +
-            (driftAmp > 0 ? interpolate(drift.value, [0, 1], [-1, 1]) * depth : 0),
-        },
-      ],
-    };
-  });
-
-  return <Animated.View style={[StyleSheet.absoluteFill, style]}>{children}</Animated.View>;
+  ...props
+}: Omit<
+  ComponentProps<typeof SharedMotionLayer>,
+  'opacityMode' | 'tiltXAmp' | 'tiltYAmp' | 'driftYAmp'
+>) {
+  return (
+    <SharedMotionLayer
+      {...props}
+      driftMs={driftMs}
+      opacityMode="stable"
+      tiltXAmp={16}
+      tiltYAmp={10}
+      driftYAmp={1}
+    />
+  );
 }
 
 /** Deterministic 0…1 from a small integer seed (no Math in worklets). */
@@ -107,9 +72,32 @@ function starSeedUnit(seed: number, salt: number): number {
   return (n < 0 ? n + 10007 : n) / 10007;
 }
 
+/** One shared driver for the whole bright field — phases make flashes feel independent. */
+function useStarTwinkleClock(active: boolean): SharedValue<number> {
+  const clock = useSharedValue(0);
+  useEffect(() => {
+    if (!active) {
+      cancelAnimation(clock);
+      clock.value = 0;
+      return;
+    }
+    clock.value = 0;
+    clock.value = withRepeat(
+      withTiming(1, { duration: 10000, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(clock);
+    };
+  }, [active, clock]);
+  return clock;
+}
+
 /**
- * Independent opacity flashes — quick rise/fall with long, varied rests.
- * No radius breathe (that reads as a synchronized pulse).
+ * Independent-looking opacity flashes via a shared clock + per-star phase.
+ * Uses Animated.View (not animated SVG) — Fabric-safe and far cheaper than
+ * N× `createAnimatedComponent(Circle)` + per-star `withRepeat` trees.
  */
 function TwinklingStar({
   cx,
@@ -118,6 +106,7 @@ function TwinklingStar({
   seed,
   baseOpacity,
   color,
+  clock,
 }: {
   cx: number;
   cy: number;
@@ -125,69 +114,50 @@ function TwinklingStar({
   seed: number;
   baseOpacity: number;
   color: string;
+  clock: SharedValue<number>;
 }) {
-  const shimmer = useSharedValue(0);
-  const delayMs = Math.round(starSeedUnit(seed, 1) * 5200);
-  const holdMs = Math.round(1600 + starSeedUnit(seed, 2) * 6400);
-  const flashUpMs = Math.round(140 + starSeedUnit(seed, 3) * 260);
-  const flashDownMs = Math.round(220 + starSeedUnit(seed, 4) * 380);
+  const phase = starSeedUnit(seed, 1);
+  const flashWidth = 0.035 + starSeedUnit(seed, 3) * 0.04;
   const peak = 0.55 + starSeedUnit(seed, 5) * 0.45;
   const doubleFlash = seed % 7 === 0 || seed % 11 === 0;
+  const size = Math.max(1.6, r * 1.85);
 
-  useEffect(() => {
-    const gapMs = Math.round(60 + starSeedUnit(seed, 6) * 140);
-    const cycle = doubleFlash
-      ? withSequence(
-          withTiming(0, { duration: holdMs }),
-          withTiming(peak, {
-            duration: flashUpMs,
-            easing: Easing.out(Easing.cubic),
-          }),
-          withTiming(0, {
-            duration: flashDownMs,
-            easing: Easing.in(Easing.quad),
-          }),
-          withTiming(0, { duration: gapMs }),
-          withTiming(peak * 0.72, {
-            duration: Math.round(flashUpMs * 0.75),
-            easing: Easing.out(Easing.cubic),
-          }),
-          withTiming(0, {
-            duration: Math.round(flashDownMs * 0.9),
-            easing: Easing.in(Easing.quad),
-          }),
-        )
-      : withSequence(
-          withTiming(0, { duration: holdMs }),
-          withTiming(peak, {
-            duration: flashUpMs,
-            easing: Easing.out(Easing.cubic),
-          }),
-          withTiming(0, {
-            duration: flashDownMs,
-            easing: Easing.in(Easing.quad),
-          }),
-        );
-
-    shimmer.value = withDelay(delayMs, withRepeat(cycle, -1, false));
-  }, [
-    delayMs,
-    doubleFlash,
-    flashDownMs,
-    flashUpMs,
-    holdMs,
-    peak,
-    seed,
-    shimmer,
-  ]);
-
-  const animatedProps = useAnimatedProps(() => ({
-    // Soft floor → brief sparkle; radius stays fixed.
-    opacity: baseOpacity * (0.78 + shimmer.value * 0.22),
-  }));
+  const style = useAnimatedStyle(() => {
+    const t = (clock.value + phase) % 1;
+    let flash = 0;
+    if (t < flashWidth) flash = t / flashWidth;
+    else if (t < flashWidth * 2) flash = 1 - (t - flashWidth) / flashWidth;
+    if (doubleFlash) {
+      const t2 = (t + 0.11) % 1;
+      const w2 = flashWidth * 0.75;
+      let f2 = 0;
+      if (t2 < w2) f2 = t2 / w2;
+      else if (t2 < w2 * 2) f2 = 1 - (t2 - w2) / w2;
+      flash = Math.max(flash, f2 * 0.72);
+    }
+    return {
+      opacity: baseOpacity * (0.78 + flash * peak * 0.22),
+    };
+  });
 
   return (
-    <AnimatedCircle cx={cx} cy={cy} r={r} fill={color} animatedProps={animatedProps} />
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.star,
+        {
+          left: `${(cx / SKY_VIEW_W) * 100}%`,
+          top: `${(cy / SKY_VIEW_H) * 100}%`,
+          width: size,
+          height: size,
+          marginLeft: -size / 2,
+          marginTop: -size / 2,
+          borderRadius: size / 2,
+          backgroundColor: color,
+        },
+        style,
+      ]}
+    />
   );
 }
 
@@ -319,6 +289,7 @@ export function TravelSkyNight({
   longitude,
   statusBand,
   motion,
+  fx,
 }: {
   condition: HeaderSkyCondition;
   destination: string;
@@ -327,11 +298,14 @@ export function TravelSkyNight({
   longitude?: number;
   statusBand: number;
   motion: TiltSkyMotion;
+  fx: TravelSkyFxPlan;
 }) {
+  const liveFx = fx.liveFx;
   const now = useMemo(() => new Date(), []);
   const cycle = useMemo(() => moonPhaseCycle(now), [now]);
   const showAurora =
     destinationShowsAurora(destination) && !condition.lightning;
+  const twinkleClock = useStarTwinkleClock(liveFx && fx.twinkle);
 
   const lat = latitude ?? approximateLatitudeForDestination(destination);
   const cloudy = condition.cloudyNight;
@@ -349,17 +323,37 @@ export function TravelSkyNight({
       }),
     [cloudy, lat, longitude, now],
   );
-  const dimStars = useMemo(
-    () =>
-      dimFieldStars(
-        SKY_VIEW_W,
-        SKY_VIEW_H,
-        `${destination}|${dateKey}`,
-        cloudy,
-        desert,
-      ),
-    [cloudy, dateKey, desert, destination],
-  );
+  const dimStars = useMemo(() => {
+    const all = dimFieldStars(
+      SKY_VIEW_W,
+      SKY_VIEW_H,
+      `${destination}|${dateKey}`,
+      cloudy,
+      desert,
+    );
+    if (fx.dimStarScale >= 0.99) return all;
+    const n = Math.max(10, Math.round(all.length * fx.dimStarScale));
+    return all.slice(0, n);
+  }, [cloudy, dateKey, desert, destination, fx.dimStarScale]);
+
+  const { twinkleStars, staticBrightStars } = useMemo(() => {
+    type Twinkle = (typeof stars)[number] & { seed: number };
+    if (!liveFx || !fx.twinkle || fx.twinkleMax <= 0) {
+      return {
+        twinkleStars: [] as Twinkle[],
+        staticBrightStars: stars,
+      };
+    }
+    const ranked = stars
+      .map((s, i) => ({ s, i }))
+      .sort((a, b) => a.s.mag - b.s.mag);
+    const twinkle = ranked.slice(0, fx.twinkleMax);
+    const twinkleKeys = new Set(twinkle.map(({ s }) => s.name));
+    return {
+      twinkleStars: twinkle.map(({ s, i }) => ({ ...s, seed: i + 1 })),
+      staticBrightStars: stars.filter((s) => !twinkleKeys.has(s.name)),
+    };
+  }, [fx.twinkle, fx.twinkleMax, liveFx, stars]);
 
   const starOpacityMul =
     (condition.rain ? 0.4 : 1) * (showAurora ? 0.85 : 1) * (desert ? 1.12 : 1);
@@ -400,6 +394,7 @@ export function TravelSkyNight({
           statusBand={statusBand}
           motion={motion}
           muted={cloudy || condition.rain}
+          liveFx={fx.auroraMotion}
         />
       ) : null}
 
@@ -423,38 +418,53 @@ export function TravelSkyNight({
               opacity={Math.min(1, s.opacity * starOpacityMul)}
             />
           ))}
-        </Svg>
-      </MotionLayer>
-
-      <MotionLayer
-        depth={0.75}
-        energy={motion.energy}
-        tiltX={motion.tiltX}
-        tiltY={motion.tiltY}>
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox={SKY_PLATE_VIEWBOX}
-          preserveAspectRatio="none">
-          {stars.map((s, i) => (
-            <TwinklingStar
+          {staticBrightStars.map((s) => (
+            <Circle
               key={s.name}
               cx={s.x}
               cy={s.y}
               r={s.r}
-              seed={i + 1}
-              baseOpacity={Math.min(1, s.opacity * starOpacityMul)}
-              color={s.mag < 1 ? '#FFF8E8' : '#F7F3E8'}
+              fill={s.mag < 1 ? '#FFF8E8' : '#F7F3E8'}
+              opacity={Math.min(1, s.opacity * starOpacityMul)}
             />
           ))}
         </Svg>
       </MotionLayer>
 
+      {twinkleStars.length > 0 ? (
+        <MotionLayer
+          depth={0.75}
+          energy={motion.energy}
+          tiltX={motion.tiltX}
+          tiltY={motion.tiltY}>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {twinkleStars.map((s) => (
+              <TwinklingStar
+                key={s.name}
+                cx={s.x}
+                cy={s.y}
+                r={s.r}
+                seed={s.seed}
+                baseOpacity={Math.min(1, s.opacity * starOpacityMul)}
+                color={s.mag < 1 ? '#FFF8E8' : '#F7F3E8'}
+                clock={twinkleClock}
+              />
+            ))}
+          </View>
+        </MotionLayer>
+      ) : null}
+
       {cloudy ? (
         <MotionLayer
           depth={1.1}
           delayMs={80}
-          driftAmp={condition.cloudCover === 'partly' ? 14 : 18}
+          driftAmp={
+            fx.cloudDrift
+              ? condition.cloudCover === 'partly'
+                ? 14
+                : 18
+              : 0
+          }
           driftMs={condition.cloudCover === 'partly' ? 28000 : 34000}
           energy={motion.energy}
           tiltX={motion.tiltX}
@@ -490,7 +500,7 @@ export function TravelSkyNight({
         gradientId="itineraryPhaseMoon"
       />
 
-      {clearSky ? (
+      {fx.meteors && clearSky ? (
         <>
           <ShootingStar
             startX={40}
@@ -515,7 +525,7 @@ export function TravelSkyNight({
         </>
       ) : null}
 
-      {!condition.rain ? (
+      {fx.satellites && !condition.rain ? (
         <>
           <Satellite
             pathY={Math.max(statusBand + 8, 28)}
@@ -534,11 +544,14 @@ export function TravelSkyNight({
         </>
       ) : null}
 
-      <TravelSkyWeatherFx
-        rain={condition.rain}
-        lightning={condition.lightning}
-        dark
-      />
+      {fx.weatherFx ? (
+        <TravelSkyWeatherFx
+          rain={condition.rain}
+          lightning={condition.lightning}
+          dark
+          maxDrops={fx.rainDropMax}
+        />
+      ) : null}
     </View>
   );
 }
@@ -548,5 +561,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
+  },
+  star: {
+    position: 'absolute',
   },
 });
