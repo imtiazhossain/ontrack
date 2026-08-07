@@ -53,6 +53,14 @@ describe('canonical travel sheet design', () => {
     expect(layout).toMatch(
       /name="travel"[\s\S]*?headerShown: false/,
     );
+
+    const planHero = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
+      'utf8',
+    );
+    // Itinerary back must dismiss to Travel home, never stack-pop to a prior trip.
+    expect(planHero).toContain("dismissTo('/(tabs)/travel'");
+    expect(planHero).not.toContain('goBackOrReplace');
   });
 
   it('keeps full-screen Travel headers on the shared small top inset', () => {

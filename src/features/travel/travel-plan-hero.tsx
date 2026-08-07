@@ -40,7 +40,6 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
-import { goBackOrReplace } from '@/utils/navigation';
 
 function TravelHeroGlassIconButton({
   icon,
@@ -213,7 +212,8 @@ export function TravelPlanHero({
             color={skyInk}
             accessibilityLabel="Go Back"
             testID={AgentUiIds.chrome.back}
-            onPress={() => goBackOrReplace(router, '/(tabs)/travel' as Href)}
+            // Always land on Travel home — never pop to a prior trip in the stack.
+            onPress={() => router.dismissTo('/(tabs)/travel' as Href)}
           />
           <TravelHeaderFlourish style={styles.headerCopy}>
             <AppText
