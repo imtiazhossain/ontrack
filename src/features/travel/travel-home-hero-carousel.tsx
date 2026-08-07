@@ -10,8 +10,8 @@ import {
     useWindowDimensions,
 } from 'react-native';
 import Animated, {
-    type SharedValue,
     useAnimatedScrollHandler,
+    useSharedValue,
 } from 'react-native-reanimated';
 
 import { fetchDestinationHeroUris } from '@/features/travel/destination-cover';
@@ -19,6 +19,7 @@ import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-h
 import {
     travelHomeAtmosphereSource,
 } from '@/features/travel/travel-home-background';
+import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelHomeEditIcon } from '@/features/travel/travel-home-icons';
 import {
@@ -40,23 +41,23 @@ type TravelHomeHeroCarouselProps = {
     index: number,
     pageCount: number,
   ) => void;
-  /** Continuous page position for glass ticks (offsetX / pageWidth). */
-  scrollProgress?: SharedValue<number>;
 };
 
-/** Horizontal paging hero (1–3 images) with edit control. Page ticks overlay on the trip card. */
+/** Horizontal paging hero (1–3 images) with edit control + page ticks. */
 export function TravelHomeHeroCarousel({
   plan,
   width,
   onEdit,
   onActiveImageChange,
-  scrollProgress,
 }: TravelHomeHeroCarouselProps) {
   const theme = useTheme();
   const { s } = useResponsive();
   const { width: windowWidth } = useWindowDimensions();
   const heroWidth = Math.max(1, Math.min(width, windowWidth));
   const height = travelHomeImageHeight(heroWidth);
+  /** Drive ticks from this carousel — avoid parent page-count lag until swipe. */
+  const scrollProgress = useSharedValue(0);
+  const stepperTop = Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset + 4));
   /**
    * Bump when cover display pipeline changes (e.g. Wikimedia proxy) so Fast
    * Refresh / warm screens refetch instead of keeping failed remote URIs.
@@ -88,8 +89,8 @@ export function TravelHomeHeroCarousel({
       setFailedUris({});
       setUris(next);
       setIndex(0);
-      if (scrollProgress) scrollProgress.value = 0;
-      // Publish settled count immediately (incl. 1) so ticks appear without a swipe.
+      scrollProgress.value = 0;
+      // Publish settled count immediately (incl. 1) so parent frost stays in sync.
       onActiveImageChange?.(next[0], 0, Math.max(0, next.length));
       if (next[1]) {
         void Image.prefetch(next[1]).catch(() => undefined);
@@ -125,7 +126,7 @@ export function TravelHomeHeroCarousel({
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      if (!scrollProgress || pageWidth <= 0) return;
+      if (pageWidth <= 0) return;
       scrollProgress.value = event.contentOffset.x / pageWidth;
     },
   });
@@ -134,7 +135,7 @@ export function TravelHomeHeroCarousel({
     const next = Math.round(event.nativeEvent.contentOffset.x / heroWidth);
     const clamped = Math.max(0, Math.min(visibleUris.length - 1, next));
     setIndex(clamped);
-    if (scrollProgress) scrollProgress.value = clamped;
+    scrollProgress.value = clamped;
     onActiveImageChange?.(
       visibleUris[clamped],
       clamped,
@@ -363,6 +364,20 @@ export function TravelHomeHeroCarousel({
         </AgentTestId>
       </View>
 
+      {/*
+        Page ticks live here (not on the trip card) so count comes from
+        visibleUris synchronously — parent heroPager used to lag until swipe.
+      */}
+      <View
+        collapsable={false}
+        pointerEvents="none"
+        style={[styles.stepperOverlay, { top: stepperTop }]}>
+        <TravelHomeCarouselStepper
+          count={visibleUris.length}
+          index={index}
+          progress={scrollProgress}
+        />
+      </View>
     </View>
   );
 }
@@ -391,5 +406,12 @@ const styles = StyleSheet.create({
   editButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepperOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    alignItems: 'center',
   },
 });

@@ -27,6 +27,9 @@ describe('travel home kit contract', () => {
     expect(source).toContain('collapsable={false}');
     expect(source).toContain('heroPageSlots');
     expect(source).toContain('scrollEnabled={scrollInteractive}');
+    // Page ticks bind to this carousel’s visibleUris (not a lagged parent count).
+    expect(source).toContain('TravelHomeCarouselStepper');
+    expect(source).toContain('count={visibleUris.length}');
     expect(source).not.toMatch(
       /visibleUris\.length\s*>\s*0\s*\?\s*\(\s*<ScrollView/,
     );
@@ -102,7 +105,6 @@ describe('travel home kit contract', () => {
     expect(scoop).not.toMatch(/scoop:\s*\{[^}]*overflow:\s*'hidden'/);
     expect(card).toContain('TravelHomeTripFrostScoop');
     expect(card).toContain('frostFadeBleed');
-    expect(card).toContain('stepperTop');
     expect(card).toContain('styles.frostBand');
     expect(card).toContain('styles.heroMedia');
     expect(card).toContain('blurKey=');
@@ -115,8 +117,11 @@ describe('travel home kit contract', () => {
     expect(tokens).toMatch(/bodyOverlap:\s*78/);
     expect(card).toContain('locationRow');
     expect(card).toContain('titleCluster');
+    // Ticks mount inside the hero carousel (visibleUris) with a dark plate so
+    // they read on pale sky without waiting for a swipe.
     expect(stepper).toContain('wrapCollapsed');
-    expect(stepper).toContain('TICK_SHADOW');
+    expect(stepper).toContain('styles.plate');
+    expect(stepper).toContain("rgba(0,0,0,0.42)");
   });
 
   it('keeps the section search plate as a row (glass children stay flex kids)', () => {

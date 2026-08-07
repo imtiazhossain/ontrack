@@ -1,12 +1,11 @@
 import { memo, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppText } from '@/components/primitives';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
 import { travelHomeSoloTripCardShadow } from '@/features/travel/travel-home-atmosphere-ink';
 import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
-import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
@@ -68,16 +67,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       layoutWidth - travelHomeTokens.spacing.screenHorizontal * 2,
     ),
   );
-  const [heroPager, setHeroPager] = useState({ index: 0, count: 0 });
-  /** Continuous hero page position for smooth glass tick crossfades. */
-  const heroScrollProgress = useSharedValue(0);
   /** Active remote hero URI — Android scoop frosts this plate. */
   const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
   useEffect(() => {
-    setHeroPager({ index: 0, count: 0 });
-    heroScrollProgress.value = 0;
     setHeroFrostUri(undefined);
-  }, [plan.id, heroScrollProgress]);
+  }, [plan.id]);
   const destination = plan.destination.trim();
   const destinationLabel = destination || plan.title;
   const dark = theme.name === 'dark';
@@ -94,8 +88,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
    * this bleed (zIndex) so footer never gets clipped by the scoop.
    */
   const frostFadeBleed = Math.max(16, s(18));
-  /** Keep ticks on the visible photo band, inset from the card top edge. */
-  const stepperTop = Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset + 4));
   const titleToLocation = Math.max(4, travelHomeTokens.spacing.titleToLocation);
   const locationToDivider = Math.max(6, travelHomeTokens.spacing.locationToDivider - 2);
   const footerPadV = Math.max(10, travelHomeTokens.spacing.cardBottom);
@@ -266,36 +258,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             plan={plan}
             width={cardWidth}
             onEdit={() => onEditTrip(plan.id)}
-            scrollProgress={heroScrollProgress}
-            onActiveImageChange={(uri, index, pageCount) => {
-              setHeroPager((previous) => {
-                // Ignore transient empty reports so ticks stay visible once known.
-                if (pageCount <= 0 && previous.count > 1) {
-                  return previous;
-                }
-                // Never collapse a known multi-page strip to a single tick mid-load.
-                if (pageCount === 1 && previous.count > 1 && !uri) {
-                  return previous;
-                }
-                if (previous.index === index && previous.count === pageCount) {
-                  return previous;
-                }
-                return { index, count: pageCount };
-              });
+            onActiveImageChange={(uri) => {
               if (uri) setHeroFrostUri(uri);
               onActiveImageChange?.(plan.id, uri);
             }}
           />
-          <View
-            collapsable={false}
-            pointerEvents="none"
-            style={[styles.stepperOverlay, { top: stepperTop }]}>
-            <TravelHomeCarouselStepper
-              count={heroPager.count}
-              index={heroPager.index}
-              progress={heroScrollProgress}
-            />
-          </View>
         </View>
 
         {/*
@@ -491,13 +458,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
     overflow: 'hidden',
     borderCurve: 'continuous',
-  },
-  stepperOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 2,
-    alignItems: 'center',
   },
   body: {
     width: '100%',

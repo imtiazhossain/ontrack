@@ -21,23 +21,17 @@ type TravelHomeCarouselStepperProps = {
 
 const MAX_SLOTS = 3;
 const SETTLE_MS = 220;
-/** Soft dark halo so white ticks stay readable on bright roofs / sky. */
-const TICK_SHADOW =
-  '0 1px 4px rgba(0,0,0,0.65), 0 0 8px rgba(0,0,0,0.4)';
 
 /**
- * Compact page ticks for Travel Home heroes — small thin lines overlaid at the
- * top of the visible hero band (one per swipeable thumbnail).
+ * Compact page ticks for Travel Home heroes — thin lines overlaid at the top
+ * of the visible hero band (one per swipeable thumbnail).
  *
  * Active highlight tracks scroll progress for a smooth crossfade while swiping.
- * Each tick keeps a static inactive fill so lines paint on first frame (animated
- * styles alone used to stay invisible until the first swipe).
+ * A dark capsule behind the ticks keeps them readable on bright sky / roofs
+ * (white-on-pale ticks used to vanish until the user swiped to a darker plate).
  *
  * Always mount a shell (collapse when ≤1 page) so Fabric siblings of BlurView
  * / glass underlays don’t remount mid-frame.
- *
- * On-image chrome: light ticks + soft shadow so they read on bright or dark
- * destination plates.
  */
 export function TravelHomeCarouselStepper({
   count,
@@ -53,9 +47,9 @@ export function TravelHomeCarouselStepper({
   const lineW = Math.max(14, s(15));
   const lineH = Math.max(2.5, s(3));
   const gap = Math.max(5, s(6));
-  const padY = Math.max(3, s(3));
-  // Stronger plate so the active tick reads as a “pill” on bright landmarks.
-  const inactiveColor = 'rgba(255,255,255,0.55)';
+  const padY = Math.max(4, s(4));
+  const padX = Math.max(8, s(9));
+  const inactiveColor = 'rgba(255,255,255,0.45)';
   const activeColor = '#FFFFFF';
 
   const fallbackProgress = useSharedValue(activeIndex);
@@ -91,8 +85,21 @@ export function TravelHomeCarouselStepper({
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[styles.wrap, { paddingTop: padY }, style]}>
-      <View style={[styles.row, { gap, height: lineH }]}>
+      style={[styles.wrap, style]}>
+      {/*
+        Dark plate so white ticks stay legible on pale sky / snow / bright roofs
+        without waiting for a swipe onto a darker hero.
+      */}
+      <View
+        style={[
+          styles.plate,
+          {
+            paddingHorizontal: padX,
+            paddingVertical: padY,
+            borderRadius: Math.max(10, s(11)),
+            gap,
+          },
+        ]}>
         {Array.from({ length: pageCount }, (_, slot) => (
           <Tick
             key={`tick-${slot}`}
@@ -134,32 +141,23 @@ function Tick({
   }));
 
   return (
-    // Shadow lives on an unclipped host — overflow:hidden on the fill would
-    // eat the drop shadow, and the trip card’s clip ancestor still lets an
-    // inward halo read on busy destination plates.
+    // Static inactive fill paints on the first frame — animated styles alone
+    // used to stay blank until the first shared-value update (swipe).
     <View
       style={{
         width,
         height,
         borderRadius: 1,
-        boxShadow: TICK_SHADOW,
+        backgroundColor: inactiveColor,
+        overflow: 'hidden',
       }}>
-      <View
-        style={{
-          width,
-          height,
-          borderRadius: 1,
-          backgroundColor: inactiveColor,
-          overflow: 'hidden',
-        }}>
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: activeColor, borderRadius: 1 },
-            activeStyle,
-          ]}
-        />
-      </View>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: activeColor, borderRadius: 1 },
+          activeStyle,
+        ]}
+      />
     </View>
   );
 }
@@ -176,9 +174,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     opacity: 0,
   },
-  row: {
+  plate: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.42)',
   },
 });
