@@ -101,7 +101,7 @@ describe('travel home kit contract', () => {
     expect(scoop).not.toMatch(/scoop:\s*\{[^}]*overflow:\s*'hidden'/);
     expect(card).toContain('TravelHomeTripFrostScoop');
     expect(card).toContain('frostFadeBleed');
-    expect(card).toContain('stepperBottom');
+    expect(card).toContain('stepperTop');
     expect(card).toContain('styles.frostBand');
     expect(card).toContain('styles.heroMedia');
     expect(card).toContain('blurKey=');

@@ -26,8 +26,8 @@ const TICK_SHADOW =
   '0 1px 4px rgba(0,0,0,0.65), 0 0 8px rgba(0,0,0,0.4)';
 
 /**
- * Compact page ticks for Travel Home heroes — small thin lines overlaid on the
- * visible hero band, just above the glass scoop (one per swipeable thumbnail).
+ * Compact page ticks for Travel Home heroes — small thin lines overlaid at the
+ * top of the visible hero band (one per swipeable thumbnail).
  *
  * Active highlight tracks scroll progress for a smooth crossfade while swiping.
  * Each tick keeps a static inactive fill so lines paint on first frame (animated
