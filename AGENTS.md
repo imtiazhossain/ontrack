@@ -71,7 +71,7 @@ Domain depth → `.cursor/skills/` (**travel**, **todos**, **workouts**, **visio
 | Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |
 | Profile avatar | `features/account/profile-avatar.tsx` |
-| Dev Mode | `account_flags` → `services/cloud/account-flags.ts`, `dev-access.ts` |
+| Dev Mode | Off by default. Seeds enter agent sandbox; `devmode release` / `verify-both` / cold start exit it. Hub toggle = user. → `dev-mode-controller.ts`, `dev-access.ts` |
 | Cloud sync | `services/cloud/sync.ts` |
 | Design tokens / DateField | `design-system/`, `components/primitives/` |
 

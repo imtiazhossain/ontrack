@@ -3,7 +3,8 @@ import { File } from 'expo-file-system';
 import { getSupabaseClient } from './supabase';
 
 const BUCKET = 'app-media';
-const MARKER_PREFIX = 'ontrack-media:';
+export const CLOUD_MEDIA_MARKER_PREFIX = 'ontrack-media:';
+const MARKER_PREFIX = CLOUD_MEDIA_MARKER_PREFIX;
 const MISSING_LOCAL_MEDIA = Symbol('missing-local-media');
 /** Signed URLs are minted for 30 days; refresh from cache well before expiry. */
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -34,6 +35,8 @@ function contentType(uri: string) {
   if (ext === '.png') return 'image/png';
   if (ext === '.heic' || ext === '.heif') return 'image/heic';
   if (ext === '.webp') return 'image/webp';
+  if (ext === '.pdf') return 'application/pdf';
+  if (ext === '.gif') return 'image/gif';
   return 'image/jpeg';
 }
 
@@ -47,6 +50,18 @@ function markerFromSignedUrl(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Durable cloud-media handle for store/normalize.
+ * Prefers `ontrack-media:` markers; remints app-media signed HTTPS URLs back to markers
+ * so sync pull (which resolves markers to temporary signed URLs) does not drop attachments.
+ */
+export function cloudMediaMarkerFromUri(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith(MARKER_PREFIX)) return trimmed;
+  return markerFromSignedUrl(trimmed);
 }
 
 function isImageItem(value: object): boolean {
@@ -160,4 +175,10 @@ export async function prepareCloudMedia(
 
 export async function resolveCloudMedia(payload: Record<string, unknown>) {
   return (await resolveValue(payload)) as Record<string, unknown>;
+}
+
+/** Resolve one media URI (marker / signed URL / passthrough) for preview/open. */
+export async function resolveCloudMediaUri(uri: string): Promise<string> {
+  const resolved = await resolveValue(uri);
+  return typeof resolved === 'string' ? resolved : uri;
 }

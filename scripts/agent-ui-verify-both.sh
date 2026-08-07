@@ -59,6 +59,28 @@ run_android
 ANDROID_OK=$?
 set -e
 
+# Seeds/flows enter an agent Dev Mode sandbox — release it after close-out so
+# mock data does not stick on the live account (user-owned Dev Mode is kept).
+release_agent_devmode() {
+  local platform="$1"
+  echo "verify-both: releasing agent Dev Mode on ${platform}" >&2
+  if [[ "${platform}" == "android" ]]; then
+    AGENT_UI_PLATFORM=android \
+      "${ROOT}/scripts/agent-ui-devmode.sh" release >/dev/null 2>&1 || true
+  else
+    env -u AGENT_UI_PLATFORM -u ONTRACK_PACKAGER_TARGET -u AGENT_UI_DEVICE \
+      AGENT_UI_PLATFORM=ios \
+      "${ROOT}/scripts/agent-ui-devmode.sh" release >/dev/null 2>&1 || true
+  fi
+}
+
+if [[ "${SKIP_IOS:-0}" != "1" ]]; then
+  release_agent_devmode ios
+fi
+if [[ "${SKIP_ANDROID:-0}" != "1" ]]; then
+  release_agent_devmode android
+fi
+
 echo "verify-both: ios_exit=${IOS_OK} android_exit=${ANDROID_OK}" >&2
 if (( IOS_OK != 0 || ANDROID_OK != 0 )); then
   exit 1

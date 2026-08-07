@@ -27,7 +27,12 @@ jest.mock('@/services/cloud/supabase', () => ({
 
 // Jest must register the native module mocks before this module is imported.
 // eslint-disable-next-line import/first
-import { prepareCloudMedia, resolveCloudMedia } from '@/services/cloud/media';
+import {
+  cloudMediaMarkerFromUri,
+  prepareCloudMedia,
+  resolveCloudMedia,
+  resolveCloudMediaUri,
+} from '@/services/cloud/media';
 
 describe('cloud media preparation', () => {
   beforeEach(() => {
@@ -99,9 +104,41 @@ describe('cloud media preparation', () => {
   });
 });
 
+describe('cloud media markers', () => {
+  it('remints app-media signed URLs to durable markers', () => {
+    expect(
+      cloudMediaMarkerFromUri(
+        'https://example.supabase.co/storage/v1/object/sign/app-media/user-1/travel/abc.pdf?token=stale',
+      ),
+    ).toBe('ontrack-media:user-1/travel/abc.pdf');
+    expect(cloudMediaMarkerFromUri('ontrack-media:user-1/travel/abc.pdf')).toBe(
+      'ontrack-media:user-1/travel/abc.pdf',
+    );
+    expect(cloudMediaMarkerFromUri('https://evil.example/x.pdf')).toBeUndefined();
+  });
+});
+
 describe('cloud media resolution', () => {
   beforeEach(() => {
     mockCreateSignedUrl.mockClear();
+  });
+
+  it('resolves a single marker URI for open/preview', async () => {
+    mockCreateSignedUrl.mockImplementationOnce(async (path: string) => ({
+      data: {
+        signedUrl: `https://example.supabase.co/storage/v1/object/sign/app-media/${path}?token=fresh`,
+      },
+      error: null,
+    }));
+    await expect(
+      resolveCloudMediaUri('ontrack-media:user-1/travel/confirm.pdf'),
+    ).resolves.toBe(
+      'https://example.supabase.co/storage/v1/object/sign/app-media/user-1/travel/confirm.pdf?token=fresh',
+    );
+    expect(mockCreateSignedUrl).toHaveBeenCalledWith(
+      'user-1/travel/confirm.pdf',
+      60 * 60 * 24 * 30,
+    );
   });
 
   it('re-mints signed URLs from persisted storage paths', async () => {

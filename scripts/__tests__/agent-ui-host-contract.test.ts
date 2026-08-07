@@ -35,6 +35,7 @@ describe('agent-ui host scripts contract', () => {
       'scripts/agent-ui-batch.sh',
       'scripts/agent-ui-seed.sh',
       'scripts/agent-ui-flow.sh',
+      'scripts/agent-ui-devmode.sh',
     ]) {
       expect(existsSync(join(root, script))).toBe(true);
       if (script !== 'scripts/agent-ui.sh') {

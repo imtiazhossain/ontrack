@@ -2,6 +2,12 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 
+import {
+    CLOUD_MEDIA_MARKER_PREFIX,
+    cloudMediaMarkerFromUri,
+    resolveCloudMediaUri,
+} from '@/services/cloud/media';
+
 import TravelDocumentReader from '../../../modules/travel-document-reader';
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic|heif)$/i;
@@ -9,6 +15,10 @@ const CONFIRMATIONS_MARKER = '/Documents/travel-confirmations/';
 
 export function isImageConfirmationUri(uri: string): boolean {
   const path = uri.split('?')[0] ?? uri;
+  // Cloud markers embed the extension in the storage path (…/hash.jpg).
+  if (path.startsWith(CLOUD_MEDIA_MARKER_PREFIX)) {
+    return IMAGE_EXT.test(path.slice(CLOUD_MEDIA_MARKER_PREFIX.length));
+  }
   return IMAGE_EXT.test(path);
 }
 
@@ -19,7 +29,8 @@ export function asConfirmationFileUri(uri: string): string {
   if (
     trimmed.startsWith('file://') ||
     trimmed.startsWith('content://') ||
-    trimmed.startsWith('ph://')
+    trimmed.startsWith('ph://') ||
+    trimmed.startsWith(CLOUD_MEDIA_MARKER_PREFIX)
   ) {
     return trimmed;
   }
@@ -31,10 +42,23 @@ export function asConfirmationFileUri(uri: string): string {
 
 export function normalizeConfirmationUris(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const uris = value
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => asConfirmationFileUri(entry))
-    .filter((entry) => entry.startsWith('file://') || entry.startsWith('content://'));
+  const uris = [
+    ...new Set(
+      value
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => {
+          const cloud = cloudMediaMarkerFromUri(entry);
+          if (cloud) return cloud;
+          return asConfirmationFileUri(entry);
+        })
+        .filter(
+          (entry) =>
+            entry.startsWith('file://') ||
+            entry.startsWith('content://') ||
+            entry.startsWith(CLOUD_MEDIA_MARKER_PREFIX),
+        ),
+    ),
+  ];
   return uris.length ? uris : undefined;
 }
 
@@ -143,16 +167,44 @@ export async function persistConfirmationAssets(
  * Resolve only the confirmation URIs owned by this itinerary item.
  * Never fall back to the kind-wide files on disk: those files can belong to a
  * different flight, stay, rental, or transport item.
+ * Cloud `ontrack-media:` markers stay openable after sync (local file may be gone).
  */
 export function confirmationUrisForDisplay(
   stored: string[] | undefined,
   _kind: 'flight' | 'rental' | 'stay' | 'transport',
 ): string[] {
-  const resolved = resolveConfirmationUris(stored);
-  if (resolved.length) return resolved;
   const normalized = normalizeConfirmationUris(stored);
-  if (normalized?.length) return normalized;
-  return [];
+  if (!normalized?.length) return [];
+  const openable: string[] = [];
+  for (const uri of normalized) {
+    if (uri.startsWith(CLOUD_MEDIA_MARKER_PREFIX)) {
+      openable.push(uri);
+      continue;
+    }
+    const resolved = resolveConfirmationUri(uri);
+    if (resolved) openable.push(resolved);
+  }
+  return openable;
+}
+
+/** Mint signed URLs for cloud markers so system preview / Image can open them. */
+export async function resolveConfirmationUrisForOpen(
+  uris: string[],
+): Promise<string[]> {
+  const openable: string[] = [];
+  for (const uri of uris) {
+    if (uri.startsWith(CLOUD_MEDIA_MARKER_PREFIX)) {
+      openable.push(await resolveCloudMediaUri(uri));
+      continue;
+    }
+    const cloud = cloudMediaMarkerFromUri(uri);
+    if (cloud) {
+      openable.push(await resolveCloudMediaUri(cloud));
+      continue;
+    }
+    openable.push(uri);
+  }
+  return openable;
 }
 
 /**
@@ -188,12 +240,17 @@ export function newestStoredConfirmationUris(
 
 /** Open confirmations in the system document preview (Quick Look / viewer). */
 export async function openConfirmationAttachments(uris: string[]): Promise<void> {
-  const existing = resolveConfirmationUris(uris);
-  const openable = existing.length
-    ? existing
+  const display = confirmationUrisForDisplay(uris, 'flight');
+  const candidates = display.length
+    ? display
     : uris.filter(
-        (uri) => uri.startsWith('file://') || uri.startsWith('content://'),
+        (uri) =>
+          uri.startsWith('file://') ||
+          uri.startsWith('content://') ||
+          uri.startsWith(CLOUD_MEDIA_MARKER_PREFIX) ||
+          uri.startsWith('https://'),
       );
+  const openable = await resolveConfirmationUrisForOpen(candidates);
   if (!openable.length) return;
 
   try {

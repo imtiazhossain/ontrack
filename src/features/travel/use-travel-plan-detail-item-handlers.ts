@@ -24,6 +24,7 @@ type ItemHandlersOptions = {
   updatePlan: (plan: TravelPlan) => void;
   setExpenseDraft: (draft: ExpenseFormState | undefined) => void;
   setOpenExpenseSheet: (open: boolean) => void;
+  onShare?: (item: TravelItineraryItem) => void;
 };
 
 export function buildTravelPlanDetailItemHandlers({
@@ -38,6 +39,7 @@ export function buildTravelPlanDetailItemHandlers({
   updatePlan,
   setExpenseDraft,
   setOpenExpenseSheet,
+  onShare,
 }: ItemHandlersOptions) {
   return {
     plan,
@@ -135,6 +137,7 @@ export function buildTravelPlanDetailItemHandlers({
     onRemovePhoto: itemMedia.removePhotoFromItem,
     onRemove: itemMedia.confirmRemoveItem,
     onSaveNotes: itemMedia.saveItemNotes,
+    onShare,
   };
 }
 

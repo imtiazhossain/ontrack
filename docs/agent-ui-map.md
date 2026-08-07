@@ -122,6 +122,8 @@ Dump/status/command files live in the app Documents directory:
 | `ontrack.tabs.visionBoard`                                | Vision Board     | addon                                                                                                 |
 | `ontrack.tabs.games`                                      | Games            | addon                                                                                                 |
 | `ontrack.tabs.vehicles`                                   | Vehicles         | addon                                                                                                 |
+| `ontrack.tabs.carousel.prev`                              | Previous tabs    | Left rail arrow — nudge floating tab carousel                                                         |
+| `ontrack.tabs.carousel.next`                              | Next tabs        | Right rail arrow — nudge floating tab carousel                                                        |
 | `ontrack.vehicles.list.add`                               | Vehicles         | Add a vehicle                                                                                         |
 | `ontrack.vehicles.list.vehicle.<vehicleId>`               | Vehicles         | Open a vehicle (`vehicle-agent-ui-demo` via `vehicle-demo`)                                           |
 | `ontrack.vehicles.detail.settings`                        | Vehicle detail   | Open vehicle settings                                                                                 |
@@ -437,36 +439,41 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 
 ## Travel list (`/(tabs)/travel`)
 
-Trip launcher home. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live on **Trip hub** (`/travel/<id>/hub`).
+Trip launcher home. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live at the **top of plan detail** (`/travel/<id>`). Legacy `/travel/<id>/hub` redirects there.
 
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
 | `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish behind travel titles |
+| `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky (stars/moon, sun/clouds, rain/lightning) behind titles |
 | `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
+| `ontrack.travel.list.section.atmosphereLocation` | Layout anchor — atmosphere photo place caption            |
+| `ontrack.travel.list.search`                     | Full-width Your Trips search (placeholder label)          |
+| `ontrack.travel.list.searchClear`                | Clear trip list search                                    |
 | `ontrack.travel.list.empty.create`               | Empty-state Add Your First Trip                           |
-| `ontrack.travel.list.openHub.<tripId>`           | Open trip tools hub from the card body                    |
+| `ontrack.travel.list.empty.search`               | No trips match the current search                         |
+| `ontrack.travel.list.openHub.<tripId>`           | Open trip (plan detail) from the card body                |
 | `ontrack.travel.list.editTrip.<tripId>`          | Edit trip details (hero control)                          |
 | `ontrack.travel.list.itinerary.<tripId>`         | View Itinerary → plan detail                              |
-| `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers from avatar stack                       |
-| `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo (hub / legacy)                  |
+| `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers from avatar stack / plan tools          |
+| `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo (legacy)                        |
 | `ontrack.travel.list.collapse.<tripId>`          | Legacy collapse control (unused on launcher cards)        |
 | `ontrack.travel.list.editDates.<tripId>`         | Legacy dates control (edit trip / plan detail)            |
-| `ontrack.travel.list.calendar.<tripId>`          | Add trip to Calendar (**hub**)                            |
-| `ontrack.travel.list.searchFlights.<tripId>`     | Search Flights (**hub**)                                  |
-| `ontrack.travel.list.searchStays.<tripId>`       | Search Stays (**hub**)                                    |
-| `ontrack.travel.list.tripWeather.<tripId>`       | Trip Weather (**hub**)                                    |
-| `ontrack.travel.list.currency.<tripId>`          | Open Currency Calculator (**hub**)                        |
-| `ontrack.travel.list.expenses.<tripId>`          | Open Expenses (**hub**)                                   |
-| `ontrack.travel.list.groupChat.<tripId>`         | Open Group Chat (**hub**)                                 |
+| `ontrack.travel.list.calendar.<tripId>`          | Add trip to Calendar (**plan detail tools**)              |
+| `ontrack.travel.list.searchFlights.<tripId>`     | Search Flights (**plan detail tools**)                    |
+| `ontrack.travel.list.searchStays.<tripId>`       | Search Stays (**plan detail tools**)                      |
+| `ontrack.travel.list.tripWeather.<tripId>`       | Trip Weather (**plan detail tools**)                      |
+| `ontrack.travel.list.currency.<tripId>`          | Open Currency Calculator (**plan detail tools**)          |
+| `ontrack.travel.list.expenses.<tripId>`          | Open Expenses (**plan detail tools**)                     |
+| `ontrack.travel.list.groupChat.<tripId>`         | Open Group Chat (**plan detail tools**)                   |
 | `ontrack.travel.list.notesSection.<tripId>`      | Legacy notes section (unused on launcher cards)           |
 
-### Travel trip hub (`/travel/<id>/hub`)
+### Travel trip hub (`/travel/<id>/hub`) — redirects to plan detail
 
 | testID                                      | Control                          |
 | ------------------------------------------- | -------------------------------- |
-| `ontrack.travel.hub.close`                  | Close trip tools                 |
+| `ontrack.travel.hub.close`                  | Close trip tools (empty state)   |
 | `ontrack.travel.hub.backToTravel`           | Empty-state back to Travel       |
-| `ontrack.travel.hub.section.<tripId>`       | Layout anchor — hub action grid  |
+| `ontrack.travel.hub.section.<tripId>`       | Legacy hub anchor (unused)       |
 | `ontrack.travel.dates.close`                     | Close the trip date-range calendar                        |
 | `ontrack.travel.dates.start`                     | Select the trip start-date endpoint                       |
 | `ontrack.travel.dates.end`                       | Select the trip end-date endpoint                         |
@@ -474,6 +481,9 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.dates.calendar.nextMonth`        | Show the next month in the trip calendar                  |
 | `ontrack.travel.dates.calendar.day.<YYYY-MM-DD>` | Select a day in the trip calendar                         |
 | `ontrack.travel.dates.save`                      | Save the selected trip date range                         |
+| `ontrack.travel.planNotes.close`                 | Close the trip notes editor                               |
+| `ontrack.travel.planNotes.field`                 | Trip notes text field                                     |
+| `ontrack.travel.planNotes.save`                  | Save trip notes                                           |
 | `ontrack.travel.photoViewer.dismiss.<tripId>`    | Dismiss the expanded trip photo                           |
 | `ontrack.travel.photoViewer.close.<tripId>`      | Close the expanded trip photo                             |
 
@@ -540,6 +550,7 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.currency.done`                    | Done on the currency calculator                    |
 | `ontrack.travel.weather.close`                    | Close destination weather                          |
 | `ontrack.travel.weather.done`                     | Done on destination weather                        |
+| `ontrack.travel.weather.current`                  | Live conditions at the trip destination            |
 | `ontrack.travel.friendRow.<target>.<action>`      | Manage, rename, or remove a trip friend            |
 | `ontrack.travel.confirmation.open.<kind>`         | Open uploaded confirmation images                  |
 | `ontrack.travel.confirmation.close`               | Close the confirmation viewer                      |
@@ -678,14 +689,25 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 | ~~`ontrack.travel.planDetail.weather`~~        | **Unused** — use `list.tripWeather.<tripId>` on the travel list          |
 | ~~`ontrack.travel.planDetail.currency`~~       | **Unused** — use `list.currency.<tripId>` on the travel list             |
 | `ontrack.travel.planDetail.addToTimeline`      | Add to Timeline                                                          |
+| `ontrack.travel.planDetail.section.tools`      | Expand/collapse Trip Tools (glass action grid)                           |
 | `ontrack.travel.planDetail.section.transport`  | Expand/collapse transport group                                          |
 | `ontrack.travel.planDetail.section.timeline`   | Expand/collapse timeline                                                 |
 | `ontrack.travel.planDetail.section.notes`      | Expand/collapse trip notes                                               |
+| `ontrack.travel.planDetail.editNotes`          | Open the trip notes editor from the notes card body                      |
 | `ontrack.travel.planDetail.section.ground`     | Expand/collapse ground and transit items                                 |
 | `ontrack.travel.planDetail.addFlight`          | Empty-state CTA to add a flight                                          |
 | `ontrack.travel.planDetail.addTransport`       | Empty-state CTA to add ground/transit                                    |
 | `ontrack.travel.planDetail.addStay`            | Empty-state CTA to add a stay                                            |
 | `ontrack.travel.planDetail.addRental`          | Empty-state CTA to add a rental                                          |
+| `ontrack.travel.planDetail.backToTravel`       | Empty-state back to Travel when plan is missing                          |
+| `ontrack.travel.timelineItem.<id>.share`       | Open per-stop share settings (private / trip / selected people)          |
+| `ontrack.travel.itineraryShare.sheet`          | Itinerary share sheet body                                               |
+| `ontrack.travel.itineraryShare.close`          | Close itinerary share sheet                                              |
+| `ontrack.travel.itineraryShare.save`           | Save itinerary share settings                                            |
+| `ontrack.travel.itineraryShare.mode.private`   | Share mode: only me                                                      |
+| `ontrack.travel.itineraryShare.mode.trip`      | Share mode: everyone on trip                                             |
+| `ontrack.travel.itineraryShare.mode.selected`  | Share mode: choose people                                                |
+| `ontrack.travel.itineraryShare.person.<userId>`| Toggle a co-traveler in selected share mode                              |
 | `ontrack.travel.timelineAdd.close`             | Kind picker close                                                        |
 | `ontrack.travel.timelineAdd.kind.<kind>`       | Timeline kind choice                                                     |
 | `ontrack.travel.timelineDay.<date>`            | Expand/collapse a timeline day group                                     |

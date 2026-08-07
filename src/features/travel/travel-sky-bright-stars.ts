@@ -1,0 +1,61 @@
+/** Compact bright-star catalog — RA in hours, Dec in degrees, mag visual. */
+export type BrightStar = {
+  name: string;
+  raHours: number;
+  decDeg: number;
+  mag: number;
+};
+
+/** ~50 navigational / conspicuous stars for the header plate. */
+export const BRIGHT_STARS: readonly BrightStar[] = [
+  { name: 'Sirius', raHours: 6.7525, decDeg: -16.7161, mag: -1.46 },
+  { name: 'Canopus', raHours: 6.3992, decDeg: -52.6957, mag: -0.74 },
+  { name: 'Arcturus', raHours: 14.261, decDeg: 19.1824, mag: -0.05 },
+  { name: 'Vega', raHours: 18.6156, decDeg: 38.7837, mag: 0.03 },
+  { name: 'Capella', raHours: 5.2782, decDeg: 45.998, mag: 0.08 },
+  { name: 'Rigel', raHours: 5.2423, decDeg: -8.2016, mag: 0.13 },
+  { name: 'Procyon', raHours: 7.655, decDeg: 5.225, mag: 0.34 },
+  { name: 'Betelgeuse', raHours: 5.9195, decDeg: 7.4071, mag: 0.45 },
+  { name: 'Altair', raHours: 19.8464, decDeg: 8.8683, mag: 0.76 },
+  { name: 'Aldebaran', raHours: 4.5987, decDeg: 16.5093, mag: 0.87 },
+  { name: 'Antares', raHours: 16.4901, decDeg: -26.4319, mag: 1.06 },
+  { name: 'Spica', raHours: 13.4199, decDeg: -11.1613, mag: 0.98 },
+  { name: 'Pollux', raHours: 7.7553, decDeg: 28.0262, mag: 1.15 },
+  { name: 'Fomalhaut', raHours: 22.9608, decDeg: -29.6222, mag: 1.17 },
+  { name: 'Deneb', raHours: 20.6905, decDeg: 45.2803, mag: 1.25 },
+  { name: 'Regulus', raHours: 10.1395, decDeg: 11.9672, mag: 1.36 },
+  { name: 'Adhara', raHours: 6.9771, decDeg: -28.9721, mag: 1.5 },
+  { name: 'Castor', raHours: 7.5766, decDeg: 31.8883, mag: 1.58 },
+  { name: 'Bellatrix', raHours: 5.4189, decDeg: 6.3497, mag: 1.64 },
+  { name: 'Elnath', raHours: 5.4382, decDeg: 28.6075, mag: 1.65 },
+  { name: 'Alnilam', raHours: 5.6036, decDeg: -1.2019, mag: 1.69 },
+  { name: 'Alnitak', raHours: 5.6793, decDeg: -1.9426, mag: 1.74 },
+  { name: 'Alioth', raHours: 12.9004, decDeg: 55.9598, mag: 1.76 },
+  { name: 'Mirfak', raHours: 3.4054, decDeg: 49.8612, mag: 1.79 },
+  { name: 'Dubhe', raHours: 11.0621, decDeg: 61.751, mag: 1.81 },
+  { name: 'Alkaid', raHours: 13.7923, decDeg: 49.3133, mag: 1.85 },
+  { name: 'Alhena', raHours: 6.6285, decDeg: 16.3993, mag: 1.93 },
+  { name: 'Polaris', raHours: 2.5303, decDeg: 89.2641, mag: 1.97 },
+  { name: 'Mirach', raHours: 1.1622, decDeg: 35.6206, mag: 2.07 },
+  { name: 'Alpheratz', raHours: 0.1398, decDeg: 29.0906, mag: 2.07 },
+  { name: 'Schedar', raHours: 0.6751, decDeg: 56.5373, mag: 2.24 },
+  { name: 'Caph', raHours: 0.1528, decDeg: 59.1498, mag: 2.28 },
+  { name: 'Merak', raHours: 11.0307, decDeg: 56.3824, mag: 2.37 },
+  { name: 'Phecda', raHours: 11.8971, decDeg: 53.6948, mag: 2.41 },
+  { name: 'Mizar', raHours: 13.3987, decDeg: 54.9254, mag: 2.23 },
+  { name: 'Kochab', raHours: 14.8451, decDeg: 74.1555, mag: 2.07 },
+  { name: 'Rasalhague', raHours: 17.5822, decDeg: 12.5606, mag: 2.08 },
+  { name: 'Enif', raHours: 21.7368, decDeg: 9.875, mag: 2.38 },
+  { name: 'Sadr', raHours: 20.3705, decDeg: 40.2567, mag: 2.23 },
+  { name: 'Gienah', raHours: 12.2634, decDeg: -17.5419, mag: 2.58 },
+  { name: 'Avior', raHours: 8.3752, decDeg: -59.5095, mag: 1.86 },
+  { name: 'Acrux', raHours: 12.4433, decDeg: -63.0991, mag: 0.77 },
+  { name: 'Hadar', raHours: 14.0637, decDeg: -60.373, mag: 0.61 },
+  { name: 'Rigil Kentaurus', raHours: 14.6607, decDeg: -60.8356, mag: -0.27 },
+  { name: 'Achernar', raHours: 1.6286, decDeg: -57.2367, mag: 0.45 },
+  { name: 'Peacock', raHours: 20.4275, decDeg: -56.7351, mag: 1.94 },
+  { name: 'Alnair', raHours: 22.1372, decDeg: -46.9609, mag: 1.73 },
+  { name: 'Markab', raHours: 23.0793, decDeg: 15.2053, mag: 2.49 },
+  { name: 'Scheat', raHours: 23.0629, decDeg: 28.0828, mag: 2.44 },
+  { name: 'Denebola', raHours: 11.8177, decDeg: 14.5721, mag: 2.14 },
+];

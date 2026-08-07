@@ -1,4 +1,5 @@
 export type DetailSectionKey =
+  | 'tools'
   | 'transport'
   | 'flights'
   | 'ground'
@@ -11,6 +12,9 @@ export function sectionDefaultExpanded(
   counts: { flights: number; ground: number; stays: number; rentals: number },
 ): boolean {
   switch (key) {
+    case 'tools':
+      // Start open so calendar / weather / chat stay one tap away.
+      return true;
     case 'transport':
       return counts.flights + counts.ground + counts.stays + counts.rentals > 0;
     // Nested kinds stay open so empty-state CTAs remain discoverable.

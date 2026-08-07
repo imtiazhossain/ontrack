@@ -1,6 +1,10 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import {
+    CLOUD_MEDIA_MARKER_PREFIX,
+    cloudMediaMarkerFromUri,
+} from '@/services/cloud/media';
 import { persistJpegToDocuments } from '@/utils/image-persist';
 
 const DIRECTORY_NAME = 'travel-moments';
@@ -10,12 +14,12 @@ export function normalizeTravelPhotoUris(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const uris = value
     .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.trim())
+    .map((entry) => cloudMediaMarkerFromUri(entry) ?? entry.trim())
     .filter(
       (entry) =>
         entry.startsWith('file://') ||
         entry.startsWith('content://') ||
-        entry.startsWith('ontrack-media:'),
+        entry.startsWith(CLOUD_MEDIA_MARKER_PREFIX),
     );
   return uris.length ? uris : undefined;
 }

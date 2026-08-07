@@ -108,16 +108,18 @@ export function TimelineFlightCaption({
   );
 }
 
-/** Icon row under an expanded itinerary item: notes, photos, edit, open, remove. */
+/** Icon row under an expanded itinerary item: notes, photos, share, edit, open, remove. */
 export function TimelineItemToolbar({
   item,
   size,
   allowStructuredEditing,
   showStructuredDetails,
   isMoment,
+  canShare = false,
   align = 'center',
   onOpenNotes,
   onAddPhotos,
+  onShare,
   onBeginFlightEdit,
   onBeginRentalEdit,
   onBeginStayEdit,
@@ -130,10 +132,12 @@ export function TimelineItemToolbar({
   allowStructuredEditing: boolean;
   showStructuredDetails: boolean;
   isMoment: boolean;
+  canShare?: boolean;
   /** Dense timeline stacks actions under the title — left-align with that column. */
   align?: 'center' | 'left';
   onOpenNotes: () => void;
   onAddPhotos: () => void;
+  onShare?: () => void;
   onBeginFlightEdit: () => void;
   onBeginRentalEdit: () => void;
   onBeginStayEdit: () => void;
@@ -176,6 +180,15 @@ export function TimelineItemToolbar({
           accessibilityLabel="Add Photos"
           onPress={onAddPhotos}
         />
+        {canShare && onShare ? (
+          <IconButton
+            {...shared}
+            icon="share"
+            accessibilityLabel="Share stop"
+            testID={AgentUiIds.travel.timelineItem.share(item.id)}
+            onPress={onShare}
+          />
+        ) : null}
         {canEdit('flight') ? (
           <IconButton
             {...shared}

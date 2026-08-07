@@ -1,7 +1,12 @@
 import { Platform } from 'react-native';
 
 import { dismissAgentUiOverlays } from './dismiss-overlays';
-import { formatAgentUiSeedDetail, seedAgentUiFixture } from './fixtures';
+import {
+  formatAgentUiSeedDetail,
+  normalizeFixtureName,
+  restoreTravelPlansFromDocuments,
+  seedAgentUiFixture,
+} from './fixtures';
 import {
   AGENT_UI_ANDROID_WAIT_TIMEOUT_MS,
   AGENT_UI_WAIT_TIMEOUT_MS,
@@ -48,6 +53,7 @@ export type AgentUiOp =
   | 'assert'
   | 'hit'
   | 'overlay'
+  | 'devmode'
   | 'dismiss';
 
 export type AgentUiRequest = {
@@ -104,6 +110,7 @@ const OPS = new Set<AgentUiOp>([
   'assert',
   'hit',
   'overlay',
+  'devmode',
   'dismiss',
 ]);
 
@@ -302,14 +309,18 @@ export async function handleAgentUiRequest(
   }
 
   if (op === 'seed') {
-    const seeded = seedAgentUiFixture(to ?? id);
+    const seedName = to ?? id;
+    const seeded =
+      normalizeFixtureName(seedName) === 'travel-restore-documents'
+        ? await restoreTravelPlansFromDocuments()
+        : seedAgentUiFixture(seedName);
     if (emitStatus) {
       await writeAgentUiStatus({
         op: 'seed',
         ok: Boolean(seeded),
         detail: seeded
           ? formatAgentUiSeedDetail(seeded)
-          : `Unknown fixture: ${to ?? id ?? '(missing)'}`,
+          : `Unknown fixture: ${seedName ?? '(missing)'}`,
         id: seeded?.primaryId,
         route: getAgentUiRoute(),
       });
@@ -426,6 +437,64 @@ export async function handleAgentUiRequest(
         ok: true,
         detail: enabled ? 'overlay on' : 'overlay off',
         id: enabled ? 'on' : 'off',
+        route: getAgentUiRoute(),
+      });
+    }
+    return true;
+  }
+
+  if (op === 'devmode') {
+    const mode = (to ?? id ?? 'status').trim().toLowerCase();
+    // Lazy require keeps unit tests free of the controller graph.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const {
+      enterDevMode,
+      exitAgentDevModeIfNeeded,
+      exitDevMode,
+    } = require('@/features/account/dev-mode-controller') as typeof import('@/features/account/dev-mode-controller');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useDevMode } =
+      require('@/store/dev-mode') as typeof import('@/store/dev-mode');
+
+    if (mode === 'on' || mode === '1' || mode === 'true' || mode === 'yes') {
+      await enterDevMode('agent');
+    } else if (
+      mode === 'off' ||
+      mode === '0' ||
+      mode === 'false' ||
+      mode === 'no' ||
+      mode === 'release'
+    ) {
+      // Prefer agent-only exit so a user-owned sandbox stays on.
+      if (mode === 'release') {
+        await exitAgentDevModeIfNeeded();
+      } else {
+        await exitDevMode();
+      }
+    } else if (mode === 'status' || mode === 'get') {
+      // leave as-is
+    } else {
+      if (emitStatus) {
+        await writeAgentUiStatus({
+          op: 'devmode',
+          ok: false,
+          detail: `Unknown mode: ${mode} (use on|off|release|status)`,
+          route: getAgentUiRoute(),
+        });
+      }
+      return false;
+    }
+
+    const state = useDevMode.getState();
+    const detail = state.enabled
+      ? `devmode on (source=${state.source ?? 'unknown'})`
+      : 'devmode off';
+    if (emitStatus) {
+      await writeAgentUiStatus({
+        op: 'devmode',
+        ok: true,
+        detail,
+        id: state.enabled ? 'on' : 'off',
         route: getAgentUiRoute(),
       });
     }

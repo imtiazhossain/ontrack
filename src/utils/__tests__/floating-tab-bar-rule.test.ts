@@ -15,31 +15,18 @@ describe('floating tab bar background invariant', () => {
     expect(tabsLayout).toMatch(/tabBarBackground:\s*\(\)\s*=>\s*null/);
   });
 
-  it('keeps the dock transparent and the capsule on a soft copper glow', () => {
+  it('keeps frosted dock chrome with a transparent centered capsule', () => {
     const source = readFileSync(
       join(process.cwd(), 'src/components/navigation/floating-tab-bar.tsx'),
       'utf8',
     );
 
+    expect(source).toContain('BlurView');
     expect(source).toContain("backgroundColor: 'transparent'");
-
-    const capsuleIndex = source.indexOf('styles.capsule');
-    expect(capsuleIndex).toBeGreaterThan(-1);
-
-    const capsuleBlock = source.slice(
-      capsuleIndex,
-      source.indexOf('}>', capsuleIndex),
-    );
-    expect(capsuleBlock).not.toMatch(/shadowOpacity/);
-    expect(capsuleBlock).not.toMatch(/elevation/);
-    expect(capsuleBlock).toMatch(
-      /boxShadow:\s*theme\.name === 'dark'\s*\?\s*'0 8px 28px rgba\(177, 138, 101, 0\.32\)'\s*:\s*'0 5px 22px rgba\(154, 118, 84, 0\.22\)'/,
-    );
-    // overflow:hidden on the shadowed capsule clips the glow — clip inner only.
+    expect(source).toMatch(/capsule:\s*\{[^}]*justifyContent:\s*'center'/);
+    expect(source).toMatch(/railEdge:\s*\{[^}]*position:\s*'absolute'/);
+    // Clip the carousel track only — never the dock blur underlay.
     expect(source).toMatch(/capsuleClip[\s\S]*overflow:\s*'hidden'/);
-    expect(source).toMatch(
-      /capsule:\s*\{[^}]*borderRadius:\s*radii\.xl[^}]*\}/,
-    );
     expect(source).not.toMatch(
       /capsule:\s*\{[^}]*overflow:\s*'hidden'/,
     );

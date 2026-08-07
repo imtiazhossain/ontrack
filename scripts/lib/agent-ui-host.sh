@@ -443,7 +443,7 @@ agent_ui_send() {
 }
 
 agent_ui_send_op() {
-  # agent_ui_send_op dump|tap|scroll|exists|prefix|route|goto|reset|seed|flow|wait|batch|assert|hit|overlay …
+  # agent_ui_send_op dump|tap|scroll|exists|prefix|route|goto|reset|seed|flow|wait|batch|assert|hit|overlay|devmode …
   local op="$1"
   shift || true
   : "${WAIT_SECS:=${AGENT_UI_COLD_WAIT_SECS}}"
@@ -477,6 +477,9 @@ agent_ui_send_op() {
       ;;
     overlay)
       flags+=(--to "${1:-toggle}")
+      ;;
+    devmode)
+      flags+=(--to "${1:-status}")
       ;;
     hit)
       # agent_ui_send_op hit <x> <y>

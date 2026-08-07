@@ -3,9 +3,7 @@ import { useEffect } from 'react';
 
 import type { TravelImportResult } from '@/features/travel/travel-import-result-modal';
 import { TravelPlanDetail } from '@/features/travel/travel-plan-detail';
-import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
-import { useTheme } from '@/hooks/use-theme';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
 
 const ADD_KINDS = new Set<TravelItemKind>([
@@ -37,8 +35,6 @@ export default function TravelPlanScreen() {
     previewModal?: string;
     importFlight?: string;
   }>();
-  const theme = useTheme();
-  const travelStyle = useTravelPageStyle(theme);
   const setThemePreference = usePreferences((s) => s.setThemePreference);
   const initialAddKind =
     typeof add === 'string' && ADD_KINDS.has(add as TravelItemKind)
@@ -78,7 +74,9 @@ export default function TravelPlanScreen() {
       <Stack.Screen
         options={{
           headerShown: false,
-          contentStyle: { ...travelStyle, paddingTop: 0 },
+          // Transparent so itinerary sky chrome (status bar + header) shows
+          // through; page wash starts below the sky band in plan detail body.
+          contentStyle: { backgroundColor: 'transparent', paddingTop: 0 },
         }}
       />
       <TravelPlanDetail

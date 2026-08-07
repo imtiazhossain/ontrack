@@ -7,12 +7,10 @@ import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import {
-  TRAVEL_EDITORIAL_ACCENT,
-  travelCardFill,
-} from '@/features/travel/travel-surface';
+import { travelAccent } from '@/features/travel/travel-surface';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
 import type {
   TravelItemKind,
@@ -88,6 +86,7 @@ type TransportHandlers = {
     itemId: string,
     notes: NonNullable<TravelItineraryItemModel['notes']>,
   ) => void;
+  onShare?: (item: TravelItineraryItemModel) => void;
 };
 
 type EmptyAction = {
@@ -105,10 +104,10 @@ function TransportEmptyState({
   actionTestID,
   onAction,
 }: EmptyAction) {
-  const theme = useTheme();
   const { spacing: rs, s } = useResponsive();
   return (
-    <View
+    <TravelHomeGlass
+      clear
       style={[
         styles.empty,
         {
@@ -116,7 +115,6 @@ function TransportEmptyState({
           paddingVertical: rs.md,
           paddingHorizontal: rs.md,
           borderRadius: Math.max(10, s(12)),
-          backgroundColor: travelCardFill(theme),
         },
       ]}>
       <AppText
@@ -136,7 +134,7 @@ function TransportEmptyState({
         style={styles.emptyAction}>
         {actionLabel}
       </Button>
-    </View>
+    </TravelHomeGlass>
   );
 }
 
@@ -155,12 +153,13 @@ function TransportItemList({
 
   return (
     <View style={{ gap: rs.xs }}>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <TravelTimelineNode
           key={item.id}
           item={item}
           plan={handlers.plan}
           compact
+          index={index}
           expanded={!handlers.minimizedItemIds.has(item.id)}
           dateDisplayFormat={handlers.dateDisplayFormat}
           editingFlightItemId={handlers.editingFlightItemId}
@@ -213,6 +212,9 @@ function TransportItemList({
           onRemovePhoto={(uri) => handlers.onRemovePhoto(item.id, uri)}
           onRemove={() => handlers.onRemove(item)}
           onSaveNotes={(notes) => handlers.onSaveNotes(item.id, notes)}
+          onShare={
+            handlers.onShare ? () => handlers.onShare?.(item) : undefined
+          }
         />
       ))}
     </View>
@@ -260,16 +262,16 @@ export function TravelTransportSections({
 
   return (
     <TravelCollapsibleSection
-      title="Transport, Stays & Rentals"
+      title="Transportation, Stays & Events"
       icon="suitcase"
-      accentColor={TRAVEL_EDITORIAL_ACCENT}
+      accentColor={travelAccent(theme)}
       card
       compact
       tightHeader
       expanded={transportExpanded}
       onToggle={onToggleTransport}
       toggleTestID={AgentUiIds.travel.planDetail.transportSection}
-      titleVariant="callout">
+      titleVariant="subheading">
       <View
         style={[
           styles.stack,

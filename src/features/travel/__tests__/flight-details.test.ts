@@ -34,12 +34,14 @@ describe('travel flight details', () => {
     });
   });
 
-  it('keeps durable confirmation file URIs', () => {
+  it('keeps durable confirmation file and cloud-media URIs', () => {
     expect(
       normalizeFlightDetails({
         airline: 'Icelandair',
         confirmationUris: [
           'file:///var/mobile/Containers/Data/Application/x/Documents/travel-confirmations/flight/page-1.jpg',
+          'ontrack-media:user-1/travel/confirm.pdf',
+          'https://example.supabase.co/storage/v1/object/sign/app-media/user-1/travel/confirm.pdf?token=x',
           'https://evil.example/ignore.jpg',
         ],
       }),
@@ -52,6 +54,7 @@ describe('travel flight details', () => {
       seat: undefined,
       confirmationUris: [
         'file:///var/mobile/Containers/Data/Application/x/Documents/travel-confirmations/flight/page-1.jpg',
+        'ontrack-media:user-1/travel/confirm.pdf',
       ],
     });
   });

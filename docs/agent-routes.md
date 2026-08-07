@@ -39,10 +39,11 @@ Pin is required when iOS Simulator and Android Emulator are both running — oth
   --assert-exists travel.list.itinerary.trip-agent-ui-demo \
   --assert-route /travel
 
-# Trip tools (moved off Travel Home)
+# Trip tools (top of plan detail; legacy /hub redirects here)
 ./scripts/agent-ui.sh once --flow travel-demo-hub \
+  --assert-exists travel.planDetail.section.tools \
   --assert-exists travel.list.tripWeather.trip-agent-ui-demo \
-  --assert-route /travel/trip-agent-ui-demo/hub
+  --assert-route /travel/trip-agent-ui-demo
 
 # Leftover sheets: land flows dismiss travel overlays first; or once --dismiss
 ./scripts/agent-ui.sh once --dismiss --flow travel-demo-hub \
@@ -114,6 +115,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo-add-flight-connecting` | Seed → United GUA→IAH→LGA connecting prefills Add Flight Name/route |
 | `travel-demo-add-flight-roundtrip` | Seed → Chase round-trip prefills → submit → expand outbound card (passenger ready) |
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
+| `travel-demo-share-flight` | Seed → expand demo flight → open share sheet |
 | `open-new-trip` | Travel list → New Trip sheet |
 | `open-new-checklist` | Checklists → new-list name field ready |
 | `checklist-demo` | Seed demo checklist → open list detail (task ready) |
@@ -212,7 +214,8 @@ npm run packager:ensure:start
 - `op=reset` / `op=goto&to=…` / `op=route` / `op=prefix&prefix=…` / `op=exists&id=…` / `op=tap&id=…` / `op=dump`
 - `op=assert` — structural checks (`id` / `missing` / `prefix` / `to` route / `contains` label); prefer over screenshots for these claims
 - `op=wait` — settle (`ms`) and/or poll until `id` / `prefix` / route (`to`) within `timeoutMs` (default 2000)
-- `op=seed&to=…-demo` — upsert stable demo data (`travel|checklist|grocery|health|vehicle|plants|activity|workouts|vision-board`)
+- `op=seed&to=…-demo` — upsert stable demo data (`travel|checklist|grocery|health|vehicle|plants|activity|workouts|vision-board`); enters agent Dev Mode sandbox
+- `op=devmode&to=on|off|release|status` — Dev Mode sandbox (`release` exits only agent-entered; `off` always exits). Off by default; `verify-both` auto-releases
 - `op=flow&to=travel-demo` (or other named flow) — expand named recipe
 - `op=batch` with `ops: […]` — run steps in one command
 

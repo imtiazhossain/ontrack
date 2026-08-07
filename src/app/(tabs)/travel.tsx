@@ -17,10 +17,7 @@ import { useAuthSession } from '@/features/auth/auth-provider';
 import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
 import { isTravelPlanOnCalendar, travelCalendarDrafts } from '@/features/travel/calendar';
 import { validateTravelDateRange } from '@/features/travel/date-range';
-import {
-    isUsableDestinationPhotoUrl,
-    persistTravelCoverPhoto,
-} from '@/features/travel/destination-cover';
+import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { repairTravelPlansChatAccess } from '@/features/travel/travel-chat-roster';
 import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
@@ -28,9 +25,9 @@ import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import {
     TravelHomeBackground,
     travelHomeAtmosphereHeight,
-    travelHomeAtmosphereSource,
 } from '@/features/travel/travel-home-background';
 import { TravelHomeHeader } from '@/features/travel/travel-home-header';
+import { filterTravelPlansByQuery } from '@/features/travel/travel-home-plan-search';
 import { TravelHomeSectionHeader } from '@/features/travel/travel-home-section-header';
 import {
     travelHomeFontFamily,
@@ -40,12 +37,10 @@ import { TravelHomeTripCard } from '@/features/travel/travel-home-trip-card';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
-import {
-    travelSafeAreaBackground,
-    useTravelPageStyle,
-} from '@/features/travel/travel-surface';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
 import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
+import { useTravelHomeAtmosphereImage } from '@/features/travel/use-travel-home-atmosphere-image';
 import { useResponsive } from '@/hooks/use-responsive';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
@@ -71,8 +66,8 @@ function isCurrentOrUpcomingTrip(plan: TravelPlan, today: string): boolean {
 function TravelScreenContent() {
   const theme = useTheme();
   const travelStyle = useTravelPageStyle(theme);
-  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { editCover, tripId } = useLocalSearchParams<{
     editCover?: string;
@@ -130,9 +125,6 @@ function TravelScreenContent() {
   const [pendingFollowTripId, setPendingFollowTripId] = useState<string>();
   const [scrollTargetOffset, setScrollTargetOffset] = useState<number>();
   const [activeTripId, setActiveTripId] = useState<string>();
-  const [heroByTrip, setHeroByTrip] = useState<Record<string, string | undefined>>(
-    {},
-  );
   const focusedTripId = typeof tripId === 'string' ? tripId : undefined;
   const scrollTargetTripId =
     pendingCreatedTripId ?? pendingFollowTripId ?? focusedTripId;
@@ -150,6 +142,11 @@ function TravelScreenContent() {
     [sortedPlans, today],
   );
   const launcherPlans = currentPlans.length > 0 ? currentPlans : pastPlans;
+  const [tripSearchQuery, setTripSearchQuery] = useState('');
+  const visibleLauncherPlans = useMemo(
+    () => filterTravelPlansByQuery(launcherPlans, tripSearchQuery),
+    [launcherPlans, tripSearchQuery],
+  );
   const hasCurrentTrips = currentPlans.length > 0;
 
   useEffect(() => {
@@ -272,14 +269,6 @@ function TravelScreenContent() {
   const closeFriends = () => {
     appPrompt.dismiss();
     setFriendsVisible(false);
-  };
-
-  const openHub = (planId: string) => {
-    interactWithPlan(planId);
-    router.push({
-      pathname: '/travel/[id]/hub',
-      params: { id: planId },
-    } as never);
   };
 
   const openItinerary = (planId: string) => {
@@ -426,26 +415,27 @@ function TravelScreenContent() {
     setShowForm(true);
   };
 
-  const backgroundUri =
-    hasCurrentTrips && activeTripId ? heroByTrip[activeTripId] : undefined;
+  const atmosphereDestinations = useMemo(
+    () =>
+      sortedPlans
+        .map((plan) => plan.destination?.trim() || plan.title?.trim() || '')
+        .filter((label) => label.length >= 2),
+    [sortedPlans],
+  );
 
-  const showScenicAtmosphere = hasCurrentTrips || launcherPlans.length > 0;
+  const atmosphereImage = useTravelHomeAtmosphereImage({
+    enabled: true,
+    tripDestinations: atmosphereDestinations,
+  });
+
   // Paint atmosphere on the app-shell chrome so it fills the status-bar band
   // (in-screen absolute layers are clipped by SafeAreaView and can't).
-  useSafeAreaChrome(
-    showScenicAtmosphere
-      ? theme.name === 'dark'
-        ? travelHomeTokens.colors.atmosphereNight
-        : travelHomeTokens.colors.atmosphereSky
-      : travelSafeAreaBackground(theme),
-    showScenicAtmosphere
-      ? {
-          backgroundImage: travelHomeAtmosphereSource(theme.name),
-          backgroundImageHeight: travelHomeAtmosphereHeight(windowHeight, insets.top),
-          backgroundImageBlurRadius: travelHomeTokens.sizes.heroBlurRadius,
-        }
-      : undefined,
-  );
+  // Hero band only — mock fades into paper before Your Trips (not full-page).
+  useSafeAreaChrome(atmosphereImage.skyColor, {
+    backgroundImage: atmosphereImage.source,
+    backgroundImageHeight: travelHomeAtmosphereHeight(windowHeight, insets.top),
+    backgroundImageBlurRadius: travelHomeTokens.sizes.heroBlurRadius,
+  });
 
   if (editingPlan) {
     return (
@@ -488,7 +478,7 @@ function TravelScreenContent() {
 
   return (
     <View style={styles.fill}>
-      <TravelHomeBackground imageUri={backgroundUri} enabled={hasCurrentTrips || launcherPlans.length > 0} />
+      <TravelHomeBackground enabled />
       <Screen
         scrollRef={scrollRef}
         style={styles.transparentScreen}
@@ -501,6 +491,8 @@ function TravelScreenContent() {
         }}>
         <TravelHomeHeader
           onAddTrip={!showForm ? openCreateTrip : undefined}
+          locationLabel={atmosphereImage.label}
+          headerInk={atmosphereImage.headerInk}
         />
 
         {showForm ? (
@@ -547,7 +539,9 @@ function TravelScreenContent() {
             <AgentTestId testID={AgentUiIds.travel.list.sectionYourTrips}>
               <TravelHomeSectionHeader
                 title="Your Trips"
-                count={launcherPlans.length}
+                count={visibleLauncherPlans.length}
+                searchQuery={tripSearchQuery}
+                onSearchQueryChange={setTripSearchQuery}
               />
             </AgentTestId>
           </View>
@@ -564,25 +558,35 @@ function TravelScreenContent() {
           />
         ) : null}
 
-        {launcherPlans.map((plan) => (
+        {launcherPlans.length > 0 &&
+        visibleLauncherPlans.length === 0 &&
+        tripSearchQuery.trim() ? (
+          <AgentTestId testID={AgentUiIds.travel.list.emptySearch}>
+            <EmptyState
+              icon="search"
+              title="No matching trips"
+              message="Try a different title, destination, or note."
+              titleStyle={{ fontFamily: travelHomeFontFamily }}
+              messageStyle={{ fontFamily: travelHomeFontFamily }}
+            />
+          </AgentTestId>
+        ) : null}
+
+        {visibleLauncherPlans.map((plan, index) => (
           <TravelHomeTripCard
             key={plan.id}
             plan={plan}
+            index={index}
+            soloAtmosphereShadow={visibleLauncherPlans.length === 1}
+            atmosphereAverageColor={atmosphereImage.averageColor}
             travelers={resolveTravelCoTravelerPeople(plan, selfDisplayName)}
-            onOpenTrip={openHub}
+            onOpenTrip={openItinerary}
             onViewItinerary={openItinerary}
             onEditTrip={(id) => {
               const next = sortedPlans.find((item) => item.id === id);
               if (next) beginEditingDetails(next);
             }}
             onViewTravelers={openFriends}
-            onActiveImageChange={(id, uri) => {
-              const next =
-                uri && isUsableDestinationPhotoUrl(uri) ? uri : undefined;
-              setHeroByTrip((previous) =>
-                previous[id] === next ? previous : { ...previous, [id]: next },
-              );
-            }}
             onLayoutY={rememberTripOffset}
           />
         ))}

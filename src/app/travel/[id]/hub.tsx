@@ -4,7 +4,7 @@ import { TravelTripHubScreen } from '@/features/travel/travel-trip-hub-screen';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Trip tools hub — actions relocated from Travel Home. */
+/** Legacy hub route — redirects to plan detail where trip tools live. */
 export default function TravelTripHubRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();

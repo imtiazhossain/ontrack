@@ -9,6 +9,7 @@ describe('travel section header typography', () => {
 
   it('keeps compact nested labels at readable overline sizing', () => {
     expect(source).toContain("variant={compact && nested ? 'overline' : titleVariant}");
+    expect(source).toContain('fit={Boolean(compact && nested) || !compact}');
     expect(source).toContain('fitMinimumScale={compact && nested ? 0.9 : undefined}');
     expect(source).not.toMatch(/compactNestedTitle:\s*\{[^}]*fontSize/s);
   });
@@ -18,9 +19,11 @@ describe('travel section header typography', () => {
     expect(source).not.toContain('{compact && nested ? null : (');
   });
 
-  it('keeps compact card titles optically centered with the leading icon', () => {
+  it('keeps compact card titles from shrink-to-fit crushing', () => {
     expect(source).toContain('compact && !nested ? styles.compactCardTitle');
-    expect(source).toMatch(/compactCardTitle:\s*\{[^}]*lineHeight:\s*18/s);
+    // Parent titles are short — never allow adjustsFontSizeToFit on them.
+    expect(source).toContain('fit={Boolean(compact && nested) || !compact}');
+    expect(source).not.toMatch(/compactCardTitle:\s*\{[^}]*fontSize/s);
   });
 
   it('uses the shared mock icon→title gap for parent and nested headers', () => {
@@ -30,6 +33,11 @@ describe('travel section header typography', () => {
     );
     expect(source).toContain('const headerGap = titleIconGap');
   });
+
+  it('defaults to theme-aware travel blue for dark-mode contrast', () => {
+    expect(source).toContain('travelAccent(theme)');
+    expect(source).not.toContain('TRAVEL_EDITORIAL_ACCENT');
+  });
 });
 
 describe('transport board section header', () => {
@@ -38,11 +46,11 @@ describe('transport board section header', () => {
     'utf8',
   );
 
-  it('uses the suitcase glyph and callout title for Transport, Stays & Rentals', () => {
-    expect(source).toContain('title="Transport, Stays & Rentals"');
+  it('uses the suitcase glyph and subheading title for Transportation, Stays & Events', () => {
+    expect(source).toContain('title="Transportation, Stays & Events"');
     expect(source).toContain('icon="suitcase"');
     expect(source).toContain('tightHeader');
-    expect(source).toContain('titleVariant="callout"');
+    expect(source).toContain('titleVariant="subheading"');
   });
 });
 
@@ -55,10 +63,22 @@ describe('timeline section header', () => {
   it('matches the transport board title treatment', () => {
     expect(source).toContain('title="Timeline"');
     expect(source).toContain('icon="clock"');
-    expect(source).toContain('titleVariant="callout"');
+    expect(source).toContain('titleVariant="subheading"');
     expect(source).toContain('tightHeader');
-    expect(source).toContain('TRAVEL_EDITORIAL_ACCENT');
+    expect(source).toContain('travelAccent(theme)');
     expect(source).toContain('timelineSection');
+  });
+});
+
+describe('trip tools section header', () => {
+  it('uses subheading so the title stays readable on the glass card', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-trip-tools.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('title="Trip Tools"');
+    expect(source).toContain('titleVariant="subheading"');
+    expect(source).toContain('travelAccent(theme)');
   });
 });
 

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
@@ -9,11 +8,10 @@ import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import {
-    TRAVEL_CARD_SHADOW,
     TRAVEL_EDITORIAL_ACCENT,
-    travelCardFill,
     travelPanelTint,
 } from '@/features/travel/travel-surface';
 import {
@@ -263,6 +261,7 @@ export function TravelItineraryTimeline({
   onRemovePhoto,
   onRemove,
   onSaveNotes,
+  onShare,
 }: {
   plan: TravelPlan;
   items: TravelItineraryItemModel[];
@@ -323,6 +322,7 @@ export function TravelItineraryTimeline({
     itemId: string,
     notes: NonNullable<TravelItineraryItemModel['notes']>,
   ) => void;
+  onShare?: (item: TravelItineraryItemModel) => void;
 }) {
   const theme = useTheme();
   const { s, spacing: rs, typography } = useResponsive();
@@ -370,16 +370,15 @@ export function TravelItineraryTimeline({
 
   if (days.length === 0) {
     return (
-      <View
+      <TravelHomeGlass
+        clear
         style={[
           styles.emptyCard,
           {
-            backgroundColor: travelCardFill(theme),
             padding: rs.lg,
             gap: rs.md,
             borderRadius: 18,
             borderCurve: 'continuous',
-            boxShadow: TRAVEL_CARD_SHADOW,
           },
         ]}>
         <View
@@ -399,7 +398,7 @@ export function TravelItineraryTimeline({
           Add flights, stays, activities, or moments with photos and notes —
           they show up here day by day. Tap + above to begin.
         </AppText>
-      </View>
+      </TravelHomeGlass>
     );
   }
 
@@ -425,8 +424,6 @@ export function TravelItineraryTimeline({
         const spineColor = daySpineColor(dayIndex, theme.name);
         const prevSpineColor =
           dayIndex > 0 ? daySpineColor(dayIndex - 1, theme.name) : spineColor;
-        const eventRowFill =
-          theme.name === 'light' ? '#F4F6F8' : theme.backgroundSunken;
         const firstUpcomingIndex =
           dayPhase === 'current'
             ? day.entries.findIndex((entry) => !isTimelineEntryPast(entry, now))
@@ -462,35 +459,36 @@ export function TravelItineraryTimeline({
                 </View>
               </View>
             ) : null}
-            <Animated.View
-              entering={FadeInDown.delay(Math.min(dayIndex * 40, 200)).duration(280)}>
-              <View
-                style={[
-                  styles.dayBody,
-                  {
-                    gap: rs.xs,
-                    paddingTop: dayIndex === 0 ? rs.xs : 0,
-                    paddingBottom: 0,
-                    paddingLeft: dayBodyPadLeft,
-                    paddingRight: rs.sm,
-                  },
-                ]}>
-                <View style={[styles.dayRow, { gap: rs.xs }]}>
-                  <View style={[styles.spineColumn, { width: spineWidth }]}>
-                    <View
-                      style={[
-                        styles.dayMarker,
-                        {
-                          width:
-                            dayPhase === 'current'
-                              ? dayMarkerSize + Math.max(2, s(2))
-                              : dayMarkerSize,
-                          height:
-                            dayPhase === 'current'
-                              ? dayMarkerSize + Math.max(2, s(2))
-                              : dayMarkerSize,
-                          borderRadius:
-                            (dayPhase === 'current'
+            <View
+              style={[
+                styles.dayBody,
+                {
+                  gap: rs.xs,
+                  paddingTop: dayIndex === 0 ? rs.xs : 0,
+                  // Keep joined days tight; give the final day room above the
+                  // Timeline panel’s bottom radius / screen edge.
+                  paddingBottom:
+                    dayIndex === days.length - 1 ? rs.md : 0,
+                  paddingLeft: dayBodyPadLeft,
+                  paddingRight: rs.sm,
+                },
+              ]}>
+              <View style={[styles.dayRow, { gap: rs.xs }]}>
+                <View style={[styles.spineColumn, { width: spineWidth }]}>
+                  <View
+                    style={[
+                      styles.dayMarker,
+                      {
+                        width:
+                          dayPhase === 'current'
+                            ? dayMarkerSize + Math.max(2, s(2))
+                            : dayMarkerSize,
+                        height:
+                          dayPhase === 'current'
+                            ? dayMarkerSize + Math.max(2, s(2))
+                            : dayMarkerSize,
+                        borderRadius:
+                          (dayPhase === 'current'
                               ? dayMarkerSize + Math.max(2, s(2))
                               : dayMarkerSize) / 2,
                           backgroundColor: spineColor,
@@ -550,14 +548,15 @@ export function TravelItineraryTimeline({
                             spineWidth={0}
                           />
                         ) : null}
-                        <View
+                        <TravelHomeGlass
+                          clear
                           style={[
                             styles.eventStack,
                             {
-                              backgroundColor: eventRowFill,
                               borderRadius: Math.max(10, s(11)),
                               borderCurve: 'continuous',
-                              overflow: 'hidden',
+                              // Last row was flush against the glass radius.
+                              paddingBottom: Math.max(6, s(6)),
                             },
                           ]}>
                           {day.entries.map((entry, index) => {
@@ -635,6 +634,7 @@ export function TravelItineraryTimeline({
                                     showKindBadge
                                     compact
                                     dense
+                                    index={dayIndex * 4 + index}
                                     allowStructuredEditing={false}
                                     showStructuredDetails={false}
                                     expanded={!minimizedItemIds.has(entry.key)}
@@ -710,24 +710,27 @@ export function TravelItineraryTimeline({
                                     onSaveNotes={(notes) =>
                                       onSaveNotes(item.id, notes)
                                     }
+                                    onShare={
+                                      onShare ? () => onShare(item) : undefined
+                                    }
                                   />
                                 </View>
                               </View>
                             );
                           })}
-                        </View>
+                        </TravelHomeGlass>
                       </View>
                     ) : null}
                   </View>
                 </View>
               </View>
-            </Animated.View>
-          </View>
+            </View>
         );
       })}
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   timeline: {},

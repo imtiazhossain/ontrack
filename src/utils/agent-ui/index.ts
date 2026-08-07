@@ -32,14 +32,21 @@ export {
     AGENT_UI_DEMO_WORKOUT_ACTIVITY_ID,
     AGENT_UI_DEMO_WORKOUT_CATALOG_EXERCISE_ID,
     AGENT_UI_DEMO_WORKOUT_EXERCISE_ID,
-    AGENT_UI_DEMO_WORKOUT_SET_ID, AGENT_UI_FIXTURE_NAMES,
+    AGENT_UI_DEMO_WORKOUT_SET_ID,
+    AGENT_UI_FIXTURE_NAMES,
+    AGENT_UI_RESERVED_TRIP_IDS,
     buildAgentUiDemoChecklist,
     buildAgentUiDemoGrocery,
     buildAgentUiDemoTrip,
     createIdFromAgentUiItemIds,
+    fixtureNameForReservedTripId,
     formatAgentUiSeedDetail,
+    isReservedAgentUiTripId,
+    leaveReservedAgentUiTravelRouteIfNeeded,
     normalizeFixtureName,
     purgeAgentUiDemoFixtures,
+    recoverMissingReservedTravelPlan,
+    restoreTravelPlansFromDocuments,
     seedAgentUiFixture,
     type AgentUiFixtureName,
     type AgentUiSeedResult
@@ -112,6 +119,7 @@ export {
     getAgentUiRoute, getLastAgentUiContentRoute, resolveAgentUiDestination,
     setAgentUiNavigator,
     setAgentUiRoute,
+    travelPlanIdFromRoute,
     type AgentUiRouteAlias
 } from './route';
 export { scrollAgentUiTargetIntoView } from './scroll-into-view';

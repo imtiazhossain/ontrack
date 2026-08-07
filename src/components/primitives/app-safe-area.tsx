@@ -11,6 +11,7 @@ import {
     SafeAreaChromeProvider,
     useSafeAreaChromeBackground,
     useSafeAreaChromeColor,
+    useSafeAreaChromeOverlayLayer,
 } from './safe-area-chrome';
 
 /**
@@ -44,6 +45,8 @@ function AppSafeAreaFrame({
     height: chromeImageHeight,
     blurRadius: chromeImageBlurRadius,
   } = useSafeAreaChromeBackground();
+  const { overlay: chromeOverlay, height: chromeOverlayHeight } =
+    useSafeAreaChromeOverlayLayer();
   const backgroundColor = chromeColor ?? theme.backgroundPrimary;
 
   useEffect(() => {
@@ -63,7 +66,19 @@ function AppSafeAreaFrame({
           contentFit="cover"
           contentPosition={{ top: '0%', left: '50%' }}
           blurRadius={chromeImageBlurRadius}
+          // Soften source swaps (Travel home atmosphere rotation).
+          transition={350}
         />
+      ) : null}
+      {chromeOverlay ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.chromeOverlay,
+            chromeOverlayHeight != null ? { height: chromeOverlayHeight } : StyleSheet.absoluteFill,
+          ]}>
+          {chromeOverlay}
+        </View>
       ) : null}
       <SafeAreaView edges={['top']} style={[styles.fill, styles.transparent]}>
         {children}
@@ -82,5 +97,14 @@ const styles = StyleSheet.create({
     right: 0,
     width: '100%',
     zIndex: 0,
+  },
+  chromeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    zIndex: 0,
+    overflow: 'visible',
   },
 });

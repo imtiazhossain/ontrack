@@ -21,14 +21,17 @@ export const travelHomeFontFamily = Platform.select({
 
 export const travelHomeTokens = {
   colors: {
-    /** Title / primary ink sampled from reference (~#16255B). */
-    navy: '#16255B',
+    /** Title / primary ink — black (replaces prior navy). */
+    navy: '#000000',
     blue: '#2F6FED',
     blueStrong: '#1E4FC4',
     blueTint: '#E8F1FF',
-    ink: '#16255B',
-    /** Tagline ink sampled from typography reference (~#5A718F). */
-    inkMuted: '#5A718F',
+    ink: '#000000',
+    /** Secondary / meta ink — neutral gray (was slate-blue). */
+    inkMuted: '#5A5A5A',
+    /** Atmosphere-band copy over the photo wash (title / tagline / section). */
+    atmosphereInk: '#000000',
+    atmosphereInkMuted: '#1A1A1A',
     brandBlue: '#2F6FED',
     brandBlueSoft: '#E8F1FF',
     /** Header flight motif — warm gold (richer than mock-sample tan). */
@@ -37,24 +40,26 @@ export const travelHomeTokens = {
     surfaceMuted: '#F4F6F9',
     /** Top-of-atmosphere sky (status-bar chrome fill) — light. */
     atmosphereSky: '#F3EAE2',
-    /** Top-of-atmosphere Iceland aurora (status-bar chrome fill) — dark. */
-    atmosphereNight: '#021734',
+    /** Top-of-atmosphere night (status-bar chrome fill) — dark. */
+    atmosphereNight: '#000000',
     divider: '#E4EAF2',
     overlayLight: 'rgba(255,255,255,0.92)',
-    shadow: 'rgba(22,37,91,0.12)',
-    cardShadow: '0 10px 28px rgba(22,37,91,0.12)',
+    shadow: 'rgba(0,0,0,0.12)',
+    cardShadow: '0 10px 28px rgba(0,0,0,0.12)',
     cardShadowDark: '0 10px 28px rgba(0,0,0,0.35)',
     /** White circular + / edit FABs — soft lift over atmosphere & hero photos. */
-    circleFabShadow: '0 8px 20px rgba(22,37,91,0.16)',
-    circleFabBorder: 'rgba(22,37,91,0.08)',
-    /** Navy CTA (View Itinerary) — same fill as trip-count circle. */
-    itineraryButtonShadow: '0 6px 16px rgba(22,37,91,0.12)',
-    itineraryButtonBorder: '#16255B',
-    avatarCountText: '#16255B',
-    avatarCountSurface: '#EBEBFF',
+    circleFabShadow: '0 8px 20px rgba(0,0,0,0.16)',
+    circleFabBorder: 'rgba(0,0,0,0.08)',
+    /** Soft lift for glass View Itinerary CTA. */
+    itineraryButtonShadow: '0 6px 16px rgba(0,0,0,0.12)',
+    /** Brand-blue solid CTA on dark meta panels. */
+    itineraryButtonShadowDark: '0 6px 18px rgba(47,111,237,0.38)',
+    itineraryButtonBorder: 'rgba(255,255,255,0.65)',
+    avatarCountText: '#000000',
+    avatarCountSurface: '#EBEBEB',
     countCapsule: '#FFFFFF',
-    /** Trip-count badge — same navy as card title ink (both themes). */
-    countCircle: '#16255B',
+    /** Trip-count badge fill in light mode (dark mode inverts to white). */
+    countCircle: '#000000',
   },
   radius: {
     /** Outer trip-card corners — design kit `card: 28` (tighter than prior 32). */

@@ -6,6 +6,9 @@ import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 
 type JsonObject = Record<string, unknown>;
 
+/** Who activated the sandbox — agent sessions must not stick across cold start. */
+export type DevModeSource = 'user' | 'agent';
+
 export type DevModeLiveSnapshot = {
   capturedAt: string;
   domains: Partial<Record<SyncDomainName, JsonObject>>;
@@ -15,6 +18,8 @@ export type DevModeLiveSnapshot = {
 interface DevModeState {
   /** Sandbox active — live account data is snapshotted; cloud push paused. */
   enabled: boolean;
+  /** `agent` = seed/verify sandbox (auto-exit on cold start); `user` = Developer Hub toggle. */
+  source: DevModeSource | null;
   liveSnapshot: DevModeLiveSnapshot | null;
   setEnabledFlag: (enabled: boolean) => void;
   setLiveSnapshot: (snapshot: DevModeLiveSnapshot | null) => void;
@@ -24,6 +29,7 @@ export const useDevMode = create<DevModeState>()(
   persist(
     (set) => ({
       enabled: false,
+      source: null,
       liveSnapshot: null,
       setEnabledFlag: (enabled) => set({ enabled }),
       setLiveSnapshot: (liveSnapshot) => set({ liveSnapshot }),
@@ -33,6 +39,7 @@ export const useDevMode = create<DevModeState>()(
       storage: createPersistStorage(),
       partialize: (state) => ({
         enabled: state.enabled,
+        source: state.source,
         liveSnapshot: state.liveSnapshot,
       }),
     },

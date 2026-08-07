@@ -89,7 +89,7 @@ describe('canonical design-system contract', () => {
     expect(importResult).toContain('SheetScaffold');
     expect(removeConfirm).toContain('SheetScaffold');
     expect(removeConfirm).not.toMatch(/\bModal\b/);
-    expect(actions).toContain('variant="secondary"');
+    expect(actions).toContain('TravelHomeGlass');
     expect(actions).not.toContain('<Card');
     expect(actions).not.toContain('numberOfLines={2}');
   });
@@ -97,13 +97,20 @@ describe('canonical design-system contract', () => {
   it('makes the Travel path obvious instead of presenting equal-weight actions', () => {
     const actions = read('src/features/travel/travel-list-actions.tsx');
     const grid = read('src/features/travel/travel-trip-action-grid.tsx');
-    expect(actions).toContain('variant="secondary"');
+    const body = read('src/features/travel/travel-plan-detail-body.tsx');
+    expect(actions).toContain('TravelHomeGlass');
     expect(grid).toContain('label="Trip Itinerary"');
     expect(grid).toContain('title="Book & Organize"');
     expect(grid).toContain('title="At Your Destination"');
     expect(grid).toContain('title="Travel Together"');
-    expect(grid.indexOf('TravelSheetPrimaryAction')).toBeLessThan(
-      grid.indexOf('<ActionGroup'),
+    expect(grid).toContain('showItineraryAction');
+    // Tools sit in a collapsible at the top of plan detail (after hero).
+    const tools = read('src/features/travel/travel-plan-trip-tools.tsx');
+    expect(tools).toContain('title="Trip Tools"');
+    expect(body).toContain("toggleSection('tools')");
+    expect(body).toContain('TravelPlanTripTools');
+    expect(body.indexOf('<TravelPlanTripTools')).toBeLessThan(
+      body.indexOf('<TravelTransportSections'),
     );
   });
 
@@ -122,7 +129,8 @@ describe('canonical design-system contract', () => {
     expect(travelTab).toContain('style={travelStyle}');
     expect(travelTab).toContain('useTravelPageStyle(theme)');
     expect(travelTab).toContain('useSafeAreaChrome(');
-    expect(travelTab).toContain('travelSafeAreaBackground(theme)');
+    expect(travelTab).toContain('atmosphereImage.skyColor');
+    expect(travelTab).toContain('backgroundImage: atmosphereImage.source');
     expect(travelLayout).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
     expect(safeAreaChrome).toContain('useSafeAreaChrome');
     expect(rootLayout).toMatch(

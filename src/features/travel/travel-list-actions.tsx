@@ -1,15 +1,18 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
   itinerarySheetChrome,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId } from '@/utils/agent-ui';
+import { haptics } from '@/utils/haptics';
 
-/** Compact trip-card action using the app-wide shared button sizing. */
+/** Compact trip action — clear glass tile matching itinerary chrome. */
 export function TravelSheetAction({
   label,
   icon,
@@ -33,61 +36,77 @@ export function TravelSheetAction({
   const chrome = itinerarySheetChrome(theme);
   const iconTone = chrome.icons[tone];
   const { s, spacing } = useResponsive();
-  const iconBox = Math.max(26, s(28));
-  const badgeSize = Math.max(12, s(13));
+  // Dense glass chips — keep ≥44pt hit via Pressable, trim visual chrome.
+  const iconBox = Math.max(22, s(24));
+  const badgeSize = Math.max(11, s(12));
+  const radius = Math.max(10, s(11));
+  const handlePress = () => {
+    haptics.tap();
+    onPress();
+  };
+
   return (
-    <Button
-      variant="secondary"
-      shape="rounded"
-      onPress={onPress}
+    <AgentTestId
       testID={testID}
-      accessibilityLabel={accessibilityLabel}
-      // One inner row owns icon+label centering.
-      leading={
-        <View style={[styles.actionContent, { gap: spacing.sm }]}>
-          <View
-            style={[
-              styles.actionIcon,
-              {
-                width: iconBox,
-                height: iconBox,
-                borderRadius: Math.max(8, s(9)),
-                backgroundColor: iconTone.bg,
-              },
-            ]}>
-            <Symbol name={icon} size="sm" color={iconTone.fg} />
-            {badgeIcon ? (
-              <View
-                style={[
-                  styles.actionIconBadge,
-                  {
-                    width: badgeSize,
-                    height: badgeSize,
-                    borderRadius: badgeSize / 2,
-                    backgroundColor: theme.backgroundElevated,
-                    borderColor: iconTone.bg,
-                  },
-                ]}>
-                <Symbol name={badgeIcon} size={9} color={iconTone.fg} />
-              </View>
-            ) : null}
+      label={accessibilityLabel}
+      onPress={handlePress}
+      // Flex lives on the registry wrapper so the 2-col grid fills the row.
+      style={[styles.action, wide ? styles.actionWide : undefined]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.actionPressable,
+          { opacity: pressed ? 0.82 : 1 },
+        ]}>
+        <TravelHomeGlass
+          clear
+          style={[
+            styles.actionGlass,
+            {
+              minHeight: Math.max(40, s(40)),
+              paddingHorizontal: Math.max(10, spacing.sm),
+              paddingVertical: Math.max(6, s(7)),
+              borderRadius: radius,
+              justifyContent: wide ? 'center' : 'flex-start',
+            },
+          ]}>
+          <View style={[styles.actionContent, { gap: Math.max(6, spacing.xs) }]}>
+            <View
+              style={[
+                styles.actionIcon,
+                {
+                  width: iconBox,
+                  height: iconBox,
+                  borderRadius: Math.max(7, s(8)),
+                  backgroundColor: iconTone.bg,
+                },
+              ]}>
+              <Symbol name={icon} size={14} color={iconTone.fg} />
+              {badgeIcon ? (
+                <View
+                  style={[
+                    styles.actionIconBadge,
+                    {
+                      width: badgeSize,
+                      height: badgeSize,
+                      borderRadius: badgeSize / 2,
+                      backgroundColor: theme.backgroundElevated,
+                      borderColor: iconTone.bg,
+                    },
+                  ]}>
+                  <Symbol name={badgeIcon} size={8} color={iconTone.fg} />
+                </View>
+              ) : null}
+            </View>
+            <AppText variant="caption" fit style={styles.actionLabel}>
+              {label}
+            </AppText>
           </View>
-          <AppText variant="callout" fit style={styles.actionLabel}>
-            {label}
-          </AppText>
-        </View>
-      }
-      style={[
-        styles.action,
-        wide ? styles.actionWide : undefined,
-        {
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          borderColor: theme.separator,
-        },
-      ]}>
-      {null}
-    </Button>
+        </TravelHomeGlass>
+      </Pressable>
+    </AgentTestId>
   );
 }
 
@@ -208,15 +227,22 @@ const styles = StyleSheet.create({
   action: {
     flexGrow: 1,
     flexBasis: '47%',
+    maxWidth: '100%',
     minWidth: 0,
-    // Left-align icon+label so every tile in the 2-column grid shares one
-    // icon column (center justify makes short labels drift vs long ones).
-    justifyContent: 'flex-start',
-    borderWidth: StyleSheet.hairlineWidth,
   },
   actionWide: {
     flexBasis: '100%',
-    // Full-width itinerary CTA stays centered as the primary next step.
-    justifyContent: 'center',
+  },
+  actionPressable: {
+    width: '100%',
+  },
+  actionGlass: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    // Left-align icon+label so every tile in the 2-column grid shares one
+    // icon column (center justify makes short labels drift vs long ones).
+    justifyContent: 'flex-start',
+    borderCurve: 'continuous',
   },
 });

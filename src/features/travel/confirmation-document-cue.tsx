@@ -21,6 +21,7 @@ import {
     confirmationUrisForDisplay,
     isImageConfirmationUri,
     openConfirmationAttachments,
+    resolveConfirmationUrisForOpen,
 } from './confirmation-attachments';
 
 export type ConfirmationDocumentTrigger = (args: {
@@ -62,19 +63,24 @@ export function ConfirmationDocumentCue({
   const insets = useSafeAreaInsets();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [viewerImageUris, setViewerImageUris] = useState<string[]>([]);
   const openableUris = confirmationUrisForDisplay(uris, kind);
   if (!openableUris.length) return null;
 
   const resolvedTestID = testID ?? AgentUiIds.travel.confirmation.open(kind);
-  const imageUris = openableUris.filter(isImageConfirmationUri);
   const open = () => {
     if (opening) return;
-    if (imageUris.length > 0 && imageUris.length === openableUris.length) {
-      setViewerOpen(true);
-      return;
-    }
     setOpening(true);
-    void openConfirmationAttachments(openableUris)
+    void (async () => {
+      const resolved = await resolveConfirmationUrisForOpen(openableUris);
+      const images = resolved.filter(isImageConfirmationUri);
+      if (images.length > 0 && images.length === resolved.length) {
+        setViewerImageUris(images);
+        setViewerOpen(true);
+        return;
+      }
+      await openConfirmationAttachments(resolved);
+    })()
       .catch((error) => {
         if (__DEV__) console.warn('[ConfirmationDocumentCue] open failed', error);
       })
@@ -131,7 +137,7 @@ export function ConfirmationDocumentCue({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.pages}>
-            {imageUris.map((uri) => (
+            {viewerImageUris.map((uri) => (
               <ScrollView
                 key={uri}
                 maximumZoomScale={4}
@@ -147,7 +153,7 @@ export function ConfirmationDocumentCue({
               </ScrollView>
             ))}
           </ScrollView>
-          {imageUris.length > 1 ? (
+          {viewerImageUris.length > 1 ? (
             <AppText variant="caption" color="secondary" style={styles.pageHint}>
               Swipe for More Pages
             </AppText>

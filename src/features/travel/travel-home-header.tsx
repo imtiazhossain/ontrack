@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import {
-    TravelHomePlusIcon,
-    TravelHomeRouteFlourish,
+  atmosphereHeaderInkColors,
+  type TravelAtmosphereHeaderInk,
+} from '@/features/travel/travel-home-atmosphere-ink';
+import { TravelHomeAtmosphereText } from '@/features/travel/travel-home-atmosphere-text';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
+import {
+  TravelHomePlusIcon,
+  TravelHomeRouteFlourish,
 } from '@/features/travel/travel-home-icons';
 import {
-    travelHomeFontFamily,
-    travelHomeTokens,
+  travelHomeFontFamily,
+  travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,24 +22,35 @@ import { haptics } from '@/utils/haptics';
 
 type TravelHomeHeaderProps = {
   onAddTrip?: () => void;
+  /** Atmosphere plate place caption when known. */
+  locationLabel?: string;
+  /** Plate-aware header ink (`light` = white over dark washes). */
+  headerInk?: TravelAtmosphereHeaderInk;
   style?: StyleProp<ViewStyle>;
 };
 
 /** Compact Travel Home header — title, tagline, route motif, FAB +. */
-export function TravelHomeHeader({ onAddTrip, style }: TravelHomeHeaderProps) {
+export function TravelHomeHeader({
+  onAddTrip,
+  locationLabel,
+  headerInk = 'light',
+  style,
+}: TravelHomeHeaderProps) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
-  const ink =
-    theme.name === 'dark' ? theme.textPrimary : travelHomeTokens.colors.ink;
-  const muted =
-    theme.name === 'dark' ? theme.textSecondary : travelHomeTokens.colors.inkMuted;
-  const brand =
-    theme.name === 'dark' ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
+  const dark = theme.name === 'dark';
+  // Default white over photo; only flip to black when the plate sample is bright.
+  const { ink, muted } = atmosphereHeaderInkColors(
+    dark ? 'light' : headerInk,
+  );
+  const brand = dark ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
   const addVisual = Math.max(44, s(travelHomeTokens.sizes.addButton));
   const addHit = Math.max(travelHomeTokens.sizes.touchTargetMin, addVisual);
   const titleSize = Math.max(42, s(travelHomeTokens.sizes.displayTitle));
   const taglineSize = Math.max(13, s(travelHomeTokens.type.heroTagline));
+  const locationSize = Math.max(12, s(12));
   const titleToTagline = Math.max(6, s(travelHomeTokens.type.titleToTaglineGap));
+  const caption = locationLabel?.replace(/\s+/g, ' ').trim();
   /** Clear air between trail tip and the add FAB. */
   const trailButtonGap = Math.max(12, s(14));
   /** Keep the plane off the title ink — shortens the flex trail. */
@@ -62,10 +79,11 @@ export function TravelHomeHeader({ onAddTrip, style }: TravelHomeHeaderProps) {
         style,
       ]}>
       <View style={styles.topRow}>
-        <Text
+        <TravelHomeAtmosphereText
           allowFontScaling
           maxFontSizeMultiplier={titleMaxMultiplier}
           numberOfLines={1}
+          containerStyle={styles.titleWrap}
           style={{
             color: ink,
             fontFamily: travelHomeFontFamily,
@@ -74,11 +92,9 @@ export function TravelHomeHeader({ onAddTrip, style }: TravelHomeHeaderProps) {
             fontWeight: '400',
             letterSpacing: 0,
             includeFontPadding: false,
-            flexShrink: 0,
-            zIndex: 1,
           }}>
           Travel
-        </Text>
+        </TravelHomeAtmosphereText>
 
         <View
           pointerEvents="none"
@@ -127,44 +143,83 @@ export function TravelHomeHeader({ onAddTrip, style }: TravelHomeHeaderProps) {
                   width: addVisual,
                   height: addVisual,
                   borderRadius: addVisual / 2,
-                  backgroundColor:
-                    theme.name === 'dark' ? theme.backgroundElevated : '#FFFFFF',
-                  borderColor:
-                    theme.name === 'dark'
-                      ? theme.separator
-                      : travelHomeTokens.colors.circleFabBorder,
                   opacity: pressed ? 0.84 : 1,
-                  boxShadow:
-                    theme.name === 'dark'
-                      ? undefined
-                      : travelHomeTokens.colors.circleFabShadow,
                 },
               ]}>
-              <TravelHomePlusIcon
-                size={Math.max(18, s(20))}
-                color={theme.name === 'dark' ? brand : travelHomeTokens.colors.ink}
-              />
+              <TravelHomeGlass
+                intensity={dark ? 44 : 56}
+                style={{
+                  width: addVisual,
+                  height: addVisual,
+                  borderRadius: addVisual / 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: dark
+                    ? undefined
+                    : travelHomeTokens.colors.circleFabShadow,
+                }}>
+                <TravelHomePlusIcon
+                  size={Math.max(18, s(20))}
+                  color={dark ? brand : travelHomeTokens.colors.ink}
+                />
+              </TravelHomeGlass>
             </Pressable>
           </AgentTestId>
         ) : null}
       </View>
 
-      <Text
-        allowFontScaling
-        maxFontSizeMultiplier={1.15}
-        numberOfLines={1}
-        style={{
-          color: muted,
-          fontFamily: travelHomeFontFamily,
-          fontSize: taglineSize,
-          lineHeight: Math.round(taglineSize * 1.28),
-          fontWeight: '400',
-          letterSpacing: 0,
-          includeFontPadding: false,
-          marginTop: titleToTagline,
-        }}>
-        Plan. Explore. Remember.
-      </Text>
+      <View
+        style={[
+          styles.taglineRow,
+          {
+            marginTop: titleToTagline,
+            gap: Math.max(8, s(10)),
+            minHeight: Math.round(Math.max(taglineSize, locationSize) * 1.28),
+          },
+        ]}>
+        <TravelHomeAtmosphereText
+          allowFontScaling
+          maxFontSizeMultiplier={1.15}
+          numberOfLines={1}
+          containerStyle={styles.taglineWrap}
+          style={{
+            color: muted,
+            fontFamily: travelHomeFontFamily,
+            fontSize: taglineSize,
+            lineHeight: Math.round(taglineSize * 1.28),
+            fontWeight: '400',
+            letterSpacing: 0,
+            includeFontPadding: false,
+          }}>
+          Plan. Explore. Remember.
+        </TravelHomeAtmosphereText>
+
+        {caption ? (
+          <AgentTestId
+            testID={AgentUiIds.travel.list.atmosphereLocation}
+            style={styles.locationSlot}>
+            <TravelHomeAtmosphereText
+              accessibilityRole="text"
+              accessibilityLabel={`Atmosphere location, ${caption}`}
+              allowFontScaling
+              maxFontSizeMultiplier={1.15}
+              numberOfLines={1}
+              containerStyle={styles.locationTextWrap}
+              style={{
+                color: muted,
+                fontFamily: travelHomeFontFamily,
+                fontSize: locationSize,
+                lineHeight: Math.round(locationSize * 1.28),
+                fontWeight: '400',
+                letterSpacing: 0.15,
+                includeFontPadding: false,
+                textAlign: 'right',
+              }}>
+              {caption}
+            </TravelHomeAtmosphereText>
+          </AgentTestId>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -177,6 +232,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
+  },
+  titleWrap: {
+    flexShrink: 0,
+    zIndex: 1,
+  },
+  taglineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  taglineWrap: {
+    flexShrink: 0,
+  },
+  locationSlot: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  locationTextWrap: {
+    width: '100%',
+    maxWidth: '100%',
   },
   motifBand: {
     flex: 1,
@@ -191,6 +269,5 @@ const styles = StyleSheet.create({
   addButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });

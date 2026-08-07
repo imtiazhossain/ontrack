@@ -1,7 +1,9 @@
+import { BlurView } from 'expo-blur';
 import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import {
+    Pressable,
     StyleSheet,
     Text,
     useWindowDimensions,
@@ -10,7 +12,6 @@ import {
 import {
     Gesture,
     GestureDetector,
-    Pressable,
 } from 'react-native-gesture-handler';
 import Animated, {
     useAnimatedStyle,
@@ -23,6 +24,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { AppText, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { radii } from '@/design-system';
+import { palette } from '@/design-system/colors';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,36 +32,38 @@ import { useAddons } from '@/store/addons';
 import { useTodos } from '@/store/todos';
 import { useUI } from '@/store/ui';
 import {
+  AgentTestId,
+  AgentUiIds,
   isAgentUiEnabled,
   registerAgentUiTarget,
   tabTestIdForRoute,
   unregisterAgentUiTarget,
 } from '@/utils/agent-ui';
 
+import {
+  canonicalPositionForRoute,
+  rebasePosition,
+  routeIndexForPosition,
+  shortestTargetPosition,
+} from './floating-tab-bar-motion';
+
 type FloatingTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>['tabBar']>
 >[0];
 
-const VISIBLE_ITEM_COUNT = 5;
+/** Middle carousel tabs; outer rail slots are fixed prev/next arrows. */
+const VISIBLE_TAB_COUNT = 3;
+const RAIL_SLOT_COUNT = VISIBLE_TAB_COUNT + 2;
 const TRACK_REPEAT_COUNT = 5;
 const MAX_CAROUSEL_WIDTH = 720;
 const VELOCITY_PROJECTION_SECONDS = 0.2;
 const MAX_FLING_ITEMS = 5;
+/** Soft settle after a finger pan only — taps jump instantly. */
 const SNAP_SPRING = {
   damping: 22,
   stiffness: 230,
   mass: 0.78,
 } as const;
-const SELECTION_SPRING = {
-  damping: 20,
-  stiffness: 205,
-  mass: 0.72,
-} as const;
-function canonicalPositionForRoute(index: number, routeCount: number) {
-  'worklet';
-  const signedIndex = index > routeCount / 2 ? index - routeCount : index;
-  return -signedIndex;
-}
 
 const TAB_META: Record<
   string,
@@ -99,7 +103,7 @@ const TAB_META: Record<
   plants: { label: 'Plants', icon: 'plant', href: '/(tabs)/plants' },
   travel: { label: 'Travel', icon: 'flight', href: '/(tabs)/travel' },
   'vision-board': {
-    // Short chrome label so five equal slots keep even visual gutters.
+    // Short chrome label so equal rail slots keep even visual gutters.
     label: 'Vision',
     icon: 'vision-board',
     href: '/(tabs)/vision-board',
@@ -202,7 +206,7 @@ export function FloatingTabBar({
   // Inset from the pill’s rounded ends so outer and inner gutters match.
   const capsuleInset = Math.max(spacing.xs, s(6));
   const itemWidth =
-    (carouselWidth - capsuleInset * 2) / VISIBLE_ITEM_COUNT;
+    (carouselWidth - capsuleInset * 2) / RAIL_SLOT_COUNT;
   const browsedIndex = visibleRoutes.findIndex(
     (route) =>
       carouselBrowse?.anchorRouteName === selectedRoute?.name &&
@@ -214,6 +218,9 @@ export function FloatingTabBar({
     canonicalPositionForRoute(initialCenterIndex, visibleRoutes.length),
   );
   const gestureStartItems = useSharedValue(0);
+  // Bumps on every selection/nudge/pan snap so interrupted springs never clear
+  // a newer in-flight move (that race caused multi-item “fast scroll” glitches).
+  const motionEpoch = useSharedValue(0);
   const trackItemCount = visibleRoutes.length * TRACK_REPEAT_COUNT;
   const centerSlot = Math.floor(trackItemCount / 2);
   const displayedRoutes = Array.from({ length: trackItemCount }, (_, slot) => {
@@ -224,8 +231,9 @@ export function FloatingTabBar({
     return visibleRoutes[routeIndex];
   });
   const routeNames = visibleRoutes.map((route) => route.name);
+  const routeCount = visibleRoutes.length;
   const baseTranslateX =
-    (Math.floor(VISIBLE_ITEM_COUNT / 2) - centerSlot) * itemWidth;
+    (Math.floor(VISIBLE_TAB_COUNT / 2) - centerSlot) * itemWidth;
 
   // Suppress the press that fires when a horizontal swipe ends on a tab.
   const suppressPressAfterPan = useRef(false);
@@ -247,49 +255,74 @@ export function FloatingTabBar({
       centerRouteName: routeName,
     });
   };
-  const clearSelectionLock = () => {
-    useUI.setState({
-      carouselPendingRouteName: null,
-      carouselSwipeClaimed: false,
-    });
-  };
-  const finishSelection = (routeName: string) => {
-    const ui = useUI.getState();
-    if (ui.carouselPendingRouteName !== routeName) {
-      clearSelectionLock();
-      return;
-    }
-
+  // Clear optimistic selection only after navigation has focused the tab.
+  // Clearing in the tap handler made `focused` (still the old route) flash
+  // back for a frame before React Navigation caught up.
+  useEffect(() => {
+    if (!pendingRouteName) return;
+    if (selectedRoute?.name !== pendingRouteName) return;
+    if (routeCount <= 0) return;
     const routeIndex = visibleRoutes.findIndex(
-      (item) => item.name === routeName,
+      (item) => item.name === pendingRouteName,
     );
-    // Normalize by whole circles only. The permanent track never rebuilds.
-    positionItems.value = canonicalPositionForRoute(
-      routeIndex < 0 ? selectedIndex : routeIndex,
-      visibleRoutes.length,
+    const index = routeIndex < 0 ? selectedIndex : routeIndex;
+    positionItems.value = rebasePosition(
+      positionItems.value,
+      index,
+      routeCount,
     );
     useUI.setState({
       carouselBrowse: null,
       carouselPendingRouteName: null,
       carouselSwipeClaimed: false,
     });
+  }, [
+    pendingRouteName,
+    positionItems,
+    routeCount,
+    selectedIndex,
+    selectedRoute?.name,
+    visibleRoutes,
+  ]);
+  const finishBrowseAtPosition = (targetItems: number, epoch: number) => {
+    if (motionEpoch.value !== epoch) return;
+    if (routeCount <= 0) return;
+    const routeIndex = routeIndexForPosition(targetItems, routeCount);
+    positionItems.value = rebasePosition(
+      targetItems,
+      routeIndex,
+      routeCount,
+    );
+    commitBrowse(routeNames[routeIndex]);
+  };
+  const nudgeCarousel = (direction: -1 | 1) => {
+    const epoch = motionEpoch.value + 1;
+    motionEpoch.value = epoch;
+    const targetItems = Math.round(positionItems.value) + direction;
+    positionItems.value = targetItems;
+    finishBrowseAtPosition(targetItems, epoch);
   };
 
+  // Fail quickly on taps so tab Pressables aren’t held in “possible” by the pan.
   const panGesture = Gesture.Pan()
-    .activeOffsetX([-8, 8])
-    .failOffsetY([-16, 16])
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-8, 8])
+    .maxPointers(1)
     .onStart(() => {
+      motionEpoch.value += 1;
       gestureStartItems.value = positionItems.value;
       scheduleOnRN(setSwipeClaimed, true);
     })
     .onUpdate((event) => {
-      if (Math.abs(event.translationX) >= 8) {
+      if (Math.abs(event.translationX) >= 12) {
         scheduleOnRN(markPanMoved);
       }
       positionItems.value =
         gestureStartItems.value + event.translationX / itemWidth;
     })
     .onEnd((event) => {
+      const epoch = motionEpoch.value + 1;
+      motionEpoch.value = epoch;
       const velocityItems = event.velocityX / itemWidth;
       const projectedItems =
         positionItems.value + velocityItems * VELOCITY_PROJECTION_SECONDS;
@@ -308,20 +341,8 @@ export function FloatingTabBar({
           velocity: velocityItems,
         },
         (finished) => {
-          if (!finished) {
-            scheduleOnRN(clearSelectionLock);
-            return;
-          }
-          const routeCount = routeNames.length;
-          const rawRouteOffset =
-            ((-targetItems % routeCount) + routeCount) % routeCount;
-          const routeIndex = rawRouteOffset;
-
-          positionItems.value = canonicalPositionForRoute(
-            routeIndex,
-            routeCount,
-          );
-          scheduleOnRN(commitBrowse, routeNames[routeIndex]);
+          if (!finished || motionEpoch.value !== epoch) return;
+          scheduleOnRN(finishBrowseAtPosition, targetItems, epoch);
         },
       );
     })
@@ -339,23 +360,106 @@ export function FloatingTabBar({
   useEffect(() => {
     if (pendingRouteName) return;
     if (carouselBrowse?.anchorRouteName === selectedRoute.name) return;
-    positionItems.value = withSpring(
-      canonicalPositionForRoute(selectedIndex, visibleRoutes.length),
-      SNAP_SPRING,
+    if (routeCount <= 0) return;
+    const current = positionItems.value;
+    const target = shortestTargetPosition(
+      current,
+      selectedIndex,
+      routeCount,
     );
+    if (Math.round(current) === Math.round(target)) {
+      positionItems.value = rebasePosition(current, selectedIndex, routeCount);
+      return;
+    }
+    motionEpoch.value += 1;
+    positionItems.value = rebasePosition(target, selectedIndex, routeCount);
   }, [
     carouselBrowse,
     pendingRouteName,
     positionItems,
+    motionEpoch,
     selectedIndex,
     selectedRoute.name,
-    visibleRoutes.length,
+    routeCount,
   ]);
 
   // Pinned bar, always expanded. Dock width must match carouselWidth math
   // (screen padding + max width) so the infinite track clips and swipes correctly.
   const bottomLabelPad = insets.bottom > 0 ? 6 : spacing.sm;
+  const arrowButtonSize = Math.max(34, s(36));
+  const arrowIconSize = Math.max(17, s(18));
+  const dark = theme.name === 'dark';
+  // Frosted discs — match dock glass (BlurView underlay; never nest remounting chrome).
+  const arrowIconColor = dark ? theme.textSecondary : palette.ink1;
 
+  const renderRailArrow = (
+    direction: 'prev' | 'next',
+  ) => {
+    const isPrev = direction === 'prev';
+    return (
+      <AgentTestId
+        testID={
+          isPrev
+            ? AgentUiIds.tabs.carouselPrev
+            : AgentUiIds.tabs.carouselNext
+        }
+        label={isPrev ? 'Previous tabs' : 'Next tabs'}
+        onPress={() => nudgeCarousel(isPrev ? 1 : -1)}
+        style={[
+          styles.railArrow,
+          {
+            width: itemWidth,
+            minHeight: layout.minTapTarget,
+            paddingVertical: spacing.xxs,
+          },
+        ]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isPrev ? 'Previous tabs' : 'Next tabs'}
+          hitSlop={4}
+          onPress={() => nudgeCarousel(isPrev ? 1 : -1)}
+          style={({ pressed }) => [
+            styles.railArrowHit,
+            pressed && styles.railArrowPressed,
+          ]}>
+          <View
+            style={[
+              styles.railArrowGlyph,
+              {
+                width: arrowButtonSize,
+                height: arrowButtonSize,
+                borderRadius: arrowButtonSize / 2,
+                backgroundColor: dark
+                  ? 'rgba(8, 12, 22, 0.36)'
+                  : 'rgba(255, 255, 255, 0.36)',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: dark
+                  ? 'rgba(255,255,255,0.16)'
+                  : 'rgba(255,255,255,0.65)',
+                overflow: 'hidden',
+              },
+            ]}>
+            <BlurView
+              intensity={dark ? 40 : 52}
+              tint={dark ? 'dark' : 'light'}
+              pointerEvents="none"
+              style={StyleSheet.absoluteFill}
+            />
+            <Symbol
+              name={isPrev ? 'chevron-left' : 'chevron-right'}
+              size={arrowIconSize}
+              color={arrowIconColor}
+            />
+          </View>
+          {/* Match tab caption height so the disc lines up with tab icons. */}
+          <View style={{ height: s(11), width: '100%' }} />
+        </Pressable>
+      </AgentTestId>
+    );
+  };
+
+  // Blur as sibling underlay only — never parent remounting tab chrome.
+  // Children inside BlurView caused Fabric `unmountChildComponentView` crashes.
   return (
     <View
       onLayout={(event) =>
@@ -370,22 +474,44 @@ export function FloatingTabBar({
           paddingHorizontal: layout.screenPadding,
           paddingTop: spacing.xxs,
           paddingBottom: bottomLabelPad,
-          // Fill under the capsule so home-indicator pad isn't a content hole.
-          backgroundColor: theme.backgroundElevated,
+          // Frosted dock so Travel (and other tabs) keep a glass chrome edge.
+          backgroundColor: dark
+            ? 'rgba(8, 12, 22, 0.42)'
+            : 'rgba(255, 255, 255, 0.42)',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: dark
+            ? 'rgba(255,255,255,0.12)'
+            : 'rgba(255,255,255,0.55)',
+          overflow: 'hidden',
         },
       ]}>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
-          collapsable={false}
+      <BlurView
+        intensity={dark ? 42 : 56}
+        tint={dark ? 'dark' : 'light'}
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[
+          styles.capsule,
+          {
+            backgroundColor: 'transparent',
+          },
+        ]}>
+        <View
           style={[
-            styles.capsule,
-            { backgroundColor: theme.backgroundElevated },
+            styles.railEdge,
+            {
+              left: capsuleInset,
+              width: itemWidth,
+            },
           ]}>
-          <View
-            style={[
-              styles.capsuleClip,
-              { paddingHorizontal: capsuleInset },
-            ]}>
+          {renderRailArrow('prev')}
+        </View>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            collapsable={false}
+            style={[styles.capsuleClip, { width: itemWidth * VISIBLE_TAB_COUNT }]}>
             <Animated.View
               style={[
                 styles.carouselTrack,
@@ -413,7 +539,7 @@ export function FloatingTabBar({
                 ? 'Vision Board'
                 : meta.label);
 
-          const onPress = () => {
+          const selectTab = () => {
             // Only ignore the synthetic press at the end of a pan — never a
             // stuck global claim flag (that made the whole bar untappable).
             if (suppressPressAfterPan.current) {
@@ -427,22 +553,32 @@ export function FloatingTabBar({
             });
 
             if (!event.defaultPrevented) {
+              const routeIndex = visibleRoutes.findIndex(
+                (item) => item.name === route.name,
+              );
+              // Cancel any in-flight pan spring so it can't overwrite this jump.
+              motionEpoch.value += 1;
+              // Rail first (shared value), then navigate — feels instant.
+              const targetItems = shortestTargetPosition(
+                positionItems.value,
+                routeIndex < 0 ? selectedIndex : routeIndex,
+                routeCount,
+              );
+              positionItems.value = targetItems;
               useUI.setState({
                 carouselPendingRouteName: route.name,
-                carouselSwipeClaimed: true,
+                carouselSwipeClaimed: false,
+                carouselBrowse: null,
               });
-              // Navigate immediately; menu centering finishes after.
-              // Re-selecting a tab also returns a nested stack to its root.
-              router.navigate(TAB_META[route.name].href);
-              const targetItems = centerSlot - slotIndex;
-              positionItems.value = withSpring(
-                targetItems,
-                SELECTION_SPRING,
-                (finished) => {
-                  if (finished) scheduleOnRN(finishSelection, route.name);
-                  else scheduleOnRN(clearSelectionLock);
-                },
-              );
+              // Direct tab jump when switching; href navigate when re-selecting
+              // so nested stacks pop to root. Pending selection stays until
+              // `selectedRoute` matches (see effect above) so the accent never
+              // snaps back to the previous tab for a frame.
+              if (focused) {
+                router.navigate(TAB_META[route.name].href);
+              } else {
+                navigation.navigate(route.name, route.params);
+              }
             }
           };
 
@@ -459,7 +595,7 @@ export function FloatingTabBar({
               accessibilityLabel={accessibilityLabel}
               hitSlop={{ top: 4, bottom: 4 }}
               onLongPress={onLongPress}
-              onPress={onPress}
+              onPress={selectTab}
               style={({ pressed }) => [
                 styles.tab,
                 {
@@ -524,19 +660,19 @@ export function FloatingTabBar({
           );
               })}
             </Animated.View>
-          </View>
-          <View
-            pointerEvents="none"
-            style={[styles.scrollHint, styles.scrollHintLeft]}>
-            <Symbol name="chevron-left" size={10} color={theme.textTertiary} />
-          </View>
-          <View
-            pointerEvents="none"
-            style={[styles.scrollHint, styles.scrollHintRight]}>
-            <Symbol name="chevron-right" size={10} color={theme.textTertiary} />
-          </View>
-        </Animated.View>
-      </GestureDetector>
+          </Animated.View>
+        </GestureDetector>
+        <View
+          style={[
+            styles.railEdge,
+            {
+              right: capsuleInset,
+              width: itemWidth,
+            },
+          ]}>
+          {renderRailArrow('next')}
+        </View>
+      </View>
     </View>
   );
 }
@@ -553,27 +689,43 @@ const styles = StyleSheet.create({
   },
   capsule: {
     flex: 1,
-  },
-  capsuleClip: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'stretch',
+    justifyContent: 'center',
+  },
+  capsuleClip: {
     overflow: 'hidden',
   },
-  scrollHint: {
+  // Pin chevrons to equal insets so the 3-tab window stays true-center
+  // even if slot widths round unevenly.
+  railEdge: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
   },
-  scrollHintLeft: {
-    left: 2,
+  railArrow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+    width: '100%',
+    height: '100%',
   },
-  scrollHintRight: {
-    right: 2,
+  railArrowHit: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  railArrowGlyph: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  railArrowPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.96 }],
   },
   carouselTrack: {
     flexDirection: 'row',

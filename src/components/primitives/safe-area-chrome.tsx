@@ -1,12 +1,13 @@
 import type { ImageSource } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useMemo,
-    useState,
-    type PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 
 type SafeAreaChromeOptions = {
@@ -25,9 +26,19 @@ type SafeAreaChromeState = {
   backgroundImageBlurRadius: number | undefined;
 };
 
+type SafeAreaChromeOverlayState = {
+  overlay: ReactNode | undefined;
+  height: number | undefined;
+};
+
 type SafeAreaChromeSetter = (
   color: string | undefined,
   options?: SafeAreaChromeOptions,
+) => void;
+
+type SafeAreaChromeOverlaySetter = (
+  overlay: ReactNode | undefined,
+  height: number | undefined,
 ) => void;
 
 const SafeAreaChromeStateContext = createContext<SafeAreaChromeState>({
@@ -37,6 +48,13 @@ const SafeAreaChromeStateContext = createContext<SafeAreaChromeState>({
   backgroundImageBlurRadius: undefined,
 });
 const SafeAreaChromeSetterContext = createContext<SafeAreaChromeSetter | null>(null);
+
+const SafeAreaChromeOverlayStateContext = createContext<SafeAreaChromeOverlayState>({
+  overlay: undefined,
+  height: undefined,
+});
+const SafeAreaChromeOverlaySetterContext =
+  createContext<SafeAreaChromeOverlaySetter | null>(null);
 
 /**
  * Owns the non-scrolling status-bar wash for the app shell.
@@ -50,6 +68,10 @@ export function SafeAreaChromeProvider({ children }: PropsWithChildren) {
     backgroundImageHeight: undefined,
     backgroundImageBlurRadius: undefined,
   });
+  const [overlayState, setOverlayState] = useState<SafeAreaChromeOverlayState>({
+    overlay: undefined,
+    height: undefined,
+  });
   const setChrome = useCallback<SafeAreaChromeSetter>((color, options) => {
     setState({
       color,
@@ -58,11 +80,18 @@ export function SafeAreaChromeProvider({ children }: PropsWithChildren) {
       backgroundImageBlurRadius: options?.backgroundImageBlurRadius,
     });
   }, []);
+  const setOverlay = useCallback<SafeAreaChromeOverlaySetter>((overlay, height) => {
+    setOverlayState({ overlay, height });
+  }, []);
 
   return (
     <SafeAreaChromeSetterContext.Provider value={setChrome}>
       <SafeAreaChromeStateContext.Provider value={state}>
-        {children}
+        <SafeAreaChromeOverlaySetterContext.Provider value={setOverlay}>
+          <SafeAreaChromeOverlayStateContext.Provider value={overlayState}>
+            {children}
+          </SafeAreaChromeOverlayStateContext.Provider>
+        </SafeAreaChromeOverlaySetterContext.Provider>
       </SafeAreaChromeStateContext.Provider>
     </SafeAreaChromeSetterContext.Provider>
   );
@@ -89,6 +118,11 @@ export function useSafeAreaChromeBackground(): {
     }),
     [backgroundImage, backgroundImageBlurRadius, backgroundImageHeight],
   );
+}
+
+/** Decorative React overlay (stars / sun) painted under the status bar. */
+export function useSafeAreaChromeOverlayLayer(): SafeAreaChromeOverlayState {
+  return useContext(SafeAreaChromeOverlayStateContext);
 }
 
 /**
@@ -121,6 +155,28 @@ export function useSafeAreaChrome(
       color,
       setChrome,
     ]),
+  );
+}
+
+/**
+ * Decorative overlay on the app shell (window y=0), independent of color/image
+ * chrome so Travel layout wash and itinerary sky can coexist.
+ * Use for art that must continue behind the clock / Dynamic Island.
+ */
+export function useSafeAreaChromeOverlay(
+  overlay: ReactNode | undefined,
+  height: number | undefined,
+) {
+  const setOverlay = useContext(SafeAreaChromeOverlaySetterContext);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!setOverlay || overlay == null || height == null || height <= 0) {
+        return;
+      }
+      setOverlay(overlay, height);
+      return () => setOverlay(undefined, undefined);
+    }, [height, overlay, setOverlay]),
   );
 }
 

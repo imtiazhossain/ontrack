@@ -38,6 +38,13 @@ describe('travel plan normalization', () => {
         coverUri: 'https://example.com/photo.jpg',
       })?.coverUri,
     ).toBeUndefined();
+    expect(
+      normalizeTravelPlan({
+        ...legacyPlan,
+        coverUri:
+          'https://example.supabase.co/storage/v1/object/sign/app-media/user-1/travel/cover.jpg?token=x',
+      })?.coverUri,
+    ).toBe('ontrack-media:user-1/travel/cover.jpg');
   });
 
   it('keeps valid expenses and drops malformed ones', () => {
@@ -105,8 +112,11 @@ describe('travel plan normalization', () => {
         durationMinutes: 90,
         details: undefined,
         bookingUrl: undefined,
+        shareMode: 'private',
         flight: undefined,
+        transport: undefined,
         rental: undefined,
+        stay: undefined,
       },
     ]);
   });
@@ -140,9 +150,12 @@ describe('travel plan normalization', () => {
         durationMinutes: 15,
         details: undefined,
         bookingUrl: undefined,
+        shareMode: 'private',
         photoUris: ['file:///Documents/travel-moments/sunset.jpg'],
         flight: undefined,
+        transport: undefined,
         rental: undefined,
+        stay: undefined,
       },
     ]);
   });
@@ -179,14 +192,19 @@ describe('travel plan normalization', () => {
         durationMinutes: 60,
         details: undefined,
         bookingUrl: undefined,
+        shareMode: 'private',
         flight: undefined,
+        transport: undefined,
         rental: {
           company: 'Hertz',
           confirmationCode: 'K98M7X2PQ1',
           pickupLocation: 'KEF',
+          dropoffLocation: undefined,
+          vehicleClass: undefined,
           dropoffDate: '2026-09-14',
           dropoffMinutes: 480,
         },
+        stay: undefined,
       },
     ]);
   });
@@ -335,8 +353,11 @@ describe('travel plan normalization', () => {
         durationMinutes: 90,
         details: undefined,
         bookingUrl: undefined,
+        shareMode: 'private',
         flight: undefined,
+        transport: undefined,
         rental: undefined,
+        stay: undefined,
       },
     ]);
   });

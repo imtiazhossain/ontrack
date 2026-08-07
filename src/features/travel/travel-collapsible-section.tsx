@@ -8,11 +8,11 @@ import {
   TRAVEL_TITLE_ICON_GAP,
   travelOverlineStyle,
 } from '@/features/travel/travel-chrome';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
-  TRAVEL_EDITORIAL_ACCENT,
+  travelAccent,
   travelCardBorder,
   travelCardFill,
-  travelMainCardFill,
   travelPanelTint,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -65,7 +65,8 @@ export function TravelCollapsibleSection({
   const theme = useTheme();
   const { s, spacing } = useResponsive();
   const label = count === undefined ? title : `${title} (${count})`;
-  const accent = accentColor ?? TRAVEL_EDITORIAL_ACCENT;
+  // Theme-aware sky blue — light `#2474A8` washes out on dark glass.
+  const accent = accentColor ?? travelAccent(theme);
   const tap = compact
     ? nested
       ? Math.max(28, s(28))
@@ -87,52 +88,41 @@ export function TravelCollapsibleSection({
     leadingIconSize !== undefined
       ? Math.max(leadingIconSize, s(leadingIconSize))
       : Math.max(28, s(30));
-  const mainCardFill = travelMainCardFill(theme);
-  const headerBackground = nested
+  const cardRadius = compact ? Math.max(11, s(12)) : Math.max(16, s(18));
+  const headerBackground = nested || card
     ? 'transparent'
-    : card
-      ? mainCardFill
-      : compact
-        ? travelCardFill(theme)
-        : travelPanelTint(theme);
+    : compact
+      ? travelCardFill(theme)
+      : travelPanelTint(theme);
 
-  return (
+  const header = (
     <View
       style={[
-        styles.section,
-        card
-          ? {
-              borderRadius: compact ? Math.max(11, s(12)) : Math.max(16, s(18)),
-              borderCurve: 'continuous',
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: travelCardBorder(theme),
-              backgroundColor: mainCardFill,
-              boxShadow: compact ? TRAVEL_HEADER_SHADOW : undefined,
-              overflow: 'hidden',
-            }
-          : { gap: compact ? spacing.xxs : spacing.sm },
+        styles.headerShell,
+        {
+          minHeight: tap,
+          gap: headerGap,
+          paddingLeft: nested ? 0 : spacing.md,
+          paddingRight: nested ? 0 : spacing.md,
+          paddingVertical: nested || compact ? 0 : spacing.xs,
+          borderRadius: card || nested ? 0 : radii.lg,
+          backgroundColor: headerBackground,
+          borderWidth: card || nested ? 0 : StyleSheet.hairlineWidth,
+          borderBottomWidth: card && expanded ? StyleSheet.hairlineWidth : 0,
+          borderColor: nested
+            ? 'transparent'
+            : card
+              ? theme.name === 'dark'
+                ? 'rgba(255,255,255,0.12)'
+                : 'rgba(255,255,255,0.45)'
+              : travelCardBorder(theme),
+        },
       ]}>
-      <View
-        style={[
-          styles.headerShell,
-          {
-            minHeight: tap,
-            gap: headerGap,
-            paddingLeft: nested ? 0 : spacing.md,
-            paddingRight: nested ? 0 : spacing.md,
-            paddingVertical: nested || compact ? 0 : spacing.xs,
-            borderRadius: card || nested ? 0 : radii.lg,
-            backgroundColor: headerBackground,
-            borderWidth: card || nested ? 0 : StyleSheet.hairlineWidth,
-            borderBottomWidth: card && expanded ? StyleSheet.hairlineWidth : 0,
-            borderColor: nested ? 'transparent' : travelCardBorder(theme),
-          },
-        ]}>
-        <AgentTestId
-          testID={toggleTestID}
-          label={label}
-          onPress={onToggle}
-          style={styles.toggleWrapper}>
+      <AgentTestId
+        testID={toggleTestID}
+        label={label}
+        onPress={onToggle}
+        style={styles.toggleWrapper}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ expanded }}
@@ -162,8 +152,12 @@ export function TravelCollapsibleSection({
           <AppText
             variant={compact && nested ? 'overline' : titleVariant}
             color="accent"
-            fit
+            // Parent card titles ("Trip Tools", "Timeline") must not use fit —
+            // adjustsFontSizeToFit was crushing them to unreadably small sizes
+            // inside the glass header row. Nested kind labels may still shrink.
+            fit={Boolean(compact && nested) || !compact}
             fitMinimumScale={compact && nested ? 0.9 : undefined}
+            numberOfLines={1}
             style={[
               travelOverlineStyle,
               styles.title,
@@ -178,7 +172,7 @@ export function TravelCollapsibleSection({
               style={[
                 styles.countBadge,
                 {
-                  backgroundColor: TRAVEL_EDITORIAL_ACCENT,
+                  backgroundColor: accent,
                   minHeight: Math.max(22, s(22)),
                   paddingHorizontal: spacing.xs,
                 },
@@ -196,7 +190,7 @@ export function TravelCollapsibleSection({
                 minWidth: chevronBox,
                 width: chevronBox,
                 borderRadius: nested ? 0 : radii.pill,
-                backgroundColor: nested || compact
+                backgroundColor: nested || compact || card
                   ? 'transparent'
                   : travelCardFill(theme),
               },
@@ -208,43 +202,66 @@ export function TravelCollapsibleSection({
             />
           </View>
         </Pressable>
-        </AgentTestId>
-        {onAddPress ? (
-          <AgentTestId
-            testID={addTestID}
-            label={`Add to ${title}`}
+      </AgentTestId>
+      {onAddPress ? (
+        <AgentTestId
+          testID={addTestID}
+          label={`Add to ${title}`}
+          onPress={onAddPress}
+          style={styles.addButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Add to ${title}`}
             onPress={onAddPress}
-            style={styles.addButton}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Add to ${title}`}
-              onPress={onAddPress}
-              hitSlop={6}
-              style={[
-                {
-                  minHeight: tap,
-                  minWidth: tap,
-                  borderRadius: radii.pill,
-                  backgroundColor: nested
-                    ? 'transparent'
-                    : travelCardFill(theme),
-                },
-              ]}>
-              <Symbol name="add" size="sm" color={TRAVEL_EDITORIAL_ACCENT} />
-            </Pressable>
-          </AgentTestId>
-        ) : null}
-      </View>
-      {expanded ? (
-        <View
-          style={
-            card
-              ? { padding: flushContent ? spacing.xxs : compact ? spacing.xs : spacing.md }
-              : undefined
-          }>
-          {children}
-        </View>
+            hitSlop={6}
+            style={[
+              {
+                minHeight: tap,
+                minWidth: tap,
+                borderRadius: radii.pill,
+                backgroundColor: nested || card
+                  ? 'transparent'
+                  : travelCardFill(theme),
+              },
+            ]}>
+            <Symbol name="add" size="sm" color={accent} />
+          </Pressable>
+        </AgentTestId>
       ) : null}
+    </View>
+  );
+
+  const body =
+    expanded ? (
+      <View
+        style={
+          card
+            ? { padding: flushContent ? spacing.xxs : compact ? spacing.xs : spacing.md }
+            : undefined
+        }>
+        {children}
+      </View>
+    ) : null;
+
+  if (card) {
+    return (
+      <TravelHomeGlass
+        clear
+        style={{
+          borderRadius: cardRadius,
+          borderCurve: 'continuous',
+          boxShadow: compact ? TRAVEL_HEADER_SHADOW : undefined,
+        }}>
+        {header}
+        {body}
+      </TravelHomeGlass>
+    );
+  }
+
+  return (
+    <View style={[styles.section, { gap: compact ? spacing.xxs : spacing.sm }]}>
+      {header}
+      {body}
     </View>
   );
 }
@@ -291,9 +308,11 @@ const styles = StyleSheet.create({
   compactNestedTitle: {
     letterSpacing: 1.2,
   },
-  /** Match icon optical center — callout’s default line-box sits high next to a 16pt glyph. */
+  /** Match icon optical center next to the 16pt leading glyph. */
   compactCardTitle: {
-    lineHeight: 18,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     letterSpacing: -0.1,
   },
 });

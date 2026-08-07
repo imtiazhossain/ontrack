@@ -4,8 +4,9 @@ import { AppText, Symbol } from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
 import { tripDatesBadge } from '@/features/travel/date-range';
 import { TRAVEL_TITLE_ICON_GAP } from '@/features/travel/travel-chrome';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { travelMainCardFill, travelPillBg } from '@/features/travel/travel-surface';
+import { travelPillBg } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -31,7 +32,7 @@ interface TravelTripDatesRowProps {
   testID?: string;
 }
 
-/** Trip-card dates strip — cream bar, calendar well, outlined duration / countdown pill. */
+/** Trip-card dates strip — glass bar, outlined duration / countdown pill. */
 export function TravelTripDatesRow({
   startLabel,
   endLabel,
@@ -45,8 +46,6 @@ export function TravelTripDatesRow({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
-  const calendarTone = chrome.icons.calendar;
-  const iconBox = compact ? Math.max(28, s(30)) : Math.max(34, s(36));
   const titleIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
   const durationLabel = `${dayCount} ${dayCount === 1 ? 'Day' : 'Days'}`;
   const statusBadge =
@@ -79,35 +78,23 @@ export function TravelTripDatesRow({
     label: accessibilityLabel,
     onPress: onPress ? handlePress : undefined,
   });
+  const radius = compact ? Math.max(12, s(14)) : Math.max(16, s(18));
   const rowStyle = [
     styles.row,
     {
-      backgroundColor: compact ? travelMainCardFill(theme) : travelPillBg(theme),
-      borderColor: chrome.fieldBorder,
       boxShadow: TRAVEL_DATE_SHADOW,
       minHeight: compact ? Math.max(52, s(54)) : Math.max(58, s(60)),
       paddingHorizontal: compact ? rs.md : rs.lg,
       paddingVertical: compact ? rs.sm : rs.sm,
       gap: titleIconGap,
-      borderRadius: compact ? Math.max(12, s(14)) : Math.max(16, s(18)),
+      borderRadius: radius,
+      // Non-compact fallback keeps a soft pill fill under glass intensity.
+      ...(compact ? {} : { backgroundColor: travelPillBg(theme) }),
     },
   ];
 
   const content = (
     <>
-      <View
-        style={[
-          styles.iconWell,
-          {
-            width: iconBox,
-            height: iconBox,
-            borderRadius: compact ? Math.max(8, s(9)) : radii.sm,
-            backgroundColor: calendarTone.bg,
-            boxShadow: theme.name === 'light' ? TRAVEL_DATE_SHADOW : undefined,
-          },
-        ]}>
-        <Symbol name="calendar" size={compact ? 18 : 'sm'} color={calendarTone.fg} />
-      </View>
       <View style={styles.copy}>
         {!compact ? (
           <AppText
@@ -206,10 +193,16 @@ export function TravelTripDatesRow({
     </>
   );
 
+  const plate = (
+    <TravelHomeGlass clear style={rowStyle}>
+      {content}
+    </TravelHomeGlass>
+  );
+
   if (!onPress) {
     return (
-      <View accessibilityRole="text" accessibilityLabel={accessibilityLabel} style={rowStyle}>
-        {content}
+      <View accessibilityRole="text" accessibilityLabel={accessibilityLabel}>
+        {plate}
       </View>
     );
   }
@@ -223,8 +216,8 @@ export function TravelTripDatesRow({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint="Opens a calendar to change the trip dates"
       onPress={handlePress}
-      style={({ pressed }) => [rowStyle, pressed && styles.pressed]}>
-      {content}
+      style={({ pressed }) => [pressed && styles.pressed]}>
+      {plate}
     </Pressable>
   );
 }
@@ -233,15 +226,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderCurve: 'continuous',
-  },
-  iconWell: {
-    borderRadius: radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   copy: {
     flex: 1,

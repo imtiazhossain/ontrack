@@ -31,6 +31,7 @@ usage:
   agent-ui.sh hit <x> <y> | --pixel <px> <py> | --overlay on|off|toggle
   agent-ui.sh source <id|keyPath> | --label TEXT
   agent-ui.sh overlay on|off|toggle|status
+  agent-ui.sh devmode on|off|release|status
 EOF
   exit 2
 }
@@ -98,6 +99,9 @@ case "${CMD}" in
     ;;
   overlay)
     exec "${ROOT}/scripts/agent-ui-overlay.sh" "$@"
+    ;;
+  devmode)
+    exec "${ROOT}/scripts/agent-ui-devmode.sh" "$@"
     ;;
   -h|--help|help)
     usage

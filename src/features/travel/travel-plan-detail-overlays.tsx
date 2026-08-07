@@ -10,9 +10,14 @@ import {
     type TravelImportResult,
 } from '@/features/travel/travel-import-result-modal';
 import { TravelItineraryAddSheet } from '@/features/travel/travel-itinerary-add-sheet';
+import {
+  TravelItineraryShareSheet,
+  type TravelItineraryShareDraft,
+} from '@/features/travel/travel-itinerary-share-sheet';
 import { TravelRemoveConfirmModal } from '@/features/travel/travel-remove-confirm-modal';
 import { TravelTimelineAddModal } from '@/features/travel/travel-timeline-add-modal';
 import { TravelTripDatesSheet } from '@/features/travel/travel-trip-dates-sheet';
+import { TravelTripNotesSheet } from '@/features/travel/travel-trip-notes-sheet';
 import type { TravelItemKind, TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import type { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
 import type { TravelPlanDetailAddForm } from '@/features/travel/use-travel-plan-detail-add-form';
@@ -28,6 +33,8 @@ type TravelPlanDetailOverlaysProps = {
   itemMedia: ReturnType<typeof useTravelPlanItemMedia>;
   editingTripDates: boolean;
   setEditingTripDates: (open: boolean) => void;
+  editingTripNotes: boolean;
+  setEditingTripNotes: (open: boolean) => void;
   openExpenseSheet: boolean;
   setOpenExpenseSheet: (open: boolean) => void;
   expenseDraft?: ExpenseFormState;
@@ -51,6 +58,10 @@ type TravelPlanDetailOverlaysProps = {
     sourcePlan: TravelPlan,
     draft: ExpenseFormState,
   ) => void;
+  sharingItem?: TravelItineraryItem;
+  localUserId?: string;
+  onCloseShare: () => void;
+  onSaveShare: (draft: TravelItineraryShareDraft) => void;
 };
 
 export function TravelPlanDetailOverlays({
@@ -61,6 +72,8 @@ export function TravelPlanDetailOverlays({
   itemMedia,
   editingTripDates,
   setEditingTripDates,
+  editingTripNotes,
+  setEditingTripNotes,
   openExpenseSheet,
   setOpenExpenseSheet,
   expenseDraft,
@@ -76,6 +89,10 @@ export function TravelPlanDetailOverlays({
   addItem,
   goToItinerarySafely,
   openImportedExpenseReview,
+  sharingItem,
+  localUserId,
+  onCloseShare,
+  onSaveShare,
 }: TravelPlanDetailOverlaysProps) {
   return (
     <>
@@ -97,6 +114,23 @@ export function TravelPlanDetailOverlays({
             updatedAt: new Date().toISOString(),
           });
           setEditingTripDates(false);
+        }}
+      />
+      <TravelTripNotesSheet
+        visible={editingTripNotes}
+        tripTitle={plan.title}
+        notes={plan.notes ?? ''}
+        onClose={() => setEditingTripNotes(false)}
+        onSave={(nextNotes) => {
+          const latest =
+            useTravel.getState().plans.find((entry) => entry.id === plan.id) ??
+            plan;
+          updatePlan({
+            ...latest,
+            notes: nextNotes,
+            updatedAt: new Date().toISOString(),
+          });
+          setEditingTripNotes(false);
         }}
       />
       <TravelTimelineAddModal
@@ -233,6 +267,14 @@ export function TravelPlanDetailOverlays({
       <BookingOpenSheet
         target={devBookingOpen}
         onClose={() => setDevBookingOpen(null)}
+      />
+      <TravelItineraryShareSheet
+        visible={Boolean(sharingItem)}
+        plan={plan}
+        item={sharingItem}
+        localUserId={localUserId}
+        onClose={onCloseShare}
+        onSave={onSaveShare}
       />
     </>
   );

@@ -20,13 +20,13 @@ import {
   toggleLightDarkThemePreference,
 } from './visibility';
 
-/** Match Travel Home add FAB — white circle, soft elevation, navy mark. */
+/** Match Travel Home add FAB — white circle, soft elevation, black mark. */
 const BUTTON_SIZE = 48;
 const EDGE_PAD = 10;
-const INK = '#16255B';
+const INK = '#000000';
 const SURFACE = '#FFFFFF';
-const BORDER = 'rgba(22,37,91,0.08)';
-const SHADOW = '0 8px 20px rgba(22,37,91,0.16)';
+const BORDER = 'rgba(0,0,0,0.08)';
+const SHADOW = '0 8px 20px rgba(0,0,0,0.16)';
 
 /** Session-persisted position so remounts keep the FAB put. */
 let savedLeft: number | null = null;
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     boxShadow: SHADOW,
-    shadowColor: '#16255B',
+    shadowColor: '#000000',
     shadowOpacity: 0.16,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 8 },

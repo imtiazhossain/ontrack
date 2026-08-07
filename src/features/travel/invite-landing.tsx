@@ -20,6 +20,10 @@ import {
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelSkyBackdrop, TravelSurfaceCard } from '@/features/travel/travel-surface';
+import {
+  markInviteSnapshotItinerary,
+  pullTravelTripItinerary,
+} from '@/services/travel/itinerary-collaboration';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -136,10 +140,15 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
               ...decoded,
               id: travelInviteLocalId(code),
               chatAccessCode: code,
+              itinerary: markInviteSnapshotItinerary(
+                decoded.itinerary,
+                'host',
+              ),
               createdAt: now,
               updatedAt: now,
             };
             savePlan(memberCopy);
+            void pullTravelTripItinerary(memberCopy).catch(() => undefined);
             replaceTravelActivities(
               memberCopy.id,
               travelCalendarDrafts(memberCopy),
@@ -156,12 +165,14 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
             );
             return;
           }
-          savePlan({
+          const synced = {
             ...existingPlan,
             chatAccessCode: code,
             ...(hostTripId ? { hostTripId } : {}),
             updatedAt: new Date().toISOString(),
-          });
+          };
+          savePlan(synced);
+          void pullTravelTripItinerary(synced).catch(() => undefined);
         }
         setAddonEnabled('travel', true);
         handledInvite.current = invite;
@@ -181,10 +192,12 @@ export function TravelInviteLanding({ invite }: { invite?: string }) {
             ? travelInviteLocalId(invite.slice(2))
             : `trip-invite-${travelPlanIdentityKey(decoded)}`,
         chatAccessCode: isShortInvite ? invite.slice(2) : undefined,
+        itinerary: markInviteSnapshotItinerary(decoded.itinerary, 'host'),
         createdAt: now,
         updatedAt: now,
       };
       savePlan(plan);
+      void pullTravelTripItinerary(plan).catch(() => undefined);
       replaceTravelActivities(plan.id, travelCalendarDrafts(plan));
       setAddonEnabled('travel', true);
       handledInvite.current = invite;

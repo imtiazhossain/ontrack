@@ -146,8 +146,8 @@ export function DeveloperHub() {
           label="Dev Mode"
           detail={
             devModeEnabled
-              ? 'On: snapshots your live data and pauses cloud sync. Demos and seeds stay local. Turn off to restore your account as it was.'
-              : 'Off: your live account is active. Turn on before seeding so demos never sync or stick to your real data.'
+              ? 'On: snapshots your live data and pauses cloud sync. Demo seeds stay local and are removed when you turn this off. Real trips you create or edit while Dev Mode is on are kept.'
+              : 'Off by default. Agents turn this on only while seeding mock data, then turn it off again. Turn on manually before seeding from here.'
           }
           detailNumberOfLines={4}
           icon="maintenance"

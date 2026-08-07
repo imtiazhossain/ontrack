@@ -161,6 +161,15 @@ export function agentUiNavigate(href: string): boolean {
   return true;
 }
 
+/** Trip id from `/travel/<id>` / `/travel/<id>/hub` (query ignored). */
+export function travelPlanIdFromRoute(route: string | null | undefined): string | null {
+  if (!route) return null;
+  const path = route.trim().split(/[?#]/)[0] ?? '';
+  const match = /(?:^|\/)travel\/([^/]+)/i.exec(path);
+  const id = match?.[1]?.trim();
+  return id || null;
+}
+
 /**
  * Resolve an agent destination to an Expo Router href.
  * Accepts aliases (`today`), absolute paths (`/travel/abc`), bare segments

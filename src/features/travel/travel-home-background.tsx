@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,14 +10,16 @@ export const TRAVEL_HOME_ATMOSPHERE = require('../../../assets/images/travel/hea
 export const TRAVEL_HOME_ATMOSPHERE_NIGHT = require('../../../assets/images/travel/header-atmosphere-iceland-aurora.png');
 
 type TravelHomeBackgroundProps = {
-  /** Reserved for future trip-synced heroes; cards own destination photography. */
-  imageUri?: string;
   enabled: boolean;
 };
 
-/** Window-space height for the atmosphere band (includes status-bar inset). */
+/**
+ * Window-space height for the atmosphere hero band (includes status-bar inset).
+ * Matches the mock: ~top third, soft-fading into page paper before Your Trips —
+ * not a full-page photo.
+ */
 export function travelHomeAtmosphereHeight(windowHeight: number, topInset: number): number {
-  return Math.round(windowHeight * 0.42) + topInset;
+  return Math.round(windowHeight * 0.34) + topInset;
 }
 
 /** Day mountain wash or Iceland aurora — same geometry either theme. */
@@ -27,10 +28,9 @@ export function travelHomeAtmosphereSource(themeName: string) {
 }
 
 /**
- * Scenic Travel home backdrop.
- * Paints the content-area wash; the matching status-bar strip is registered
- * via `useSafeAreaChrome` so AppSafeArea fills the notch band (SafeAreaView
- * clips negative offsets, so the chrome layer owns that region).
+ * Page paper under the hero band + soft fade at the photo’s bottom edge.
+ * The atmosphere photo itself is painted once on AppSafeArea via
+ * `useSafeAreaChrome` at `travelHomeAtmosphereHeight` (not full-bleed).
  */
 export function TravelHomeBackground({
   enabled: _enabled,
@@ -39,77 +39,37 @@ export function TravelHomeBackground({
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const dark = theme.name === 'dark';
-  const paper = dark ? theme.backgroundPrimary : travelHomeTokens.colors.surfaceMuted;
-  /** Include status-bar inset so the photo aligns with the chrome-layer strip. */
-  const photoHeight = travelHomeAtmosphereHeight(height, insets.top);
-  const atmosphere = travelHomeAtmosphereSource(theme.name);
+  /** Content-space height of the upper atmosphere band. */
+  const contentPhotoHeight = travelHomeAtmosphereHeight(height, insets.top) - insets.top;
+  const paper = dark ? theme.backgroundPrimary : travelHomeTokens.colors.surface;
 
   return (
-    <View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFill,
-        styles.root,
-        {
-          backgroundColor: dark
-            ? travelHomeTokens.colors.atmosphereNight
-            : travelHomeTokens.colors.surfaceMuted,
-        },
-      ]}>
-      <Image
-        source={atmosphere}
-        style={[
-          styles.photo,
-          {
-            top: -insets.top,
-            height: photoHeight,
-          },
-        ]}
-        contentFit="cover"
-        contentPosition={{ top: '0%', left: '50%' }}
-        blurRadius={travelHomeTokens.sizes.heroBlurRadius}
-      />
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.root]}>
+      {/* Soften the hard bottom edge of the chrome photo into paper. */}
       <LinearGradient
         pointerEvents="none"
         colors={
           dark
-            ? [
-                'rgba(4,10,24,0.05)',
-                'rgba(4,10,24,0.0)',
-                'rgba(8,14,28,0.45)',
-                paper,
-              ]
-            : [
-                'rgba(255,255,255,0.12)',
-                'rgba(255,255,255,0.0)',
-                'rgba(244,246,249,0.28)',
-                'rgba(244,246,249,0.72)',
-              ]
+            ? ['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', paper]
+            : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.55)', paper]
         }
-        locations={[0, 0.28, 0.68, 1]}
+        locations={[0.4, 0.78, 1]}
         style={[
           styles.fade,
           {
-            top: -insets.top,
-            // Stop short of a hard paper cut so card/sheet top curves stay visible.
-            height: photoHeight + 8,
+            top: 0,
+            height: contentPhotoHeight + 12,
           },
         ]}
       />
-      {/*
-        Curved paper sheet — large top radii so atmosphere peeks through
-        the corner wedges behind the first trip card (matches user mock).
-        Start slightly below the atmosphere band so card top-curves aren’t
-        flattened against an opaque rectangular wash.
-      */}
+      {/* Solid paper under Your Trips — photo must not continue full-page. */}
       <View
+        pointerEvents="none"
         style={[
-          styles.paperFill,
+          styles.paper,
           {
-            top: photoHeight - insets.top + Math.round(travelHomeTokens.radius.sheetTop * 0.35),
+            top: contentPhotoHeight,
             backgroundColor: paper,
-            borderTopLeftRadius: travelHomeTokens.radius.sheetTop,
-            borderTopRightRadius: travelHomeTokens.radius.sheetTop,
           },
         ]}
       />
@@ -119,25 +79,17 @@ export function TravelHomeBackground({
 
 const styles = StyleSheet.create({
   root: {
-    overflow: 'visible',
-  },
-  photo: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    width: '100%',
+    backgroundColor: 'transparent',
   },
   fade: {
     position: 'absolute',
     left: 0,
     right: 0,
   },
-  paperFill: {
+  paper: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
   },
 });

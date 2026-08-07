@@ -2,6 +2,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
     FadeIn,
+    FadeInDown,
     FadeOut,
     LinearTransition,
 } from 'react-native-reanimated';
@@ -36,6 +37,7 @@ import {
     titleCaseTravelKind,
     TRAVEL_TITLE_ICON_GAP,
 } from '@/features/travel/travel-chrome';
+import { isItineraryItemOwnedBy } from '@/features/travel/itinerary-visibility';
 import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
 import {
     kindAccent,
@@ -44,11 +46,10 @@ import {
 } from '@/features/travel/travel-kind-chrome';
 import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
     TRAVEL_CARD_SHADOW,
-    travelCardBorder,
     travelCardFill,
-    travelMainCardFill,
 } from '@/features/travel/travel-surface';
 import {
     flightCaptionInput,
@@ -91,6 +92,8 @@ export function TravelTimelineNode({
   leadingTimeLabel,
   allowStructuredEditing = true,
   showStructuredDetails = true,
+  /** Stagger entrance like Today activity cards. */
+  index = 0,
   accentColor,
   tintColor,
   editingFlightItemId,
@@ -131,6 +134,7 @@ export function TravelTimelineNode({
   onRemovePhoto,
   onRemove,
   onSaveNotes,
+  onShare,
 }: {
   item: TravelItineraryItemModel;
   plan: TravelPlan;
@@ -149,6 +153,8 @@ export function TravelTimelineNode({
   dense?: boolean;
   /** Hour label rendered in the dense title row (keeps time · icon · title vertically aligned). */
   leadingTimeLabel?: string;
+  /** Stagger entrance like Today activity cards. */
+  index?: number;
   /** Structured flight/stay/rental editors belong only in the transport section. */
   allowStructuredEditing?: boolean;
   /** Structured summaries and transport actions belong only in the transport section. */
@@ -196,10 +202,23 @@ export function TravelTimelineNode({
   onRemovePhoto: (uri: string) => void;
   onRemove: () => void;
   onSaveNotes: (notes: TravelItemNote[]) => void;
+  onShare?: () => void;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const { user } = useAuthSession();
+  const localUserId = user?.id;
+  const ownsItem = isItineraryItemOwnedBy(item, localUserId);
+  const shareCue =
+    ownsItem && (item.shareMode ?? 'private') === 'private'
+      ? 'Only you'
+      : ownsItem && (item.shareMode ?? 'private') === 'trip'
+        ? 'Shared with trip'
+        : ownsItem && (item.shareMode ?? 'private') === 'selected'
+          ? 'Shared with selected'
+          : !ownsItem && item.ownerUserId
+            ? 'From co-traveler'
+            : undefined;
   const [notesOpen, setNotesOpen] = useState(false);
   const [editingTransport, setEditingTransport] = useState(false);
   const [bookingOpen, setBookingOpen] = useState<Extract<
@@ -315,37 +334,17 @@ export function TravelTimelineNode({
     denseTimeWidth +
     (hasDenseTimeSlot ? denseIconGap : 0) +
     (showKindBadgeResolved ? kindPillSize + denseIconGap : 0);
-  const cardFill = dense
-    ? 'transparent'
-    : isCompactBoardCard
-      ? travelMainCardFill(theme)
-      : travelCardFill(theme);
+  const cardFill = dense ? 'transparent' : travelCardFill(theme);
   const collapsedBoardMinHeight = Math.max(64, s(68));
+  const cardRadius = dense
+    ? 0
+    : isCompactBoardCard
+      ? Math.max(16, s(18))
+      : compact
+        ? Math.max(10, s(11))
+        : 13;
 
-  return (
-    <Animated.View
-      layout={LinearTransition.duration(180)}
-      style={[
-        styles.nodeCard,
-        {
-          backgroundColor: cardFill,
-          borderRadius: dense
-            ? 0
-            : isCompactBoardCard
-              ? Math.max(16, s(18))
-              : compact
-                ? Math.max(10, s(11))
-                : 13,
-          borderCurve: 'continuous',
-          borderWidth: isCompactBoardCard ? StyleSheet.hairlineWidth : 0,
-          borderColor: isCompactBoardCard
-            ? travelCardBorder(theme)
-            : 'transparent',
-          boxShadow: dense || isCompactBoardCard ? undefined : TRAVEL_CARD_SHADOW,
-          overflow: 'hidden',
-        },
-      ]}
-    >
+  const nodeBody = (
       <View
         style={[
           styles.nodeBody,
@@ -416,7 +415,7 @@ export function TravelTimelineNode({
                 {leadingTimeLabel ? (
                   <AppText
                     variant="caption"
-                    color="tertiary"
+                    color="secondary"
                     fit
                     style={styles.denseTimeLabel}>
                     {leadingTimeLabel}
@@ -511,6 +510,11 @@ export function TravelTimelineNode({
                     {caption}
                   </AppText>
                 )
+              ) : null}
+              {shareCue && !isCompactBoardCard ? (
+                <AppText variant="caption" color="secondary" fit>
+                  {shareCue}
+                </AppText>
               ) : null}
             </View>
             <View
@@ -728,9 +732,11 @@ export function TravelTimelineNode({
                 allowStructuredEditing={allowStructuredEditing}
                 showStructuredDetails={showStructuredDetails}
                 isMoment={isMoment}
+                canShare={ownsItem && Boolean(onShare)}
                 align={dense ? 'left' : 'center'}
                 onOpenNotes={() => setNotesOpen(true)}
                 onAddPhotos={onAddPhotos}
+                onShare={onShare}
                 onBeginFlightEdit={onBeginFlightEdit}
                 onBeginRentalEdit={onBeginRentalEdit}
                 onBeginStayEdit={onBeginStayEdit}
@@ -742,6 +748,43 @@ export function TravelTimelineNode({
           </Animated.View>
         ) : null}
       </View>
+  );
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}
+      layout={LinearTransition.duration(180)}
+      style={[
+        styles.nodeCard,
+        {
+          borderRadius: cardRadius,
+          borderCurve: 'continuous',
+          overflow: 'hidden',
+          ...(isCompactBoardCard
+            ? {}
+            : {
+                backgroundColor: cardFill,
+                borderWidth: 0,
+                borderColor: 'transparent',
+                boxShadow: dense ? undefined : TRAVEL_CARD_SHADOW,
+              }),
+        },
+      ]}>
+      {isCompactBoardCard ? (
+        <TravelHomeGlass
+          clear
+          style={[
+            styles.nodeCard,
+            {
+              borderRadius: cardRadius,
+              borderCurve: 'continuous',
+            },
+          ]}>
+          {nodeBody}
+        </TravelHomeGlass>
+      ) : (
+        nodeBody
+      )}
       <TravelItemNotesSheet
         plan={plan}
         item={item}

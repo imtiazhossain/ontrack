@@ -13,9 +13,116 @@ import {
     travelHomePlaneTransformPoint,
     travelHomeTrailStartVb,
 } from '@/features/travel/travel-home-icons';
+import { travelHomeAtmosphereHeight } from '@/features/travel/travel-home-background';
 import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 
 describe('travel home kit contract', () => {
+  it('keeps the trip hero ScrollView always mounted (Fabric crash guard)', () => {
+    // Conditionally mounting ScrollView / dots as Fabric siblings SIGABRTs on
+    // iOS (`unmountChildComponentView` index mismatch on the 362×199 hero).
+    const source = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-hero-carousel.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('collapsable={false}');
+    expect(source).toContain('heroPageSlots');
+    expect(source).toContain('scrollEnabled={scrollInteractive}');
+    expect(source).not.toMatch(
+      /visibleUris\.length\s*>\s*0\s*\?\s*\(\s*<ScrollView/,
+    );
+  });
+
+  it('keeps the trip-card stepper slot always mounted (Fabric crash guard)', () => {
+    // Conditionally mounting the stepper beside BlurView SIGABRTs on iOS
+    // (`unmountChildComponentView` on the meta glass — child y≈-12).
+    const card = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
+      'utf8',
+    );
+    const stepper = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-carousel-stepper.tsx'),
+      'utf8',
+    );
+    expect(card).toContain('stepperSlotCollapsed');
+    expect(card).not.toMatch(/showStepper\s*\?\s*\(\s*<View/);
+    expect(stepper).toContain('wrapCollapsed');
+    expect(stepper).not.toMatch(/if\s*\(\s*pageCount\s*<=\s*1\s*\)\s*return\s*null/);
+  });
+
+  it('keeps the duration chip as a solid brand tint (not glass wash)', () => {
+    // Android TravelHomeGlass light tint bleached the pill into a white outlined
+    // badge; iOS target is soft filled brandBlueSoft.
+    const dateBlock = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-date-block.tsx'),
+      'utf8',
+    );
+    const glass = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+      'utf8',
+    );
+    expect(dateBlock).toContain('brandBlueSoft');
+    expect(dateBlock).not.toContain('TravelHomeGlass');
+    expect(glass).toContain('rgba(12, 16, 24, 0.32)');
+    expect(glass).not.toContain('rgba(12, 16, 24, 0.68)');
+  });
+
+  it('frosts Android trip-card scoops with a blurred hero plate (glass, not milk)', () => {
+    // expo-blur defaults to blurMethod none on Android — clear plastic scoop.
+    // Opaque milk also fails the glass read. Blurred hero + translucent tint.
+    const glass = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+      'utf8',
+    );
+    const card = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
+      'utf8',
+    );
+    expect(glass).toContain('blurRadius');
+    expect(glass).toContain('androidTintLightFrosted');
+    expect(glass).toContain('backgroundColor: \'transparent\'');
+    expect(glass).not.toContain('bodyFill');
+    // Children must stay direct flex kids — a chrome wrapper broke search+badge row.
+    expect(glass).not.toContain('androidChrome');
+    expect(card).toContain('frost=');
+    expect(card).toContain('androidFrostSource');
+    expect(card).not.toContain('BlurTargetView');
+    expect(card).not.toContain('panelFill');
+  });
+
+  it('keeps the section search plate as a row (glass children stay flex kids)', () => {
+    const header = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-section-header.tsx'),
+      'utf8',
+    );
+    expect(header).toContain('flexDirection: \'row\'');
+    expect(header).toContain('styles.search');
+    expect(header).toContain('styles.badge');
+  });
+
+  it('grounds a solo trip with an atmosphere-tinted bottom shadow', () => {
+    const card = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
+      'utf8',
+    );
+    const screen = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      'utf8',
+    );
+    expect(card).toContain('soloAtmosphereShadow');
+    expect(card).toContain('travelHomeSoloTripCardShadow');
+    expect(screen).toContain('soloAtmosphereShadow={visibleLauncherPlans.length === 1}');
+    expect(screen).toContain('atmosphereAverageColor={atmosphereImage.averageColor}');
+  });
+
+  it('keeps atmosphere as a top hero band (not full-page)', () => {
+    const windowHeight = 852;
+    const topInset = 59;
+    const band = travelHomeAtmosphereHeight(windowHeight, topInset);
+    expect(band).toBe(Math.round(windowHeight * 0.34) + topInset);
+    expect(band).toBeLessThan(windowHeight);
+    expect(band / windowHeight).toBeLessThan(0.5);
+  });
+
   it('keeps layout tokens aligned with design/travel', () => {
     expect(travelHomeTokenContract()).toEqual({
       screenHorizontal: 20,
@@ -30,7 +137,7 @@ describe('travel home kit contract', () => {
       activeDot: 7,
       inactiveDot: 5,
       heroCrossfadeMs: 350,
-      navy: '#16255B',
+      navy: '#000000',
     });
   });
 
