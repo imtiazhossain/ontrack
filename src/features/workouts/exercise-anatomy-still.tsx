@@ -13,6 +13,7 @@ import Animated, {
 
 import { AppText, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 import { ANATOMY_BEIGE } from './anatomy-art';
 import type { MovementPattern } from './exercise-motion';
@@ -67,6 +68,8 @@ export function ExerciseAnatomyStill({
 }: ExerciseAnatomyStillProps) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
+  const { allowsLoopMotion } = usePerformanceTier();
+  const stillPose = reduceMotion || !allowsLoopMotion;
   const progress = useSharedValue(0);
   const steps = formStepsForExercise(exercise, primaryTarget);
   const [index, setIndex] = useState(0);
@@ -77,7 +80,7 @@ export function ExerciseAnatomyStill({
 
   useEffect(() => {
     cancelAnimation(progress);
-    if (reduceMotion) {
+    if (stillPose) {
       progress.value = 0.55;
       return;
     }
@@ -92,7 +95,7 @@ export function ExerciseAnatomyStill({
       true,
     );
     return () => cancelAnimation(progress);
-  }, [pattern, playing, progress, reduceMotion]);
+  }, [pattern, playing, progress, stillPose]);
 
   const figureMotion = useAnimatedStyle(() => {
     const p = smoothStep(progress.value);

@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { radii } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import type { MovementPattern } from './exercise-motion';
 import type { MuscleKey } from './muscle-data';
 
@@ -35,11 +36,13 @@ export function GenericAnatomyFigure({
 }) {
   const progress = useSharedValue(0);
   const reduceMotion = useReducedMotion();
+  const { allowsLoopMotion } = usePerformanceTier();
   const hitSet = new Set(hits);
+  const stillPose = reduceMotion || !allowsLoopMotion;
 
   useEffect(() => {
     cancelAnimation(progress);
-    if (reduceMotion) {
+    if (stillPose) {
       progress.value = 0.55;
       return;
     }
@@ -55,7 +58,7 @@ export function GenericAnatomyFigure({
       true,
     );
     return () => cancelAnimation(progress);
-  }, [pattern, playing, progress, reduceMotion]);
+  }, [pattern, playing, progress, stillPose]);
 
   const bodyMotion = useAnimatedStyle(() => {
     const p = smoothStep(progress.value);

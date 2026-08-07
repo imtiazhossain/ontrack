@@ -12,6 +12,7 @@ import Animated, {
 
 import { AppText } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 
 import type { FanSide } from './types';
@@ -26,10 +27,12 @@ const FAN_SIZE = 44;
 export function EdgeFan({ side, strength }: FanProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
+  const { allowsLoopMotion } = usePerformanceTier();
   const spin = useSharedValue(0);
+  const still = reducedMotion || !allowsLoopMotion;
 
   useEffect(() => {
-    if (reducedMotion) {
+    if (still) {
       cancelAnimation(spin);
       spin.set(0);
       return;
@@ -40,7 +43,7 @@ export function EdgeFan({ side, strength }: FanProps) {
       withRepeat(withTiming(1, { duration, easing: Easing.linear }), -1, false),
     );
     return () => cancelAnimation(spin);
-  }, [reducedMotion, spin, strength]);
+  }, [still, spin, strength]);
 
   const bladeStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${spin.get() * 360}deg` }],

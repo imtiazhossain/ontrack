@@ -1,10 +1,17 @@
-import { Platform } from 'react-native';
+import type { PerformanceTier } from '@/utils/device-capability';
+import {
+  degradePerformanceTier,
+  minPerformanceTier,
+  performanceTierRank,
+  resolvePerformanceTier,
+  type DeviceCapabilityInput,
+} from '@/utils/device-capability';
 
 /**
- * Itinerary sky fidelity ladder.
+ * Itinerary sky fidelity ladder (alias of the app-wide performance tier).
  * Degrades from full motion → static chrome wash so weak devices stay open.
  */
-export type TravelSkyQuality = 'full' | 'reduced' | 'minimal' | 'static';
+export type TravelSkyQuality = PerformanceTier;
 
 export type TravelSkyFxPlan = {
   quality: TravelSkyQuality;
@@ -28,92 +35,14 @@ export type TravelSkyFxPlan = {
   dimStarScale: number;
 };
 
-export type TravelSkyCapabilityInput = {
-  /** expo-device `deviceYearClass` (null on many sims). */
-  deviceYearClass?: number | null;
-  /** expo-device `totalMemory` bytes. */
-  totalMemory?: number | null;
-  /** Physical device vs Simulator / emulator. */
-  isDevice?: boolean;
-  /** Accessibility Reduce Motion. */
-  reduceMotion?: boolean;
-  platformOs?: typeof Platform.OS;
-};
+export type TravelSkyCapabilityInput = DeviceCapabilityInput;
 
-const QUALITY_ORDER: TravelSkyQuality[] = [
-  'full',
-  'reduced',
-  'minimal',
-  'static',
-];
+export const degradeTravelSkyQuality = degradePerformanceTier;
+export const travelSkyQualityRank = performanceTierRank;
+export const minTravelSkyQuality = minPerformanceTier;
+export const resolveTravelSkyCapability = resolvePerformanceTier;
 
-export function degradeTravelSkyQuality(
-  quality: TravelSkyQuality,
-): TravelSkyQuality {
-  const i = QUALITY_ORDER.indexOf(quality);
-  if (i < 0 || i >= QUALITY_ORDER.length - 1) return 'static';
-  return QUALITY_ORDER[i + 1]!;
-}
-
-export function travelSkyQualityRank(quality: TravelSkyQuality): number {
-  return QUALITY_ORDER.indexOf(quality);
-}
-
-/** Pick the weaker of two tiers. */
-export function minTravelSkyQuality(
-  a: TravelSkyQuality,
-  b: TravelSkyQuality,
-): TravelSkyQuality {
-  return travelSkyQualityRank(a) >= travelSkyQualityRank(b) ? a : b;
-}
-
-/**
- * Device / a11y → starting sky tier.
- * Simulators stay `full` so agent-ui can exercise the live plate.
- */
-export function resolveTravelSkyCapability(
-  input: TravelSkyCapabilityInput = {},
-): TravelSkyQuality {
-  if (input.reduceMotion) return 'minimal';
-
-  const isDevice = input.isDevice ?? true;
-  if (!isDevice) return 'full';
-
-  const year = input.deviceYearClass ?? null;
-  const mem = input.totalMemory ?? null;
-  const memGb = mem != null && mem > 0 ? mem / (1024 * 1024 * 1024) : null;
-  const os = input.platformOs ?? Platform.OS;
-
-  // Very constrained — chrome wash only.
-  if (
-    (memGb != null && memGb < 2.4) ||
-    (year != null && year <= 2016) ||
-    (os === 'android' && memGb != null && memGb < 3 && year != null && year <= 2018)
-  ) {
-    return 'static';
-  }
-
-  // Static SVG plate, no loops.
-  if (
-    (memGb != null && memGb < 3.2) ||
-    (year != null && year <= 2018)
-  ) {
-    return 'minimal';
-  }
-
-  // Thinned motion set.
-  if (
-    (memGb != null && memGb < 4.5) ||
-    (year != null && year <= 2021) ||
-    (os === 'android' && memGb != null && memGb < 5.5)
-  ) {
-    return 'reduced';
-  }
-
-  return 'full';
-}
-
-/** Map a quality tier to concrete FX switches. */
+/** Map a quality tier to concrete itinerary sky FX switches. */
 export function planTravelSkyFx(quality: TravelSkyQuality): TravelSkyFxPlan {
   switch (quality) {
     case 'static':
