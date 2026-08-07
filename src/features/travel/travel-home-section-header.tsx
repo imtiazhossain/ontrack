@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { Symbol } from '@/components/primitives';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
@@ -31,8 +31,13 @@ export function TravelHomeSectionHeader({
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const dark = theme.name === 'dark';
-  const ink = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
-  const muted = dark ? theme.textTertiary : travelHomeTokens.colors.inkMuted;
+  // Outer plate is inverted: black glass in light mode, white glass in dark.
+  const plateInk = dark ? travelHomeTokens.colors.ink : '#FFFFFF';
+  // Icon + placeholder: white in light, ink in dark (scoop inverted to match).
+  const fieldInk = dark ? travelHomeTokens.colors.ink : '#FFFFFF';
+  const fieldMuted = dark
+    ? travelHomeTokens.colors.inkMuted
+    : 'rgba(255,255,255,0.88)';
   const titleSize = Math.max(18, s(travelHomeTokens.sizes.sectionTitle));
   const searchTextSize = Math.max(15, s(travelHomeTokens.sizes.searchFieldText));
   const showCount = count !== undefined && count > 0;
@@ -56,8 +61,40 @@ export function TravelHomeSectionHeader({
     },
   );
 
+  const countBadge = showCount ? (
+    <TravelHomeGlass
+      inverted
+      intensity={dark ? 56 : 44}
+      accessibilityRole="text"
+      accessibilityLabel={`${count} ${tripsWord}`}
+      style={[
+        styles.badge,
+        {
+          width: circle,
+          height: circle,
+          borderRadius: circle / 2,
+        },
+      ]}>
+      <Text
+        allowFontScaling
+        maxFontSizeMultiplier={1.1}
+        numberOfLines={1}
+        style={{
+          // White on dark inverted frost (light mode); ink on light frost (dark).
+          color: dark ? travelHomeTokens.colors.ink : '#FFFFFF',
+          fontSize: Math.max(11, s(12)),
+          fontWeight: '400',
+          fontFamily: travelHomeFontFamily,
+        }}>
+        {count}
+      </Text>
+    </TravelHomeGlass>
+  ) : null;
+
   return (
     <TravelHomeGlass
+      inverted
+      intensity={dark ? 48 : 44}
       style={[
         styles.plate,
         {
@@ -70,21 +107,19 @@ export function TravelHomeSectionHeader({
       ]}>
       {showSearch ? (
         <TravelHomeGlass
-          intensity={dark ? 28 : 36}
+          inverted
+          intensity={dark ? 36 : 28}
           style={[
             styles.search,
             {
               height: fieldHeight,
               borderRadius: fieldHeight / 2,
               paddingLeft: Math.max(10, s(10)),
-              paddingRight: Math.max(6, s(6)),
+              paddingRight: Math.max(4, s(4)),
               gap: s(6),
-              backgroundColor: dark
-                ? 'rgba(255,255,255,0.08)'
-                : 'rgba(255,255,255,0.28)',
             },
           ]}>
-          <Symbol name="search" size={searchIconSize} color={muted} />
+          <Symbol name="search" size={searchIconSize} color={fieldMuted} />
           <TextInput
             ref={searchAgent.ref as never}
             testID={searchAgent.testID}
@@ -92,7 +127,7 @@ export function TravelHomeSectionHeader({
             value={searchQuery}
             onChangeText={onSearchQueryChange}
             placeholder={title}
-            placeholderTextColor={muted}
+            placeholderTextColor={fieldMuted}
             accessibilityLabel={title}
             autoCapitalize="none"
             autoCorrect={false}
@@ -104,7 +139,7 @@ export function TravelHomeSectionHeader({
               flexShrink: 1,
               minWidth: 0,
               paddingVertical: 0,
-              color: ink,
+              color: fieldInk,
               fontFamily: travelHomeFontFamily,
               fontSize: searchTextSize,
               lineHeight: Math.round(searchTextSize * 1.2),
@@ -127,61 +162,37 @@ export function TravelHomeSectionHeader({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Symbol name="close" size={Math.max(12, s(13))} color={muted} />
+              <Symbol
+                name="close"
+                size={Math.max(12, s(13))}
+                color={fieldMuted}
+              />
             </Pressable>
           ) : null}
+          {countBadge}
         </TravelHomeGlass>
       ) : (
-        <Text
-          allowFontScaling
-          maxFontSizeMultiplier={1.15}
-          numberOfLines={1}
-          style={{
-            flex: 1,
-            flexShrink: 1,
-            minWidth: 0,
-            color: ink,
-            fontFamily: travelHomeFontFamily,
-            fontSize: titleSize,
-            lineHeight: titleSize * 1.15,
-            fontWeight: '400',
-            letterSpacing: -0.3,
-          }}>
-          {title}
-        </Text>
-      )}
-      {showCount ? (
-        <TravelHomeGlass
-          inverted
-          intensity={dark ? 56 : 44}
-          accessibilityRole="text"
-          accessibilityLabel={`${count} ${tripsWord}`}
-          style={[
-            styles.badge,
-            {
-              width: circle,
-              height: circle,
-              borderRadius: circle / 2,
-              boxShadow: dark
-                ? travelHomeTokens.colors.shadow
-                : undefined,
-            },
-          ]}>
+        <>
           <Text
             allowFontScaling
-            maxFontSizeMultiplier={1.1}
+            maxFontSizeMultiplier={1.15}
             numberOfLines={1}
             style={{
-              // Match inverted glass: white on dark frost, black on light frost.
-              color: dark ? travelHomeTokens.colors.ink : '#FFFFFF',
-              fontSize: Math.max(11, s(12)),
-              fontWeight: '400',
+              flex: 1,
+              flexShrink: 1,
+              minWidth: 0,
+              color: plateInk,
               fontFamily: travelHomeFontFamily,
+              fontSize: titleSize,
+              lineHeight: titleSize * 1.15,
+              fontWeight: '400',
+              letterSpacing: -0.3,
             }}>
-            {count}
+            {title}
           </Text>
-        </TravelHomeGlass>
-      ) : null}
+          {countBadge}
+        </>
+      )}
     </TravelHomeGlass>
   );
 }

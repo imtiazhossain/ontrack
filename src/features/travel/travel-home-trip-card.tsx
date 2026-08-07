@@ -8,7 +8,6 @@ import { travelHomeSoloTripCardShadow } from '@/features/travel/travel-home-atmo
 import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
 import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
-import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
     TravelHomeLocationPin,
@@ -147,10 +146,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     ),
   );
   const labelSize = Math.max(13, s(travelHomeTokens.type.button));
-  // Light: inverted dark glass + white ink (spec navy CTA). Dark: brand blue +
-  // white — medium-grey glass + black ink reads as a disabled control.
+  // Light: solid black + white ink. Dark: brand blue + white.
   const itineraryFg = '#FFFFFF';
-  const itineraryFill = dark ? travelHomeTokens.colors.brandBlue : undefined;
+  const itineraryFill = dark
+    ? travelHomeTokens.colors.brandBlue
+    : travelHomeTokens.colors.ink;
   const itineraryPadH = Math.max(
     12,
     s(travelHomeTokens.sizes.itineraryHorizontalPadding),
@@ -437,38 +437,22 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   alignSelf: 'stretch',
                 },
               ]}>
-              {itineraryFill ? (
-                <View
-                  style={[
-                    styles.itineraryButton,
-                    {
-                      flex: 1,
-                      height: buttonHeight,
-                      paddingHorizontal: itineraryPadH,
-                      borderRadius: travelHomeTokens.radius.itineraryButton,
-                      backgroundColor: itineraryFill,
-                      boxShadow: travelHomeTokens.colors.itineraryButtonShadowDark,
-                    },
-                  ]}>
-                  {itineraryContent}
-                </View>
-              ) : (
-                <TravelHomeGlass
-                  inverted
-                  intensity={44}
-                  style={[
-                    styles.itineraryButton,
-                    {
-                      flex: 1,
-                      height: buttonHeight,
-                      paddingHorizontal: itineraryPadH,
-                      borderRadius: travelHomeTokens.radius.itineraryButton,
-                      boxShadow: travelHomeTokens.colors.itineraryButtonShadow,
-                    },
-                  ]}>
-                  {itineraryContent}
-                </TravelHomeGlass>
-              )}
+              <View
+                style={[
+                  styles.itineraryButton,
+                  {
+                    flex: 1,
+                    height: buttonHeight,
+                    paddingHorizontal: itineraryPadH,
+                    borderRadius: travelHomeTokens.radius.itineraryButton,
+                    backgroundColor: itineraryFill,
+                    boxShadow: dark
+                      ? travelHomeTokens.colors.itineraryButtonShadowDark
+                      : travelHomeTokens.colors.itineraryButtonShadow,
+                  },
+                ]}>
+                {itineraryContent}
+              </View>
             </Pressable>
           </View>
         </View>

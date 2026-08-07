@@ -48,8 +48,8 @@ describe('travel home kit contract', () => {
       join(process.cwd(), 'src/features/travel/travel-home-date-block.tsx'),
       'utf8',
     );
-    const glass = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+    const card = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
       'utf8',
     );
     expect(dateBlock).toContain('formatTripDateRangeLabel');
@@ -57,8 +57,9 @@ describe('travel home kit contract', () => {
     expect(dateBlock).not.toContain('brandBlueSoft');
     expect(dateBlock).not.toMatch(/styles\.pill/);
     expect(dateBlock).not.toContain('TravelHomeGlass');
-    expect(glass).toContain('rgba(12, 16, 24, 0.32)');
-    expect(glass).not.toContain('rgba(12, 16, 24, 0.68)');
+    // Light View Itinerary = solid ink black (not translucent glass grey).
+    expect(card).toContain('travelHomeTokens.colors.ink');
+    expect(card).not.toContain('TravelHomeGlass');
   });
 
   it('frosts trip-card scoops with BlurView over the live hero', () => {
@@ -126,6 +127,10 @@ describe('travel home kit contract', () => {
     expect(header).toContain('flexDirection: \'row\'');
     expect(header).toContain('styles.search');
     expect(header).toContain('styles.badge');
+    // Outer counter plate: black glass in light, white glass in dark.
+    expect(header).toMatch(/<TravelHomeGlass\s+inverted/);
+    // Count sits at the far right inside the search scoop.
+    expect(header).toMatch(/\{countBadge\}\s*<\/TravelHomeGlass>/);
   });
 
   it('grounds a solo trip with an atmosphere-tinted bottom shadow', () => {
