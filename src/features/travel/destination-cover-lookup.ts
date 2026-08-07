@@ -20,6 +20,19 @@ const DESTINATION_COVER_IMAGE_HOST_SUFFIXES = [
   'wordpress.com',
 ] as const;
 
+/**
+ * Hosts RN Image can usually load without the Wikimedia User-Agent proxy.
+ * Prefer at least one of these in hero carousels so cards still show photos
+ * when `/api/destination-cover-image` is unavailable.
+ */
+const DIRECT_CLIENT_COVER_HOST_SUFFIXES = [
+  'images.unsplash.com',
+  'unsplash.com',
+  'wordpress.com',
+  'wp.com',
+  'staticflickr.com',
+] as const;
+
 /** Skip flags/maps, non-HTTPS assets, and watermarked Unsplash+ previews. */
 export function isUsableDestinationPhotoUrl(url: string): boolean {
   const trimmed = url.trim();
@@ -46,6 +59,19 @@ export function isAllowedDestinationCoverImageUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase();
     return DESTINATION_COVER_IMAGE_HOST_SUFFIXES.some(
+      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** True when the native image loader can fetch this URL without our proxy. */
+export function isDirectClientCoverUrl(url: string): boolean {
+  if (!isUsableDestinationPhotoUrl(url)) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return DIRECT_CLIENT_COVER_HOST_SUFFIXES.some(
       (suffix) => host === suffix || host.endsWith(`.${suffix}`),
     );
   } catch {
@@ -229,6 +255,37 @@ function coverHeaders(userAgent?: string): Record<string, string> {
 }
 
 /**
+ * Merge Wikimedia-first results with at least one direct-loadable URL when
+ * available so trip cards still render if the image proxy is down.
+ */
+export function mergeDestinationCoverUrls(
+  primary: string[],
+  direct: string[],
+  limit: number,
+): string[] {
+  const capped = normalizeLimit(limit);
+  const out: string[] = [];
+  const append = (url: string | undefined) => {
+    if (!url || out.length >= capped) return;
+    pushUniqueUrl(out, url);
+  };
+
+  const directUsable = direct.filter(isDirectClientCoverUrl);
+  // Keep destination-accurate Wikimedia first, but reserve a slot for a
+  // direct-loadable backup whenever the list would otherwise be proxy-only.
+  for (const url of primary) append(url);
+  if (directUsable.length > 0 && !out.some(isDirectClientCoverUrl)) {
+    if (out.length >= capped) {
+      out[capped - 1] = directUsable[0]!;
+    } else {
+      append(directUsable[0]);
+    }
+  }
+  for (const url of directUsable) append(url);
+  return out.slice(0, capped);
+}
+
+/**
  * Up to `limit` destination-relevant landscape URLs (max 3).
  * Prefer variety across providers when a single source under-delivers.
  */
@@ -241,36 +298,40 @@ export async function lookupDestinationCoverUrls(
 
   const limit = normalizeLimit(options?.limit);
   const headers = coverHeaders(options?.userAgent);
-  const out: string[] = [];
+  const primary: string[] = [];
 
-  const append = (urls: string[]) => {
+  const appendPrimary = (urls: string[]) => {
     for (const url of urls) {
-      if (out.length >= limit) return;
-      pushUniqueUrl(out, url);
+      if (primary.length >= limit) return;
+      pushUniqueUrl(primary, url);
     }
   };
 
   // Prefer Wikimedia / Openverse (clean licensing) before Unsplash napi.
   pushUniqueUrl(
-    out,
+    primary,
     await fetchWikiSummaryCover('en.wikipedia.org', trimmed, headers),
   );
-  if (out.length >= limit) return out;
+  if (primary.length < limit) {
+    pushUniqueUrl(
+      primary,
+      await fetchWikiSummaryCover('en.wikivoyage.org', trimmed, headers),
+    );
+  }
+  if (primary.length < limit) {
+    appendPrimary(
+      await fetchCommonsSearchCovers(trimmed, headers, limit - primary.length),
+    );
+  }
+  if (primary.length < limit) {
+    appendPrimary(
+      await fetchOpenverseCovers(trimmed, headers, limit - primary.length),
+    );
+  }
 
-  pushUniqueUrl(
-    out,
-    await fetchWikiSummaryCover('en.wikivoyage.org', trimmed, headers),
-  );
-  if (out.length >= limit) return out;
-
-  append(await fetchCommonsSearchCovers(trimmed, headers, limit - out.length));
-  if (out.length >= limit) return out;
-
-  append(await fetchOpenverseCovers(trimmed, headers, limit - out.length));
-  if (out.length >= limit) return out;
-
-  append(await fetchUnsplashCovers(trimmed, headers, limit - out.length));
-  return out;
+  // Always probe Unsplash so clients can show a photo without the Wiki proxy.
+  const direct = await fetchUnsplashCovers(trimmed, headers, limit);
+  return mergeDestinationCoverUrls(primary, direct, limit);
 }
 
 /** Single cover URL for a place name (server should pass a real User-Agent). */

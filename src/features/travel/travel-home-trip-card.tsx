@@ -6,7 +6,6 @@ import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
-    TravelHomeChevronRight,
     TravelHomeLocationPin,
     TravelHomeRouteIcon,
 } from '@/features/travel/travel-home-icons';
@@ -310,10 +309,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 }}>
                 View Itinerary
               </Text>
-              <TravelHomeChevronRight
-                size={Math.max(14, s(15))}
-                color={itineraryFg}
-              />
             </Pressable>
           </View>
         </View>

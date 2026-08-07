@@ -35,7 +35,7 @@ resolve_deep_link() {
 
 URL="$(resolve_deep_link "$DEST")"
 echo "goto file-command failed; opening ${URL}"
-xcrun simctl openurl booted "$URL"
+agent_ui_open_dev_client_url "$URL"
 
 # Poll route instead of a fixed sleep.
 deadline=$((SECONDS + 2))

@@ -1,6 +1,7 @@
 import {
     DESTINATION_COVER_MAX,
     isAllowedDestinationCoverImageUrl,
+    isDirectClientCoverUrl,
     isUsableDestinationPhotoUrl,
     lookupDestinationCoverUrls,
 } from '@/features/travel/destination-cover-lookup';
@@ -30,16 +31,22 @@ export {
     DESTINATION_COVER_MAX,
     enlargeWikimediaThumb,
     isAllowedDestinationCoverImageUrl,
-    isUsableDestinationPhotoUrl
+    isDirectClientCoverUrl,
+    isUsableDestinationPhotoUrl,
+    mergeDestinationCoverUrls,
 } from '@/features/travel/destination-cover-lookup';
 
-/** Custom cover, else first moment photo. */
+/**
+ * Custom cover, else first photo on a moment stop.
+ * Flight/stay confirmation screenshots must not become the trip hero.
+ */
 export function localTripCoverUri(plan: TravelPlan): string | undefined {
   if (plan.coverUri) {
     const custom = resolveTravelPhotoUris([plan.coverUri])[0];
     if (custom) return custom;
   }
   for (const item of plan.itinerary ?? []) {
+    if (item.kind !== 'moment') continue;
     const photos = resolveTravelPhotoUris(item.photoUris);
     if (photos[0]) return photos[0];
   }
@@ -155,7 +162,23 @@ export function proxyDestinationCoverImageUrl(
 
 function toClientDisplayCoverUri(uri: string): string {
   if (isLocalTravelPhotoUri(uri)) return uri;
+  // Unsplash / Flickr / WP can load in RN without a User-Agent proxy.
+  if (isDirectClientCoverUrl(uri)) return uri;
   return proxyDestinationCoverImageUrl(uri) ?? uri;
+}
+
+/** Prefer direct-loadable remotes so cards survive a missing image proxy. */
+function orderHeroUrisForClient(uris: string[]): string[] {
+  const direct: string[] = [];
+  const proxied: string[] = [];
+  for (const uri of uris) {
+    if (isLocalTravelPhotoUri(uri) || isDirectClientCoverUrl(uri)) {
+      direct.push(uri);
+    } else {
+      proxied.push(uri);
+    }
+  }
+  return [...direct, ...proxied];
 }
 
 function pushUniqueUri(out: string[], uri: string | undefined): void {
@@ -266,7 +289,7 @@ export async function fetchPlaceCoverUri(
   const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
   if (!places.length) return undefined;
 
-  const key = `place-v2|${places.join('|').toLowerCase()}`;
+  const key = `place-v3|${places.join('|').toLowerCase()}`;
   const cached = coverCache.get(key);
   if (cached?.kind === 'hit') return toClientDisplayCoverUri(cached.uri);
   if (cached?.kind === 'miss') {
@@ -331,17 +354,19 @@ export async function fetchDestinationHeroUris(
     .filter((c) => c.length >= 2);
   if (!places.length) return out.map(toClientDisplayCoverUri);
 
-  const key = `hero-v5|${places.join('|').toLowerCase()}`;
+  const key = `hero-v6|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
   if (cached?.kind === 'hit') {
     for (const uri of cached.uris) {
       pushUniqueUri(out, uri);
       if (out.length >= capped) break;
     }
-    return out.map(toClientDisplayCoverUri);
+    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
   }
   if (cached?.kind === 'miss') {
-    if (cached.expiresAt > Date.now()) return out.map(toClientDisplayCoverUri);
+    if (cached.expiresAt > Date.now()) {
+      return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
+    }
     heroCache.delete(key);
   }
 
@@ -352,7 +377,7 @@ export async function fetchDestinationHeroUris(
       pushUniqueUri(out, uri);
       if (out.length >= capped) break;
     }
-    return out.map(toClientDisplayCoverUri);
+    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
   }
 
   const request = (async () => {
@@ -388,5 +413,5 @@ export async function fetchDestinationHeroUris(
     pushUniqueUri(out, uri);
     if (out.length >= capped) break;
   }
-  return out.map(toClientDisplayCoverUri);
+  return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
 }

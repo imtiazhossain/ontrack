@@ -98,7 +98,7 @@ if (( NO_WAIT )); then
     exit 0
   fi
   echo "file goto unavailable; openurl ${URL}"
-  xcrun simctl openurl booted "$URL"
+  agent_ui_open_dev_client_url "$URL"
   exit 0
 fi
 
@@ -131,7 +131,7 @@ fi
 # Heal only after a real bridge/batch failure — never on the happy path.
 echo "batch open failed; healing + openurl ${URL}" >&2
 agent_ui_heal_packager || true
-xcrun simctl openurl booted "$URL"
+agent_ui_open_dev_client_url "$URL"
 deadline=$((SECONDS + ${WAIT_SECS%.*}))
 while (( SECONDS < deadline )); do
   if [[ -n "${WAIT_PREFIX}" ]]; then

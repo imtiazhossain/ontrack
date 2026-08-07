@@ -15,7 +15,10 @@ type AgentTestIdProps = PropsWithChildren<{
  * Thin __DEV__ registration wrapper for custom Pressables / layout anchors
  * that cannot use Button/Input primitives. Pass `onPress` for tappable
  * controls; omit it for non-interactive section/panel anchors that still
- * need dump/hit/overlay → source lookup. Production passes children through.
+ * need dump/hit/overlay → source lookup.
+ *
+ * Production skips registry wiring, but still wraps when `style` is set so
+ * layout (absolute FABs, gaps, hit boxes) is not dropped outside __DEV__.
  */
 export function AgentTestId({
   testID,
@@ -27,7 +30,10 @@ export function AgentTestId({
   const agent = useAgentUiTarget(testID, { label, onPress });
 
   if (!isAgentUiEnabled()) {
-    return <>{children}</>;
+    if (style == null) {
+      return <>{children}</>;
+    }
+    return <View style={style}>{children}</View>;
   }
 
   return (
