@@ -132,8 +132,10 @@ describe('travel home kit contract', () => {
     expect(header).toContain('flexDirection: \'row\'');
     expect(header).toContain('styles.search');
     expect(header).toContain('styles.badge');
-    // Outer counter plate: black glass in light, white glass in dark.
-    expect(header).toMatch(/<TravelHomeGlass\s+inverted/);
+    // Theme-native plate/scoop; count badge stays inverted for contrast.
+    expect(header).toMatch(/<TravelHomeGlass[\s\S]*?\binverted\b/);
+    expect(header).not.toContain('plateDark');
+    expect(header).not.toContain('scoopLight');
     // Count sits at the far right inside the search scoop.
     expect(header).toMatch(/\{countBadge\}\s*<\/TravelHomeGlass>/);
   });
