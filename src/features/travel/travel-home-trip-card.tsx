@@ -89,10 +89,16 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const radius = travelHomeTokens.radius.tripCard;
   const heroHeight = travelHomeImageHeight(cardWidth);
   const bodyOverlap = travelHomeTokens.spacing.bodyOverlap;
+  // Device/prod has no __DEV__ fixtures — seed from coverUri so the scoop is
+  // never waiting on the carousel fetch (sim looks fine; phone stayed milk).
   const fixtureFrost = __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
+  const coverFrost =
+    typeof plan.coverUri === 'string' && plan.coverUri.trim()
+      ? { uri: plan.coverUri.trim() }
+      : undefined;
   const heroFrostSource = heroFrostUri
     ? { uri: heroFrostUri }
-    : fixtureFrost;
+    : coverFrost ?? fixtureFrost;
   const cardShadow = soloAtmosphereShadow
     ? travelHomeSoloTripCardShadow({
         averageColor: atmosphereAverageColor,

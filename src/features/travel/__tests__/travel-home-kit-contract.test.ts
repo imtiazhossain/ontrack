@@ -67,8 +67,9 @@ describe('travel home kit contract', () => {
   });
 
   it('frosts trip-card scoops with a hero-aligned plate on iOS and Android', () => {
-    // Scoop must stay pixel-aligned with the hero (no +offset shift). iOS uses
-    // sharp underlay + BlurView; Android pre-blurs. LinearGradient milks to paper.
+    // Scoop must stay pixel-aligned with the hero (no +offset shift). Pre-blur
+    // the plate on both OS — BlurView-over-sibling milks solid on device iPhones.
+    // Seed coverUri so prod/device isn’t __DEV__-fixture-only.
     const glass = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
       'utf8',
@@ -85,12 +86,20 @@ describe('travel home kit contract', () => {
     expect(glass).toContain('LinearGradient');
     expect(glass).toContain('contentPosition={{ top: \'50%\', left: \'50%\' }}');
     expect(glass).toContain('backgroundColor: \'transparent\'');
+    expect(glass).toContain('imageBlurRadius');
+    // Frost path must not rely on BlurView sampling a sibling underlay.
+    expect(glass.indexOf('if (frost)')).toBeGreaterThan(-1);
+    expect(
+      glass.slice(glass.indexOf('if (frost)'), glass.indexOf('if (Platform.OS === \'android\')')),
+    ).not.toContain('<BlurView');
     expect(glass).not.toContain('overlap + 40');
     expect(glass).not.toContain('bodyFill');
     expect(glass).not.toContain('androidChrome');
     expect(tokens).toMatch(/bodyOverlap:\s*56/);
     expect(card).toContain('frost=');
     expect(card).toContain('heroFrostSource');
+    expect(card).toContain('coverFrost');
+    expect(card).toContain('plan.coverUri');
     expect(card).not.toContain('Platform.OS === \'android\' &&');
     expect(card).not.toContain('BlurTargetView');
     expect(card).not.toContain('panelFill');
