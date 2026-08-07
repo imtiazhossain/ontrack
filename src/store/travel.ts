@@ -6,11 +6,38 @@ import {
   withAllAccountsTestTrip,
 } from '@/constants/travel';
 import { featureFlags } from '@/constants/feature-flags';
+import { flushCloudDomain } from '@/services/cloud/sync';
 import { createPersistStorage, STORAGE_KEYS } from '@/services/storage';
 import { normalizeTravelPlan, normalizeTravelPlans } from '@/features/travel/normalize';
 import type { TravelPlan } from '@/features/travel/types';
+import { useDevMode } from '@/store/dev-mode';
 import { useSchedule } from '@/store/schedule';
 import { useTravelPlanUi } from '@/store/travel-plan-ui';
+
+/** Prevent Dev Mode exit / agent settle from resurrecting a deleted trip. */
+function forgetPlanInDevModeSnapshot(planId: string) {
+  const { enabled, liveSnapshot } = useDevMode.getState();
+  if (!enabled || !liveSnapshot) return;
+  const travel = liveSnapshot.domains.travel;
+  if (!travel || !Array.isArray(travel.plans)) return;
+  const nextPlans = travel.plans.filter(
+    (entry) =>
+      !(
+        entry &&
+        typeof entry === 'object' &&
+        'id' in entry &&
+        (entry as { id?: unknown }).id === planId
+      ),
+  );
+  if (nextPlans.length === travel.plans.length) return;
+  useDevMode.getState().setLiveSnapshot({
+    ...liveSnapshot,
+    domains: {
+      ...liveSnapshot.domains,
+      travel: { ...travel, plans: nextPlans },
+    },
+  });
+}
 
 interface TravelState {
   plans: TravelPlan[];
@@ -69,6 +96,11 @@ export const useTravel = create<TravelState>()(
         if (!keepPlan) {
           useSchedule.getState().removeTravelActivities([id]);
           useTravelPlanUi.getState().clearPlanUi(id);
+          // Dev Mode restore merges snapshot∪sandbox adds — without this, a
+          // deleted live trip comes back on exit / agent cold-start settle.
+          forgetPlanInDevModeSnapshot(id);
+          // Skip the 1.2s+ debounce so reload cannot pull a pre-delete cloud row.
+          void flushCloudDomain('travel');
         }
       },
       replacePlans: (plans) => {

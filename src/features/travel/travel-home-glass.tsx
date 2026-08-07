@@ -1,6 +1,4 @@
 import { BlurView } from 'expo-blur';
-import { Image, type ImageSource } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   Platform,
   StyleSheet,
@@ -13,27 +11,10 @@ import {
 import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 
-/**
- * Photo-backed frost — hero plate aligned to the scoop so the edge reads as
- * continuous glass over the destination image.
- *
- * Live BlurView alone samples paper below the hero; on physical iOS it also
- * often fails to frost a sibling underlay (simulators look fine). Trip-card
- * scoops therefore use a pre-blurred hero plate on both platforms.
- */
-export type TravelHomeGlassFrost = {
-  /** Remote URI, bundled require(), or expo-image source. */
-  source: ImageSource | number | string;
-  /** Full destination hero height (includes overlap band). */
-  heroHeight: number;
-  /** How far the glass scoops up into the hero (`bodyOverlap`). */
-  overlap: number;
-};
-
 type TravelHomeGlassProps = ViewProps & {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** Override blur strength (iOS frosted / Android frost plate). */
+  /** Override blur strength (iOS frosted). */
   intensity?: number;
   /**
    * Flip light/dark frost (e.g. dark glass CTA on a light meta panel).
@@ -45,19 +26,16 @@ type TravelHomeGlassProps = ViewProps & {
    * Skips BlurView — expo-blur’s light material reads as solid milk on paper.
    */
   clear?: boolean;
-  /**
-   * Frosted glass over a photo (trip-card scoop). Pre-blurred hero underlay
-   * + milk-out tint on iOS and Android (device-reliable).
-   */
-  frost?: TravelHomeGlassFrost;
 };
 
 /**
- * Shared glass plate for Travel chrome.
+ * Shared glass plate for Travel chrome (search, CTA chips, itinerary).
  *
- * - `frost`: hero-aligned pre-blur plate + milk-out (trip-card scoop, both OS).
- * - Default (iOS): frosted BlurView (home / atmosphere-backed surfaces).
- * - Default (Android) without frost: translucent material wash.
+ * Trip-card hero scoops use `TravelHomeTripFrostScoop` (BlurView over the
+ * live photo) — not this plate. Pre-blurred duplicate heroes look muddy.
+ *
+ * - Default (iOS): frosted BlurView (atmosphere-backed surfaces).
+ * - Default (Android): translucent material wash.
  * - `clear`: translucent cool tint + sheen (itinerary on flat wash).
  *
  * Blur is a sibling underlay (no React children inside BlurView). Nesting
@@ -72,7 +50,6 @@ export function TravelHomeGlass({
   intensity,
   inverted = false,
   clear = false,
-  frost,
   ...rest
 }: TravelHomeGlassProps) {
   const theme = useTheme();
@@ -90,94 +67,6 @@ export function TravelHomeGlass({
           darkPlate ? styles.clearDark : styles.clearLight,
           style,
         ]}>
-        {children}
-      </View>
-    );
-  }
-
-  if (frost) {
-    // Pre-blur the hero on both OS — BlurView-over-sibling underlay looks
-    // correct in Simulator but often milks solid on physical iPhones.
-    // Android Glide BlurTransformation caps at 25.
-    const imageBlurRadius = allowsBlur
-      ? Platform.OS === 'android'
-        ? 25
-        : 18
-      : 0;
-
-    return (
-      <View
-        {...rest}
-        collapsable={false}
-        style={[
-          styles.glass,
-          {
-            borderColor: darkPlate
-              ? 'rgba(255,255,255,0.18)'
-              : 'rgba(255,255,255,0.55)',
-            backgroundColor: 'transparent',
-          },
-          style,
-        ]}>
-        {/*
-          Always paint the hero plate (even when blur is gated) so the scoop
-          keeps destination color wash on reduced/minimal tiers + Reduce Motion.
-        */}
-        <Image
-          pointerEvents="none"
-          source={
-            typeof frost.source === 'string'
-              ? { uri: frost.source }
-              : frost.source
-          }
-          blurRadius={imageBlurRadius}
-          contentFit="cover"
-          // Match remote trip heroes (center). Misaligned crop seams the scoop.
-          contentPosition={{ top: '50%', left: '50%' }}
-          accessible={false}
-          importantForAccessibility="no"
-          recyclingKey={`travel-glass-frost-${imageBlurRadius}`}
-          // Pin to the same frame as the destination hero so the scoop edge
-          // is continuous (no +offset shift — that desynced the city plate).
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: frost.overlap - frost.heroHeight,
-              height: frost.heroHeight,
-              zIndex: 0,
-            },
-            Platform.OS === 'android' && allowsBlur
-              ? ({ filter: 'blur(16px)' } as object)
-              : null,
-          ]}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={
-            darkPlate
-              ? [
-                  'rgba(12, 16, 24, 0.28)',
-                  'rgba(12, 16, 24, 0.58)',
-                  'rgba(12, 16, 24, 0.92)',
-                  'rgba(12, 16, 24, 1)',
-                ]
-              : [
-                  'rgba(255, 255, 255, 0.22)',
-                  'rgba(255, 255, 255, 0.58)',
-                  'rgba(255, 255, 255, 0.92)',
-                  '#FFFFFF',
-                ]
-          }
-          locations={[0, 0.32, 0.62, 0.85]}
-          style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
-        />
-        {/*
-          Children stay direct flex kids of this plate so callers’ row/gap/
-          padding styles keep working (section search + count badge, etc.).
-          Frost underlays are absolute; chrome paints above.
-        */}
         {children}
       </View>
     );

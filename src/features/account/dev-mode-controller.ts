@@ -95,6 +95,8 @@ function clearSandboxFlag() {
 /**
  * Keep real trips created/edited in the sandbox after restore.
  * Reserved agent-ui / travel-home fixture ids are ignored here (purged next).
+ * Deletions are handled separately: `removePlan` drops the id from the live
+ * snapshot so restore cannot resurrect a trip the user already deleted.
  */
 export function mergeSandboxTravelPlansIntoLive(sandboxPlans: unknown): void {
   if (!Array.isArray(sandboxPlans)) return;

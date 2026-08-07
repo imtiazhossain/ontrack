@@ -89,7 +89,8 @@ export function TravelHomeHeroCarousel({
       setUris(next);
       setIndex(0);
       if (scrollProgress) scrollProgress.value = 0;
-      onActiveImageChange?.(next[0], 0, next.length);
+      // Publish settled count immediately (incl. 1) so ticks appear without a swipe.
+      onActiveImageChange?.(next[0], 0, Math.max(0, next.length));
       if (next[1]) {
         void Image.prefetch(next[1]).catch(() => undefined);
       }

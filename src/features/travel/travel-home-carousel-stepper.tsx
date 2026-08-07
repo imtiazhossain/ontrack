@@ -23,7 +23,7 @@ const MAX_SLOTS = 3;
 const SETTLE_MS = 220;
 /** Soft dark halo so white ticks stay readable on bright roofs / sky. */
 const TICK_SHADOW =
-  '0 1px 3px rgba(0,0,0,0.55), 0 0 6px rgba(0,0,0,0.35)';
+  '0 1px 4px rgba(0,0,0,0.65), 0 0 8px rgba(0,0,0,0.4)';
 
 /**
  * Compact page ticks for Travel Home heroes — small thin lines overlaid on the
@@ -50,11 +50,12 @@ export function TravelHomeCarouselStepper({
   const activeIndex = Math.max(0, Math.min(Math.max(pageCount - 1, 0), index));
   const visible = pageCount > 1;
 
-  const lineW = Math.max(12, s(13));
-  const lineH = Math.max(2, s(2));
-  const gap = Math.max(4, s(5));
+  const lineW = Math.max(14, s(15));
+  const lineH = Math.max(2.5, s(3));
+  const gap = Math.max(5, s(6));
   const padY = Math.max(3, s(3));
-  const inactiveColor = 'rgba(255,255,255,0.45)';
+  // Stronger plate so the active tick reads as a “pill” on bright landmarks.
+  const inactiveColor = 'rgba(255,255,255,0.55)';
   const activeColor = '#FFFFFF';
 
   const fallbackProgress = useSharedValue(activeIndex);

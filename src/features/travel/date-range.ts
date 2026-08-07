@@ -25,7 +25,7 @@ export type TripDatesBadge =
   | { kind: 'complete' };
 
 /**
- * Compact itinerary dates-row pill:
+ * Compact itinerary dates-row status pill (shown right of trip length):
  * - before start → countdown
  * - during trip → inclusive days left
  * - after end → complete (checkmark in UI)

@@ -20,6 +20,7 @@ import {
     travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
 import { TravelHomeTravelerStack } from '@/features/travel/travel-home-traveler-stack';
+import { TravelHomeTripFrostScoop } from '@/features/travel/travel-home-trip-frost-scoop';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -71,7 +72,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const [heroPager, setHeroPager] = useState({ index: 0, count: 0 });
   /** Continuous hero page position for smooth glass tick crossfades. */
   const heroScrollProgress = useSharedValue(0);
-  /** Active remote hero URI — glass frosts this plate in the scoop (iOS + Android). */
+  /** Active remote hero URI — Android scoop frosts this plate. */
   const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
   useEffect(() => {
     setHeroPager({ index: 0, count: 0 });
@@ -89,8 +90,17 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const radius = travelHomeTokens.radius.tripCard;
   const heroHeight = travelHomeImageHeight(cardWidth);
   const bodyOverlap = travelHomeTokens.spacing.bodyOverlap;
-  // Device/prod has no __DEV__ fixtures — seed from coverUri so the scoop is
-  // never waiting on the carousel fetch (sim looks fine; phone stayed milk).
+  /**
+   * Visual milk under the title into paper. Keep short — paper paints above
+   * this bleed (zIndex) so footer never gets clipped by the scoop.
+   */
+  const frostFadeBleed = Math.max(16, s(18));
+  /** Keep ticks on the visible photo band, clear of the frost scoop. */
+  const stepperBottom =
+    bodyOverlap + Math.max(10, s(travelHomeTokens.sizes.carouselBottomInset + 4));
+  const titleToLocation = Math.max(4, travelHomeTokens.spacing.titleToLocation);
+  const locationToDivider = Math.max(6, travelHomeTokens.spacing.locationToDivider - 2);
+  const footerPadV = Math.max(10, travelHomeTokens.spacing.cardBottom);
   const fixtureFrost = __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
   const coverFrost =
     typeof plan.coverUri === 'string' && plan.coverUri.trim()
@@ -99,6 +109,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const heroFrostSource = heroFrostUri
     ? { uri: heroFrostUri }
     : coverFrost ?? fixtureFrost;
+  const paper = dark ? theme.backgroundSunken : '#FFFFFF';
   const cardShadow = soloAtmosphereShadow
     ? travelHomeSoloTripCardShadow({
         averageColor: atmosphereAverageColor,
@@ -166,6 +177,58 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       </Text>
     </>
   );
+  const locationRow = destination ? (
+    <View style={[styles.locationRow, { gap: 6 }]}>
+      <TravelHomeLocationPin size={Math.max(14, s(15))} color={brand} />
+      <AppText
+        variant="callout"
+        numberOfLines={1}
+        style={{
+          color: muted,
+          fontFamily: travelHomeFontFamily,
+          fontSize: Math.max(14, s(travelHomeTokens.type.location)),
+          flexShrink: 1,
+          minWidth: 0,
+        }}>
+        {destination}
+      </AppText>
+    </View>
+  ) : null;
+
+  const titleBlock = (
+    <View style={[styles.titleCluster, { gap: titleToLocation }]}>
+      <View style={[styles.titleRow, { gap: rs.sm }]}>
+        <View style={styles.titleCopy}>
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={1.15}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{
+              color: ink,
+              fontFamily: travelHomeFontFamily,
+              fontSize: titleSize,
+              lineHeight: titleSize * 1.1,
+              fontWeight: '400',
+              letterSpacing: -0.4,
+            }}>
+            {plan.title}
+          </Text>
+        </View>
+        {!compact ? (
+          <TravelHomeTravelerStack
+            people={travelers}
+            tripTitle={plan.title}
+            testID={AgentUiIds.travel.list.coTravelers(plan.id)}
+            onPress={() => onViewTravelers(plan.id)}
+          />
+        ) : null}
+      </View>
+      {/* Location lives in frost chrome — paper sits under the milk overlay. */}
+      {locationRow}
+    </View>
+  );
+
   return (
     // Shadow and overflow:hidden cannot share one view on iOS — split so the
     // large mock corner radii actually clip the destination hero.
@@ -184,15 +247,22 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           width: '100%',
         },
       ]}>
-      <View
-        style={[
-          styles.clip,
-          {
-            backgroundColor: 'transparent',
-            borderRadius: radius,
-          },
-        ]}>
-        <View collapsable={false} style={styles.heroWrap}>
+      {/*
+        Do not wrap hero + frost in one overflow:hidden clip — that kills iOS
+        UIVisualEffect sampling after reload (dark bar, “missing” title).
+        Clip the hero media and paper body separately; frost sits between.
+      */}
+      <View collapsable={false} style={styles.column}>
+        <View
+          collapsable={false}
+          style={[
+            styles.heroMedia,
+            {
+              height: heroHeight,
+              borderTopLeftRadius: radius,
+              borderTopRightRadius: radius,
+            },
+          ]}>
           <TravelHomeHeroCarousel
             plan={plan}
             width={cardWidth}
@@ -201,31 +271,26 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             onActiveImageChange={(uri, index, pageCount) => {
               setHeroPager((previous) => {
                 // Ignore transient empty reports so ticks stay visible once known.
-                if (pageCount <= 0 && previous.count > 1) return previous;
+                if (pageCount <= 0 && previous.count > 1) {
+                  return previous;
+                }
+                // Never collapse a known multi-page strip to a single tick mid-load.
+                if (pageCount === 1 && previous.count > 1 && !uri) {
+                  return previous;
+                }
                 if (previous.index === index && previous.count === pageCount) {
                   return previous;
                 }
                 return { index, count: pageCount };
               });
-              setHeroFrostUri(uri);
+              if (uri) setHeroFrostUri(uri);
               onActiveImageChange?.(plan.id, uri);
             }}
           />
-          {/*
-            Page ticks overlay the visible hero band (above the glass scoop),
-            not the meta panel — keeps them on the photo toward its bottom.
-          */}
           <View
             collapsable={false}
             pointerEvents="none"
-            style={[
-              styles.stepperOverlay,
-              {
-                bottom:
-                  bodyOverlap +
-                  Math.max(6, s(travelHomeTokens.sizes.carouselBottomInset)),
-              },
-            ]}>
+            style={[styles.stepperOverlay, { bottom: stepperBottom }]}>
             <TravelHomeCarouselStepper
               count={heroPager.count}
               index={heroPager.index}
@@ -235,44 +300,78 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
         </View>
 
         {/*
-          Glass meta panel scoops into the hero so the title sits on frost.
-          Hero-aligned plate + milk-out (iOS BlurView / Android photo blur).
+          Frost overlays the hero bottom via negative margin — sibling of the
+          clipped hero media so BlurView can sample the live photo. Long
+          fadeBleed milks frost into solid paper (no glass→white rim).
         */}
-        <TravelHomeGlass
-          frost={
-            heroFrostSource
-              ? {
-                  source: heroFrostSource,
-                  heroHeight,
-                  overlap: bodyOverlap,
-                }
-              : undefined
-          }
+        <View
+          collapsable={false}
           style={[
-            styles.metaPanel,
+            styles.frostBand,
             {
+              height: bodyOverlap + frostFadeBleed,
               marginTop: -bodyOverlap,
-              borderTopLeftRadius: travelHomeTokens.radius.bodyTop,
-              borderTopRightRadius: travelHomeTokens.radius.bodyTop,
-              borderBottomLeftRadius: radius,
-              borderBottomRightRadius: radius,
             },
           ]}>
-          {/*
-            Always mount this collapsed slot as a Fabric sibling of BlurView.
-            Toggling a real child here caused iOS SIGABRT:
-            `unmountChildComponentView` index mismatch on the meta glass plate
-            (child y≈-12, pointerEvents=none — former in-glass stepper).
-          */}
-          <View
-            collapsable={false}
-            pointerEvents="none"
-            style={styles.stepperSlotCollapsed}
-          />
-          <AgentTestId
-            testID={AgentUiIds.travel.list.openHub(plan.id)}
-            label={`Open ${plan.title}`}
-            onPress={openTrip}>
+          <TravelHomeTripFrostScoop
+            height={bodyOverlap}
+            fadeBleed={frostFadeBleed}
+            heroHeight={heroHeight}
+            source={heroFrostSource}
+            paperColor={paper}
+            blurKey={
+              heroFrostUri ??
+              (typeof plan.coverUri === 'string' ? plan.coverUri : 'seed')
+            }
+            borderTopLeftRadius={travelHomeTokens.radius.bodyTop}
+            borderTopRightRadius={travelHomeTokens.radius.bodyTop}>
+            <AgentTestId
+              testID={AgentUiIds.travel.list.openHub(plan.id)}
+              label={
+                destination
+                  ? `Open ${plan.title}, ${destination}`
+                  : `Open ${plan.title}`
+              }
+              onPress={openTrip}
+              style={styles.frostTitleFill}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  destination
+                    ? `Open ${plan.title}, ${destination}`
+                    : `Open ${plan.title}`
+                }
+                onPress={openTrip}
+                style={({ pressed }) => [
+                  styles.frostTitle,
+                  {
+                    paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
+                    paddingTop: travelHomeTokens.spacing.bodyTop,
+                    paddingBottom: Math.max(6, s(6)),
+                    opacity: pressed ? 0.92 : 1,
+                  },
+                ]}>
+                {titleBlock}
+              </Pressable>
+            </AgentTestId>
+          </TravelHomeTripFrostScoop>
+        </View>
+
+        {/* Solid paper body — pulled under the frost milk-out for a soft join. */}
+        <View
+          style={[
+            styles.metaBody,
+            {
+              backgroundColor: paper,
+              borderBottomLeftRadius: radius,
+              borderBottomRightRadius: radius,
+              marginTop: -frostFadeBleed,
+              // Tight under location; metaBody stacks above the frost bleed so
+              // dates/CTA are never covered by the milk overlay.
+              paddingTop: locationToDivider,
+            },
+          ]}>
+          {compact ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Open ${plan.title}`}
@@ -281,68 +380,18 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingTop: travelHomeTokens.spacing.bodyTop,
-                  paddingBottom: travelHomeTokens.spacing.locationToDivider,
-                  gap: travelHomeTokens.spacing.titleToLocation,
+                  paddingBottom: locationToDivider,
                   opacity: pressed ? 0.92 : 1,
                 },
               ]}>
-              <View style={[styles.titleRow, { gap: rs.sm }]}>
-                <View style={styles.titleCopy}>
-                  <Text
-                    allowFontScaling
-                    maxFontSizeMultiplier={1.15}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    style={{
-                      color: ink,
-                      fontFamily: travelHomeFontFamily,
-                      fontSize: titleSize,
-                      lineHeight: titleSize * 1.1,
-                      fontWeight: '400',
-                      letterSpacing: -0.4,
-                    }}>
-                    {plan.title}
-                  </Text>
-                </View>
-                {!compact ? (
-                  <TravelHomeTravelerStack
-                    people={travelers}
-                    tripTitle={plan.title}
-                    testID={AgentUiIds.travel.list.coTravelers(plan.id)}
-                    onPress={() => onViewTravelers(plan.id)}
-                  />
-                ) : null}
-              </View>
-
-              {destination ? (
-                <View style={[styles.locationRow, { gap: 6 }]}>
-                  <TravelHomeLocationPin size={Math.max(14, s(15))} color={brand} />
-                  <AppText
-                    variant="callout"
-                    numberOfLines={1}
-                    style={{
-                      color: muted,
-                      fontFamily: travelHomeFontFamily,
-                      fontSize: Math.max(14, s(travelHomeTokens.type.location)),
-                      flexShrink: 1,
-                      minWidth: 0,
-                    }}>
-                    {destination}
-                  </AppText>
-                </View>
-              ) : null}
-
-              {compact ? (
-                <TravelHomeTravelerStack
-                  people={travelers}
-                  tripTitle={plan.title}
-                  testID={AgentUiIds.travel.list.coTravelers(plan.id)}
-                  onPress={() => onViewTravelers(plan.id)}
-                />
-              ) : null}
+              <TravelHomeTravelerStack
+                people={travelers}
+                tripTitle={plan.title}
+                testID={AgentUiIds.travel.list.coTravelers(plan.id)}
+                onPress={() => onViewTravelers(plan.id)}
+              />
             </Pressable>
-          </AgentTestId>
+          ) : null}
 
           <View
             style={[
@@ -362,44 +411,15 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               styles.footer,
               {
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                // iOS TNR footer ink sits optically low — give the band equal air
-                // so the dates cluster + CTA share one centered midline.
-                paddingBottom:
-                  Platform.OS === 'ios'
-                    ? Math.max(16, travelHomeTokens.spacing.cardBottom + 4)
-                    : travelHomeTokens.spacing.cardBottom,
-                paddingTop:
-                  Platform.OS === 'ios'
-                    ? Math.max(14, travelHomeTokens.spacing.dividerToMeta + 6)
-                    : travelHomeTokens.spacing.dividerToMeta,
-                gap: Math.max(
-                  Platform.OS === 'ios' ? 14 : 10,
-                  rs.sm,
-                ),
+                paddingTop: Math.max(8, footerPadV - 2),
+                paddingBottom: footerPadV,
+                // Invisible 50/50 split — no divider; gap is the only seam.
+                gap: Math.max(10, rs.sm),
                 flexDirection: compact ? 'column' : 'row',
-                alignItems: compact ? 'stretch' : 'center',
+                alignItems: 'stretch',
               },
             ]}>
             <TravelHomeDateBlock startDate={plan.startDate} endDate={plan.endDate} />
-            {!compact ? (
-              <View
-                style={[
-                  styles.footerRule,
-                  {
-                    backgroundColor:
-                      theme.name === 'dark'
-                        ? 'rgba(255,255,255,0.14)'
-                        : travelHomeTokens.colors.divider,
-                    // Span the date line + label cluster optical mid — not the full
-                    // footer height — so the rule matches the shorter, centered read.
-                    height:
-                      Platform.OS === 'ios'
-                        ? Math.max(28, s(30))
-                        : Math.max(24, s(26)),
-                  },
-                ]}
-              />
-            ) : null}
             <Pressable
               ref={itineraryAgent.ref}
               testID={AgentUiIds.travel.list.itinerary(plan.id)}
@@ -411,13 +431,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               style={({ pressed }) => [
                 styles.itineraryHit,
                 {
+                  flex: compact ? undefined : 1,
                   height: buttonHeight,
                   borderRadius: travelHomeTokens.radius.itineraryButton,
                   opacity: pressed ? 0.88 : 1,
-                  alignSelf: compact ? 'stretch' : 'center',
-                  maxWidth: compact
-                    ? undefined
-                    : Math.max(168, s(travelHomeTokens.sizes.itineraryButtonMaxWidth + 12)),
+                  alignSelf: 'stretch',
                 },
               ]}>
               {itineraryFill ? (
@@ -425,6 +443,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   style={[
                     styles.itineraryButton,
                     {
+                      flex: 1,
                       height: buttonHeight,
                       paddingHorizontal: itineraryPadH,
                       borderRadius: travelHomeTokens.radius.itineraryButton,
@@ -441,6 +460,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   style={[
                     styles.itineraryButton,
                     {
+                      flex: 1,
                       height: buttonHeight,
                       paddingHorizontal: itineraryPadH,
                       borderRadius: travelHomeTokens.radius.itineraryButton,
@@ -452,7 +472,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               )}
             </Pressable>
           </View>
-        </TravelHomeGlass>
+        </View>
       </View>
     </Animated.View>
   );
@@ -462,15 +482,31 @@ const styles = StyleSheet.create({
   shadow: {
     borderCurve: 'continuous',
   },
-  clip: {
+  column: {
+    width: '100%',
+    borderCurve: 'continuous',
+  },
+  heroMedia: {
+    width: '100%',
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
-  heroWrap: {
+  frostBand: {
     width: '100%',
-  },
-  metaPanel: {
+    // Below paper body — bleed must not cover divider/footer.
     zIndex: 1,
+  },
+  frostTitleFill: {
+    flex: 1,
+  },
+  frostTitle: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  metaBody: {
+    // Above frost bleed so dates + View Itinerary stay fully visible.
+    zIndex: 2,
+    overflow: 'hidden',
     borderCurve: 'continuous',
   },
   stepperOverlay: {
@@ -480,16 +516,12 @@ const styles = StyleSheet.create({
     zIndex: 2,
     alignItems: 'center',
   },
-  stepperSlotCollapsed: {
-    height: 0,
-    marginTop: 0,
-    marginBottom: 0,
-    overflow: 'hidden',
-    opacity: 0,
-    zIndex: 3,
-  },
   body: {
     width: '100%',
+  },
+  titleCluster: {
+    width: '100%',
+    minWidth: 0,
   },
   titleRow: {
     flexDirection: 'row',
@@ -500,26 +532,24 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
+    overflow: 'hidden',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
+    flexShrink: 1,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
   },
   footer: {
-    justifyContent: 'space-between',
-  },
-  footerRule: {
-    width: StyleSheet.hairlineWidth,
-    flexShrink: 0,
-    alignSelf: 'center',
+    width: '100%',
   },
   itineraryHit: {
-    flexGrow: 0,
-    flexShrink: 0,
+    flexShrink: 1,
+    minWidth: 0,
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
@@ -528,8 +558,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    flexGrow: 0,
-    flexShrink: 0,
+    width: '100%',
+    minWidth: 0,
     borderCurve: 'continuous',
   },
 });
