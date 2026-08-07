@@ -20,13 +20,21 @@
 #   - OTA (`npm run update:production`) cannot ship native module changes.
 #     Use this script when Kotlin/Java under modules/ (or other native code) changed.
 #   - Always deletes existing *.apk in the folder before upload so only one remains.
+#   - Uploaded name is onTrack-<expo.version>-android-release.apk (from app.json).
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FOLDER_ID="${ONTRACK_DRIVE_APK_FOLDER_ID:-162sjQp7GPhie7MCJMdIAbEXPATmIa1Pa}"
 REMOTE="${ONTRACK_DRIVE_RCLONE_REMOTE:-gdrive}"
-APK_NAME="onTrack-android-release.apk"
+APP_VERSION="$(
+  node -e "const a=require('${ROOT}/app.json'); process.stdout.write(String(a?.expo?.version||''))" 2>/dev/null || true
+)"
+if [[ -z "$APP_VERSION" ]]; then
+  echo "error: could not read expo.version from app.json" >&2
+  exit 1
+fi
+APK_NAME="onTrack-${APP_VERSION}-android-release.apk"
 APK_SRC="$ROOT/android/app/build/outputs/apk/release/app-release.apk"
 APK_DEST="$ROOT/$APK_NAME"
 JAVA_HOME_DEFAULT="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
@@ -67,7 +75,7 @@ fi
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 if [[ "$DO_BUILD" -eq 1 ]]; then
-  echo "==> Building release APK (commit $SHA)"
+  echo "==> Building release APK v${APP_VERSION} (commit $SHA)"
   cd "$ROOT/android"
   GRADLE_ARGS=()
   if [[ "$CLEAN_NATIVE" -eq 1 ]]; then
@@ -128,6 +136,8 @@ echo "==> Folder contents"
 rclone lsl "${REMOTE}:" --drive-root-folder-id "$FOLDER_ID" 2>&1 | grep -v NOTICE
 LINK="$(rclone link "${REMOTE}:${APK_NAME}" --drive-root-folder-id "$FOLDER_ID" 2>&1 | grep -v NOTICE | tail -1)"
 echo
+echo "version=$APP_VERSION"
 echo "commit=$SHA"
+echo "apk=$APK_NAME"
 echo "file=$LINK"
 echo "folder=https://drive.google.com/drive/folders/${FOLDER_ID}"

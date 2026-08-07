@@ -1,10 +1,16 @@
 import {
     destinationCoverCandidates,
     enlargeWikimediaThumb,
+    isAllowedDestinationCoverImageUrl,
     isUsableDestinationPhotoUrl,
+    proxyDestinationCoverImageUrl,
     stayCoverCandidates,
 } from '../destination-cover';
 import type { TravelPlan } from '../types';
+
+jest.mock('@/services/http/api-url', () => ({
+  resolveExpoApiUrl: (path: string) => `http://localhost:8081${path}`,
+}));
 
 function plan(partial: Partial<TravelPlan>): TravelPlan {
   return {
@@ -94,6 +100,19 @@ describe('isUsableDestinationPhotoUrl', () => {
   it('rejects non-https urls', () => {
     expect(isUsableDestinationPhotoUrl('http://example.com/photo.jpg')).toBe(false);
   });
+
+  it('rejects watermarked Unsplash+ preview urls', () => {
+    expect(
+      isUsableDestinationPhotoUrl(
+        'https://plus.unsplash.com/premium_photo-1677344289076-b4e8d7325e94?w=1080',
+      ),
+    ).toBe(false);
+    expect(
+      isUsableDestinationPhotoUrl(
+        'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1080',
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('enlargeWikimediaThumb', () => {
@@ -104,6 +123,51 @@ describe('enlargeWikimediaThumb', () => {
       ),
     ).toBe(
       'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Reykjavik.jpg/800px-Reykjavik.jpg',
+    );
+  });
+});
+
+describe('destination cover image proxy', () => {
+  it('allowlists Wikimedia upload hosts and rejects arbitrary https', () => {
+    expect(
+      isAllowedDestinationCoverImageUrl(
+        'https://upload.wikimedia.org/wikipedia/commons/a/a1/Paris.jpg',
+      ),
+    ).toBe(true);
+    expect(
+      isAllowedDestinationCoverImageUrl('https://evil.example/photo.jpg'),
+    ).toBe(false);
+  });
+
+  it('builds a proxied API URL for allowed remotes', () => {
+    const remote =
+      'https://upload.wikimedia.org/wikipedia/commons/a/a1/Paris.jpg';
+    const proxied = proxyDestinationCoverImageUrl(remote);
+    expect(proxied).toContain('/api/destination-cover-image?src=');
+    expect(proxied).toContain(encodeURIComponent(remote));
+  });
+});
+
+describe('rewriteDestinationCoverFetchUrl', () => {
+  // Lazy import keeps the API route out of the main cover module graph.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { rewriteDestinationCoverFetchUrl } =
+    require('../../../app/api/destination-cover-image+api') as typeof import('../../../app/api/destination-cover-image+api');
+
+  it('maps commons originals and thumbs to Special:FilePath resize URLs', () => {
+    expect(
+      rewriteDestinationCoverFetchUrl(
+        'https://upload.wikimedia.org/wikipedia/commons/6/61/Santa_Catalina_Arch_-_Antigua_Guatemala_Feb_2020.jpg',
+      ),
+    ).toBe(
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Santa_Catalina_Arch_-_Antigua_Guatemala_Feb_2020.jpg?width=1200',
+    );
+    expect(
+      rewriteDestinationCoverFetchUrl(
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Santa_Catalina_Arch_-_Antigua_Guatemala_Feb_2020.jpg/800px-Santa_Catalina_Arch_-_Antigua_Guatemala_Feb_2020.jpg',
+      ),
+    ).toBe(
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Santa_Catalina_Arch_-_Antigua_Guatemala_Feb_2020.jpg?width=1200',
     );
   });
 });

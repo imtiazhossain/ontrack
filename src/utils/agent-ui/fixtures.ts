@@ -80,6 +80,7 @@ export function createIdFromAgentUiItemIds(
 
 export type AgentUiFixtureName =
   | 'travel-demo'
+  | 'travel-home'
   | 'checklist-demo'
   | 'grocery-demo'
   | 'health-demo'
@@ -89,6 +90,12 @@ export type AgentUiFixtureName =
   | 'food-demo'
   | 'workouts-demo'
   | 'vision-board-demo';
+
+export {
+    TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    TRAVEL_HOME_ICELAND_TRIP_ID,
+    TRAVEL_HOME_THIRD_TRIP_ID
+} from '@/features/travel/fixtures/travel-home';
 
 export type AgentUiSeedResult = {
   fixture: AgentUiFixtureName;
@@ -107,6 +114,98 @@ export type AgentUiSeedResult = {
   categoryId?: string;
   itemId?: string;
 };
+
+function buildTravelHomeParticipant(
+  id: string,
+  name: string,
+  nowIso: string,
+): TravelPlan['participants'][number] {
+  return {
+    id,
+    name,
+    inviteCode: `home-${id}`,
+    invitedAt: nowIso,
+    acceptedAt: nowIso,
+  };
+}
+
+/**
+ * Iceland + Antigua + third trip for Travel Home visual QA.
+ * Hero images resolve via `travelHomeFixtureHeroUris` in __DEV__.
+ */
+export function buildTravelHomeVisualTrips(
+  nowIso = new Date().toISOString(),
+): TravelPlan[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const {
+    TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    TRAVEL_HOME_ICELAND_TRIP_ID,
+    TRAVEL_HOME_THIRD_TRIP_ID,
+  } =
+    require('@/features/travel/fixtures/travel-home') as typeof import('@/features/travel/fixtures/travel-home');
+
+  const iceland: TravelPlan = {
+    id: TRAVEL_HOME_ICELAND_TRIP_ID,
+    title: 'Iceland',
+    mode: 'flight',
+    destination: 'Reykjavík, Iceland',
+    startDate: '2026-09-08',
+    endDate: '2026-09-14',
+    notes: 'Travel Home visual fixture. Safe to overwrite.',
+    itinerary: [],
+    participants: [
+      buildTravelHomeParticipant('p-home-alex', 'Alex Rivera', nowIso),
+      buildTravelHomeParticipant('p-home-jordan', 'Jordan Lee', nowIso),
+      buildTravelHomeParticipant('p-home-morgan', 'Morgan Blake', nowIso),
+    ],
+    baseCurrency: 'USD',
+    expenses: [],
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  const antigua: TravelPlan = {
+    id: TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    title: 'Antigua, Guatemala',
+    mode: 'flight',
+    destination: 'Antigua, Guatemala',
+    startDate: '2026-09-22',
+    endDate: '2026-09-27',
+    notes: 'Travel Home visual fixture. Safe to overwrite.',
+    itinerary: [],
+    participants: [
+      buildTravelHomeParticipant('p-home-casey', 'Casey Morgan', nowIso),
+      buildTravelHomeParticipant('p-home-sam', 'Sam Quinn', nowIso),
+      buildTravelHomeParticipant('p-home-riley', 'Riley Chen', nowIso),
+      buildTravelHomeParticipant('p-home-avery', 'Avery Brooks', nowIso),
+      buildTravelHomeParticipant('p-home-jamie', 'Jamie Patel', nowIso),
+    ],
+    baseCurrency: 'USD',
+    expenses: [],
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  const third: TravelPlan = {
+    id: TRAVEL_HOME_THIRD_TRIP_ID,
+    title: 'Faroe Islands',
+    mode: 'flight',
+    destination: 'Tórshavn, Faroe Islands',
+    startDate: '2026-10-04',
+    endDate: '2026-10-10',
+    notes: 'Travel Home visual fixture (below-fold third trip). Safe to overwrite.',
+    itinerary: [],
+    participants: [
+      buildTravelHomeParticipant('p-home-taylor', 'Taylor Nguyen', nowIso),
+    ],
+    baseCurrency: 'USD',
+    expenses: [],
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  return [iceland, antigua, third];
+}
 
 export function buildAgentUiDemoTrip(
   nowIso = new Date().toISOString(),
@@ -394,6 +493,34 @@ export function seedAgentUiFixture(
     };
   }
 
+  if (fixture === 'travel-home') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useTravel } = require('@/store/travel') as typeof import('@/store/travel');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useUI } = require('@/store/ui') as typeof import('@/store/ui');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const {
+      TRAVEL_HOME_ANTIGUA_TRIP_ID,
+      TRAVEL_HOME_ICELAND_TRIP_ID,
+      TRAVEL_HOME_THIRD_TRIP_ID,
+    } =
+      require('@/features/travel/fixtures/travel-home') as typeof import('@/features/travel/fixtures/travel-home');
+    const plans = buildTravelHomeVisualTrips();
+    for (const plan of plans) {
+      if (!useTravel.getState().savePlan(plan)) return null;
+    }
+    // Recency order: Iceland first, then Antigua, then third (below fold).
+    useTravel.getState().recordPlanInteraction(TRAVEL_HOME_THIRD_TRIP_ID);
+    useTravel.getState().recordPlanInteraction(TRAVEL_HOME_ANTIGUA_TRIP_ID);
+    useTravel.getState().recordPlanInteraction(TRAVEL_HOME_ICELAND_TRIP_ID);
+    useUI.getState().setTabBarCollapsed(false);
+    return {
+      fixture,
+      primaryId: TRAVEL_HOME_ICELAND_TRIP_ID,
+      planId: TRAVEL_HOME_ICELAND_TRIP_ID,
+    };
+  }
+
   if (fixture === 'checklist-demo') {
     const built = buildAgentUiDemoChecklist();
     upsertTodoFixtureLists({
@@ -671,6 +798,13 @@ export function normalizeFixtureName(
     return 'travel-demo';
   }
   if (
+    key === 'travel-home' ||
+    key === 'travel-home-visual' ||
+    key === 'trip-travel-home-iceland'
+  ) {
+    return 'travel-home';
+  }
+  if (
     key === 'checklist-demo' ||
     key === 'checklist' ||
     key === AGENT_UI_DEMO_CHECKLIST_LIST_ID
@@ -742,6 +876,7 @@ export function normalizeFixtureName(
 
 export const AGENT_UI_FIXTURE_NAMES = [
   'travel-demo',
+  'travel-home',
   'checklist-demo',
   'grocery-demo',
   'health-demo',

@@ -500,6 +500,7 @@ export const AgentUiIds = {
       searchStays: (tripId: string) =>
         `ontrack.travel.list.searchStays.${tripId}`,
       itinerary: (tripId: string) => `ontrack.travel.list.itinerary.${tripId}`,
+      openHub: (tripId: string) => `ontrack.travel.list.openHub.${tripId}`,
       calendar: (tripId: string) => `ontrack.travel.list.calendar.${tripId}`,
       tripWeather: (tripId: string) =>
         `ontrack.travel.list.tripWeather.${tripId}`,
@@ -511,6 +512,13 @@ export const AgentUiIds = {
       editTrip: (tripId: string) => `ontrack.travel.list.editTrip.${tripId}`,
       notesSection: (tripId: string) =>
         `ontrack.travel.list.notesSection.${tripId}`,
+      sectionYourTrips: 'ontrack.travel.list.section.yourTrips',
+      emptyCreate: 'ontrack.travel.list.empty.create',
+    },
+    hub: {
+      close: 'ontrack.travel.hub.close',
+      backToTravel: 'ontrack.travel.hub.backToTravel',
+      section: (tripId: string) => `ontrack.travel.hub.section.${tripId}`,
     },
     dates: {
       close: 'ontrack.travel.dates.close',
@@ -764,6 +772,10 @@ export const AgentUiIds = {
     overlayRoot: 'ontrack.agentUi.overlay.root',
     /** Floating per-page overlay toggle (Dev Mode). */
     overlayToggle: 'ontrack.agentUi.overlay.toggle',
+  },
+  dev: {
+    /** __DEV__ floating Light/Dark switcher — triple-tap page to show/hide. */
+    themeToggle: 'ontrack.dev.themeToggle',
   },
 } as const;
 

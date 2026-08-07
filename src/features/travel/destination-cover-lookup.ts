@@ -8,7 +8,19 @@ import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 export const DESTINATION_COVER_UA =
   'onTrack/1.0 (travel destination covers; https://ontrack.app)';
 
-/** Skip flags/maps and non-HTTPS assets. */
+export const DESTINATION_COVER_MAX = 3;
+
+/** Hosts the cover-image proxy is allowed to fetch (Wikimedia / Openverse). */
+const DESTINATION_COVER_IMAGE_HOST_SUFFIXES = [
+  'upload.wikimedia.org',
+  'commons.wikimedia.org',
+  'wikipedia.org',
+  'wikimedia.org',
+  'openverse.org',
+  'wordpress.com',
+] as const;
+
+/** Skip flags/maps, non-HTTPS assets, and watermarked Unsplash+ previews. */
 export function isUsableDestinationPhotoUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed.toLowerCase().startsWith('https://')) return false;
@@ -17,7 +29,28 @@ export function isUsableDestinationPhotoUrl(url: string): boolean {
   if (/(^|\/)flag[_-]|coat_of_arms|locator_map|location_map/i.test(lower)) {
     return false;
   }
+  // Unsplash+ / premium previews ship with visible watermarks — never use them.
+  if (
+    lower.includes('plus.unsplash.com') ||
+    lower.includes('premium_photo-') ||
+    lower.includes('unsplash-premium-photos')
+  ) {
+    return false;
+  }
   return true;
+}
+
+/** True when the cover-image proxy may fetch this remote URL. */
+export function isAllowedDestinationCoverImageUrl(url: string): boolean {
+  if (!isUsableDestinationPhotoUrl(url)) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return DESTINATION_COVER_IMAGE_HOST_SUFFIXES.some(
+      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Prefer a sharper Wikimedia thumb when the summary returns a tiny one. */
@@ -34,6 +67,18 @@ export function pickDestinationPhotoUrl(
     return enlargeWikimediaThumb(next);
   }
   return undefined;
+}
+
+function normalizeLimit(limit?: number): number {
+  if (limit == null || !Number.isFinite(limit)) return 1;
+  return Math.max(1, Math.min(DESTINATION_COVER_MAX, Math.floor(limit)));
+}
+
+function pushUniqueUrl(out: string[], url: string | undefined): void {
+  if (!url) return;
+  const key = url.toLowerCase();
+  if (out.some((existing) => existing.toLowerCase() === key)) return;
+  out.push(url);
 }
 
 type WikiSummary = {
@@ -73,16 +118,17 @@ async function fetchWikiSummaryCover(
   );
 }
 
-async function fetchCommonsSearchCover(
+async function fetchCommonsSearchCovers(
   place: string,
   headers: Record<string, string>,
-): Promise<string | undefined> {
+  limit: number,
+): Promise<string[]> {
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
     gsrsearch: `${place} landscape`,
     gsrnamespace: '6',
-    gsrlimit: '8',
+    gsrlimit: String(Math.max(8, limit * 3)),
     prop: 'imageinfo',
     iiprop: 'url|mime',
     iiurlwidth: '800',
@@ -108,94 +154,133 @@ async function fetchCommonsSearchCover(
         };
       }
     | undefined;
-  if (!body) return undefined;
+  if (!body) return [];
+  const out: string[] = [];
   for (const page of Object.values(body.query?.pages ?? {})) {
+    if (out.length >= limit) break;
     const info = page.imageinfo?.[0];
     const mime = info?.mime?.toLowerCase() ?? '';
     if (mime && !mime.startsWith('image/jpeg') && !mime.startsWith('image/png')) {
       continue;
     }
-    const next = pickDestinationPhotoUrl(info?.thumburl, info?.url);
-    if (next) return next;
+    pushUniqueUrl(out, pickDestinationPhotoUrl(info?.thumburl, info?.url));
   }
-  return undefined;
+  return out;
 }
 
-async function fetchOpenverseCover(
+async function fetchOpenverseCovers(
   place: string,
   headers: Record<string, string>,
-): Promise<string | undefined> {
+  limit: number,
+): Promise<string[]> {
   const url = `https://api.openverse.org/v1/images/?${new URLSearchParams({
     q: place,
-    page_size: '5',
+    page_size: String(Math.max(5, limit * 2)),
     category: 'photograph',
     extension: 'jpg,png',
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
     | { results?: Array<{ thumbnail?: string; url?: string }> }
     | undefined;
-  if (!body) return undefined;
+  if (!body) return [];
+  const out: string[] = [];
   for (const hit of body.results ?? []) {
-    const next = pickDestinationPhotoUrl(hit.url, hit.thumbnail);
-    if (next) return next;
+    if (out.length >= limit) break;
+    pushUniqueUrl(out, pickDestinationPhotoUrl(hit.url, hit.thumbnail));
   }
-  return undefined;
+  return out;
 }
 
-async function fetchUnsplashCover(
+async function fetchUnsplashCovers(
   place: string,
   headers: Record<string, string>,
-): Promise<string | undefined> {
+  limit: number,
+): Promise<string[]> {
   const url = `https://unsplash.com/napi/search/photos?${new URLSearchParams({
     query: place,
-    per_page: '3',
+    per_page: String(Math.max(6, limit * 3)),
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
-    | { results?: Array<{ urls?: { regular?: string; small?: string } }> }
+    | {
+        results?: Array<{
+          plus?: boolean;
+          premium?: boolean;
+          urls?: { regular?: string; small?: string };
+        }>;
+      }
     | undefined;
-  if (!body) return undefined;
+  if (!body) return [];
+  const out: string[] = [];
   for (const hit of body.results ?? []) {
-    const next = pickDestinationPhotoUrl(hit.urls?.regular, hit.urls?.small);
-    if (next) return next;
+    if (out.length >= limit) break;
+    if (hit.plus || hit.premium) continue;
+    pushUniqueUrl(out, pickDestinationPhotoUrl(hit.urls?.regular, hit.urls?.small));
   }
-  return undefined;
+  return out;
 }
 
-/** Wikimedia-first cover URL for a place name (server should pass a real User-Agent). */
+function coverHeaders(userAgent?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Api-User-Agent': userAgent ?? DESTINATION_COVER_UA,
+  };
+  if (userAgent) headers['User-Agent'] = userAgent;
+  return headers;
+}
+
+/**
+ * Up to `limit` destination-relevant landscape URLs (max 3).
+ * Prefer variety across providers when a single source under-delivers.
+ */
+export async function lookupDestinationCoverUrls(
+  place: string,
+  options?: { userAgent?: string; limit?: number },
+): Promise<string[]> {
+  const trimmed = place.trim();
+  if (!trimmed) return [];
+
+  const limit = normalizeLimit(options?.limit);
+  const headers = coverHeaders(options?.userAgent);
+  const out: string[] = [];
+
+  const append = (urls: string[]) => {
+    for (const url of urls) {
+      if (out.length >= limit) return;
+      pushUniqueUrl(out, url);
+    }
+  };
+
+  // Prefer Wikimedia / Openverse (clean licensing) before Unsplash napi.
+  pushUniqueUrl(
+    out,
+    await fetchWikiSummaryCover('en.wikipedia.org', trimmed, headers),
+  );
+  if (out.length >= limit) return out;
+
+  pushUniqueUrl(
+    out,
+    await fetchWikiSummaryCover('en.wikivoyage.org', trimmed, headers),
+  );
+  if (out.length >= limit) return out;
+
+  append(await fetchCommonsSearchCovers(trimmed, headers, limit - out.length));
+  if (out.length >= limit) return out;
+
+  append(await fetchOpenverseCovers(trimmed, headers, limit - out.length));
+  if (out.length >= limit) return out;
+
+  append(await fetchUnsplashCovers(trimmed, headers, limit - out.length));
+  return out;
+}
+
+/** Single cover URL for a place name (server should pass a real User-Agent). */
 export async function lookupDestinationCoverUrl(
   place: string,
   options?: { userAgent?: string },
 ): Promise<string | undefined> {
-  const trimmed = place.trim();
-  if (!trimmed) return undefined;
-
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'Api-User-Agent': options?.userAgent ?? DESTINATION_COVER_UA,
-  };
-  if (options?.userAgent) {
-    headers['User-Agent'] = options.userAgent;
-  }
-
-  const unsplash = await fetchUnsplashCover(trimmed, headers);
-  if (unsplash) return unsplash;
-
-  const wikipedia = await fetchWikiSummaryCover(
-    'en.wikipedia.org',
-    trimmed,
-    headers,
-  );
-  if (wikipedia) return wikipedia;
-
-  const wikivoyage = await fetchWikiSummaryCover(
-    'en.wikivoyage.org',
-    trimmed,
-    headers,
-  );
-  if (wikivoyage) return wikivoyage;
-
-  const commons = await fetchCommonsSearchCover(trimmed, headers);
-  if (commons) return commons;
-
-  return fetchOpenverseCover(trimmed, headers);
+  const urls = await lookupDestinationCoverUrls(place, {
+    ...options,
+    limit: 1,
+  });
+  return urls[0];
 }

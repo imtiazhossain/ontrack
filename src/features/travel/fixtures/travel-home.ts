@@ -1,0 +1,106 @@
+/**
+ * Deterministic Travel Home fixture data for previews / visual checks.
+ * Mirrored from `design/travel/fixtures/travel-home.fixture.json`.
+ *
+ * Agent-ui seed ids (`trip-travel-home-*`) use stable Wikimedia hero URLs so
+ * visual QA does not depend on live cover lookups.
+ */
+import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
+
+/** Stable agent-ui / visual-QA plan ids (sandbox seed). */
+export const TRAVEL_HOME_ICELAND_TRIP_ID = 'trip-travel-home-iceland';
+export const TRAVEL_HOME_ANTIGUA_TRIP_ID = 'trip-travel-home-antigua';
+export const TRAVEL_HOME_THIRD_TRIP_ID = 'trip-travel-home-third';
+
+/**
+ * Bundled heroes for travel-home visual QA.
+ * Remote Wikimedia thumbs are blocked without a custom User-Agent in RN Image.
+ */
+const TRAVEL_HOME_HERO_SOURCE_BY_PLAN_ID: Record<string, number> = {
+  [TRAVEL_HOME_ICELAND_TRIP_ID]: require('../../../../assets/images/travel/fixtures/iceland-hero.jpg'),
+  [TRAVEL_HOME_ANTIGUA_TRIP_ID]: require('../../../../assets/images/travel/fixtures/antigua-hero.jpg'),
+  [TRAVEL_HOME_THIRD_TRIP_ID]: require('../../../../assets/images/travel/fixtures/third-hero.jpg'),
+};
+
+/** DEV visual-QA local hero module for travel-home seed plans only. */
+export function travelHomeFixtureHeroSource(planId: string): number | undefined {
+  return TRAVEL_HOME_HERO_SOURCE_BY_PLAN_ID[planId];
+}
+
+export type TravelHomeFixtureTrip = {
+  id: string;
+  destination: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  dayCount: number;
+  memberCount: number;
+  visibleMembers: Array<{ id: string; name: string }>;
+  imageQuery: string;
+};
+
+export type TravelHomeFixture = {
+  trips: TravelHomeFixtureTrip[];
+};
+
+export const travelHomeFixture: TravelHomeFixture = {
+  trips: [
+    {
+      id: TRAVEL_HOME_ICELAND_TRIP_ID,
+      destination: 'Iceland',
+      location: 'Reykjavík, Iceland',
+      startDate: '2026-09-08',
+      endDate: '2026-09-14',
+      dayCount: 7,
+      memberCount: 4,
+      visibleMembers: [
+        { id: 'm1', name: 'Alex Rivera' },
+        { id: 'm2', name: 'Jordan Lee' },
+      ],
+      imageQuery: 'Reykjavik Iceland city mountains travel landscape',
+    },
+    {
+      id: TRAVEL_HOME_ANTIGUA_TRIP_ID,
+      destination: 'Antigua, Guatemala',
+      location: 'Antigua, Guatemala',
+      startDate: '2026-09-22',
+      endDate: '2026-09-27',
+      dayCount: 6,
+      memberCount: 6,
+      visibleMembers: [
+        { id: 'm3', name: 'Casey Morgan' },
+        { id: 'm4', name: 'Sam Quinn' },
+        { id: 'm5', name: 'Riley Chen' },
+      ],
+      imageQuery: 'Antigua Guatemala Santa Catalina arch volcano travel landscape',
+    },
+  ],
+};
+
+export const travelHomeVisualScenarios = [
+  'travel-home-two-trips',
+  'travel-home-one-trip',
+  'travel-home-empty',
+  'travel-home-dark',
+  'travel-home-long-destination',
+  'travel-home-image-loading',
+] as const;
+
+/** Kit token contract — keep production tokens aligned with `design/travel`. */
+export function travelHomeTokenContract() {
+  return {
+    screenHorizontal: travelHomeTokens.spacing.screenHorizontal,
+    cardGap: travelHomeTokens.spacing.cardGap,
+    tripCardRadius: travelHomeTokens.radius.tripCard,
+    imageHeight: travelHomeTokens.sizes.tripImageHeightPhone,
+    editButton: travelHomeTokens.sizes.editButton,
+    avatar: travelHomeTokens.sizes.avatar,
+    avatarOverlap: travelHomeTokens.spacing.avatarOverlap,
+    itineraryHeight: travelHomeTokens.sizes.itineraryButtonHeight,
+    itineraryRadius: travelHomeTokens.radius.itineraryButton,
+    activeDot: travelHomeTokens.sizes.carouselActiveDot,
+    inactiveDot: travelHomeTokens.sizes.carouselInactiveDot,
+    heroCrossfadeMs: travelHomeTokens.motion.heroCrossfadeMs,
+    navy: travelHomeTokens.colors.navy,
+  };
+}

@@ -21,6 +21,7 @@
       "env": {
         "EAS_USE_CACHE": "1",
         "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "https://ontrack.expo.app",
         "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
       },
       "ios": {
@@ -37,6 +38,7 @@
       "env": {
         "EAS_USE_CACHE": "1",
         "EXPO_PUBLIC_APP_ENV": "testflight",
+        "EXPO_PUBLIC_API_BASE_URL": "https://ontrack.expo.app",
         "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
       },
       "ios": {
@@ -50,6 +52,7 @@
       "autoIncrement": true,
       "env": {
         "EAS_USE_CACHE": "1",
+        "EXPO_PUBLIC_API_BASE_URL": "https://ontrack.expo.app",
         "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
       },
       "ios": {

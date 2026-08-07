@@ -32,9 +32,9 @@
 #   METRO_WATCHER_FS_PROBE=1   # also touch beacon + confirm Watchman sees it
 #   ONTRACK_PACKAGER_TARGET=ios|android   # or pass --android
 #   AGENT_UI_PLATFORM=ios|android         # agent-ui command pin (set with --android)
-#   ONTRACK_IOS_SIMULATOR=iPhone 17 Pro   # default simulator device name
-#   ONTRACK_IOS_SIMULATOR_UDID=<udid>     # optional exact device
-#   ONTRACK_IOS_SIMULATOR_WINDOW=1        # open Simulator.app (default: headless)
+#   ONTRACK_IOS_SIMULATOR=onTrack iPhone 17 Pro  # default simulator device name
+#   ONTRACK_IOS_SIMULATOR_UDID=<udid>            # optional exact device
+#   ONTRACK_IOS_SIMULATOR_WINDOW=1               # open Simulator.app (default: headless)
 #   ONTRACK_ANDROID_AVD=Galaxy_S26
 #   ONTRACK_ANDROID_EMULATOR_WINDOW=1
 

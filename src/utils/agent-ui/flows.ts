@@ -72,6 +72,27 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
+  /** Visual QA: Iceland + Antigua fixture cards on Travel Home. */
+  'travel-home': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-home' },
+    { op: 'goto', to: 'travel' },
+    {
+      op: 'wait',
+      id: 'ontrack.travel.list.itinerary.trip-travel-home-iceland',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
+  'travel-demo-hub': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-demo' },
+    { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}/hub` },
+    {
+      op: 'wait',
+      id: `ontrack.travel.hub.section.${AGENT_UI_DEMO_TRIP_ID}`,
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
   'travel-demo-add-flight': [
     { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },

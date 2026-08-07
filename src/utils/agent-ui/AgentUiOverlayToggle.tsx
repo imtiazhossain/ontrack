@@ -7,30 +7,37 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 
+import { Symbol } from '@/components/primitives';
+
 import { AgentUiIds } from './ids';
 import { dismissAgentUiFab, toggleAgentUiOverlay } from './overlay';
 import { useAgentUiTarget } from './use-agent-ui-target';
 
-const BUTTON_MIN_WIDTH = 72;
-const BUTTON_HEIGHT = 44;
+/** Match Travel Home add FAB — white circle, soft elevation, navy mark. */
+const BUTTON_SIZE = 48;
 const EDGE_PAD = 10;
+const INK = '#16255B';
+const SURFACE = '#FFFFFF';
+const BORDER = 'rgba(22,37,91,0.08)';
+const SHADOW = '0 8px 20px rgba(22,37,91,0.16)';
 
 /** Session-persisted position so remounts / toggle state flips keep the FAB put. */
 let savedLeft: number | null = null;
 let savedTop: number | null = null;
 
 function defaultPosition(): { left: number; top: number } {
-  const { width } = Dimensions.get('window');
+  const { width, height } = Dimensions.get('window');
+  // Bottom-right — keeps Travel Home’s header + clear; drag if needed.
   return {
-    left: Math.max(EDGE_PAD, width - BUTTON_MIN_WIDTH - EDGE_PAD - 16),
-    top: 56,
+    left: Math.max(EDGE_PAD, width - BUTTON_SIZE - EDGE_PAD - 16),
+    top: Math.max(EDGE_PAD + 36, height - BUTTON_SIZE - EDGE_PAD - 96),
   };
 }
 
 function clampPosition(left: number, top: number): { left: number; top: number } {
   const { width, height } = Dimensions.get('window');
-  const maxLeft = Math.max(EDGE_PAD, width - BUTTON_MIN_WIDTH - EDGE_PAD);
-  const maxTop = Math.max(EDGE_PAD, height - BUTTON_HEIGHT - EDGE_PAD - 24);
+  const maxLeft = Math.max(EDGE_PAD, width - BUTTON_SIZE - EDGE_PAD);
+  const maxTop = Math.max(EDGE_PAD, height - BUTTON_SIZE - EDGE_PAD - 24);
   return {
     left: Math.min(maxLeft, Math.max(EDGE_PAD, left)),
     top: Math.min(maxTop, Math.max(EDGE_PAD + 36, top)),
@@ -43,9 +50,9 @@ type Props = {
 };
 
 /**
- * Compact draggable __DEV__ FAB — tap toggles overlay frames; drag to move;
- * long-press dismisses. Restore with a page long-press (Dev Mode + developer
- * account) or by turning Overlay on in Diagnostics.
+ * Compact draggable __DEV__ FAB — only mounted while overlay paint is on.
+ * Tap turns overlay off; drag to move; long-press dismisses. Restore by turning
+ * Overlay on in Diagnostics, agent-ui-overlay.sh, or a page long-press (Dev Mode).
  */
 export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
   const onToggle = useCallback(() => {
@@ -55,7 +62,9 @@ export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
     dismissAgentUiFab();
   }, []);
   const target = useAgentUiTarget(AgentUiIds.agentUi.overlayToggle, {
-    label: enabled ? 'Hide agent UI overlay' : 'Show agent UI overlay',
+    label: enabled
+      ? `Hide agent UI overlay (${idCount} targets)`
+      : 'Show agent UI overlay',
     onPress: onToggle,
   });
 
@@ -110,6 +119,8 @@ export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
     top: top.value,
   }));
 
+  const countLabel = idCount > 99 ? '99+' : String(idCount);
+
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
@@ -118,21 +129,20 @@ export function AgentUiOverlayToggle({ enabled, idCount }: Props) {
         onLayout={target.onLayout}
         accessibilityRole="button"
         accessibilityLabel={
-          enabled ? 'Hide agent UI overlay' : 'Show agent UI overlay'
+          enabled
+            ? `Hide agent UI overlay (${idCount} targets)`
+            : 'Show agent UI overlay'
         }
         accessibilityHint="Drag to move. Long-press to hide. With Dev Mode on, long-press anywhere to show again."
         testID={target.testID}
-        style={[
-          styles.fab,
-          enabled ? styles.fabOn : styles.fabOff,
-          animatedStyle,
-        ]}>
-        <Text style={styles.title} numberOfLines={1}>
-          {enabled ? 'Overlay' : 'Agent UI'}
-        </Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {enabled ? `On · ${idCount}` : 'Off · tap'}
-        </Text>
+        style={[styles.fab, enabled ? styles.fabOn : null, animatedStyle]}>
+        {enabled ? (
+          <Text style={styles.count} numberOfLines={1} allowFontScaling={false}>
+            {countLabel}
+          </Text>
+        ) : (
+          <Symbol name="gallery" size={22} color={INK} />
+        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -142,38 +152,29 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     zIndex: 1000,
-    minWidth: BUTTON_MIN_WIDTH,
-    minHeight: BUTTON_HEIGHT,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 22,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: SURFACE,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: BORDER,
+    boxShadow: SHADOW,
+    shadowColor: '#16255B',
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
   fabOn: {
-    backgroundColor: 'rgba(10, 18, 32, 0.92)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.95)',
+    borderColor: 'rgba(47,111,237,0.45)',
   },
-  fabOff: {
-    backgroundColor: 'rgba(10, 18, 32, 0.78)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(157, 176, 199, 0.65)',
-  },
-  title: {
-    color: '#F4F7FB',
-    fontSize: 12,
+  count: {
+    color: INK,
+    fontSize: 15,
     fontFamily: 'System',
     fontWeight: '600',
-  },
-  meta: {
-    color: '#9DB0C7',
-    fontSize: 10,
-    fontFamily: 'System',
+    includeFontPadding: false,
   },
 });

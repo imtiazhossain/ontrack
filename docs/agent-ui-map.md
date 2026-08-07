@@ -437,23 +437,36 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 
 ## Travel list (`/(tabs)/travel`)
 
+Trip launcher home. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live on **Trip hub** (`/travel/<id>/hub`).
+
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
 | `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish behind travel titles |
-| `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo                                 |
-| `ontrack.travel.list.collapse.<tripId>`          | Collapse or expand a trip card without reordering it      |
-| `ontrack.travel.list.editTrip.<tripId>`          | Edit trip details                                         |
-| `ontrack.travel.list.editDates.<tripId>`         | Open the trip date-range calendar                         |
-| `ontrack.travel.list.itinerary.<tripId>`         | Open plan itinerary                                       |
-| `ontrack.travel.list.calendar.<tripId>`          | Add trip to Calendar, or open Calendar when already added |
-| `ontrack.travel.list.searchFlights.<tripId>`     | Search Flights                                            |
-| `ontrack.travel.list.searchStays.<tripId>`       | Search Stays                                              |
-| `ontrack.travel.list.tripWeather.<tripId>`       | Trip Weather                                              |
-| `ontrack.travel.list.currency.<tripId>`          | Open Currency Calculator                                  |
-| `ontrack.travel.list.expenses.<tripId>`          | Open Expenses                                             |
-| `ontrack.travel.list.groupChat.<tripId>`         | Open Group Chat                                           |
-| `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers                                         |
-| `ontrack.travel.list.notesSection.<tripId>`      | Expand/collapse trip notes on the list card               |
+| `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
+| `ontrack.travel.list.empty.create`               | Empty-state Add Your First Trip                           |
+| `ontrack.travel.list.openHub.<tripId>`           | Open trip tools hub from the card body                    |
+| `ontrack.travel.list.editTrip.<tripId>`          | Edit trip details (hero control)                          |
+| `ontrack.travel.list.itinerary.<tripId>`         | View Itinerary → plan detail                              |
+| `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers from avatar stack                       |
+| `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo (hub / legacy)                  |
+| `ontrack.travel.list.collapse.<tripId>`          | Legacy collapse control (unused on launcher cards)        |
+| `ontrack.travel.list.editDates.<tripId>`         | Legacy dates control (edit trip / plan detail)            |
+| `ontrack.travel.list.calendar.<tripId>`          | Add trip to Calendar (**hub**)                            |
+| `ontrack.travel.list.searchFlights.<tripId>`     | Search Flights (**hub**)                                  |
+| `ontrack.travel.list.searchStays.<tripId>`       | Search Stays (**hub**)                                    |
+| `ontrack.travel.list.tripWeather.<tripId>`       | Trip Weather (**hub**)                                    |
+| `ontrack.travel.list.currency.<tripId>`          | Open Currency Calculator (**hub**)                        |
+| `ontrack.travel.list.expenses.<tripId>`          | Open Expenses (**hub**)                                   |
+| `ontrack.travel.list.groupChat.<tripId>`         | Open Group Chat (**hub**)                                 |
+| `ontrack.travel.list.notesSection.<tripId>`      | Legacy notes section (unused on launcher cards)           |
+
+### Travel trip hub (`/travel/<id>/hub`)
+
+| testID                                      | Control                          |
+| ------------------------------------------- | -------------------------------- |
+| `ontrack.travel.hub.close`                  | Close trip tools                 |
+| `ontrack.travel.hub.backToTravel`           | Empty-state back to Travel       |
+| `ontrack.travel.hub.section.<tripId>`       | Layout anchor — hub action grid  |
 | `ontrack.travel.dates.close`                     | Close the trip date-range calendar                        |
 | `ontrack.travel.dates.start`                     | Select the trip start-date endpoint                       |
 | `ontrack.travel.dates.end`                       | Select the trip end-date endpoint                         |
@@ -790,7 +803,8 @@ Deep link: `ontrack://travel/<planId>/chat` → `/travel/[id]/chat`
 | testID                            | Control                                                                 |
 | --------------------------------- | ----------------------------------------------------------------------- |
 | `ontrack.agentUi.overlay.root`    | Overlay host (`./scripts/agent-ui-overlay.sh on` paints framed testIDs) |
-| `ontrack.agentUi.overlay.toggle`  | Draggable FAB — tap toggles overlay; drag to move; long-press hides. Restore: page long-press (Dev Mode + developer account) or Diagnostics → Overlay (__DEV__) |
+| `ontrack.agentUi.overlay.toggle`  | White circular FAB (Travel `+` style; default bottom-right) — tap toggles overlay; drag to move; long-press hides. On = target count. Restore: page long-press (Dev Mode + developer account) or Diagnostics → Overlay (__DEV__) |
+| `ontrack.dev.themeToggle`         | White circular FAB (Travel `+` style; default bottom-right, left of overlay) — tap flips Light ↔ Dark (moon/sun). Hidden by default; triple-tap the page to show/hide (__DEV__) |
 
 ## Source of truth
 

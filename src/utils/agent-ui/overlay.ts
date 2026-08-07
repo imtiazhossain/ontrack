@@ -6,7 +6,10 @@
 type Listener = () => void;
 
 let overlayEnabled = false;
-/** Floating Overlay FAB — long-press hides; enabling overlay brings it back. */
+/**
+ * Floating Overlay FAB — only shown while overlay paint is on.
+ * Long-press hides; enabling overlay (Diagnostics / agent-ui-overlay.sh) brings it back.
+ */
 let fabVisible = true;
 const listeners = new Set<Listener>();
 
@@ -87,8 +90,9 @@ export function isAgentUiOverlayEnabled(): boolean {
   return overlayEnabled;
 }
 
+/** True only when overlay paint is on and the FAB has not been long-press dismissed. */
 export function isAgentUiFabVisible(): boolean {
-  return fabVisible;
+  return overlayEnabled && fabVisible;
 }
 
 export function setAgentUiOverlayEnabled(enabled: boolean): void {
@@ -119,7 +123,10 @@ export function dismissAgentUiFab(): void {
   if (changed) notifyListeners();
 }
 
-/** Show the floating Overlay button again (does not enable paint). */
+/**
+ * Clear a long-press dismiss so the next overlay-on shows the FAB.
+ * Does not enable paint by itself — use setAgentUiOverlayEnabled(true) to show it.
+ */
 export function restoreAgentUiFab(): void {
   if (fabVisible) return;
   fabVisible = true;

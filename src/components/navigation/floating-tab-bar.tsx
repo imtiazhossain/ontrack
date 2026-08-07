@@ -1,14 +1,17 @@
 import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
-    Pressable,
     StyleSheet,
     Text,
     useWindowDimensions,
     View,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+    Gesture,
+    GestureDetector,
+    Pressable,
+} from 'react-native-gesture-handler';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -19,7 +22,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { AppText, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
-import { borders, radii } from '@/design-system';
+import { radii } from '@/design-system';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -42,11 +45,6 @@ const TRACK_REPEAT_COUNT = 5;
 const MAX_CAROUSEL_WIDTH = 720;
 const VELOCITY_PROJECTION_SECONDS = 0.2;
 const MAX_FLING_ITEMS = 5;
-const RESTORE_BUTTON_SIZE = 36;
-const COLLAPSE_DRAG_DISTANCE = 72;
-const COLLAPSE_THRESHOLD = 30;
-const COLLAPSE_VELOCITY_THRESHOLD = 420;
-
 const SNAP_SPRING = {
   damping: 22,
   stiffness: 230,
@@ -139,8 +137,6 @@ export function FloatingTabBar({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { spacing, layout, s } = useResponsive();
-  const collapsed = useUI((store) => store.tabBarCollapsed);
-  const setTabBarCollapsed = useUI((store) => store.setTabBarCollapsed);
   const carouselBrowse = useUI((store) => store.carouselBrowse);
   const pendingRouteName = useUI(
     (store) => store.carouselPendingRouteName,
@@ -165,6 +161,16 @@ export function FloatingTabBar({
       }),
     [enabledAddons, state.routes],
   );
+
+  useEffect(() => {
+    // Locked-open nav + clear any stuck swipe/collapse flags from older builds
+    // or interrupted springs (stuck claim blocks every tab press).
+    useUI.setState({
+      tabBarCollapsed: false,
+      carouselSwipeClaimed: false,
+      carouselPendingRouteName: null,
+    });
+  }, []);
 
   useEffect(() => {
     if (!isAgentUiEnabled()) return;
@@ -207,7 +213,6 @@ export function FloatingTabBar({
   const positionItems = useSharedValue(
     canonicalPositionForRoute(initialCenterIndex, visibleRoutes.length),
   );
-  const collapseProgress = useSharedValue(0);
   const gestureStartItems = useSharedValue(0);
   const trackItemCount = visibleRoutes.length * TRACK_REPEAT_COUNT;
   const centerSlot = Math.floor(trackItemCount / 2);
@@ -222,21 +227,19 @@ export function FloatingTabBar({
   const baseTranslateX =
     (Math.floor(VISIBLE_ITEM_COUNT / 2) - centerSlot) * itemWidth;
 
+  // Suppress the press that fires when a horizontal swipe ends on a tab.
+  const suppressPressAfterPan = useRef(false);
   const setSwipeClaimed = (claimed: boolean) => {
     useUI.getState().setCarouselSwipeClaimed(claimed);
   };
   const releaseSwipeClaim = () => {
-    setTimeout(() => setSwipeClaimed(false), 80);
+    setTimeout(() => {
+      setSwipeClaimed(false);
+      suppressPressAfterPan.current = false;
+    }, 80);
   };
-  const finishCollapse = () => {
-    setTabBarCollapsed(true);
-    setSwipeClaimed(false);
-  };
-  const expandMenu = () => {
-    setSwipeClaimed(true);
-    setTabBarCollapsed(false);
-    collapseProgress.value = 0;
-    releaseSwipeClaim();
+  const markPanMoved = () => {
+    suppressPressAfterPan.current = true;
   };
   const commitBrowse = (routeName: string) => {
     setCarouselBrowse({
@@ -244,9 +247,18 @@ export function FloatingTabBar({
       centerRouteName: routeName,
     });
   };
+  const clearSelectionLock = () => {
+    useUI.setState({
+      carouselPendingRouteName: null,
+      carouselSwipeClaimed: false,
+    });
+  };
   const finishSelection = (routeName: string) => {
     const ui = useUI.getState();
-    if (ui.carouselPendingRouteName !== routeName) return;
+    if (ui.carouselPendingRouteName !== routeName) {
+      clearSelectionLock();
+      return;
+    }
 
     const routeIndex = visibleRoutes.findIndex(
       (item) => item.name === routeName,
@@ -271,6 +283,9 @@ export function FloatingTabBar({
       scheduleOnRN(setSwipeClaimed, true);
     })
     .onUpdate((event) => {
+      if (Math.abs(event.translationX) >= 8) {
+        scheduleOnRN(markPanMoved);
+      }
       positionItems.value =
         gestureStartItems.value + event.translationX / itemWidth;
     })
@@ -293,7 +308,10 @@ export function FloatingTabBar({
           velocity: velocityItems,
         },
         (finished) => {
-          if (!finished) return;
+          if (!finished) {
+            scheduleOnRN(clearSelectionLock);
+            return;
+          }
           const routeCount = routeNames.length;
           const rawRouteOffset =
             ((-targetItems % routeCount) + routeCount) % routeCount;
@@ -310,31 +328,6 @@ export function FloatingTabBar({
     .onFinalize(() => {
       scheduleOnRN(releaseSwipeClaim);
     });
-  const collapseGesture = Gesture.Pan()
-    .activeOffsetY(10)
-    .failOffsetX([-24, 24])
-    .onStart(() => {
-      scheduleOnRN(setSwipeClaimed, true);
-    })
-    .onUpdate((event) => {
-      collapseProgress.value = Math.max(
-        0,
-        Math.min(0.88, event.translationY / COLLAPSE_DRAG_DISTANCE),
-      );
-    })
-    .onEnd((event) => {
-      const shouldCollapse =
-        event.translationY >= COLLAPSE_THRESHOLD ||
-        event.velocityY >= COLLAPSE_VELOCITY_THRESHOLD;
-      if (shouldCollapse) {
-        collapseProgress.value = 1;
-        scheduleOnRN(finishCollapse);
-      } else {
-        collapseProgress.value = 0;
-        scheduleOnRN(releaseSwipeClaim);
-      }
-    });
-  const carouselGesture = Gesture.Race(panGesture, collapseGesture);
   const trackStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -342,17 +335,6 @@ export function FloatingTabBar({
       },
     ],
   }));
-  const capsuleAnimationStyle = useAnimatedStyle(() => {
-    const progress = collapseProgress.value;
-    return {
-      opacity: 1 - progress,
-      transform: [
-        { translateY: progress * 28 },
-        { scaleX: 1 - progress * 0.78 },
-        { scaleY: 1 - progress * 0.42 },
-      ],
-    };
-  });
 
   useEffect(() => {
     if (pendingRouteName) return;
@@ -370,6 +352,10 @@ export function FloatingTabBar({
     visibleRoutes.length,
   ]);
 
+  // Pinned bar, always expanded. Dock width must match carouselWidth math
+  // (screen padding + max width) so the infinite track clips and swipes correctly.
+  const bottomLabelPad = insets.bottom > 0 ? 6 : spacing.sm;
+
   return (
     <View
       onLayout={(event) =>
@@ -379,86 +365,34 @@ export function FloatingTabBar({
       style={[
         styles.dock,
         {
-          height: collapsed
-            ? RESTORE_BUTTON_SIZE + insets.bottom + spacing.md
-            : layout.floatingTabBarBaseHeight + insets.bottom,
+          height: layout.floatingTabBarBaseHeight + bottomLabelPad,
           maxWidth: MAX_CAROUSEL_WIDTH + layout.screenPadding * 2,
           paddingHorizontal: layout.screenPadding,
-          paddingTop: spacing.xs,
-          paddingBottom: Math.max(insets.bottom, spacing.sm),
-          backgroundColor: 'transparent',
+          paddingTop: spacing.xxs,
+          paddingBottom: bottomLabelPad,
+          // Fill under the capsule so home-indicator pad isn't a content hole.
+          backgroundColor: theme.backgroundElevated,
         },
       ]}>
-      {collapsed ? (
-        <View
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          collapsable={false}
           style={[
-            styles.restoreButtonPosition,
-            {
-              left: layout.screenPadding,
-              right: layout.screenPadding,
-              bottom: Math.max(insets.bottom, spacing.sm),
-            },
+            styles.capsule,
+            { backgroundColor: theme.backgroundElevated },
           ]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Show navigation menu"
-            hitSlop={8}
-            onPress={expandMenu}
-            style={({ pressed }) => [
-              styles.restoreButton,
-              {
-                backgroundColor: theme.backgroundElevated,
-                borderColor:
-                  theme.name === 'dark'
-                    ? theme.separator
-                    : theme.backgroundSunken,
-                boxShadow:
-                  theme.name === 'dark'
-                    ? '0 6px 20px rgba(0, 0, 0, 0.32)'
-                    : '0 5px 18px rgba(54, 43, 33, 0.15)',
-                opacity: pressed ? 0.68 : 1,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}>
-            <Symbol
-              name="chevron-up"
-              size={16}
-              color={theme.accentPrimary}
-            />
-          </Pressable>
-        </View>
-      ) : (
-        <GestureDetector gesture={carouselGesture}>
-          <Animated.View
+          <View
             style={[
-              styles.capsule,
-              capsuleAnimationStyle,
-              {
-                backgroundColor: theme.backgroundElevated,
-                borderColor:
-                  theme.name === 'dark'
-                    ? theme.separator
-                    : theme.backgroundSunken,
-                // Soft copper glow matching the selected tab accent.
-                // Kept on the outer capsule (no overflow clip) so it paints.
-                boxShadow:
-                  theme.name === 'dark'
-                    ? '0 8px 28px rgba(177, 138, 101, 0.32)'
-                    : '0 5px 22px rgba(154, 118, 84, 0.22)',
-              },
+              styles.capsuleClip,
+              { paddingHorizontal: capsuleInset },
             ]}>
-            <View
+            <Animated.View
               style={[
-                styles.capsuleClip,
-                { paddingHorizontal: capsuleInset },
+                styles.carouselTrack,
+                { width: itemWidth * trackItemCount },
+                trackStyle,
               ]}>
-              <Animated.View
-                style={[
-                  styles.carouselTrack,
-                  { width: itemWidth * trackItemCount },
-                  trackStyle,
-                ]}>
-                {displayedRoutes.map((route, slotIndex) => {
+              {displayedRoutes.map((route, slotIndex) => {
           const meta = TAB_META[route.name];
           const focused = selectedRoute?.key === route.key;
           const visuallySelected = pendingRouteName
@@ -480,7 +414,12 @@ export function FloatingTabBar({
                 : meta.label);
 
           const onPress = () => {
-            if (useUI.getState().carouselSwipeClaimed) return;
+            // Only ignore the synthetic press at the end of a pan — never a
+            // stuck global claim flag (that made the whole bar untappable).
+            if (suppressPressAfterPan.current) {
+              suppressPressAfterPan.current = false;
+              return;
+            }
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -501,6 +440,7 @@ export function FloatingTabBar({
                 SELECTION_SPRING,
                 (finished) => {
                   if (finished) scheduleOnRN(finishSelection, route.name);
+                  else scheduleOnRN(clearSelectionLock);
                 },
               );
             }
@@ -582,12 +522,21 @@ export function FloatingTabBar({
               />
             </Pressable>
           );
-                })}
-              </Animated.View>
-            </View>
-          </Animated.View>
-        </GestureDetector>
-      )}
+              })}
+            </Animated.View>
+          </View>
+          <View
+            pointerEvents="none"
+            style={[styles.scrollHint, styles.scrollHintLeft]}>
+            <Symbol name="chevron-left" size={10} color={theme.textTertiary} />
+          </View>
+          <View
+            pointerEvents="none"
+            style={[styles.scrollHint, styles.scrollHintRight]}>
+            <Symbol name="chevron-right" size={10} color={theme.textTertiary} />
+          </View>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
@@ -604,30 +553,27 @@ const styles = StyleSheet.create({
   },
   capsule: {
     flex: 1,
-    borderWidth: borders.hairline,
-    borderRadius: radii.xl,
-    borderCurve: 'continuous',
   },
   capsuleClip: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: radii.xl,
-    borderCurve: 'continuous',
     overflow: 'hidden',
   },
-  restoreButtonPosition: {
+  scrollHint: {
     position: 'absolute',
-    alignItems: 'center',
-  },
-  restoreButton: {
-    width: RESTORE_BUTTON_SIZE,
-    height: RESTORE_BUTTON_SIZE,
+    top: 0,
+    bottom: 0,
+    width: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.pill,
-    borderCurve: 'continuous',
-    borderWidth: borders.hairline,
+    zIndex: 2,
+  },
+  scrollHintLeft: {
+    left: 2,
+  },
+  scrollHintRight: {
+    right: 2,
   },
   carouselTrack: {
     flexDirection: 'row',

@@ -11,7 +11,7 @@ alwaysApply: false
 
 **Full procedure:** [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).
 
-After app-affecting Expo changes, prove the surface on **both** iOS (iPhone 17 Pro) and Android (Galaxy_S26). **Default close-out:**
+After app-affecting Expo changes, prove the surface on **both** iOS (`onTrack iPhone 17 Pro`, latest iOS runtime) and Android (Galaxy_S26). **Default close-out:**
 
 ```bash
 # Already on route → omit --flow; otherwise pass a named flow (travel-demo, …)
