@@ -103,21 +103,6 @@ export function TravelHomeRouteIcon({ size = 26, color }: TravelHomeIconProps) {
   );
 }
 
-/** Spec `chevron-right.svg` — View Itinerary trailing chevron. */
-export function TravelHomeChevronRight({ size = 18, color }: TravelHomeIconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 5L16 12L9 19"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
 /** Spec `calendar.svg` — trip dates leading mark. */
 export function TravelHomeCalendarIcon({ size = 16, color }: TravelHomeIconProps) {
   return (

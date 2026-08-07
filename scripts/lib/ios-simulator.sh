@@ -16,6 +16,22 @@
 : "${ONTRACK_IOS_SIMULATOR:=onTrack iPhone 17 Pro}"
 : "${ONTRACK_IOS_SIMULATOR_DEVICE_TYPE:=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}"
 : "${ONTRACK_IOS_SIMULATOR_WINDOW:=0}"
+# Hard cap for simctl RPCs. A wedged CoreSimulator otherwise hangs forever and
+# freezes Simulator.app (common when overlapping agents call get_app_container /
+# terminate / launch concurrently).
+: "${ONTRACK_SIMCTL_TIMEOUT_SECS:=8}"
+
+# Run `xcrun simctl …` with a hard alarm so agents fail fast instead of wedging.
+# Usage: ios_simctl_timed [secs] <simctl-args…>
+# Exit 142 (SIGALRM) on timeout. Default secs: ONTRACK_SIMCTL_TIMEOUT_SECS.
+ios_simctl_timed() {
+  local secs="${ONTRACK_SIMCTL_TIMEOUT_SECS}"
+  if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+    secs="$1"
+    shift
+  fi
+  perl -e 'alarm shift @ARGV; exec @ARGV' "$secs" xcrun simctl "$@"
+}
 
 ios_sim_preferred_name() {
   printf '%s' "${ONTRACK_IOS_SIMULATOR}"

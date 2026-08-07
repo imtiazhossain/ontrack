@@ -35,6 +35,7 @@
 #   ONTRACK_IOS_SIMULATOR=onTrack iPhone 17 Pro  # default simulator device name
 #   ONTRACK_IOS_SIMULATOR_UDID=<udid>            # optional exact device
 #   ONTRACK_IOS_SIMULATOR_WINDOW=1               # open Simulator.app (default: headless)
+#   ONTRACK_SIMCTL_TIMEOUT_SECS=8               # hard cap for simctl RPCs (anti-wedge)
 #   ONTRACK_ANDROID_AVD=Galaxy_S26
 #   ONTRACK_ANDROID_EMULATOR_WINDOW=1
 
@@ -129,6 +130,38 @@ if [[ "${AGENT_UI_PLATFORM:-}" == "android" || "$PACKAGER_TARGET" == "android" ]
   PACKAGER_TARGET="android"
   export AGENT_UI_PLATFORM=android
   export ONTRACK_PACKAGER_TARGET=android
+fi
+
+# Serialize device-touching ensure runs. Overlapping agents that each call
+# `simctl get_app_container` / terminate / launch wedge CoreSimulator and freeze
+# Simulator.app. Metro-only / check-only skip the lock (no device RPCs).
+PACKAGER_LOCK_DIR="$ROOT/.cursor/ensure-packager.lockdir"
+release_packager_lock() {
+  rm -rf "$PACKAGER_LOCK_DIR" 2>/dev/null || true
+}
+acquire_packager_lock() {
+  mkdir -p "$ROOT/.cursor"
+  local deadline=$((SECONDS + 90))
+  while (( SECONDS < deadline )); do
+    if mkdir "$PACKAGER_LOCK_DIR" 2>/dev/null; then
+      printf '%s\n' "$$" >"$PACKAGER_LOCK_DIR/pid"
+      trap 'release_packager_lock' EXIT
+      return 0
+    fi
+    local owner
+    owner="$(cat "$PACKAGER_LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$owner" ]] && ! kill -0 "$owner" 2>/dev/null; then
+      echo "ensure-packager: clearing stale lock (pid ${owner} gone)" >&2
+      rm -rf "$PACKAGER_LOCK_DIR"
+      continue
+    fi
+    sleep 0.4
+  done
+  echo "error: another ensure-packager is already running (lock: ${PACKAGER_LOCK_DIR})" >&2
+  return 1
+}
+if [[ "$METRO_ONLY" != "1" && "$CHECK_ONLY" != "1" ]]; then
+  acquire_packager_lock || exit 1
 fi
 
 http_ok() {
@@ -248,7 +281,7 @@ app_installed() {
     android_emu_adb shell pm path "$BUNDLE_ID" 2>/dev/null | grep -q "package:"
     return $?
   fi
-  xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+  ios_simctl_timed get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
 }
 
 probe_connected() {
@@ -285,16 +318,16 @@ ensure_fast_refresh_enabled() {
   fi
 
   local menu
-  menu="$(xcrun simctl spawn booted defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
+  menu="$(ios_simctl_timed spawn booted defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
   if [[ "$menu" != *"hotLoadingEnabled = 0"* ]]; then
     return 0
   fi
   echo "Fast Refresh is OFF in the dev client (RCTDevMenu.hotLoadingEnabled=0) — enabling…"
   # Terminate first so the running app cannot overwrite the setting on exit;
   # the normal probe/reconnect flow below relaunches it.
-  xcrun simctl terminate booted "$BUNDLE_ID" 2>/dev/null || true
+  ios_simctl_timed terminate booted "$BUNDLE_ID" 2>/dev/null || true
   sleep 1
-  xcrun simctl spawn booted defaults write "$BUNDLE_ID" RCTDevMenu -dict-add hotLoadingEnabled -bool YES
+  ios_simctl_timed spawn booted defaults write "$BUNDLE_ID" RCTDevMenu -dict-add hotLoadingEnabled -bool YES
   echo "Fast Refresh re-enabled; app will be relaunched by the reconnect step."
 }
 
@@ -686,9 +719,9 @@ reconnect_dev_client() {
     fi
 
     # Soft foreground; avoid terminate/relaunch unless launch is required.
-    xcrun simctl launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+    ios_simctl_timed 12 launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
     echo "Reconnecting dev client → http://${host}:${METRO_PORT}"
-    xcrun simctl openurl booted "$url"
+    ios_simctl_timed 12 openurl booted "$url"
   fi
 
   # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.

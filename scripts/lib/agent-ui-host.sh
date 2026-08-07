@@ -52,6 +52,11 @@ agent_ui_bridge_py() {
   printf '%s\n' "$(agent_ui_repo_root)/scripts/lib/agent_ui_bridge.py"
 }
 
+agent_ui_ios_lib() {
+  # shellcheck disable=SC1091
+  source "$(agent_ui_repo_root)/scripts/lib/ios-simulator.sh"
+}
+
 # True when the daemon is up and a successful op landed recently (~30s).
 agent_ui_bridge_is_warm() {
   AGENT_UI_ROOT="$(agent_ui_repo_root)" \
@@ -130,7 +135,8 @@ agent_ui_app_installed() {
     android_emu_adb shell pm path "$BUNDLE_ID" 2>/dev/null | grep -q "package:"
     return $?
   fi
-  xcrun simctl get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+  agent_ui_ios_lib
+  ios_simctl_timed get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
 }
 
 # True when the app process has a PID in the simulator (not merely installed).
@@ -140,7 +146,8 @@ agent_ui_app_process_running() {
     android_emu_adb shell pidof -s "$BUNDLE_ID" >/dev/null 2>&1
     return $?
   fi
-  xcrun simctl spawn booted launchctl list 2>/dev/null \
+  agent_ui_ios_lib
+  ios_simctl_timed spawn booted launchctl list 2>/dev/null \
     | grep -E "^[0-9]+[[:space:]]+.*UIKitApplication:${BUNDLE_ID}" >/dev/null
 }
 
@@ -153,7 +160,8 @@ agent_ui_launch_app() {
         -n "${BUNDLE_ID}/.MainActivity" >/dev/null 2>&1 || true
     return 0
   fi
-  xcrun simctl launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+  agent_ui_ios_lib
+  ios_simctl_timed 12 launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
 }
 
 agent_ui_open_dev_client_url() {
@@ -163,7 +171,8 @@ agent_ui_open_dev_client_url() {
     android_emu_adb shell am start -a android.intent.action.VIEW -d "$url" >/dev/null 2>&1 || true
     return 0
   fi
-  xcrun simctl openurl booted "$url" >/dev/null 2>&1 || true
+  agent_ui_ios_lib
+  ios_simctl_timed 12 openurl booted "$url" >/dev/null 2>&1 || true
 }
 
 # Cheap bridge liveness (route status). Skips nested app-up / heal recursion.

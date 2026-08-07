@@ -163,6 +163,32 @@ describe('metro launch command contract', () => {
     expect(sim).toContain('ios_sim_prune_peers_briefly');
   });
 
+  it('times out wedged simctl RPCs and serializes ensure-packager device ops', () => {
+    // Unbounded get_app_container / terminate / launch wedges CoreSimulator and
+    // freezes Simulator.app when overlapping agents pile up.
+    const sim = read('scripts/lib/ios-simulator.sh');
+    expect(sim).toContain('ios_simctl_timed');
+    expect(sim).toContain('ONTRACK_SIMCTL_TIMEOUT_SECS');
+    expect(sim).toContain('alarm shift @ARGV');
+
+    const ensure = read('scripts/ensure-packager.sh');
+    expect(ensure).toContain('ios_simctl_timed get_app_container');
+    expect(ensure).toContain('acquire_packager_lock');
+    expect(ensure).toContain('ensure-packager.lockdir');
+    expect(ensure).not.toMatch(
+      /xcrun simctl get_app_container booted "\$BUNDLE_ID"/,
+    );
+
+    const host = read('scripts/lib/agent-ui-host.sh');
+    expect(host).toContain('agent_ui_ios_lib');
+    expect(host).toContain('ios_simctl_timed get_app_container');
+
+    const bridge = read('scripts/lib/agent_ui_bridge.py');
+    expect(bridge).toContain('SIMCTL_TIMEOUT_SECS');
+    expect(bridge).toContain('TimeoutExpired');
+    expect(bridge).toContain('timeout=SIMCTL_TIMEOUT_SECS');
+  });
+
   it('boots preferred Android emulator headless; GUI window is opt-in only', () => {
     const emu = read('scripts/lib/android-emulator.sh');
     expect(emu).toContain('ONTRACK_ANDROID_AVD:=Galaxy_S26');

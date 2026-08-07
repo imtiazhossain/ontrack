@@ -22,6 +22,8 @@ DUMP_NAME = os.environ.get("DUMP_NAME", "agent-ui-dump.json")
 STATUS_NAME = os.environ.get("STATUS_NAME", "agent-ui-status.json")
 COMMAND_NAME = os.environ.get("COMMAND_NAME", "agent-ui-command.json")
 POLL_SLEEP = float(os.environ.get("POLL_SLEEP", "0.016"))
+# Hard cap for simctl RPCs — wedged CoreSimulator otherwise hangs forever.
+SIMCTL_TIMEOUT_SECS = float(os.environ.get("ONTRACK_SIMCTL_TIMEOUT_SECS", "8"))
 CACHE_REL = Path(".cursor") / "agent-ui-data-dir"
 ANDROID_DUMP_REL = Path(".cursor") / "agent-ui-android-dump.json"
 TRANSPORT = os.environ.get("AGENT_UI_TRANSPORT", "auto")  # auto|daemon|file
@@ -113,7 +115,13 @@ def resolve_data_dir(root: Path | None = None) -> Path:
             check=False,
             capture_output=True,
             text=True,
+            timeout=SIMCTL_TIMEOUT_SECS,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise SystemExit(
+            "error: simctl get_app_container timed out "
+            f"(simulator may be wedged; timeout={SIMCTL_TIMEOUT_SECS}s)"
+        ) from exc
     except OSError as exc:
         raise SystemExit(f"error: could not resolve app data container: {exc}") from exc
 

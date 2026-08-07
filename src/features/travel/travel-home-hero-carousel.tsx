@@ -14,9 +14,9 @@ import {
 import { fetchDestinationHeroUris } from '@/features/travel/destination-cover';
 import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
 import {
-    TravelHomeDestinationPlaceholder,
-    TravelHomeEditIcon,
-} from '@/features/travel/travel-home-icons';
+    travelHomeAtmosphereSource,
+} from '@/features/travel/travel-home-background';
+import { TravelHomeEditIcon } from '@/features/travel/travel-home-icons';
 import {
     travelHomeImageHeight,
     travelHomeTokens,
@@ -50,9 +50,10 @@ export function TravelHomeHeroCarousel({
    * Bump when cover display pipeline changes (e.g. Wikimedia proxy) so Fast
    * Refresh / warm screens refetch instead of keeping failed remote URIs.
    */
-  const destinationKey = `cover-v5:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
+  const destinationKey = `cover-v6:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
   const fixtureSource =
     __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
+  const fallbackSource = travelHomeAtmosphereSource(theme.name);
   const [uris, setUris] = useState<string[]>([]);
   const [failedUris, setFailedUris] = useState<Record<string, true>>({});
   const [index, setIndex] = useState(0);
@@ -142,12 +143,20 @@ export function TravelHomeHeroCarousel({
           backgroundColor: heroSurface,
         },
       ]}>
-      {/* Always paint a solid plate so failed remote images never punch through. */}
-      <View
-        style={[styles.fallback, imageRadiusStyle, { width: heroWidth, height }]}
-        pointerEvents="none">
-        <TravelHomeDestinationPlaceholder width={heroWidth} height={height} />
-      </View>
+      {/* Scenic photo plate — shown while remote heroes load or if they fail. */}
+      <Image
+        source={fallbackSource}
+        style={[
+          styles.fallback,
+          imageRadiusStyle,
+          { width: heroWidth, height },
+        ]}
+        contentFit="cover"
+        contentPosition={{ top: '35%', left: '50%' }}
+        pointerEvents="none"
+        accessible={false}
+        importantForAccessibility="no"
+      />
       {fixtureSource ? (
         <Image
           source={fixtureSource}
@@ -201,13 +210,13 @@ export function TravelHomeHeroCarousel({
         </ScrollView>
       ) : null}
 
-      <AgentTestId
-        testID={AgentUiIds.travel.list.editTrip(plan.id)}
-        label={`Edit ${destinationLabel} trip`}
-        onPress={() => {
-          haptics.tap();
-          onEdit();
-        }}
+      {/*
+        Absolute layout lives on this View (not only AgentTestId) so the pencil
+        FAB stays pinned in production, where AgentTestId may skip its registry
+        wrapper when style is omitted.
+      */}
+      <View
+        pointerEvents="box-none"
         style={[
           styles.editWrap,
           {
@@ -217,43 +226,52 @@ export function TravelHomeHeroCarousel({
             height: editHit,
           },
         ]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Edit ${destinationLabel} trip`}
+        <AgentTestId
+          testID={AgentUiIds.travel.list.editTrip(plan.id)}
+          label={`Edit ${destinationLabel} trip`}
           onPress={() => {
             haptics.tap();
             onEdit();
           }}
-          hitSlop={4}
-          style={({ pressed }) => [
-            styles.editButton,
-            {
-              width: editVisual,
-              height: editVisual,
-              borderRadius: editVisual / 2,
-              backgroundColor:
-                theme.name === 'dark' ? theme.backgroundElevated : '#FFFFFF',
-              borderColor:
+          style={styles.editHit}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${destinationLabel} trip`}
+            onPress={() => {
+              haptics.tap();
+              onEdit();
+            }}
+            hitSlop={4}
+            style={({ pressed }) => [
+              styles.editButton,
+              {
+                width: editVisual,
+                height: editVisual,
+                borderRadius: editVisual / 2,
+                backgroundColor:
+                  theme.name === 'dark' ? theme.backgroundElevated : '#FFFFFF',
+                borderColor:
+                  theme.name === 'dark'
+                    ? theme.separator
+                    : travelHomeTokens.colors.circleFabBorder,
+                boxShadow:
+                  theme.name === 'dark'
+                    ? undefined
+                    : travelHomeTokens.colors.circleFabShadow,
+                opacity: pressed ? 0.72 : 1,
+              },
+            ]}>
+            <TravelHomeEditIcon
+              size={Math.max(16, s(18))}
+              color={
                 theme.name === 'dark'
-                  ? theme.separator
-                  : travelHomeTokens.colors.circleFabBorder,
-              boxShadow:
-                theme.name === 'dark'
-                  ? undefined
-                  : travelHomeTokens.colors.circleFabShadow,
-              opacity: pressed ? 0.72 : 1,
-            },
-          ]}>
-          <TravelHomeEditIcon
-            size={Math.max(16, s(18))}
-            color={
-              theme.name === 'dark'
-                ? theme.textPrimary
-                : travelHomeTokens.colors.ink
-            }
-          />
-        </Pressable>
-      </AgentTestId>
+                  ? theme.textPrimary
+                  : travelHomeTokens.colors.ink
+              }
+            />
+          </Pressable>
+        </AgentTestId>
+      </View>
 
       {!fixtureSource && visibleUris.length > 1 ? (
         <View
@@ -297,14 +315,18 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   fallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
   editWrap: {
     position: 'absolute',
     zIndex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editHit: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

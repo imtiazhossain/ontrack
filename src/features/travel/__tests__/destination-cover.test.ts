@@ -2,7 +2,10 @@ import {
     destinationCoverCandidates,
     enlargeWikimediaThumb,
     isAllowedDestinationCoverImageUrl,
+    isDirectClientCoverUrl,
     isUsableDestinationPhotoUrl,
+    localTripCoverUri,
+    mergeDestinationCoverUrls,
     proxyDestinationCoverImageUrl,
     stayCoverCandidates,
 } from '../destination-cover';
@@ -10,6 +13,12 @@ import type { TravelPlan } from '../types';
 
 jest.mock('@/services/http/api-url', () => ({
   resolveExpoApiUrl: (path: string) => `http://localhost:8081${path}`,
+}));
+
+jest.mock('@/features/travel/travel-moment-media', () => ({
+  persistTravelMomentPhotos: jest.fn(),
+  resolveTravelPhotoUris: (uris?: string[]) =>
+    (uris ?? []).filter((uri) => typeof uri === 'string' && uri.length > 0),
 }));
 
 function plan(partial: Partial<TravelPlan>): TravelPlan {
@@ -145,6 +154,91 @@ describe('destination cover image proxy', () => {
     const proxied = proxyDestinationCoverImageUrl(remote);
     expect(proxied).toContain('/api/destination-cover-image?src=');
     expect(proxied).toContain(encodeURIComponent(remote));
+  });
+});
+
+describe('isDirectClientCoverUrl', () => {
+  it('accepts Unsplash CDN urls and rejects Wikimedia', () => {
+    expect(
+      isDirectClientCoverUrl(
+        'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1080',
+      ),
+    ).toBe(true);
+    expect(
+      isDirectClientCoverUrl(
+        'https://upload.wikimedia.org/wikipedia/commons/a/a1/Paris.jpg',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('mergeDestinationCoverUrls', () => {
+  it('keeps a direct-loadable backup when the primary list is proxy-only', () => {
+    const wiki =
+      'https://upload.wikimedia.org/wikipedia/commons/a/a1/Paris.jpg';
+    const wiki2 =
+      'https://upload.wikimedia.org/wikipedia/commons/b/b2/Louvre.jpg';
+    const wiki3 =
+      'https://upload.wikimedia.org/wikipedia/commons/c/c3/Seine.jpg';
+    const unsplash =
+      'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1080';
+    expect(mergeDestinationCoverUrls([wiki, wiki2, wiki3], [unsplash], 3)).toEqual([
+      wiki,
+      wiki2,
+      unsplash,
+    ]);
+  });
+});
+
+describe('localTripCoverUri', () => {
+  it('uses an explicit cover before itinerary photos', () => {
+    expect(
+      localTripCoverUri(
+        plan({
+          coverUri: 'file:///Documents/travel-moments/cover.jpg',
+          itinerary: [
+            {
+              id: 'm1',
+              kind: 'moment',
+              title: 'Sunset',
+              date: '2026-08-01',
+              startMinutes: 0,
+              durationMinutes: 60,
+              photoUris: ['file:///Documents/travel-moments/moment.jpg'],
+            },
+          ],
+        }),
+      ),
+    ).toBe('file:///Documents/travel-moments/cover.jpg');
+  });
+
+  it('ignores flight/stay confirmation photos and prefers moment photos', () => {
+    expect(
+      localTripCoverUri(
+        plan({
+          itinerary: [
+            {
+              id: 'f1',
+              kind: 'flight',
+              title: 'Flight',
+              date: '2026-08-01',
+              startMinutes: 0,
+              durationMinutes: 120,
+              photoUris: ['file:///Documents/travel-moments/boarding-pass.jpg'],
+            },
+            {
+              id: 'm1',
+              kind: 'moment',
+              title: 'Harbor',
+              date: '2026-08-02',
+              startMinutes: 0,
+              durationMinutes: 60,
+              photoUris: ['file:///Documents/travel-moments/harbor.jpg'],
+            },
+          ],
+        }),
+      ),
+    ).toBe('file:///Documents/travel-moments/harbor.jpg');
   });
 });
 
