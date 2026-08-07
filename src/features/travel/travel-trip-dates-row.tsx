@@ -32,7 +32,7 @@ interface TravelTripDatesRowProps {
   testID?: string;
 }
 
-/** Trip-card dates strip — glass bar, outlined duration / countdown pill. */
+/** Trip-card dates strip — glass bar, duration pill left of countdown / status. */
 export function TravelTripDatesRow({
   startLabel,
   endLabel,
@@ -51,11 +51,12 @@ export function TravelTripDatesRow({
   const statusBadge =
     compact && startDate && endDate ? tripDatesBadge(startDate, endDate) : null;
   const badgeComplete = statusBadge?.kind === 'complete';
-  const badgeLabel = badgeComplete
-    ? 'Complete'
-    : statusBadge?.kind === 'label'
+  const statusLabel =
+    statusBadge?.kind === 'label'
       ? statusBadge.label
-      : durationLabel;
+      : badgeComplete
+        ? 'Complete'
+        : null;
   const compactRange =
     compact && startDate && endDate
       ? formatTripDateRangeLabel(startDate, endDate)
@@ -67,9 +68,10 @@ export function TravelTripDatesRow({
   const primaryLabel =
     compactRange ??
     (startLabel && endLabel ? `${startLabel} → ${endLabel}` : startLabel ?? endLabel ?? '');
+  const trailingLabels = [durationLabel, statusLabel].filter(Boolean).join(', ');
   const accessibilityLabel = weekdayRange
-    ? `Trip dates ${primaryLabel}, ${weekdayRange}, ${badgeLabel}`
-    : `Trip dates ${primaryLabel}, ${badgeLabel}`;
+    ? `Trip dates ${primaryLabel}, ${weekdayRange}, ${trailingLabels}`
+    : `Trip dates ${primaryLabel}, ${trailingLabels}`;
   const handlePress = () => {
     haptics.tap();
     onPress?.();
@@ -79,6 +81,17 @@ export function TravelTripDatesRow({
     onPress: onPress ? handlePress : undefined,
   });
   const radius = compact ? Math.max(12, s(14)) : Math.max(16, s(18));
+  const badgeMinHeight = compact ? Math.max(24, s(26)) : Math.max(30, s(32));
+  const badgePadH = compact ? rs.sm : Math.max(12, rs.md);
+  const badgePadHIcon = compact ? Math.max(6, rs.xs) : Math.max(8, rs.sm);
+  const badgeMinWidthIcon = compact ? Math.max(24, s(26)) : Math.max(30, s(32));
+  const badgeFill =
+    theme.name === 'dark' ? theme.backgroundSunken : theme.accentFaint;
+  const badgeBorder =
+    theme.name === 'dark' ? theme.separator : theme.accentSoft;
+  const badgeTextSize = compact
+    ? Math.max(11, s(11))
+    : Math.max(14, typography.caption.fontSize + 1.5);
   const rowStyle = [
     styles.row,
     {
@@ -92,6 +105,35 @@ export function TravelTripDatesRow({
       ...(compact ? {} : { backgroundColor: travelPillBg(theme) }),
     },
   ];
+
+  const renderTextBadge = (label: string) => (
+    <View
+      key={label}
+      style={[
+        styles.badge,
+        {
+          backgroundColor: badgeFill,
+          borderColor: badgeBorder,
+          minHeight: badgeMinHeight,
+          paddingHorizontal: badgePadH,
+          borderWidth: StyleSheet.hairlineWidth,
+        },
+      ]}>
+      <AppText
+        variant="caption"
+        fit
+        numberOfLines={1}
+        style={[
+          compact ? styles.badgeLabelCompact : styles.badgeLabel,
+          {
+            color: theme.accentPrimary,
+            fontSize: badgeTextSize,
+          },
+        ]}>
+        {label}
+      </AppText>
+    </View>
+  );
 
   const content = (
     <>
@@ -143,52 +185,29 @@ export function TravelTripDatesRow({
           </AppText>
         ) : null}
       </View>
-      <View
-        style={[
-          styles.badge,
-          {
-            backgroundColor:
-              theme.name === 'dark' ? theme.backgroundSunken : theme.accentFaint,
-            borderColor: theme.name === 'dark' ? theme.separator : theme.accentSoft,
-            minHeight: compact ? Math.max(24, s(26)) : Math.max(30, s(32)),
-            minWidth: badgeComplete
-              ? compact
-                ? Math.max(24, s(26))
-                : Math.max(30, s(32))
-              : undefined,
-            paddingHorizontal: badgeComplete
-              ? compact
-                ? Math.max(6, rs.xs)
-                : Math.max(8, rs.sm)
-              : compact
-                ? rs.sm
-                : Math.max(12, rs.md),
-            borderWidth: StyleSheet.hairlineWidth,
-          },
-        ]}>
+      <View style={[styles.badges, { gap: Math.max(6, s(6)) }]}>
+        {renderTextBadge(durationLabel)}
+        {statusLabel && !badgeComplete ? renderTextBadge(statusLabel) : null}
         {badgeComplete ? (
-          <Symbol
-            name="check"
-            size={compact ? Math.max(14, s(14)) : Math.max(16, s(16))}
-            color={theme.accentPrimary}
-          />
-        ) : (
-          <AppText
-            variant="caption"
-            fit
-            numberOfLines={1}
+          <View
             style={[
-              compact ? styles.badgeLabelCompact : styles.badgeLabel,
+              styles.badge,
               {
-                color: theme.accentPrimary,
-                fontSize: compact
-                  ? Math.max(11, s(11))
-                  : Math.max(14, typography.caption.fontSize + 1.5),
+                backgroundColor: badgeFill,
+                borderColor: badgeBorder,
+                minHeight: badgeMinHeight,
+                minWidth: badgeMinWidthIcon,
+                paddingHorizontal: badgePadHIcon,
+                borderWidth: StyleSheet.hairlineWidth,
               },
             ]}>
-            {badgeLabel}
-          </AppText>
-        )}
+            <Symbol
+              name="check"
+              size={compact ? Math.max(14, s(14)) : Math.max(16, s(16))}
+              color={theme.accentPrimary}
+            />
+          </View>
+        ) : null}
       </View>
     </>
   );
@@ -247,6 +266,11 @@ const styles = StyleSheet.create({
   datesCompact: {
     fontWeight: '500',
     letterSpacing: -0.2,
+  },
+  badges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   badge: {
     borderRadius: radii.pill,

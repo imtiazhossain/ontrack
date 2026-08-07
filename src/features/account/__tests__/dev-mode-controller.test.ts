@@ -199,6 +199,61 @@ describe('dev-mode-controller', () => {
     );
   });
 
+  it('keeps trips deleted in the sandbox deleted after exit', async () => {
+    useTravel.getState().replacePlans([
+      {
+        id: 'trip-keep',
+        title: 'Keep Me',
+        mode: 'flight',
+        origin: 'NYC',
+        destination: 'Lisbon',
+        startDate: '2026-09-01',
+        endDate: '2026-09-05',
+        itinerary: [],
+      },
+      {
+        id: 'trip-delete',
+        title: 'Delete Me',
+        mode: 'flight',
+        origin: 'BOS',
+        destination: 'Test',
+        startDate: '2026-09-27',
+        endDate: '2026-09-30',
+        itinerary: [],
+      },
+    ]);
+    await enterDevMode();
+    useTravel.getState().removePlan('trip-delete');
+    expect(useTravel.getState().plans.map((plan) => plan.id)).toEqual(['trip-keep']);
+
+    const snapPlans = useDevMode.getState().liveSnapshot?.domains.travel?.plans as
+      | { id: string }[]
+      | undefined;
+    expect(snapPlans?.map((plan) => plan.id)).toEqual(['trip-keep']);
+
+    await exitDevMode();
+    expect(useTravel.getState().plans.map((plan) => plan.id)).toEqual(['trip-keep']);
+  });
+
+  it('keeps sandbox deletions after agent cold-start settle', async () => {
+    useTravel.getState().replacePlans([
+      {
+        id: 'trip-live',
+        title: 'Live Trip',
+        mode: 'flight',
+        origin: 'NYC',
+        destination: 'Lisbon',
+        startDate: '2026-09-01',
+        endDate: '2026-09-05',
+        itinerary: [],
+      },
+    ]);
+    ensureDevModeSandboxSync();
+    useTravel.getState().removePlan('trip-live');
+    await settleDevModeAfterRehydrate();
+    expect(useTravel.getState().plans.map((plan) => plan.id)).toEqual([]);
+  });
+
   it('ensureDevModeSandboxSync is idempotent and marks source=agent', () => {
     ensureDevModeSandboxSync();
     const first = useDevMode.getState().liveSnapshot?.capturedAt;

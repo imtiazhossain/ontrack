@@ -32,26 +32,18 @@ describe('travel home kit contract', () => {
     );
   });
 
-  it('keeps the trip-card stepper slot always mounted (Fabric crash guard)', () => {
-    // Conditionally mounting the stepper beside BlurView SIGABRTs on iOS
-    // (`unmountChildComponentView` on the meta glass — child y≈-12).
-    const card = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
-      'utf8',
-    );
+  it('keeps the trip-card stepper shell always mounted (Fabric crash guard)', () => {
+    // Conditionally returning null from the stepper SIGABRTs when remounting
+    // near hero / frost BlurView siblings — collapse via height/opacity instead.
     const stepper = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-carousel-stepper.tsx'),
       'utf8',
     );
-    expect(card).toContain('stepperSlotCollapsed');
-    expect(card).not.toMatch(/showStepper\s*\?\s*\(\s*<View/);
     expect(stepper).toContain('wrapCollapsed');
     expect(stepper).not.toMatch(/if\s*\(\s*pageCount\s*<=\s*1\s*\)\s*return\s*null/);
   });
 
-  it('keeps the duration chip as a solid brand tint (not glass wash)', () => {
-    // Android TravelHomeGlass light tint bleached the pill into a white outlined
-    // badge; iOS target is soft filled brandBlueSoft.
+  it('shows only the date range in the trip-card footer dates slot', () => {
     const dateBlock = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-date-block.tsx'),
       'utf8',
@@ -60,49 +52,70 @@ describe('travel home kit contract', () => {
       join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
       'utf8',
     );
-    expect(dateBlock).toContain('brandBlueSoft');
+    expect(dateBlock).toContain('formatTripDateRangeLabel');
+    expect(dateBlock).not.toContain('DATES');
+    expect(dateBlock).not.toContain('brandBlueSoft');
+    expect(dateBlock).not.toMatch(/styles\.pill/);
     expect(dateBlock).not.toContain('TravelHomeGlass');
     expect(glass).toContain('rgba(12, 16, 24, 0.32)');
     expect(glass).not.toContain('rgba(12, 16, 24, 0.68)');
   });
 
-  it('frosts trip-card scoops with a hero-aligned plate on iOS and Android', () => {
-    // Scoop must stay pixel-aligned with the hero (no +offset shift). Pre-blur
-    // the plate on both OS — BlurView-over-sibling milks solid on device iPhones.
-    // Seed coverUri so prod/device isn’t __DEV__-fixture-only.
-    const glass = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+  it('frosts trip-card scoops with BlurView over the live hero', () => {
+    // Photo→paper blend: light BlurView softener + full-height LinearGradient.
+    // No frosted-glass plate / hairline (those read as a separate band).
+    const scoop = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-frost-scoop.tsx'),
       'utf8',
     );
     const card = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
       'utf8',
     );
+    const glass = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+      'utf8',
+    );
     const tokens = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-tokens.ts'),
       'utf8',
     );
-    expect(glass).toContain('frost.overlap - frost.heroHeight');
-    expect(glass).toContain('LinearGradient');
-    expect(glass).toContain('contentPosition={{ top: \'50%\', left: \'50%\' }}');
-    expect(glass).toContain('backgroundColor: \'transparent\'');
-    expect(glass).toContain('imageBlurRadius');
-    // Frost path must not rely on BlurView sampling a sibling underlay.
-    expect(glass.indexOf('if (frost)')).toBeGreaterThan(-1);
-    expect(
-      glass.slice(glass.indexOf('if (frost)'), glass.indexOf('if (Platform.OS === \'android\')')),
-    ).not.toContain('<BlurView');
-    expect(glass).not.toContain('overlap + 40');
-    expect(glass).not.toContain('bodyFill');
-    expect(glass).not.toContain('androidChrome');
-    expect(tokens).toMatch(/bodyOverlap:\s*56/);
-    expect(card).toContain('frost=');
+    const stepper = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-carousel-stepper.tsx'),
+      'utf8',
+    );
+    expect(scoop).toContain("tint={dark ? 'dark' : 'light'}");
+    expect(scoop).toContain('<BlurView');
+    expect(scoop).toContain('blurKey');
+    expect(scoop).toContain('LinearGradient');
+    expect(scoop).toContain('fadeBleed');
+    expect(scoop).toContain('paperColor');
+    expect(scoop).toContain('blurEndInset');
+    expect(scoop).toContain('hexToRgba');
+    expect(scoop).toContain('fadeHeight = totalHeight');
+    expect(scoop).toContain('borderWidth: 0');
+    // Bleed sealed solid under the ramp.
+    expect(scoop).toContain('backgroundColor: paperColor');
+    // Scoop shell itself must stay overflow-visible for UIVisualEffect.
+    expect(scoop).toMatch(/scoop:\s*\{[^}]*backgroundColor:\s*'transparent'/);
+    expect(scoop).not.toMatch(/scoop:\s*\{[^}]*overflow:\s*'hidden'/);
+    expect(card).toContain('TravelHomeTripFrostScoop');
+    expect(card).toContain('frostFadeBleed');
+    expect(card).toContain('stepperBottom');
+    expect(card).toContain('styles.frostBand');
+    expect(card).toContain('styles.heroMedia');
+    expect(card).toContain('blurKey=');
     expect(card).toContain('heroFrostSource');
-    expect(card).toContain('coverFrost');
-    expect(card).toContain('plan.coverUri');
-    expect(card).not.toContain('Platform.OS === \'android\' &&');
+    expect(card).not.toContain('styles.clip');
+    expect(card).not.toContain('frost=');
     expect(card).not.toContain('BlurTargetView');
-    expect(card).not.toContain('panelFill');
+    expect(glass).not.toContain('frost?:');
+    expect(glass).not.toContain('TravelHomeGlassFrost');
+    expect(tokens).toMatch(/bodyOverlap:\s*78/);
+    expect(card).toContain('locationRow');
+    expect(card).toContain('titleCluster');
+    expect(stepper).toContain('wrapCollapsed');
+    expect(stepper).toContain('TICK_SHADOW');
   });
 
   it('keeps the section search plate as a row (glass children stay flex kids)', () => {

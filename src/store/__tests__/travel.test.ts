@@ -110,6 +110,16 @@ describe('disabled all-accounts travel test fixture', () => {
     expect(useTravel.getState().savePlan({ id: 'invalid' } as TravelPlan)).toBe(false);
     expect(useTravel.getState().plans.map((plan) => plan.id)).toEqual(['trip-1']);
   });
+
+  it('persists removePlan without the deleted trip', async () => {
+    expect(useTravel.getState().savePlan(trip('trip-1'))).toBe(true);
+    expect(useTravel.getState().savePlan(trip('trip-2'))).toBe(true);
+    useTravel.getState().removePlan('trip-1');
+
+    await expect(persistedTravelPlans(1)).resolves.toEqual([
+      expect.objectContaining({ id: 'trip-2' }),
+    ]);
+  });
 });
 
 const plan = (id: string, startDate: string): TravelPlan => ({

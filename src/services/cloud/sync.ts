@@ -372,6 +372,17 @@ function enqueueDomainPush(userId: string, domain: (typeof domains)[number]) {
   return next;
 }
 
+/**
+ * Push one domain immediately (skips the interaction debounce).
+ * Use after destructive local edits so a reload cannot restore stale cloud rows.
+ */
+export function flushCloudDomain(domainName: SyncDomainName): Promise<void> {
+  if (!activeUserId || cloudSyncPushPaused) return Promise.resolve();
+  const domain = domains.find((item) => item.name === domainName);
+  if (!domain) return Promise.resolve();
+  return enqueueDomainPush(activeUserId, domain);
+}
+
 const SYNC_DEBOUNCE_MS = 1200;
 /** Hold pushes while the user is mid-interaction so sync JS doesn't fight gestures. */
 const SYNC_INTERACTION_COOLDOWN_MS = 1800;

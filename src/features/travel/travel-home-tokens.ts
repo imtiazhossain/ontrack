@@ -87,20 +87,21 @@ export const travelHomeTokens = {
     cardHorizontal: 18,
     /** Tight bottom inset — mock white panel is compact, not airy. */
     cardBottom: 12,
+    /** Compact title → location gap on the paper body. */
     titleToLocation: 4,
-    locationToDivider: 8,
-    dividerToMeta: 8,
+    locationToDivider: 6,
+    dividerToMeta: 6,
     avatarOverlap: 12,
     cardGap: 14,
     editInset: 14,
     headerBottom: 8,
     /**
-     * Pull the meta panel up over the hero so the title row sits on frosted
-     * glass (design scoop). Keep in sync with visible hero via
-     * `travelHomeImageHeight` (adds this overlap back into image height).
+     * Pull the frosted title scoop up over the hero. Tall enough for title +
+     * location (+ travelers) without clipping; milk-out continues below into
+     * paper. Keep in sync with `travelHomeImageHeight`.
      */
-    bodyOverlap: 56,
-    /** White meta panel top inset (below bodyTop curve). */
+    bodyOverlap: 78,
+    /** Title band top inset inside the frost scoop. */
     bodyTop: 12,
   },
   sizes: {
@@ -155,7 +156,8 @@ export const travelHomeTokens = {
     titleToTaglineGap: 8,
     location: 15,
     metadataLabel: 13,
-    date: 15,
+    /** Footer range — slightly above button label so the CTA doesn’t dominate. */
+    date: 20,
     button: 14,
     countLabel: 13,
   },
