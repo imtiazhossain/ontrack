@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button } from '@/components/primitives';
 import { radii } from '@/design-system';
+import {
+  TRAVEL_ITEM_SHARE_MODES,
+  travelItemShareModeHint,
+  travelItemShareModeLabel,
+} from '@/features/travel/itinerary-visibility';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import {
   canonicalTravelTripId,
@@ -31,18 +36,6 @@ type TravelItineraryShareSheetProps = {
   onClose: () => void;
   onSave: (draft: TravelItineraryShareDraft) => void;
 };
-
-function modeLabel(mode: TravelItemShareMode): string {
-  if (mode === 'trip') return 'Everyone on trip';
-  if (mode === 'selected') return 'Choose people';
-  return 'Only me';
-}
-
-function modeHint(mode: TravelItemShareMode): string {
-  if (mode === 'trip') return 'All co-travelers can see this stop.';
-  if (mode === 'selected') return 'Only the people you pick can see it.';
-  return 'Hidden from everyone else on this trip.';
-}
 
 export function TravelItineraryShareSheet({
   visible,
@@ -84,11 +77,6 @@ export function TravelItineraryShareSheet({
     };
   }, [visible, plan, localUserId]);
 
-  const modes = useMemo(
-    () => ['private', 'trip', 'selected'] as const,
-    [],
-  );
-
   if (!item) return null;
 
   const togglePerson = (userId: string) => {
@@ -127,13 +115,13 @@ export function TravelItineraryShareSheet({
       }>
       <AgentTestId testID={AgentUiIds.travel.itineraryShare.sheet}>
         <View style={{ gap: spacing.md }}>
-          {modes.map((mode) => {
+          {TRAVEL_ITEM_SHARE_MODES.map((mode) => {
             const selected = shareMode === mode;
             return (
               <AgentTestId
                 key={mode}
                 testID={AgentUiIds.travel.itineraryShare.mode(mode)}
-                label={modeLabel(mode)}
+                label={travelItemShareModeLabel(mode)}
                 onPress={() => setShareMode(mode)}
                 style={[
                   styles.modeRow,
@@ -149,10 +137,10 @@ export function TravelItineraryShareSheet({
                   },
                 ]}>
                 <AppText variant="callout" fit>
-                  {modeLabel(mode)}
+                  {travelItemShareModeLabel(mode)}
                 </AppText>
                 <AppText variant="caption" color="secondary">
-                  {modeHint(mode)}
+                  {travelItemShareModeHint(mode)}
                 </AppText>
               </AgentTestId>
             );

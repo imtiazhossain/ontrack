@@ -106,6 +106,7 @@ describe('travel header sky décor', () => {
     expect(hero).toContain('statusBandRatio={0}');
     expect(hero).toContain('useSafeAreaChrome');
     expect(hero).toContain('headerSkyChromeColor');
+    expect(hero).toContain('priority: 1');
     // No second plate — scenery must not be duplicated across bands.
     expect(hero).not.toContain('useSafeAreaChromeOverlay');
     expect(hero.match(/<TravelHeaderSkyDecor/g)).toHaveLength(1);

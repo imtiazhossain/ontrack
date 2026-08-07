@@ -6,22 +6,16 @@ import {
   encodeTravelInvite,
   isShortTravelInvite,
 } from '@/features/travel/travel-invite-codec';
+import { TravelInviteError } from '@/features/travel/travel-invite-error';
 import type { TravelPlan } from '@/features/travel/types';
 import { getSupabaseClient } from '@/services/cloud/supabase';
-import {
-  markInviteSnapshotItinerary,
-  publishTravelTripItinerary,
-} from '@/services/travel/itinerary-collaboration';
+import { markInviteSnapshotItinerary } from '@/features/travel/itinerary-visibility';
+import { publishTravelTripItinerary } from '@/services/travel/itinerary-collaboration';
 import { formatDateLong } from '@/utils/date';
 
-const SHORT_INVITE_PREFIX = 's.';
+export { TravelInviteError };
 
-export class TravelInviteError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'TravelInviteError';
-  }
-}
+const SHORT_INVITE_PREFIX = 's.';
 
 export async function requireAuthenticatedInviteClient() {
   const client = getSupabaseClient();

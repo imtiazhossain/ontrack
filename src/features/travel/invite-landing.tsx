@@ -20,10 +20,8 @@ import {
 } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelSkyBackdrop, TravelSurfaceCard } from '@/features/travel/travel-surface';
-import {
-  markInviteSnapshotItinerary,
-  pullTravelTripItinerary,
-} from '@/services/travel/itinerary-collaboration';
+import { markInviteSnapshotItinerary } from '@/features/travel/itinerary-visibility';
+import { pullTravelTripItinerary } from '@/services/travel/itinerary-collaboration';
 import { useAddons } from '@/store/addons';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';

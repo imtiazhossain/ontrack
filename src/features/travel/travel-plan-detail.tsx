@@ -47,10 +47,12 @@ import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  publishTravelTripItinerary,
-  shouldSyncTravelItinerary,
   stampOwnedItineraryDefaults,
   touchItineraryItemShare,
+} from '@/features/travel/itinerary-visibility';
+import {
+  publishTravelTripItinerary,
+  shouldSyncTravelItinerary,
 } from '@/services/travel/itinerary-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';

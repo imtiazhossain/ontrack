@@ -125,11 +125,14 @@ export function TravelPlanHero({
     destination: skyDestination,
     latitude: atmosphere.latitude,
   });
+  // Priority > layout wash: child focus effects run before parents, so without
+  // this the travel stack's black chrome would cover the night-sky status band.
   useSafeAreaChrome(
     headerSkyChromeColor({
       themeDark: theme.name === 'dark',
       look: skyCondition.look,
     }),
+    { priority: 1 },
   );
   const edgeBleed = layout.screenPadding;
 

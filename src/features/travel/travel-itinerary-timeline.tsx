@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AppState, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { radii } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import {
     TRAVEL_EDITORIAL_ACCENT,
     travelPanelTint,
 } from '@/features/travel/travel-surface';
+import {
+    dayNumberFor,
+    daySpineColor,
+    TimelineDayBridge,
+    TimelineDayHeader,
+} from '@/features/travel/travel-timeline-day-chrome';
 import {
     expandTimelineEntries,
     groupTimelineEntriesByDate,
@@ -24,7 +29,6 @@ import {
     resolveJourneyTraveler,
     summarizeTimelineProgress,
     timelineDayPhase,
-    type TimelineDayPhase,
 } from '@/features/travel/travel-timeline-progress';
 import {
     TimelineNowMarker,
@@ -38,186 +42,10 @@ import {
     formatDateKeyMedium,
     formatMinutes,
     formatWeekday,
-    fromDateKey,
     type DateDisplayFormat,
 } from '@/utils/date';
 
 type TravelItineraryItemModel = TravelPlan['itinerary'][number];
-
-/** Per-day spine accents — blue, green, then warm/cool cycle. */
-const DAY_SPINE_LIGHT = ['#2F6FE4', '#2F9B6A', '#C47A2C', '#7B5EA7', '#2F8A8A'] as const;
-const DAY_SPINE_DARK = ['#6B9BE8', '#5BC48A', '#D4A05A', '#B394D0', '#5BB8B8'] as const;
-
-function dayNumberFor(planStartDate: string, date: string): number {
-  const start = fromDateKey(planStartDate).getTime();
-  const current = fromDateKey(date).getTime();
-  return Math.round((current - start) / (24 * 60 * 60 * 1000)) + 1;
-}
-
-function daySpineColor(dayIndex: number, themeName: string): string {
-  const palette = themeName === 'dark' ? DAY_SPINE_DARK : DAY_SPINE_LIGHT;
-  return palette[dayIndex % palette.length] ?? palette[0];
-}
-
-function mixHexChannel(a: number, b: number, t: number): number {
-  return Math.round(a + (b - a) * t);
-}
-
-/** Lerp `#RRGGBB` colors for stepped dashed bridges between day spines. */
-function mixSpineColor(from: string, to: string, t: number): string {
-  const parse = (hex: string) => {
-    const raw = hex.replace('#', '');
-    return {
-      r: Number.parseInt(raw.slice(0, 2), 16),
-      g: Number.parseInt(raw.slice(2, 4), 16),
-      b: Number.parseInt(raw.slice(4, 6), 16),
-    };
-  };
-  const a = parse(from);
-  const b = parse(to);
-  const clamped = Math.min(1, Math.max(0, t));
-  const r = mixHexChannel(a.r, b.r, clamped);
-  const g = mixHexChannel(a.g, b.g, clamped);
-  const bl = mixHexChannel(a.b, b.b, clamped);
-  return `#${[r, g, bl].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
-}
-
-/** View-based dashed bridge — SVG stroke gradients are unreliable on thin vertical rails. */
-function TimelineDayBridge({
-  fromColor,
-  toColor,
-  height,
-  thickness,
-  dashLength,
-}: {
-  fromColor: string;
-  toColor: string;
-  height: number;
-  thickness: number;
-  dashLength: number;
-}) {
-  const count = Math.max(3, Math.floor(height / (dashLength + 2)));
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        height,
-        width: thickness,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-      {Array.from({ length: count }, (_, index) => {
-        const t = count === 1 ? 0 : index / (count - 1);
-        return (
-          <View
-            key={`dash-${index}`}
-            style={{
-              width: thickness,
-              height: dashLength,
-              borderRadius: thickness / 2,
-              backgroundColor: mixSpineColor(fromColor, toColor, t),
-            }}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-function dayPhaseChipLabel(
-  phase: TimelineDayPhase,
-  entryCount: number,
-): string {
-  if (phase === 'past') return 'Done';
-  if (phase === 'current') return 'Today';
-  return `${entryCount} ${entryCount === 1 ? 'Stop' : 'Stops'}`;
-}
-
-function TimelineDayHeader({
-  date,
-  dayNumber,
-  weekday,
-  dateLabel,
-  entryCount,
-  dayPhase,
-  dayExpanded,
-  dayTap,
-  chipBackground,
-  overlineSize,
-  overlineLineHeight,
-  onToggleDay,
-}: {
-  date: string;
-  dayNumber: number;
-  weekday: string;
-  dateLabel: string;
-  entryCount: number;
-  dayPhase: TimelineDayPhase;
-  dayExpanded: boolean;
-  dayTap: number;
-  chipBackground: string;
-  overlineSize: number;
-  overlineLineHeight: number;
-  onToggleDay: (date: string) => void;
-}) {
-  const { spacing: rs } = useResponsive();
-  const chipLabel = dayPhaseChipLabel(dayPhase, entryCount);
-  const dayTitle = `Day ${dayNumber} · ${dateLabel} · ${chipLabel}`;
-  const dayAgent = useAgentUiTarget(AgentUiIds.travel.timelineDay.toggle(date), {
-    label: dayTitle,
-    onPress: () => onToggleDay(date),
-  });
-  return (
-    <Pressable
-      ref={dayAgent.ref}
-      testID={dayAgent.testID}
-      onLayout={dayAgent.onLayout}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: dayExpanded }}
-      accessibilityLabel={dayTitle}
-      onPress={() => onToggleDay(date)}
-      hitSlop={6}
-      style={[styles.dayHeader, { minHeight: dayTap, gap: rs.xs }]}>
-      <View style={styles.dayTitleBlock}>
-        <AppText variant="callout" fit style={styles.dayNumber}>
-          Day {dayNumber}
-        </AppText>
-        <AppText
-          variant="caption"
-          color="secondary"
-          fit
-          style={[
-            travelOverlineStyle,
-            styles.dayMeta,
-            {
-              fontSize: overlineSize,
-              lineHeight: overlineLineHeight,
-            },
-          ]}>
-          {weekday} · {dateLabel}
-        </AppText>
-      </View>
-      <View
-        style={[
-          styles.countChip,
-          {
-            backgroundColor: chipBackground,
-            minHeight: Math.max(20, rs.sm + 4),
-            paddingHorizontal: rs.sm,
-            opacity: dayPhase === 'past' ? 0.72 : 1,
-          },
-        ]}>
-        <AppText
-          variant="caption"
-          color="accent"
-          fit
-          style={{ fontSize: overlineSize }}>
-          {chipLabel}
-        </AppText>
-      </View>
-    </Pressable>
-  );
-}
 
 export function TravelItineraryTimeline({
   plan,
@@ -750,31 +578,6 @@ const styles = StyleSheet.create({
   dayContent: {
     flex: 1,
     minWidth: 0,
-  },
-  dayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dayTitleBlock: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: spacing.xxs,
-  },
-  dayNumber: {
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  dayMeta: {
-    flexShrink: 1,
-    minWidth: 0,
-    textTransform: 'none',
-  },
-  countChip: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   eventStack: {
     width: '100%',

@@ -5,10 +5,8 @@ import {
   encodeTravelInvite,
   ONTRACK_TRAVEL_SHARE_URL,
 } from '@/features/travel/travel-invite-codec';
-import {
-  requireAuthenticatedInviteClient,
-  TravelInviteError,
-} from '@/features/travel/travel-invite-api';
+import { TravelInviteError } from '@/features/travel/travel-invite-error';
+import { requireAuthenticatedInviteClient } from '@/features/travel/travel-invite-api';
 import type {
   TravelOpenJoinPreview,
   TravelOpenJoinRequest,
