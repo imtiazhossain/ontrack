@@ -1,15 +1,18 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     NativeScrollEvent,
     NativeSyntheticEvent,
     Platform,
     Pressable,
-    ScrollView,
     StyleSheet,
     View,
     useWindowDimensions,
 } from 'react-native';
+import Animated, {
+    type SharedValue,
+    useAnimatedScrollHandler,
+} from 'react-native-reanimated';
 
 import { fetchDestinationHeroUris } from '@/features/travel/destination-cover';
 import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
@@ -37,6 +40,8 @@ type TravelHomeHeroCarouselProps = {
     index: number,
     pageCount: number,
   ) => void;
+  /** Continuous page position for glass ticks (offsetX / pageWidth). */
+  scrollProgress?: SharedValue<number>;
 };
 
 /** Horizontal paging hero (1–3 images) with edit control. Page control lives on glass. */
@@ -45,6 +50,7 @@ export function TravelHomeHeroCarousel({
   width,
   onEdit,
   onActiveImageChange,
+  scrollProgress,
 }: TravelHomeHeroCarouselProps) {
   const theme = useTheme();
   const { s } = useResponsive();
@@ -62,9 +68,10 @@ export function TravelHomeHeroCarousel({
   const [uris, setUris] = useState<string[]>([]);
   const [failedUris, setFailedUris] = useState<Record<string, true>>({});
   const [index, setIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<Animated.ScrollView>(null);
   const destinationLabel = plan.destination.trim() || plan.title;
   const visibleUris = uris.filter((uri) => !failedUris[uri]);
+  const pageWidth = heroWidth;
 
   useEffect(() => {
     let active = true;
@@ -74,13 +81,14 @@ export function TravelHomeHeroCarousel({
     scrollRef.current?.scrollTo({ x: 0, animated: false });
     // Fixture plate is the scenic underlay while remotes load (and if they miss).
     // Still fetch heroes so multi-page glass steppers work on travel-home seeds.
-    if (fixtureSource) {
-      onActiveImageChange?.(undefined, 0, 0);
-    }
+    // Do NOT report pageCount 0 here — that collapsed the glass ticks until swipe
+    // whenever a load flicker won the race against the real multi-URI result.
     void fetchDestinationHeroUris(plan).then((next) => {
       if (!active) return;
       setFailedUris({});
       setUris(next);
+      setIndex(0);
+      if (scrollProgress) scrollProgress.value = 0;
       onActiveImageChange?.(next[0], 0, next.length);
       if (next[1]) {
         void Image.prefetch(next[1]).catch(() => undefined);
@@ -93,25 +101,39 @@ export function TravelHomeHeroCarousel({
   }, [destinationKey, fixtureSource]);
 
   useEffect(() => {
-    if (visibleUris.length === 0) {
-      onActiveImageChange?.(undefined, 0, 0);
-      return;
-    }
+    // Empty uris = still loading / cleared for a refetch. Leave the parent's
+    // page count alone (trip card resets on plan.id) so ticks don't vanish.
+    if (visibleUris.length === 0) return;
     const nextIndex = Math.min(index, visibleUris.length - 1);
     if (nextIndex !== index) setIndex(nextIndex);
     scrollRef.current?.scrollTo({ x: nextIndex * heroWidth, animated: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to failure/uri changes
+  }, [failedUris, uris, heroWidth]);
+
+  // Publish page count before paint so glass ticks show without waiting for a swipe.
+  useLayoutEffect(() => {
+    if (visibleUris.length === 0) return;
+    const nextIndex = Math.min(index, visibleUris.length - 1);
     onActiveImageChange?.(
       visibleUris[nextIndex],
       nextIndex,
       visibleUris.length,
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to failure/uri changes
-  }, [failedUris, uris, heroWidth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mirror pager to parent
+  }, [visibleUris.length, index, failedUris, uris]);
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (!scrollProgress || pageWidth <= 0) return;
+      scrollProgress.value = event.contentOffset.x / pageWidth;
+    },
+  });
 
   const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(event.nativeEvent.contentOffset.x / heroWidth);
     const clamped = Math.max(0, Math.min(visibleUris.length - 1, next));
     setIndex(clamped);
+    if (scrollProgress) scrollProgress.value = clamped;
     onActiveImageChange?.(
       visibleUris[clamped],
       clamped,
@@ -184,12 +206,13 @@ export function TravelHomeHeroCarousel({
           accessible={false}
           importantForAccessibility="no"
         />
-        <ScrollView
+        <Animated.ScrollView
           ref={scrollRef}
           horizontal
           pagingEnabled
           scrollEnabled={scrollInteractive}
           showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
           onMomentumScrollEnd={onScrollEnd}
           scrollEventThrottle={16}
           style={[
@@ -246,7 +269,7 @@ export function TravelHomeHeroCarousel({
               </View>
             );
           })}
-        </ScrollView>
+        </Animated.ScrollView>
         {/*
           Dev fixture plate is opacity-toggled — never swaps ScrollView out.
         */}

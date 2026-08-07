@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
-  Easing,
+  Extrapolation,
+  interpolate,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
@@ -15,15 +16,21 @@ import { useTheme } from '@/hooks/use-theme';
 type TravelHomeCarouselStepperProps = {
   count: number;
   index: number;
+  /** Continuous page position from the hero ScrollView (0…count-1). */
+  progress?: SharedValue<number>;
   style?: StyleProp<ViewStyle>;
 };
 
 const MAX_SLOTS = 3;
-const SLIDE_MS = 220;
+const SETTLE_MS = 220;
 
 /**
  * Compact page ticks for Travel Home heroes — small thin lines, centered on
  * the top edge of the glass scoop (one per swipeable thumbnail).
+ *
+ * Active highlight tracks scroll progress for a smooth crossfade while swiping.
+ * Each tick keeps a static inactive fill so lines paint on first frame (animated
+ * styles alone used to stay invisible until the first swipe).
  *
  * Always mount a shell (collapse when ≤1 page) so Fabric siblings of BlurView
  * / glass underlays don’t remount mid-frame.
@@ -31,6 +38,7 @@ const SLIDE_MS = 220;
 export function TravelHomeCarouselStepper({
   count,
   index,
+  progress: progressProp,
   style,
 }: TravelHomeCarouselStepperProps) {
   const theme = useTheme();
@@ -41,21 +49,26 @@ export function TravelHomeCarouselStepper({
   const visible = pageCount > 1;
 
   const lineW = Math.max(12, s(13));
-  const lineH = StyleSheet.hairlineWidth * 2;
+  const lineH = Math.max(2, s(2));
   const gap = Math.max(4, s(5));
-  // Sit on the top edge of the glass scoop — only a hair of inset.
   const padY = Math.max(3, s(3));
-  const inactiveColor = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.28)';
+  const inactiveColor = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.28)';
   const activeColor = dark ? '#FFFFFF' : travelHomeTokens.colors.brandBlue;
 
-  const progress = useSharedValue(activeIndex);
+  const fallbackProgress = useSharedValue(activeIndex);
+  const progress = progressProp ?? fallbackProgress;
 
+  // When the parent only passes discrete index (no scroll binding), ease over.
   useEffect(() => {
-    progress.value = withTiming(activeIndex, {
-      duration: SLIDE_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [activeIndex, progress]);
+    if (progressProp) {
+      // Keep shared scroll value in sync for non-gesture jumps (reload, clamp).
+      if (Math.abs(progressProp.value - activeIndex) > 0.01) {
+        progressProp.value = withTiming(activeIndex, { duration: SETTLE_MS });
+      }
+      return;
+    }
+    fallbackProgress.value = withTiming(activeIndex, { duration: SETTLE_MS });
+  }, [activeIndex, fallbackProgress, progressProp]);
 
   if (!visible) {
     return (
@@ -108,25 +121,32 @@ function Tick({
   activeColor: string;
   inactiveColor: string;
 }) {
-  const style = useAnimatedStyle(() => {
-    const on = Math.abs(progress.value - index) < 0.45;
-    return {
-      backgroundColor: on ? activeColor : inactiveColor,
-      opacity: on ? 1 : 0.85,
-    };
-  });
+  const activeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      progress.value,
+      [index - 1, index, index + 1],
+      [0, 1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
   return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height: Math.max(1.5, height),
-          borderRadius: 1,
-        },
-        style,
-      ]}
-    />
+    <View
+      style={{
+        width,
+        height,
+        borderRadius: 1,
+        backgroundColor: inactiveColor,
+        overflow: 'hidden',
+      }}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: activeColor, borderRadius: 1 },
+          activeStyle,
+        ]}
+      />
+    </View>
   );
 }
 

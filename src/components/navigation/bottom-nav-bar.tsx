@@ -64,7 +64,7 @@ const TRACK_REPEAT_COUNT = 5;
 const MAX_CAROUSEL_WIDTH = 720;
 const VELOCITY_PROJECTION_SECONDS = 0.2;
 const MAX_FLING_ITEMS = 5;
-/** Soft settle after a finger pan only — taps jump instantly. */
+/** Soft settle for pan snaps and rail arrow nudges. */
 const SNAP_SPRING = {
   damping: 22,
   stiffness: 230,
@@ -262,6 +262,9 @@ export function BottomNavBar({
 
   // Suppress the press that fires when a horizontal swipe ends on a tab.
   const suppressPressAfterPan = useRef(false);
+  // Logical snap target while an arrow spring is in flight so rapid taps
+  // step from the destination, not a mid-animation fractional offset.
+  const pendingNudgeTarget = useRef<number | null>(null);
   const setSwipeClaimed = (claimed: boolean) => {
     useUI.getState().setCarouselSwipeClaimed(claimed);
   };
@@ -311,6 +314,7 @@ export function BottomNavBar({
   const finishBrowseAtPosition = (targetItems: number, epoch: number) => {
     if (motionEpoch.value !== epoch) return;
     if (routeCount <= 0) return;
+    pendingNudgeTarget.current = null;
     const routeIndex = routeIndexForPosition(targetItems, routeCount);
     positionItems.value = rebasePosition(
       targetItems,
@@ -322,9 +326,21 @@ export function BottomNavBar({
   const nudgeCarousel = (direction: -1 | 1) => {
     const epoch = motionEpoch.value + 1;
     motionEpoch.value = epoch;
-    const targetItems = Math.round(positionItems.value) + direction;
-    positionItems.value = targetItems;
-    finishBrowseAtPosition(targetItems, epoch);
+    const base =
+      pendingNudgeTarget.current ?? Math.round(positionItems.value);
+    const targetItems = base + direction;
+    pendingNudgeTarget.current = targetItems;
+    positionItems.value = withSpring(
+      targetItems,
+      SNAP_SPRING,
+      (finished) => {
+        if (!finished || motionEpoch.value !== epoch) return;
+        scheduleOnRN(finishBrowseAtPosition, targetItems, epoch);
+      },
+    );
+  };
+  const clearPendingNudge = () => {
+    pendingNudgeTarget.current = null;
   };
 
   // Fail quickly on taps so tab Pressables aren’t held in “possible” by the pan.
@@ -335,6 +351,7 @@ export function BottomNavBar({
     .onStart(() => {
       motionEpoch.value += 1;
       gestureStartItems.value = positionItems.value;
+      scheduleOnRN(clearPendingNudge);
       scheduleOnRN(setSwipeClaimed, true);
     })
     .onUpdate((event) => {
@@ -393,6 +410,7 @@ export function BottomNavBar({
   ) {
     prevRouteOrderKeyRef.current = routeOrderKey;
     motionEpoch.value += 1;
+    pendingNudgeTarget.current = null;
     positionItems.value = rebasePosition(
       positionItems.value,
       selectedIndex,
@@ -417,6 +435,7 @@ export function BottomNavBar({
       return;
     }
     motionEpoch.value += 1;
+    pendingNudgeTarget.current = null;
     positionItems.value = rebasePosition(target, selectedIndex, routeCount);
   }, [
     carouselBrowse,
@@ -599,8 +618,9 @@ export function BottomNavBar({
               const routeIndex = visibleRoutes.findIndex(
                 (item) => item.name === route.name,
               );
-              // Cancel any in-flight pan spring so it can't overwrite this jump.
+              // Cancel any in-flight spring so it can't overwrite this jump.
               motionEpoch.value += 1;
+              pendingNudgeTarget.current = null;
               // Rail first (shared value), then navigate — feels instant.
               const targetItems = shortestTargetPosition(
                 positionItems.value,
