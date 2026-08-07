@@ -31,13 +31,12 @@ export function TravelHomeSectionHeader({
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const dark = theme.name === 'dark';
-  // Outer plate is inverted: black glass in light mode, white glass in dark.
-  const plateInk = dark ? travelHomeTokens.colors.ink : '#FFFFFF';
-  // Icon + placeholder: white in light, ink in dark (scoop inverted to match).
-  const fieldInk = dark ? travelHomeTokens.colors.ink : '#FFFFFF';
+  // Theme-native glass: light frost in light mode, dark frost in dark.
+  const plateInk = dark ? '#FFFFFF' : travelHomeTokens.colors.ink;
+  const fieldInk = plateInk;
   const fieldMuted = dark
-    ? travelHomeTokens.colors.inkMuted
-    : 'rgba(255,255,255,0.88)';
+    ? 'rgba(255,255,255,0.88)'
+    : travelHomeTokens.colors.inkMuted;
   const titleSize = Math.max(18, s(travelHomeTokens.sizes.sectionTitle));
   const searchTextSize = Math.max(15, s(travelHomeTokens.sizes.searchFieldText));
   const showCount = count !== undefined && count > 0;
@@ -80,7 +79,7 @@ export function TravelHomeSectionHeader({
         maxFontSizeMultiplier={1.1}
         numberOfLines={1}
         style={{
-          // White on dark inverted frost (light mode); ink on light frost (dark).
+          // Opposite the scoop: dark frost + white (light); light frost + ink (dark).
           color: dark ? travelHomeTokens.colors.ink : '#FFFFFF',
           fontSize: Math.max(11, s(12)),
           fontWeight: '400',
@@ -93,7 +92,6 @@ export function TravelHomeSectionHeader({
 
   return (
     <TravelHomeGlass
-      inverted
       intensity={dark ? 48 : 44}
       style={[
         styles.plate,
@@ -107,8 +105,7 @@ export function TravelHomeSectionHeader({
       ]}>
       {showSearch ? (
         <TravelHomeGlass
-          inverted
-          intensity={dark ? 36 : 28}
+          intensity={dark ? 36 : 52}
           style={[
             styles.search,
             {
