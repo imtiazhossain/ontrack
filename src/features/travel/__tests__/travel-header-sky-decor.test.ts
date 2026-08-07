@@ -33,9 +33,20 @@ describe('travel header sky décor', () => {
     expect(night).toContain('PhaseMoon');
     expect(night).toContain('projectStarsToPlate');
     expect(night).toContain('TravelSkyAurora');
-    expect(night).toContain('destinationShowsAurora');
+    expect(night).toContain('travel-sky-aurora-destinations');
     expect(day).toContain('SoftCloud');
     expect(day).toContain('DaySun');
+  });
+
+  it('keeps sun and moon round under plate stretch', () => {
+    const plate = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-sky-plate.ts'),
+      'utf8',
+    );
+    expect(plate).toContain('celestialDiscHostStyle');
+    expect(plate).toContain('aspectRatio: 1');
+    expect(night).toContain('celestialDiscHostStyle');
+    expect(day).toContain('celestialDiscHostStyle');
   });
 
   it('renders a realistic terminator moon with surface detail', () => {
@@ -89,7 +100,7 @@ describe('travel header sky décor', () => {
     expect(day).toContain('statusBand + SKY_CELESTIAL_CLEARANCE');
   });
 
-  it('paints dynamic sky in the header with a matching status-bar wash', () => {
+  it('paints one continuous sky on app-shell chrome (status bar + header)', () => {
     const hero = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
       'utf8',
@@ -98,17 +109,16 @@ describe('travel header sky décor', () => {
       join(process.cwd(), 'src/features/travel/travel-plan-detail-body.tsx'),
       'utf8',
     );
-    // Dynamic art stays in-header (stack fills cover app-shell chrome below inset).
-    expect(hero).toContain('skyOnHeader');
+    // Single plate from window y=0 — aurora/day washes stay live behind the clock.
     expect(hero).toContain('TravelHeaderSkyDecor');
     expect(hero).toContain('useTravelAtmosphere');
     expect(hero).toContain('weatherCode');
-    expect(hero).toContain('statusBandRatio={0}');
     expect(hero).toContain('useSafeAreaChrome');
+    expect(hero).toContain('useSafeAreaChromeOverlay');
     expect(hero).toContain('headerSkyChromeColor');
+    expect(hero).toContain('statusBandRatio');
     expect(hero).toContain('priority: 1');
-    // No second plate — scenery must not be duplicated across bands.
-    expect(hero).not.toContain('useSafeAreaChromeOverlay');
+    expect(hero).not.toContain('skyOnHeader');
     expect(hero.match(/<TravelHeaderSkyDecor/g)).toHaveLength(1);
     expect(body).toContain('transparentScreen');
     expect(body).toContain('pageWash');

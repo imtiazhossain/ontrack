@@ -17,7 +17,7 @@ export function collaborationMessageFrom(
 
 export function shouldSyncTravelCollaboration(plan: TravelPlan): boolean {
   return Boolean(
-    plan.participants.length > 0 ||
+    (plan.participants ?? []).length > 0 ||
       plan.chatAccessCode ||
       plan.openJoinCode ||
       plan.hostTripId,

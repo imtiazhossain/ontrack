@@ -21,6 +21,7 @@ import {
     travelAtmosphereScheme,
     type TravelAtmosphere,
 } from './travel-atmosphere-model';
+import { HEADER_SKY_NIGHT_CHROME } from './travel-sky-condition';
 
 /** Travel's open-sky accent. Shared control semantics remain unchanged. */
 export const TRAVEL_EDITORIAL_ACCENT = '#2474A8';
@@ -40,8 +41,9 @@ const FALLBACK_ATMOSPHERE: TravelAtmosphere = {
 };
 
 function travelTopWash(theme: Theme): string {
+  // Dark wash matches itinerary night-sky status chrome (not pure page black).
   return theme.name === 'dark'
-    ? darkTravelTheme.backgroundPrimary
+    ? HEADER_SKY_NIGHT_CHROME
     : lightTravelTheme.backgroundPrimary;
 }
 

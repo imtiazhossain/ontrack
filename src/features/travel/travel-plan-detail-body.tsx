@@ -7,6 +7,7 @@ import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-time
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
 import { TravelPlanTripTools } from '@/features/travel/travel-plan-trip-tools';
 import type { DetailSectionKey } from '@/features/travel/travel-plan-detail-sections';
+import { HEADER_SKY_NIGHT_CHROME } from '@/features/travel/travel-sky-condition';
 import { travelAccent } from '@/features/travel/travel-surface';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
 import type {
@@ -59,9 +60,9 @@ export function TravelPlanDetailBody({
   // Match hero header→dates breathing room between Notes / Transport / Timeline.
   const sectionGap = Math.max(rs.md, s(20));
   // Clear the sky band so app-shell chrome can meet the in-header plate.
-  const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(128));
+  const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
 
-  const washTop = theme.name === 'dark' ? '#0A1424' : '#DCE8F1';
+  const washTop = theme.name === 'dark' ? HEADER_SKY_NIGHT_CHROME : '#DCE8F1';
   const paper =
     typeof travelStyle.backgroundColor === 'string'
       ? travelStyle.backgroundColor

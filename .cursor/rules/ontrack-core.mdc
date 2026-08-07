@@ -31,4 +31,4 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).
 - **Think cool** → UI should feel crafted/delightful (presence, one idea, restraint); for design/polish read `~/.cursor/skills/think-cool/SKILL.md`.
 - **Optimize the code** → cleanup/rename/reuse/token-slim/temp removal; read `~/.cursor/skills/optimize-code/SKILL.md`.
-- **Push / ship script** → when the user says “run the push script”, “push script”, or “ship push”, run `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Flow: commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK. Use `--ota-apk-only` to reship current main; `--skip-ota` / `--skip-apk` for partial runs.
+- **`push`** → always `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Same for “push script” / “ship push”. Flow: commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK. Do **not** treat bare `push` as plain git commit+push. Use `--ota-apk-only` to reship current main; `--skip-ota` / `--skip-apk` for partial runs.

@@ -31,12 +31,11 @@ import {
   moonTerminatorPath,
   projectStarsToPlate,
 } from '@/features/travel/travel-sky-astronomy';
-import {
-  destinationShowsAurora,
-  TravelSkyAurora,
-} from '@/features/travel/travel-sky-aurora';
+import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
+import { TravelSkyAurora } from '@/features/travel/travel-sky-aurora';
 import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
 import {
+  celestialDiscHostStyle,
   SKY_CELESTIAL_CLEARANCE,
   SKY_PLATE_VIEWBOX,
   SKY_VIEW_H,
@@ -317,105 +316,113 @@ function PhaseMoon({
     ],
   }));
 
+  // Square host — full-plate `preserveAspectRatio="none"` would oval the disc.
+  const box = r * 3.6;
+  const pad = r * 1.8;
+
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, style]}>
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox={SKY_PLATE_VIEWBOX}
-        preserveAspectRatio="none">
-        <Defs>
-          <RadialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="rgba(232,238,248,0.22)" />
-            <Stop offset="100%" stopColor="rgba(232,238,248,0)" />
-          </RadialGradient>
-          <RadialGradient
-            id="moonSurface"
-            gradientUnits="userSpaceOnUse"
-            cx={cx - r * 0.28}
-            cy={cy - r * 0.32}
-            r={r * 1.6}>
-            <Stop offset="0%" stopColor="#F8FAFC" />
-            <Stop offset="55%" stopColor="#DCE3EC" />
-            <Stop offset="100%" stopColor="#A9B5C4" />
-          </RadialGradient>
-          <ClipPath id="moonLit">
-            <Path d={litPath} />
-          </ClipPath>
-        </Defs>
+    <View
+      pointerEvents="none"
+      style={celestialDiscHostStyle(cx, cy, box)}>
+      <Animated.View style={[{ flex: 1 }, style]}>
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox={`${cx - pad} ${cy - pad} ${box} ${box}`}
+          preserveAspectRatio="xMidYMid meet">
+          <Defs>
+            <RadialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor="rgba(232,238,248,0.22)" />
+              <Stop offset="100%" stopColor="rgba(232,238,248,0)" />
+            </RadialGradient>
+            <RadialGradient
+              id="moonSurface"
+              gradientUnits="userSpaceOnUse"
+              cx={cx - r * 0.28}
+              cy={cy - r * 0.32}
+              r={r * 1.6}>
+              <Stop offset="0%" stopColor="#F8FAFC" />
+              <Stop offset="55%" stopColor="#DCE3EC" />
+              <Stop offset="100%" stopColor="#A9B5C4" />
+            </RadialGradient>
+            <ClipPath id="moonLit">
+              <Path d={litPath} />
+            </ClipPath>
+          </Defs>
 
-        {/* Halo + faint earthshine on the dark side */}
-        <Circle cx={cx} cy={cy} r={r * 1.6} fill="url(#moonGlow)" />
-        <Circle cx={cx} cy={cy} r={r} fill="rgba(214,224,238,0.12)" />
+          {/* Halo + faint earthshine on the dark side */}
+          <Circle cx={cx} cy={cy} r={r * 1.6} fill="url(#moonGlow)" />
+          <Circle cx={cx} cy={cy} r={r} fill="rgba(214,224,238,0.12)" />
 
-        <G clipPath="url(#moonLit)">
-          <Circle cx={cx} cy={cy} r={r} fill="url(#moonSurface)" />
-          {/* Maria — darker basalt plains */}
-          {MOON_MARIA.map((m, i) => (
-            <Ellipse
-              key={`maria-${i}`}
-              cx={cx + m.fx * r}
-              cy={cy + m.fy * r}
-              rx={m.frx * r}
-              ry={m.fry * r}
-              fill="rgba(96,112,134,0.34)"
+          <G clipPath="url(#moonLit)">
+            <Circle cx={cx} cy={cy} r={r} fill="url(#moonSurface)" />
+            {/* Maria — darker basalt plains */}
+            {MOON_MARIA.map((m, i) => (
+              <Ellipse
+                key={`maria-${i}`}
+                cx={cx + m.fx * r}
+                cy={cy + m.fy * r}
+                rx={m.frx * r}
+                ry={m.fry * r}
+                fill="rgba(96,112,134,0.34)"
+              />
+            ))}
+            {/* Craters — dark floor inside a light rim */}
+            {MOON_CRATERS.map((c, i) => (
+              <G key={`crater-${i}`}>
+                <Circle
+                  cx={cx + c.fx * r}
+                  cy={cy + c.fy * r}
+                  r={c.fr * r}
+                  fill="none"
+                  stroke="rgba(240,246,252,0.5)"
+                  strokeWidth={c.fr * r * 0.35}
+                />
+                <Circle
+                  cx={cx + c.fx * r + c.fr * r * 0.12}
+                  cy={cy + c.fy * r + c.fr * r * 0.12}
+                  r={c.fr * r * 0.72}
+                  fill="rgba(84,99,120,0.42)"
+                />
+              </G>
+            ))}
+            {/* Tycho + ray splash */}
+            <Circle
+              cx={cx + MOON_TYCHO.fx * r}
+              cy={cy + MOON_TYCHO.fy * r}
+              r={MOON_TYCHO.fr * r}
+              fill="rgba(238,244,250,0.6)"
             />
-          ))}
-          {/* Craters — dark floor inside a light rim */}
-          {MOON_CRATERS.map((c, i) => (
-            <G key={`crater-${i}`}>
-              <Circle
-                cx={cx + c.fx * r}
-                cy={cy + c.fy * r}
-                r={c.fr * r}
-                fill="none"
-                stroke="rgba(240,246,252,0.5)"
-                strokeWidth={c.fr * r * 0.35}
-              />
-              <Circle
-                cx={cx + c.fx * r + c.fr * r * 0.12}
-                cy={cy + c.fy * r + c.fr * r * 0.12}
-                r={c.fr * r * 0.72}
-                fill="rgba(84,99,120,0.42)"
-              />
-            </G>
-          ))}
-          {/* Tycho + ray splash */}
-          <Circle
-            cx={cx + MOON_TYCHO.fx * r}
-            cy={cy + MOON_TYCHO.fy * r}
-            r={MOON_TYCHO.fr * r}
-            fill="rgba(238,244,250,0.6)"
-          />
-          {[-40, 0, 42].map((deg) => {
-            const rad = ((deg - 90) * Math.PI) / 180;
-            const x0 = cx + MOON_TYCHO.fx * r;
-            const y0 = cy + MOON_TYCHO.fy * r;
-            return (
-              <Line
-                key={`ray-${deg}`}
-                x1={x0}
-                y1={y0}
-                x2={x0 + Math.cos(rad) * r * 0.55}
-                y2={y0 - Math.sin(rad) * r * 0.55}
-                stroke="rgba(235,242,250,0.3)"
-                strokeWidth={r * 0.07}
-                strokeLinecap="round"
-              />
-            );
-          })}
-          {/* Limb darkening — spherical falloff at the edge */}
-          <Circle
-            cx={cx}
-            cy={cy}
-            r={r * 0.93}
-            fill="none"
-            stroke="rgba(52,66,88,0.28)"
-            strokeWidth={r * 0.16}
-          />
-        </G>
-      </Svg>
-    </Animated.View>
+            {[-40, 0, 42].map((deg) => {
+              const rad = ((deg - 90) * Math.PI) / 180;
+              const x0 = cx + MOON_TYCHO.fx * r;
+              const y0 = cy + MOON_TYCHO.fy * r;
+              return (
+                <Line
+                  key={`ray-${deg}`}
+                  x1={x0}
+                  y1={y0}
+                  x2={x0 + Math.cos(rad) * r * 0.55}
+                  y2={y0 - Math.sin(rad) * r * 0.55}
+                  stroke="rgba(235,242,250,0.3)"
+                  strokeWidth={r * 0.07}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+            {/* Limb darkening — spherical falloff at the edge */}
+            <Circle
+              cx={cx}
+              cy={cy}
+              r={r * 0.93}
+              fill="none"
+              stroke="rgba(52,66,88,0.28)"
+              strokeWidth={r * 0.16}
+            />
+          </G>
+        </Svg>
+      </Animated.View>
+    </View>
   );
 }
 

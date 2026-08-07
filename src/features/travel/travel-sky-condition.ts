@@ -9,6 +9,7 @@ import {
   NO_SKY_ACCENTS,
   type DestinationSkyAccents,
 } from '@/features/travel/travel-sky-accents';
+import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 
 /** Visual family for the itinerary header sky plate. */
 export type HeaderSkyLook =
@@ -38,16 +39,32 @@ export type HeaderSkyCondition = {
 };
 
 /**
- * Solid status-bar wash that matches the header sky plate.
- * Stack fills often cover app-shell chrome art below the inset — keep a
- * matching static color behind the clock, and paint dynamic sky in-header.
+ * Clear-night plate top (Portugal-style). Underlay for status-bar chrome when
+ * the live sky overlay is painting aurora / weather above it.
+ */
+export const HEADER_SKY_NIGHT_CHROME = '#0C1423';
+
+/**
+ * Aurora destinations (Iceland, …) — greenish-teal top wash picked from the
+ * live header veil so status chrome matches before/under the sky overlay.
+ */
+export const HEADER_SKY_AURORA_CHROME = '#1E3A42';
+
+/**
+ * Solid status-bar underlay that tracks the header sky family.
+ * Live stars/aurora/clouds continue via `useSafeAreaChromeOverlay` in the hero;
+ * this color fills any gap and SystemUI behind the plate.
  */
 export function headerSkyChromeColor(options: {
   themeDark: boolean;
   look: HeaderSkyLook;
+  destination?: string;
 }): string {
   if (options.themeDark || options.look.startsWith('night')) {
-    return '#0A1424';
+    if (destinationShowsAurora(options.destination ?? '')) {
+      return HEADER_SKY_AURORA_CHROME;
+    }
+    return HEADER_SKY_NIGHT_CHROME;
   }
   switch (options.look) {
     case 'sunrise':
