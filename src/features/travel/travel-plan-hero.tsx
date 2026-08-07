@@ -15,7 +15,11 @@ import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
-import { TRAVEL_HEADER_SKY_CONTENT_BAND } from '@/features/travel/travel-header-sky-height';
+import {
+  TRAVEL_HEADER_DATES_SKY_OVERLAP,
+  TRAVEL_HEADER_SKY_CONTENT_BAND,
+  TRAVEL_HEADER_SKY_FADE_TAIL,
+} from '@/features/travel/travel-header-sky-height';
 import {
   atmosphereHeaderInkColors,
   resolveAtmosphereHeaderInk,
@@ -26,6 +30,8 @@ import {
   headerSkyChromeColor,
   resolveHeaderSkyCondition,
 } from '@/features/travel/travel-sky-condition';
+import { useTravelPageStyle } from '@/features/travel/travel-surface';
+import { travelPageBg } from '@/features/travel/travel-surface';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
 import { tripHeroPlaceName } from '@/features/travel/trip-hero-place';
@@ -102,6 +108,8 @@ export function TravelPlanHero({
   onEditNotes,
   notesExpanded,
   onNotesExpandedChange,
+  /** False during push entrance — solid chrome only; sky FX mounts after settle. */
+  enableSkyDecor = true,
 }: {
   plan: TravelPlan;
   onAddPress?: () => void;
@@ -109,6 +117,7 @@ export function TravelPlanHero({
   onEditNotes?: () => void;
   notesExpanded?: boolean;
   onNotesExpandedChange?: (expanded: boolean) => void;
+  enableSkyDecor?: boolean;
 }) {
   const theme = useTheme();
   const router = useRouter();
@@ -125,8 +134,11 @@ export function TravelPlanHero({
 
   // One continuous sky plate on app-shell chrome (status bar + header).
   // Stack content stays transparent over this band so aurora/day washes stay live.
+  // Fade tail extends the overlay behind the dates card so sky dissolves into paper.
   const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
-  const skyChromeHeight = insets.top + skyContentBand;
+  const skyFadeTail = Math.max(TRAVEL_HEADER_SKY_FADE_TAIL, s(40));
+  const datesSkyOverlap = Math.max(TRAVEL_HEADER_DATES_SKY_OVERLAP, s(24));
+  const skyChromeHeight = insets.top + skyContentBand + skyFadeTail;
   const statusBandRatio =
     skyChromeHeight > 0 ? insets.top / skyChromeHeight : 0;
   const skyDestination = destination || atmosphere.destination || '';
@@ -150,26 +162,32 @@ export function TravelPlanHero({
       averageColor: skyChrome,
     }),
   );
+  // Theme paper — sky horizon dissolves into this just below the dates card.
+  const pageBase = travelPageBg(theme);
   useSafeAreaChrome(skyChrome, { priority: 1 });
   const skyOverlay = useMemo(
-    () => (
-      <TravelHeaderSkyDecor
-        destination={skyDestination}
-        dateKey={plan.startDate}
-        latitude={atmosphere.latitude}
-        longitude={atmosphere.longitude}
-        timeOfDay={atmosphere.timeOfDay}
-        weatherCode={atmosphere.weatherCode}
-        timezone={atmosphere.timezone}
-        statusBandRatio={statusBandRatio}
-      />
-    ),
+    () =>
+      enableSkyDecor ? (
+        <TravelHeaderSkyDecor
+          destination={skyDestination}
+          dateKey={plan.startDate}
+          latitude={atmosphere.latitude}
+          longitude={atmosphere.longitude}
+          timeOfDay={atmosphere.timeOfDay}
+          weatherCode={atmosphere.weatherCode}
+          timezone={atmosphere.timezone}
+          statusBandRatio={statusBandRatio}
+          fadeTo={pageBase}
+        />
+      ) : undefined,
     [
       atmosphere.latitude,
       atmosphere.longitude,
       atmosphere.timeOfDay,
       atmosphere.timezone,
       atmosphere.weatherCode,
+      enableSkyDecor,
+      pageBase,
       plan.startDate,
       skyDestination,
       statusBandRatio,
@@ -178,7 +196,7 @@ export function TravelPlanHero({
   useSafeAreaChromeOverlay(skyOverlay, skyChromeHeight, { priority: 1 });
 
   return (
-    <View style={[styles.hero, { gap: Math.max(rs.md, s(20)) }]}>
+    <View style={[styles.hero, { gap: Math.max(rs.sm, s(12)) }]}>
       <View style={[styles.headerBlock, { minHeight: skyContentBand }]}>
         <View
           style={[
@@ -263,14 +281,17 @@ export function TravelPlanHero({
         </View>
       </View>
 
-      <TravelTripDatesRow
-        startDate={plan.startDate}
-        endDate={plan.endDate}
-        dayCount={dayCount}
-        compact
-        onPress={onEditDates}
-        testID={onEditDates ? AgentUiIds.travel.list.editDates(plan.id) : undefined}
-      />
+      {/* Float dates on the dissolving sky — one composition, not a hard seam. */}
+      <View style={{ marginTop: -datesSkyOverlap, zIndex: 2 }}>
+        <TravelTripDatesRow
+          startDate={plan.startDate}
+          endDate={plan.endDate}
+          dayCount={dayCount}
+          compact
+          onPress={onEditDates}
+          testID={onEditDates ? AgentUiIds.travel.list.editDates(plan.id) : undefined}
+        />
+      </View>
 
       {plan.notes || onEditNotes ? (
         <TravelTripNotesCard

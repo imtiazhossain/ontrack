@@ -1,13 +1,18 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Screen } from '@/components/primitives';
+import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
-import { TRAVEL_HEADER_SKY_CONTENT_BAND } from '@/features/travel/travel-header-sky-height';
+import {
+  TRAVEL_HEADER_SKY_CONTENT_BAND,
+  TRAVEL_HEADER_SKY_FADE_TAIL,
+  travelPlanSkyPageWashStyle,
+} from '@/features/travel/travel-header-sky-height';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
 import { TravelPlanTripTools } from '@/features/travel/travel-plan-trip-tools';
 import type { DetailSectionKey } from '@/features/travel/travel-plan-detail-sections';
-import { HEADER_SKY_NIGHT_CHROME } from '@/features/travel/travel-sky-condition';
+import { resolveHeaderSkyWashTop } from '@/features/travel/travel-sky-condition';
 import { travelAccent } from '@/features/travel/travel-surface';
 import { TravelTransportSections } from '@/features/travel/travel-transport-sections';
 import type {
@@ -56,13 +61,23 @@ export function TravelPlanDetailBody({
   onNotesExpandedChange,
 }: TravelPlanDetailBodyProps) {
   const theme = useTheme();
+  const atmosphere = useTravelAtmosphere();
   const { s, spacing: rs } = useResponsive();
   // Match hero header→dates breathing room between Notes / Transport / Timeline.
   const sectionGap = Math.max(rs.md, s(20));
   // Clear the sky band so app-shell chrome can meet the in-header plate.
   const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
-
-  const washTop = theme.name === 'dark' ? HEADER_SKY_NIGHT_CHROME : '#DCE8F1';
+  const skyFadeTail = Math.max(TRAVEL_HEADER_SKY_FADE_TAIL, s(40));
+  const skyDestination =
+    plan.destination.trim() || atmosphere.destination || '';
+  const washTop = resolveHeaderSkyWashTop({
+    themeDark: theme.name === 'dark',
+    timeOfDay: atmosphere.timeOfDay,
+    weatherCode: atmosphere.weatherCode,
+    timezone: atmosphere.timezone,
+    destination: skyDestination,
+    latitude: atmosphere.latitude,
+  });
   const paper =
     typeof travelStyle.backgroundColor === 'string'
       ? travelStyle.backgroundColor
@@ -71,19 +86,17 @@ export function TravelPlanDetailBody({
   return (
     <View style={styles.fill}>
       {/*
-        Page wash starts below the header sky band. Soft gradient at the top
-        edge so it blends into the sky instead of a hard cut line.
+        Short sky→paper dissolve ending just below the dates card; solid
+        theme base for everything under that.
       */}
       <View
         pointerEvents="none"
-        style={[
-          styles.pageWash,
-          {
-            top: skyContentBand,
-            backgroundColor: paper,
-            experimental_backgroundImage: `linear-gradient(to bottom, ${washTop} 0%, ${paper} 48px, ${paper} 100%)`,
-          },
-        ]}
+        style={travelPlanSkyPageWashStyle({
+          skyContentBand,
+          washTop,
+          paper,
+          fadeTail: skyFadeTail,
+        })}
       />
       <Screen
         style={styles.transparentScreen}
@@ -145,8 +158,5 @@ export function TravelPlanDetailBody({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  pageWash: {
-    ...StyleSheet.absoluteFill,
-  },
   transparentScreen: { backgroundColor: 'transparent' },
 });

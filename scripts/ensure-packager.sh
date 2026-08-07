@@ -273,6 +273,10 @@ simulator_booted() {
     ONTRACK_ANDROID_SERIAL="$serial" android_emu_adb get-state >/dev/null 2>&1
     return $?
   fi
+  if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
+    xcrun simctl list devices booted 2>/dev/null | grep -q "${ONTRACK_IOS_SIMULATOR_UDID}"
+    return $?
+  fi
   xcrun simctl list devices booted 2>/dev/null | grep -q Booted
 }
 
@@ -281,13 +285,15 @@ app_installed() {
     android_emu_adb shell pm path "$BUNDLE_ID" 2>/dev/null | grep -q "package:"
     return $?
   fi
-  ios_simctl_timed get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+  ios_simctl_timed get_app_container "$(ios_sim_target)" "$BUNDLE_ID" data >/dev/null 2>&1
 }
 
 probe_connected() {
   # Agent-ui dump only succeeds when JS runtime is alive and listening for deep links.
   # Skip heal recursion (dump → open → heal → ensure → probe).
-  AGENT_UI_SKIP_HEAL=1 AGENT_UI_PLATFORM="${AGENT_UI_PLATFORM}" WAIT_SECS=3 \
+  # Skip simulator lease — we already hold ensure-packager.lockdir; taking the
+  # agent-ui lease here can deadlock against a verify thread waiting on us.
+  AGENT_UI_SKIP_HEAL=1 AGENT_UI_SKIP_LEASE=1 AGENT_UI_PLATFORM="${AGENT_UI_PLATFORM}" WAIT_SECS=3 \
     ./scripts/agent-ui-dump.sh >/dev/null 2>&1
 }
 
@@ -317,17 +323,18 @@ ensure_fast_refresh_enabled() {
     return 0
   fi
 
-  local menu
-  menu="$(ios_simctl_timed spawn booted defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
+  local menu ios_target
+  ios_target="$(ios_sim_target)"
+  menu="$(ios_simctl_timed spawn "$ios_target" defaults read "$BUNDLE_ID" RCTDevMenu 2>/dev/null || true)"
   if [[ "$menu" != *"hotLoadingEnabled = 0"* ]]; then
     return 0
   fi
   echo "Fast Refresh is OFF in the dev client (RCTDevMenu.hotLoadingEnabled=0) — enabling…"
   # Terminate first so the running app cannot overwrite the setting on exit;
   # the normal probe/reconnect flow below relaunches it.
-  ios_simctl_timed terminate booted "$BUNDLE_ID" 2>/dev/null || true
+  ios_simctl_timed terminate "$ios_target" "$BUNDLE_ID" 2>/dev/null || true
   sleep 1
-  ios_simctl_timed spawn booted defaults write "$BUNDLE_ID" RCTDevMenu -dict-add hotLoadingEnabled -bool YES
+  ios_simctl_timed spawn "$ios_target" defaults write "$BUNDLE_ID" RCTDevMenu -dict-add hotLoadingEnabled -bool YES
   echo "Fast Refresh re-enabled; app will be relaunched by the reconnect step."
 }
 
@@ -681,6 +688,45 @@ else:
 PY
 }
 
+# When ensuring a pool slot that has no build yet, clone from any peer device.
+packager_pool_clone_app_if_needed() {
+  if app_installed; then
+    return 0
+  fi
+  case "${AGENT_UI_POOL_MODE:-0}" in
+    1|true|TRUE|yes|YES) ;;
+    *)
+      [[ -n "${AGENT_UI_SLOT:-}" ]] || return 1
+      ;;
+  esac
+  # shellcheck source=lib/agent-ui-pool.sh
+  source "$ROOT/scripts/lib/agent-ui-pool.sh"
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    agent_ui_pool_clone_android_app "${ONTRACK_ANDROID_SERIAL:-}" || return 1
+  else
+    local udid="${ONTRACK_IOS_SIMULATOR_UDID:-}"
+    if [[ -z "$udid" || "$udid" == "booted" ]]; then
+      udid="$(ios_sim_preferred_booted_udid || ios_sim_resolve_udid || true)"
+    fi
+    [[ -n "$udid" ]] || return 1
+    agent_ui_pool_clone_ios_app "$udid" || return 1
+  fi
+  app_installed
+}
+
+packager_write_slot_pin() {
+  [[ -n "${AGENT_UI_SLOT:-}" ]] || return 0
+  AGENT_UI_ROOT="$ROOT" \
+  AGENT_UI_PLATFORM="${AGENT_UI_PLATFORM:-$PACKAGER_TARGET}" \
+  AGENT_UI_SLOT="${AGENT_UI_SLOT}" \
+  AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+  BUNDLE_ID="${BUNDLE_ID}" \
+  ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
+  ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
+  ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}" \
+    python3 "$ROOT/scripts/lib/agent_ui_bridge.py" write-slot-pin >/dev/null 2>&1 || true
+}
+
 reconnect_dev_client() {
   local host="$1"
   local encoded
@@ -691,6 +737,9 @@ reconnect_dev_client() {
     if ! ensure_preferred_android_emulator; then
       print_packager_diagnostics "$host"
       exit 1
+    fi
+    if ! app_installed; then
+      packager_pool_clone_app_if_needed || true
     fi
     if ! app_installed; then
       echo "error: ${BUNDLE_ID} is not installed on the preferred emulator ($(android_emu_preferred_name))" >&2
@@ -707,10 +756,14 @@ reconnect_dev_client() {
       >/dev/null 2>&1 || true
     echo "Reconnecting Android dev client → http://${host}:${METRO_PORT}"
     android_emu_adb shell am start -a android.intent.action.VIEW -d "$url" >/dev/null 2>&1 || true
+    packager_write_slot_pin
   else
     if ! ensure_preferred_ios_simulator; then
       print_packager_diagnostics "$host"
       exit 1
+    fi
+    if ! app_installed; then
+      packager_pool_clone_app_if_needed || true
     fi
     if ! app_installed; then
       echo "error: ${BUNDLE_ID} is not installed on the preferred simulator ($(ios_sim_preferred_name))" >&2
@@ -719,18 +772,53 @@ reconnect_dev_client() {
     fi
 
     # Soft foreground; avoid terminate/relaunch unless launch is required.
-    ios_simctl_timed 12 launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+    local ios_target ios_udid
+    ios_target="$(ios_sim_target)"
+    ios_udid="${ONTRACK_IOS_SIMULATOR_UDID:-}"
+    if [[ -z "$ios_udid" || "$ios_udid" == "booted" ]]; then
+      ios_udid="$(ios_sim_preferred_booted_udid || ios_sim_resolve_udid || true)"
+    fi
+    # Pre-approve so SpringBoard does not show "Open in \"onTrack\"?".
+    if [[ -n "$ios_udid" ]]; then
+      ios_sim_approve_url_schemes "$ios_udid" >/dev/null || true
+    else
+      ios_sim_approve_url_schemes >/dev/null || true
+    fi
+    ios_simctl_timed 12 launch "$ios_target" "$BUNDLE_ID" >/dev/null 2>&1 || true
     echo "Reconnecting dev client → http://${host}:${METRO_PORT}"
-    ios_simctl_timed 12 openurl booted "$url"
+    ios_simctl_timed 12 openurl "$ios_target" "$url"
+    packager_write_slot_pin
   fi
 
   # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.
-  local deadline=$((SECONDS + WAIT_SECS + 30))
+  # Android first paint after reconnect is slower — give more headroom.
+  local extra=30
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    extra=45
+  fi
+  local deadline=$((SECONDS + WAIT_SECS + extra))
+  local alert_ticks=0
   while (( SECONDS < deadline )); do
     if probe_connected; then
       echo "Dev client connected (agent-ui dump ok)."
       return 0
     fi
+    # Re-fire the Metro URL periodically — DevLauncher sometimes drops the first.
+    if (( alert_ticks > 0 && alert_ticks % 8 == 0 )); then
+      if [[ "$PACKAGER_TARGET" == "android" ]]; then
+        android_emu_adb shell am start -a android.intent.action.VIEW -d "$url" \
+          >/dev/null 2>&1 || true
+      else
+        ios_simctl_timed 12 openurl "$(ios_sim_target)" "$url" >/dev/null 2>&1 || true
+      fi
+      packager_write_slot_pin
+    fi
+    # While waiting, auto-accept an "Open in …?" sheet if approval missed this boot.
+    if [[ "$PACKAGER_TARGET" != "android" ]] && (( alert_ticks % 3 == 0 )); then
+      AGENT_UI_ROOT="$ROOT" AGENT_UI_PLATFORM=ios \
+        python3 "$ROOT/scripts/lib/ios_system_alert.py" ensure >/dev/null 2>&1 || true
+    fi
+    alert_ticks=$((alert_ticks + 1))
     sleep 0.75
   done
   echo "error: reconnect timed out — check Metro / device launcher" >&2
@@ -800,8 +888,12 @@ if [[ "$PACKAGER_TARGET" == "android" ]]; then
     printf '%s\n' "$ONTRACK_ANDROID_SERIAL" >"$ROOT/.cursor/android-emulator.serial"
   fi
   if ! app_installed; then
-    echo "note: app not installed on $(android_emu_preferred_name) — Metro is healthy"
-    exit 0
+    if packager_pool_clone_app_if_needed; then
+      echo "Installed ${BUNDLE_ID} onto pool emulator $(android_emu_preferred_name) via clone."
+    else
+      echo "note: app not installed on $(android_emu_preferred_name) — Metro is healthy"
+      exit 0
+    fi
   fi
 else
   if ! ensure_preferred_ios_simulator; then
@@ -810,8 +902,12 @@ else
   fi
 
   if ! app_installed; then
-    echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
-    exit 0
+    if packager_pool_clone_app_if_needed; then
+      echo "Installed ${BUNDLE_ID} onto pool simulator $(ios_sim_preferred_name) via clone."
+    else
+      echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
+      exit 0
+    fi
   fi
 fi
 

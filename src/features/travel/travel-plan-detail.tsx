@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
@@ -15,6 +15,12 @@ import {
 import {
     TravelImportResult,
 } from '@/features/travel/travel-import-result-modal';
+import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
+import {
+    TRAVEL_HEADER_SKY_CONTENT_BAND,
+    TRAVEL_HEADER_SKY_FADE_TAIL,
+    travelPlanSkyPageWashStyle,
+} from '@/features/travel/travel-header-sky-height';
 import { TravelPlanDetailBody } from '@/features/travel/travel-plan-detail-body';
 import {
     useTravelPlanDetailExpenseImport,
@@ -24,6 +30,8 @@ import {
     type DetailSectionKey,
     sectionDefaultExpanded,
 } from '@/features/travel/travel-plan-detail-sections';
+import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
+import { resolveHeaderSkyWashTop } from '@/features/travel/travel-sky-condition';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { expandTimelineEntries } from '@/features/travel/travel-timeline-entries';
 import {
@@ -45,6 +53,7 @@ import { useTravelPlanDetailEffects } from '@/features/travel/use-travel-plan-de
 import { buildTravelPlanDetailItemHandlers } from '@/features/travel/use-travel-plan-detail-item-handlers';
 import { useTravelPlanItemDetailsEdit } from '@/features/travel/use-travel-plan-item-details-edit';
 import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-media';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
   stampOwnedItineraryDefaults,
@@ -59,6 +68,8 @@ import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { useTravelPlanUi } from '@/store/travel-plan-ui';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
+import { warmHrefsAfterTransition } from '@/utils/warm-navigation';
 
 type TravelPlanDetailProps = {
   planId: string;
@@ -91,6 +102,16 @@ export function TravelPlanDetail(props: TravelPlanDetailProps) {
   const plan = useTravel((state) =>
     planId ? state.plans.find((item) => item.id === planId) : undefined,
   );
+  // Light hero shell paints with the push (and during router.prefetch). Heavy
+  // itinerary waits until the screen is focused *and* the stack settle so
+  // preloaded routes don't mount timeline/sky/overlays off-screen.
+  const isFocused = useIsFocused();
+  const [transitionSettled, setTransitionSettled] = useState(false);
+  useEffect(() => {
+    if (!isFocused || transitionSettled) return;
+    return deferAfterPageTransition(() => setTransitionSettled(true));
+  }, [isFocused, transitionSettled]);
+
   if (!plan) {
     return (
       <Screen style={travelStyle}>
@@ -105,7 +126,62 @@ export function TravelPlanDetail(props: TravelPlanDetailProps) {
       </Screen>
     );
   }
+  if (!transitionSettled) {
+    return <TravelPlanDetailEntrance plan={plan} />;
+  }
   return <TravelPlanDetailLoaded {...props} planId={planId} plan={plan} />;
+}
+
+/** First-paint shell during stack push — solid sky + hero only. */
+function TravelPlanDetailEntrance({ plan }: { plan: TravelPlan }) {
+  const theme = useTheme();
+  const atmosphere = useTravelAtmosphere();
+  const travelStyle = useTravelPageStyle(theme);
+  const { s, spacing: rs } = useResponsive();
+  const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
+  const skyFadeTail = Math.max(TRAVEL_HEADER_SKY_FADE_TAIL, s(40));
+  const skyDestination =
+    plan.destination.trim() || atmosphere.destination || '';
+  const washTop = resolveHeaderSkyWashTop({
+    themeDark: theme.name === 'dark',
+    timeOfDay: atmosphere.timeOfDay,
+    weatherCode: atmosphere.weatherCode,
+    timezone: atmosphere.timezone,
+    destination: skyDestination,
+    latitude: atmosphere.latitude,
+  });
+  const paper =
+    typeof travelStyle.backgroundColor === 'string'
+      ? travelStyle.backgroundColor
+      : theme.backgroundPrimary;
+  const planUi = useTravelPlanUi((state) => state.byPlanId[plan.id]);
+  const notesExpanded = planUi?.notesExpanded ?? true;
+
+  return (
+    <View style={styles.root}>
+      <View style={styles.fill}>
+        <View
+          pointerEvents="none"
+          style={travelPlanSkyPageWashStyle({
+            skyContentBand,
+            washTop,
+            paper,
+            fadeTail: skyFadeTail,
+          })}
+        />
+        <Screen
+          style={styles.transparentScreen}
+          contentStyle={{ gap: Math.max(rs.md, s(20)), paddingTop: rs.sm }}
+          refresh={false}>
+          <TravelPlanHero
+            plan={plan}
+            enableSkyDecor={false}
+            notesExpanded={notesExpanded}
+          />
+        </Screen>
+      </View>
+    </View>
+  );
 }
 
 function TravelPlanDetailLoaded({
@@ -132,6 +208,15 @@ function TravelPlanDetailLoaded({
   const localUserId = user?.id;
   const itinerary = Array.isArray(plan.itinerary) ? plan.itinerary : [];
   const [sharingItemId, setSharingItemId] = useState<string | undefined>();
+
+  // Warm trip-tool routes after the itinerary settles (staggered, max 3).
+  useEffect(() => {
+    return warmHrefsAfterTransition([
+      { pathname: '/travel/[id]/stays', params: { id: planId } },
+      { pathname: '/travel/[id]/flights', params: { id: planId } },
+      { pathname: '/travel/[id]/chat', params: { id: planId } },
+    ] as never);
+  }, [planId]);
 
   const updatePlan = (next: TravelPlan) => {
     const stamped = stampOwnedItineraryDefaults(next, localUserId);
@@ -352,16 +437,19 @@ function TravelPlanDetailLoaded({
       },
     });
   };
-  const defaultCollapsedItemIds = () =>
-    new Set([
-      ...itinerary.map((item) => item.id),
-      ...expandTimelineEntries(itinerary).map((entry) => entry.key),
-    ]);
+  const defaultCollapsedItemIds = useMemo(
+    () =>
+      new Set([
+        ...itinerary.map((item) => item.id),
+        ...expandTimelineEntries(itinerary).map((entry) => entry.key),
+      ]),
+    [itinerary],
+  );
   const collapsedItemIds = planUi?.minimizedItemIds
     ? new Set(planUi.minimizedItemIds)
-    : defaultCollapsedItemIds();
+    : defaultCollapsedItemIds;
   const toggleItineraryItem = (itemId: string) => {
-    const next = new Set(planUi?.minimizedItemIds ?? defaultCollapsedItemIds());
+    const next = new Set(planUi?.minimizedItemIds ?? defaultCollapsedItemIds);
     if (next.has(itemId)) next.delete(itemId);
     else next.add(itemId);
     patchPlanUi(planId, { minimizedItemIds: [...next] });
@@ -483,4 +571,6 @@ function TravelPlanDetailLoaded({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  fill: { flex: 1 },
+  transparentScreen: { backgroundColor: 'transparent' },
 });

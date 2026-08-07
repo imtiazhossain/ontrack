@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
   Button,
+  CollapsibleBody,
   IconButton,
   Input,
   Symbol,
@@ -262,7 +263,7 @@ export function TripFriendRow({
         header
       )}
 
-      {expanded && !renaming ? (
+      <CollapsibleBody expanded={Boolean(expanded) && !renaming}>
         <View style={styles.inlineActions}>
           <FriendActionChip
             label="Rename"
@@ -316,7 +317,7 @@ export function TripFriendRow({
             />
           ) : null}
         </View>
-      ) : null}
+      </CollapsibleBody>
     </View>
   );
 }

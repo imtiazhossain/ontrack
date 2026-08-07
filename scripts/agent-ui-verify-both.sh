@@ -11,6 +11,9 @@
 # Env:
 #   SKIP_IOS=1 / SKIP_ANDROID=1 — escape hatches (do not use for normal close-out)
 #   ONTRACK_ANDROID_AVD / AGENT_UI_DEVICE — android device pin
+#   AGENT_UI_SKIP_LEASE=1 — bypass device pool / lease (escape hatch only)
+#   AGENT_UI_LOCK_WAIT_SECS — how long to wait for a free pool slot (default 300)
+#   AGENT_UI_POOL_MAX — max concurrent agent device slots (default 5)
 
 set -euo pipefail
 
@@ -20,6 +23,11 @@ if [[ $# -lt 1 ]]; then
   echo "usage: $0 --route <path> [--flow <name>] [--exists <id>|…]…" >&2
   exit 2
 fi
+
+# Hold the simulator lease for the whole dual run so another thread cannot
+# interleave between iOS and Android (children inherit AGENT_UI_LOCK_HELD).
+# shellcheck source=lib/agent-ui-host.sh
+source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 ARGS=("$@")
 IOS_OK=0
@@ -32,8 +40,17 @@ run_ios() {
   fi
   echo "verify-both: iOS (AGENT_UI_PLATFORM unset → ios)" >&2
   # Clear sticky android pin so default host stamp is ios.
+  # Keep lease env so the child does not wait on our lockdir.
   env -u AGENT_UI_PLATFORM -u ONTRACK_PACKAGER_TARGET -u AGENT_UI_DEVICE \
     AGENT_UI_PLATFORM=ios \
+    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-1}" \
+    AGENT_UI_LOCK_ACQUIRED=0 \
+    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+    AGENT_UI_LOCK_DIR="${AGENT_UI_LOCK_DIR:-}" \
+    AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+    ONTRACK_IOS_SIMULATOR="${ONTRACK_IOS_SIMULATOR:-}" \
+    ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
+    ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
     "${ROOT}/scripts/agent-ui.sh" verify "${ARGS[@]}"
 }
 
@@ -45,10 +62,27 @@ run_android() {
   echo "verify-both: Android (AGENT_UI_PLATFORM=android)" >&2
   # Ensure emu + packager without killing a healthy Metro.
   if ! AGENT_UI_PLATFORM=android AGENT_UI_SKIP_HEAL=1 WAIT_SECS=3 \
+    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-1}" \
+    AGENT_UI_LOCK_ACQUIRED=0 \
+    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+    AGENT_UI_LOCK_DIR="${AGENT_UI_LOCK_DIR:-}" \
+    AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+    ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
+    ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
     "${ROOT}/scripts/agent-ui-route.sh" >/dev/null 2>&1; then
-    bash "${ROOT}/scripts/ensure-packager.sh" --start --android || true
+    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+      AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+      ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
+      bash "${ROOT}/scripts/ensure-packager.sh" --start --android || true
   fi
   AGENT_UI_PLATFORM=android \
+    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-1}" \
+    AGENT_UI_LOCK_ACQUIRED=0 \
+    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+    AGENT_UI_LOCK_DIR="${AGENT_UI_LOCK_DIR:-}" \
+    AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+    ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
+    ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
     "${ROOT}/scripts/agent-ui.sh" verify "${ARGS[@]}"
 }
 
@@ -66,10 +100,14 @@ release_agent_devmode() {
   echo "verify-both: releasing agent Dev Mode on ${platform}" >&2
   if [[ "${platform}" == "android" ]]; then
     AGENT_UI_PLATFORM=android \
+      AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-1}" \
+      AGENT_UI_LOCK_ACQUIRED=0 \
       "${ROOT}/scripts/agent-ui-devmode.sh" release >/dev/null 2>&1 || true
   else
     env -u AGENT_UI_PLATFORM -u ONTRACK_PACKAGER_TARGET -u AGENT_UI_DEVICE \
       AGENT_UI_PLATFORM=ios \
+      AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-1}" \
+      AGENT_UI_LOCK_ACQUIRED=0 \
       "${ROOT}/scripts/agent-ui-devmode.sh" release >/dev/null 2>&1 || true
   fi
 }

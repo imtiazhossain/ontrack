@@ -1,11 +1,17 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
-import { resolveHeaderSkyCondition } from '@/features/travel/travel-sky-condition';
+import type { TravelTimeOfDay } from '@/features/travel/travel-atmosphere-model';
+import {
+  headerSkyChromeColor,
+  resolveHeaderSkyCondition,
+} from '@/features/travel/travel-sky-condition';
 import { TravelSkyDay } from '@/features/travel/travel-sky-day';
+import { TravelSkyGround } from '@/features/travel/travel-sky-ground';
+import { resolveTravelSkyGroundKind } from '@/features/travel/travel-sky-ground-kind';
 import { TravelSkyNight } from '@/features/travel/travel-sky-night';
 import { SKY_VIEW_H } from '@/features/travel/travel-sky-plate';
 import { useTiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
-import type { TravelTimeOfDay } from '@/features/travel/travel-atmosphere-model';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
@@ -15,10 +21,13 @@ import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
  * stay continuous behind the clock. `headerSkyChromeColor` is the solid underlay.
  * Night: projected stars, phase moon, satellites, meteors, aurora.
  * Day: sun rays / clouds / flocking birds with dawn/dusk palettes.
- * Both: rain/lightning FX and destination accents (tropical/desert/fog).
+ * Both: rain/lightning FX, destination accents, and a location ground band
+ * (trees / town / city / cars) that soft-fades into theme paper just below
+ * the dates card.
  *
  * @param statusBandRatio Fraction of the plate reserved for the status-bar band
  *   (celestial discs stay below the clock / Dynamic Island).
+ * @param fadeTo Light/dark page base color for the short horizon dissolve.
  */
 export function TravelHeaderSkyDecor({
   statusBandRatio = 0.35,
@@ -29,6 +38,8 @@ export function TravelHeaderSkyDecor({
   timeOfDay,
   weatherCode,
   timezone,
+  /** Light/dark page base — sky art eases into this at the horizon. */
+  fadeTo,
 }: {
   statusBandRatio?: number;
   destination?: string;
@@ -38,6 +49,7 @@ export function TravelHeaderSkyDecor({
   timeOfDay?: TravelTimeOfDay;
   weatherCode?: number;
   timezone?: string;
+  fadeTo?: string;
 } = {}) {
   const theme = useTheme();
   const dark = theme.name === 'dark';
@@ -55,6 +67,13 @@ export function TravelHeaderSkyDecor({
     dark ||
     condition.look.startsWith('night') ||
     condition.timeOfDay === 'night';
+  const chrome = headerSkyChromeColor({
+    themeDark: dark,
+    look: condition.look,
+    destination,
+  });
+  const horizon = fadeTo ?? chrome;
+  const groundKind = resolveTravelSkyGroundKind(destination, latitude);
 
   return (
     <AgentTestId
@@ -82,6 +101,17 @@ export function TravelHeaderSkyDecor({
             motion={motion}
           />
         )}
+        <TravelSkyGround kind={groundKind} night={night} motion={motion} />
+        {/*
+          Short horizon dissolve into the theme base — not a sky wash down
+          the page. Ground foot eases into paper just below the dates card.
+        */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['transparent', 'transparent', horizon]}
+          locations={[0.72, 0.88, 1]}
+          style={styles.bottomFade}
+        />
       </View>
     </AgentTestId>
   );
@@ -93,5 +123,12 @@ const styles = StyleSheet.create({
   },
   fill: {
     ...StyleSheet.absoluteFill,
+  },
+  bottomFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '26%',
   },
 });

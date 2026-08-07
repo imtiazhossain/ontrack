@@ -2,6 +2,7 @@ import {
   moonIllumination,
   moonIsWaxing,
   moonPhaseCycle,
+  moonPhaseShadowPath,
   moonTerminatorPath,
 } from '@/features/travel/travel-sky-astronomy';
 import { destinationSkyAccents } from '@/features/travel/travel-sky-accents';
@@ -12,7 +13,9 @@ import {
 } from '@/features/travel/travel-home-atmosphere-ink';
 import {
   headerSkyChromeColor,
+  resolveHeaderSkyCloudCover,
   resolveHeaderSkyCondition,
+  resolveHeaderSkyWashTop,
 } from '@/features/travel/travel-sky-condition';
 
 describe('moon phase helpers', () => {
@@ -71,6 +74,25 @@ describe('moonTerminatorPath', () => {
     const south = moonTerminatorPath(0.1, 100, 50, 10, true);
     expect(north).toContain('A10 10 0 0 1');
     expect(south).toContain('A10 10 0 0 0');
+  });
+});
+
+describe('moonPhaseShadowPath', () => {
+  it('covers the full disc near new moon so the orb stays visible', () => {
+    const shadow = moonPhaseShadowPath(0, 100, 50, 10);
+    expect(shadow).not.toBeNull();
+    expect(shadow?.fillRule).toBeUndefined();
+    expect(shadow?.d).toContain('A10 10 0 1 1');
+  });
+
+  it('omits shadow near full moon', () => {
+    expect(moonPhaseShadowPath(0.5, 100, 50, 10)).toBeNull();
+  });
+
+  it('uses evenodd disc-minus-lit for crescents', () => {
+    const shadow = moonPhaseShadowPath(0.1, 100, 50, 10);
+    expect(shadow?.fillRule).toBe('evenodd');
+    expect(shadow?.d).toContain(moonTerminatorPath(0.1, 100, 50, 10));
   });
 });
 
@@ -211,6 +233,45 @@ describe('resolveHeaderSkyCondition', () => {
       fog: false,
     });
   });
+
+  it('keeps the sun for partly cloudy / mainly clear, dense pack only for overcast', () => {
+    expect(resolveHeaderSkyCloudCover('cloudy', 1)).toBe('partly');
+    expect(resolveHeaderSkyCloudCover('cloudy', 2)).toBe('partly');
+    expect(resolveHeaderSkyCloudCover('cloudy', 3)).toBe('dense');
+    expect(resolveHeaderSkyCloudCover('clear', 0)).toBe('light');
+
+    const partly = resolveHeaderSkyCondition({
+      themeDark: false,
+      timeOfDay: 'day',
+      weatherCode: 2,
+    });
+    expect(partly.look).toBe('sunny');
+    expect(partly.cloudCover).toBe('partly');
+
+    const mainlyClear = resolveHeaderSkyCondition({
+      themeDark: false,
+      timeOfDay: 'day',
+      weatherCode: 1,
+    });
+    expect(mainlyClear.look).toBe('sunny');
+    expect(mainlyClear.cloudCover).toBe('partly');
+
+    const overcast = resolveHeaderSkyCondition({
+      themeDark: false,
+      timeOfDay: 'day',
+      weatherCode: 3,
+    });
+    expect(overcast.look).toBe('cloudy');
+    expect(overcast.cloudCover).toBe('dense');
+
+    const rain = resolveHeaderSkyCondition({
+      themeDark: false,
+      timeOfDay: 'day',
+      weatherCode: 61,
+    });
+    expect(rain.look).toBe('rain');
+    expect(rain.cloudCover).toBe('dense');
+  });
 });
 
 describe('headerSkyChromeColor', () => {
@@ -259,5 +320,22 @@ describe('headerSkyChromeColor', () => {
       }),
     );
     expect(dayInk.ink).toBe('#000000');
+  });
+});
+
+describe('resolveHeaderSkyWashTop', () => {
+  it('matches aurora chrome for Iceland so page wash does not hard-cut the sky', () => {
+    expect(
+      resolveHeaderSkyWashTop({
+        themeDark: true,
+        destination: 'Reykjavík, Iceland',
+      }),
+    ).toBe('#1E3A42');
+    expect(
+      resolveHeaderSkyWashTop({
+        themeDark: true,
+        destination: 'Lisbon, Portugal',
+      }),
+    ).toBe('#0C1423');
   });
 });

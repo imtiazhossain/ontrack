@@ -22,6 +22,7 @@ import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { useUI } from '@/store/ui';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 
 type TravelPlanTripToolsProps = {
   plan: TravelPlan;
@@ -89,7 +90,6 @@ export function TravelPlanTripTools({
             isOnCalendar={isOnCalendar}
             showItineraryAction={false}
             onOpenCalendar={() => {
-              recordPlanInteraction(plan.id);
               const nextActivities = replaceTravelActivities(
                 plan.id,
                 travelCalendarDrafts(plan),
@@ -99,47 +99,48 @@ export function TravelPlanTripTools({
                 eventCount: nextActivities.length,
                 startDate: plan.startDate,
               });
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onSearchFlights={() => {
-              recordPlanInteraction(plan.id);
               router.push({
                 pathname: '/travel/[id]/flights',
                 params: { id: plan.id },
               } as never);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onAddTransport={() => {
-              recordPlanInteraction(plan.id);
               onAddTransport();
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onSearchStays={() => {
-              recordPlanInteraction(plan.id);
               router.push({
                 pathname: '/travel/[id]/stays',
                 params: { id: plan.id },
               } as never);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onOpenWeather={() => {
-              recordPlanInteraction(plan.id);
               setWeatherVisible(true);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onOpenCurrency={() => {
-              recordPlanInteraction(plan.id);
               setCurrencyVisible(true);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onOpenExpenses={() => {
-              recordPlanInteraction(plan.id);
               onOpenExpenses();
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onOpenChat={() => {
-              recordPlanInteraction(plan.id);
               router.push({
                 pathname: '/travel/[id]/chat',
                 params: { id: plan.id },
               } as never);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
             onOpenCoTravelers={() => {
-              recordPlanInteraction(plan.id);
               setFriendsVisible(true);
+              deferAfterPageTransition(() => recordPlanInteraction(plan.id));
             }}
           />
         </View>

@@ -1,14 +1,14 @@
 import * as WebBrowser from 'expo-web-browser';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-    FadeIn,
-    FadeInDown,
-    FadeOut,
-    LinearTransition,
-} from 'react-native-reanimated';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import {
+  AppText,
+  CollapsibleBody,
+  DisclosureChevron,
+  Symbol,
+} from '@/components/primitives';
+import { motion, radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { AirlineLogo } from '@/features/travel/airline-logo';
 import {
@@ -95,8 +95,8 @@ export function TravelTimelineNode({
   leadingTimeLabel,
   allowStructuredEditing = true,
   showStructuredDetails = true,
-  /** Stagger entrance like Today activity cards. */
-  index = 0,
+  /** Kept for call-site compatibility; page reveal owns entrance motion. */
+  index: _index = 0,
   accentColor,
   tintColor,
   editingFlightItemId,
@@ -156,7 +156,7 @@ export function TravelTimelineNode({
   dense?: boolean;
   /** Hour label rendered in the dense title row (keeps time · icon · title vertically aligned). */
   leadingTimeLabel?: string;
-  /** Stagger entrance like Today activity cards. */
+  /** Kept for call-site compatibility; page reveal owns entrance motion. */
   index?: number;
   /** Structured flight/stay/rental editors belong only in the transport section. */
   allowStructuredEditing?: boolean;
@@ -528,8 +528,8 @@ export function TravelTimelineNode({
                 },
               ]}
             >
-              <Symbol
-                name={isExpanded ? 'chevron-up' : 'chevron-right'}
+              <DisclosureChevron
+                expanded={isExpanded}
                 size={dense || compact ? 10 : 12}
                 color={isCompactBoardCard ? accent : theme.textTertiary}
               />
@@ -540,10 +540,8 @@ export function TravelTimelineNode({
           <PhotoStrip uris={photos.slice(0, 4)} />
         ) : null}
 
-        {isExpanded ? (
-          <Animated.View
-            entering={FadeIn.duration(150)}
-            exiting={FadeOut.duration(120)}
+        <CollapsibleBody expanded={isExpanded}>
+          <View
             style={[
               styles.itemDetails,
               {
@@ -739,15 +737,14 @@ export function TravelTimelineNode({
                 onRemove={onRemove}
               />
             ) : null}
-          </Animated.View>
-        ) : null}
+          </View>
+        </CollapsibleBody>
       </View>
   );
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}
-      layout={LinearTransition.duration(180)}
+      layout={LinearTransition.duration(motion.layout)}
       style={[
         styles.nodeCard,
         {

@@ -24,10 +24,15 @@ export type HeaderSkyLook =
   | 'sunset'
   | 'sunrise';
 
+/** How much cloud mass the itinerary header should paint. */
+export type HeaderSkyCloudCover = 'none' | 'light' | 'partly' | 'dense';
+
 export type HeaderSkyCondition = {
   look: HeaderSkyLook;
   timeOfDay: TravelTimeOfDay;
   weatherMood: TravelWeatherMood;
+  /** Soft / drifting cloud shelf for the live sky plate. */
+  cloudCover: HeaderSkyCloudCover;
   /** Show animated rain streaks. */
   rain: boolean;
   /** Occasional lightning flashes (storm). */
@@ -80,14 +85,56 @@ export function headerSkyChromeColor(options: {
   }
 }
 
-function isOvercastFamily(mood: TravelWeatherMood): boolean {
-  return (
-    mood === 'cloudy' ||
-    mood === 'fog' ||
-    mood === 'rain' ||
-    mood === 'snow' ||
-    mood === 'storm'
-  );
+/** Page-wash top stop matching the live itinerary sky underlay. */
+export function resolveHeaderSkyWashTop(options: {
+  themeDark: boolean;
+  timeOfDay?: TravelTimeOfDay;
+  weatherCode?: number;
+  timezone?: string;
+  destination?: string;
+  latitude?: number;
+}): string {
+  const condition = resolveHeaderSkyCondition(options);
+  return headerSkyChromeColor({
+    themeDark: options.themeDark,
+    look: condition.look,
+    destination: options.destination,
+  });
+}
+
+/**
+ * WMO-ish cloud mass for the header plate.
+ * 0 clear → light decorative shelf; 1–2 mainly/partly cloudy → sun + clouds;
+ * 3 overcast (+ fog/precip) → dense pack.
+ */
+export function resolveHeaderSkyCloudCover(
+  weatherMood: TravelWeatherMood,
+  weatherCode?: number,
+): HeaderSkyCloudCover {
+  if (
+    weatherMood === 'rain' ||
+    weatherMood === 'storm' ||
+    weatherMood === 'snow' ||
+    weatherMood === 'fog'
+  ) {
+    return 'dense';
+  }
+  if (weatherMood === 'cloudy') {
+    // Open-Meteo / WMO: 1 mainly clear, 2 partly cloudy, 3 overcast.
+    if (weatherCode === 1 || weatherCode === 2) return 'partly';
+    return 'dense';
+  }
+  if (weatherMood === 'mixed') return 'partly';
+  return 'light';
+}
+
+/** Full gray overcast plate (hides the sun) — not partly sunny. */
+function isDenseOvercastLook(
+  weatherMood: TravelWeatherMood,
+  cloudCover: HeaderSkyCloudCover,
+): boolean {
+  if (weatherMood === 'fog' || weatherMood === 'snow') return true;
+  return cloudCover === 'dense' && weatherMood === 'cloudy';
 }
 
 /**
@@ -109,9 +156,10 @@ export function resolveHeaderSkyCondition(options: {
     options.timeOfDay ??
     travelTimeOfDay(options.now ?? new Date(), options.timezone);
   const weatherMood = travelWeatherMood(options.weatherCode);
+  const cloudCover = resolveHeaderSkyCloudCover(weatherMood, options.weatherCode);
   const rain = weatherMood === 'rain' || weatherMood === 'storm';
   const lightning = weatherMood === 'storm';
-  const overcast = isOvercastFamily(weatherMood);
+  const veiledNight = cloudCover === 'partly' || cloudCover === 'dense';
   const accents = options.destination
     ? destinationSkyAccents(options.destination, options.latitude)
     : NO_SKY_ACCENTS;
@@ -120,14 +168,15 @@ export function resolveHeaderSkyCondition(options: {
     let look: HeaderSkyLook = 'night-clear';
     if (weatherMood === 'storm') look = 'night-storm';
     else if (weatherMood === 'rain') look = 'night-rain';
-    else if (overcast) look = 'night-cloudy';
+    else if (veiledNight) look = 'night-cloudy';
     return {
       look,
       timeOfDay: options.themeDark ? 'night' : timeOfDay,
       weatherMood,
+      cloudCover,
       rain,
       lightning,
-      cloudyNight: overcast,
+      cloudyNight: veiledNight,
       accents,
     };
   }
@@ -137,6 +186,7 @@ export function resolveHeaderSkyCondition(options: {
       look: rain ? (lightning ? 'storm' : 'rain') : 'sunset',
       timeOfDay,
       weatherMood,
+      cloudCover,
       rain,
       lightning,
       cloudyNight: false,
@@ -148,6 +198,7 @@ export function resolveHeaderSkyCondition(options: {
       look: rain ? (lightning ? 'storm' : 'rain') : 'sunrise',
       timeOfDay,
       weatherMood,
+      cloudCover,
       rain,
       lightning,
       cloudyNight: false,
@@ -161,6 +212,7 @@ export function resolveHeaderSkyCondition(options: {
       look: 'storm',
       timeOfDay,
       weatherMood,
+      cloudCover,
       rain: true,
       lightning: true,
       cloudyNight: false,
@@ -172,17 +224,19 @@ export function resolveHeaderSkyCondition(options: {
       look: 'rain',
       timeOfDay,
       weatherMood,
+      cloudCover,
       rain: true,
       lightning: false,
       cloudyNight: false,
       accents,
     };
   }
-  if (overcast) {
+  if (isDenseOvercastLook(weatherMood, cloudCover)) {
     return {
       look: 'cloudy',
       timeOfDay,
       weatherMood,
+      cloudCover,
       rain: false,
       lightning: false,
       cloudyNight: false,
@@ -193,6 +247,7 @@ export function resolveHeaderSkyCondition(options: {
     look: 'sunny',
     timeOfDay,
     weatherMood,
+    cloudCover,
     rain: false,
     lightning: false,
     cloudyNight: false,

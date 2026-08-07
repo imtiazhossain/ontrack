@@ -23,6 +23,12 @@
 : "${AGENT_UI_ANDROID_COLD_FLOW_WAIT_SECS:=20}"
 : "${AGENT_UI_WAIT_TIMEOUT_MS:=2000}"
 : "${AGENT_UI_ANDROID_WAIT_TIMEOUT_MS:=4000}"
+# Device pool lease — up to AGENT_UI_POOL_MAX concurrent dedicated agent devices.
+: "${AGENT_UI_LOCK_WAIT_SECS:=300}"
+: "${AGENT_UI_POOL_MAX:=5}"
+
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/agent-ui-pool.sh"
 
 agent_ui_platform() {
   case "${AGENT_UI_PLATFORM:-ios}" in
@@ -47,6 +53,20 @@ agent_ui_repo_root() {
   # scripts/lib → repo root (subshell so sourcing never chdirs the caller)
   printf '%s\n' "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 }
+
+agent_ui_lock_dir() {
+  if [[ -n "${AGENT_UI_LOCK_DIR:-}" ]]; then
+    printf '%s\n' "${AGENT_UI_LOCK_DIR}"
+    return 0
+  fi
+  if [[ -n "${AGENT_UI_SLOT:-}" ]]; then
+    agent_ui_pool_slot_lockdir "$AGENT_UI_SLOT"
+    return 0
+  fi
+  printf '%s\n' "$(agent_ui_repo_root)/.cursor/agent-ui.lockdir"
+}
+
+# agent_ui_ensure_lease / agent_ui_release_lease → scripts/lib/agent-ui-pool.sh
 
 agent_ui_bridge_py() {
   printf '%s\n' "$(agent_ui_repo_root)/scripts/lib/agent_ui_bridge.py"
@@ -117,13 +137,30 @@ agent_ui_android_lib() {
   source "$(agent_ui_repo_root)/scripts/lib/android-emulator.sh"
 }
 
+# Pin adb to the preferred AVD serial. Required when Galaxy_S26 and onTrack_Agent_N
+# are both booted — bare `adb` otherwise hits the first emulator.
+agent_ui_pin_android_serial() {
+  agent_ui_is_android || return 0
+  agent_ui_android_lib
+  local serial
+  serial="$(android_emu_preferred_serial || true)"
+  if [[ -z "$serial" ]]; then
+    return 1
+  fi
+  export ONTRACK_ANDROID_SERIAL="$serial"
+  export ANDROID_SERIAL="$serial"
+  return 0
+}
+
 agent_ui_simulator_booted() {
   if agent_ui_is_android; then
-    agent_ui_android_lib
-    local serial
-    serial="$(android_emu_preferred_serial || true)"
-    [[ -n "$serial" ]] || return 1
+    agent_ui_pin_android_serial || return 1
     android_emu_adb get-state >/dev/null 2>&1
+    return $?
+  fi
+  agent_ui_ios_lib
+  if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
+    xcrun simctl list devices booted 2>/dev/null | grep -q "${ONTRACK_IOS_SIMULATOR_UDID}"
     return $?
   fi
   xcrun simctl list devices booted 2>/dev/null | grep -q Booted
@@ -131,12 +168,12 @@ agent_ui_simulator_booted() {
 
 agent_ui_app_installed() {
   if agent_ui_is_android; then
-    agent_ui_android_lib
+    agent_ui_pin_android_serial || return 1
     android_emu_adb shell pm path "$BUNDLE_ID" 2>/dev/null | grep -q "package:"
     return $?
   fi
   agent_ui_ios_lib
-  ios_simctl_timed get_app_container booted "$BUNDLE_ID" data >/dev/null 2>&1
+  ios_simctl_timed get_app_container "$(ios_sim_target)" "$BUNDLE_ID" data >/dev/null 2>&1
 }
 
 # True when the app process has a PID in the simulator (not merely installed).
@@ -147,7 +184,7 @@ agent_ui_app_process_running() {
     return $?
   fi
   agent_ui_ios_lib
-  ios_simctl_timed spawn booted launchctl list 2>/dev/null \
+  ios_simctl_timed spawn "$(ios_sim_target)" launchctl list 2>/dev/null \
     | grep -E "^[0-9]+[[:space:]]+.*UIKitApplication:${BUNDLE_ID}" >/dev/null
 }
 
@@ -161,7 +198,7 @@ agent_ui_launch_app() {
     return 0
   fi
   agent_ui_ios_lib
-  ios_simctl_timed 12 launch booted "$BUNDLE_ID" >/dev/null 2>&1 || true
+  ios_simctl_timed 12 launch "$(ios_sim_target)" "$BUNDLE_ID" >/dev/null 2>&1 || true
 }
 
 agent_ui_open_dev_client_url() {
@@ -172,7 +209,21 @@ agent_ui_open_dev_client_url() {
     return 0
   fi
   agent_ui_ios_lib
-  ios_simctl_timed 12 openurl booted "$url" >/dev/null 2>&1 || true
+  # Trust custom schemes before openurl so SpringBoard skips "Open in …?".
+  if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
+    ios_sim_approve_url_schemes "$ONTRACK_IOS_SIMULATOR_UDID" >/dev/null || true
+  else
+    ios_sim_approve_url_schemes >/dev/null || true
+  fi
+  ios_simctl_timed 12 openurl "$(ios_sim_target)" "$url" >/dev/null 2>&1 || true
+}
+
+# Tell the running app which pool slot to poll (daemon routes by slot).
+agent_ui_pin_slot() {
+  local slot="${1:-${AGENT_UI_SLOT:-}}"
+  [[ -n "$slot" ]] || return 0
+  local url="ontrack://agent/ui?op=route&slot=${slot}"
+  agent_ui_open_dev_client_url "$url"
 }
 
 # Cheap bridge liveness (route status). Skips nested app-up / heal recursion.
@@ -183,6 +234,14 @@ agent_ui_bridge_answers() {
     wait_secs=3
   fi
   AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-0}" \
+    AGENT_UI_LOCK_ACQUIRED=0 \
+    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+    AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+    ONTRACK_IOS_SIMULATOR="${ONTRACK_IOS_SIMULATOR:-}" \
+    ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
+    ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
+    ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
     WAIT_SECS="${wait_secs}" \
     "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1
 }
@@ -217,6 +276,8 @@ agent_ui_heal_packager() {
   if [[ "$code" == "200" ]]; then
     # Metro is up — cheap route probe (not a full dump).
     if AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 WAIT_SECS=1.5 \
+      AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-0}" \
+      AGENT_UI_LOCK_ACQUIRED=0 \
       "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1; then
       return 0
     fi
@@ -228,6 +289,8 @@ agent_ui_heal_packager() {
     ensure_flags+=(--android)
   fi
   if AGENT_UI_SKIP_HEAL=1 AGENT_UI_SKIP_APP_UP=1 AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-0}" \
+    AGENT_UI_LOCK_ACQUIRED=0 \
     bash "$ensure" "${ensure_flags[@]}"; then
     return 0
   fi
@@ -247,9 +310,89 @@ agent_ui_ensure_ios_system_alerts_clear() {
     python3 "$(agent_ui_repo_root)/scripts/lib/ios_system_alert.py" ensure
 }
 
-# Bridge answered — also clear iOS system sheets that cover the app.
+# Write pool slot pin so the JS bridge polls the matching daemon queue before
+# the first command (iOS Documents file / Android run-as files/).
+agent_ui_write_slot_pin() {
+  [[ -n "${AGENT_UI_SLOT:-}" ]] || return 0
+  AGENT_UI_ROOT="$(agent_ui_repo_root)" \
+  AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+  AGENT_UI_SLOT="${AGENT_UI_SLOT}" \
+  AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+  BUNDLE_ID="${BUNDLE_ID}" \
+  ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
+  ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
+  ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}" \
+    python3 "$(agent_ui_bridge_py)" write-slot-pin >/dev/null 2>&1 || true
+}
+
+# Soft reconnect: open Metro URL + pin slot (no force-stop). Safe when the
+# process is up but stuck on DevLauncher / pre-JS.
+agent_ui_soft_reconnect_dev_client() {
+  local host="${PACKAGER_HOST:-127.0.0.1}" encoded url
+  case "$host" in
+    localhost|lan|LAN) host=127.0.0.1 ;;
+  esac
+  encoded="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "http://${host}:${METRO_PORT:-8081}")"
+  url="exp+ontrack://expo-development-client/?url=${encoded}"
+  if agent_ui_is_android; then
+    agent_ui_android_lib
+    android_emu_ensure_adb_reverse >/dev/null 2>&1 || true
+  fi
+  agent_ui_open_dev_client_url "$url"
+  agent_ui_write_slot_pin
+  # Brief beat so Expo can hand off before the slot deep-link.
+  sleep 0.8
+  agent_ui_pin_slot "${AGENT_UI_SLOT:-}" || true
+  return 0
+}
+
+# Clone the app onto a pool device when the slot is empty.
+agent_ui_pool_ensure_app_installed() {
+  [[ -n "${AGENT_UI_SLOT:-}" || "${AGENT_UI_POOL_MODE:-0}" == "1" ]] || return 1
+  if agent_ui_app_installed; then
+    return 0
+  fi
+  if agent_ui_is_android; then
+    echo "agent-ui: cloning app onto pool Android device…" >&2
+    agent_ui_android_lib
+    agent_ui_pool_clone_android_app "${ONTRACK_ANDROID_SERIAL:-}" || return 1
+  else
+    echo "agent-ui: cloning app onto pool iOS device…" >&2
+    local udid="${ONTRACK_IOS_SIMULATOR_UDID:-}"
+    if [[ -z "$udid" || "$udid" == "booted" ]]; then
+      agent_ui_ios_lib
+      udid="$(ios_sim_resolve_udid 2>/dev/null || true)"
+    fi
+    [[ -n "$udid" ]] || return 1
+    agent_ui_pool_clone_ios_app "$udid" || return 1
+  fi
+  agent_ui_app_installed
+}
+
+# Wait until the bridge answers (or deadline). Pins slot file each loop.
+agent_ui_wait_for_bridge() {
+  local deadline_secs="${1:-12}"
+  local deadline=$((SECONDS + deadline_secs))
+  agent_ui_write_slot_pin
+  while (( SECONDS < deadline )); do
+    if agent_ui_bridge_answers; then
+      return 0
+    fi
+    sleep 0.4
+  done
+  return 1
+}
+
+# Bridge answered — pin pool slot, then clear iOS system sheets that cover the app.
 agent_ui_finish_app_up() {
-  agent_ui_ensure_ios_system_alerts_clear || return 1
+  if [[ -n "${AGENT_UI_SLOT:-}" ]]; then
+    agent_ui_write_slot_pin
+    agent_ui_pin_slot "${AGENT_UI_SLOT}" || true
+  fi
+  # Alert OCR needs a screen surface; never tear down a healthy bridge on OCR fail.
+  agent_ui_ensure_ios_system_alerts_clear || {
+    echo "agent-ui: iOS system-alert clear failed — continuing (bridge is up)" >&2
+  }
   return 0
 }
 
@@ -259,6 +402,12 @@ agent_ui_finish_app_up() {
 agent_ui_ensure_app_up() {
   if [[ "${AGENT_UI_SKIP_APP_UP:-0}" == "1" ]]; then
     return 0
+  fi
+
+  # Android pool: pin serial before any probe so we never talk to Galaxy_S26
+  # while ONTRACK_ANDROID_AVD=onTrack_Agent_N.
+  if agent_ui_is_android; then
+    agent_ui_pin_android_serial || true
   fi
 
   # Definitive liveness: JS bridge answered a route probe.
@@ -272,6 +421,7 @@ agent_ui_ensure_app_up() {
   if agent_ui_is_android; then
     device_label="emulator"
     # Cheap fix first: missing adb reverse breaks 127.0.0.1 Metro + daemon.
+    agent_ui_pin_android_serial || true
     agent_ui_android_lib
     if android_emu_ensure_adb_reverse >/dev/null 2>&1; then
       if [[ "${ANDROID_EMU_REVERSE_ADDED:-0}" == "1" ]]; then
@@ -286,15 +436,11 @@ agent_ui_ensure_app_up() {
 
   # Android: prefer soft wait over reconnect — heal drops the app onto `/`.
   if agent_ui_is_android && agent_ui_app_process_running && agent_ui_bridge_recently_ok; then
-    local soft=$((SECONDS + 6))
     echo "agent-ui: Android bridge quiet but recently ok — soft wait…" >&2
-    while (( SECONDS < soft )); do
-      if agent_ui_bridge_answers; then
-        agent_ui_finish_app_up
-        return $?
-      fi
-      sleep 0.5
-    done
+    if agent_ui_wait_for_bridge 6; then
+      agent_ui_finish_app_up
+      return $?
+    fi
   fi
 
   if ! agent_ui_simulator_booted; then
@@ -303,38 +449,57 @@ agent_ui_ensure_app_up() {
       agent_ui_finish_app_up
       return $?
     fi
-    echo "error: ${device_label} is not booted (and heal failed)" >&2
-    return 1
+    # Heal often boots the device even when the bridge is still quiet (e.g. app
+    # missing on a fresh pool slot). Fall through to clone/launch instead of
+    # mis-reporting "not booted".
+    if ! agent_ui_simulator_booted; then
+      echo "error: ${device_label} is not booted (and heal failed)" >&2
+      return 1
+    fi
   fi
 
   if ! agent_ui_app_installed; then
-    echo "error: ${BUNDLE_ID} is not installed on the booted ${device_label}" >&2
-    return 1
+    if agent_ui_pool_ensure_app_installed; then
+      :
+    else
+      echo "error: ${BUNDLE_ID} is not installed on the booted ${device_label}" >&2
+      return 1
+    fi
   fi
 
   if ! agent_ui_app_process_running; then
     echo "agent-ui: app not running — launching ${BUNDLE_ID}…" >&2
     agent_ui_launch_app
+    # Fresh pool slots need the Metro deep-link, not just a launcher start.
+    if [[ -n "${AGENT_UI_SLOT:-}" || "${AGENT_UI_POOL_MODE:-0}" == "1" ]]; then
+      agent_ui_soft_reconnect_dev_client
+    else
+      agent_ui_write_slot_pin
+    fi
   else
     echo "agent-ui: app process up but bridge quiet — waiting…" >&2
+    agent_ui_write_slot_pin
   fi
 
   # Cold launch / reconnect needs a few seconds before the JS bridge mounts.
-  local deadline=$((SECONDS + 10))
+  # Fresh pool clones (first install + Metro bundle) need more headroom.
+  local wait_secs=14
   if agent_ui_is_android; then
-    deadline=$((SECONDS + 14))
+    wait_secs=22
+  elif [[ -n "${AGENT_UI_SLOT:-}" || "${AGENT_UI_POOL_MODE:-0}" == "1" ]]; then
+    wait_secs=24
   fi
-  while (( SECONDS < deadline )); do
-    if agent_ui_bridge_answers; then
-      agent_ui_finish_app_up
-      return $?
-    fi
-    sleep 0.4
-  done
+  if agent_ui_wait_for_bridge "$wait_secs"; then
+    agent_ui_finish_app_up
+    return $?
+  fi
 
-  # Last resort heal — skip on Android when process is up (reconnect resets route),
-  # unless adb reverse was missing (app is likely stuck on DevLauncher).
-  if agent_ui_is_android && agent_ui_app_process_running; then
+  # Soft reconnect (Metro URL) before force-stop heal — preserves route when possible.
+  echo "agent-ui: ${device_label} bridge quiet — soft reconnecting dev client…" >&2
+  agent_ui_soft_reconnect_dev_client
+  local soft_wait=18
+  if agent_ui_is_android; then
+    soft_wait=24
     if [[ "$reverse_was_missing" == "1" ]]; then
       echo "agent-ui: adb reverse was missing — healing packager once…" >&2
       if agent_ui_heal_packager && agent_ui_bridge_answers; then
@@ -342,7 +507,13 @@ agent_ui_ensure_app_up() {
         return $?
       fi
     fi
-    echo "agent-ui: Android process up but bridge quiet — skipping force-reconnect heal" >&2
+  fi
+  if agent_ui_wait_for_bridge "$soft_wait"; then
+    agent_ui_finish_app_up
+    return $?
+  fi
+
+  if agent_ui_is_android && agent_ui_app_process_running; then
     echo "error: ${BUNDLE_ID} bridge not answering on ${device_label} (try android:ensure:start)" >&2
     return 1
   fi
@@ -432,12 +603,15 @@ agent_ui_send() {
 
   AGENT_UI_ROOT="$(agent_ui_repo_root)" \
   AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+  AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+  AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
   BUNDLE_ID="${BUNDLE_ID}" \
   DUMP_NAME="${DUMP_NAME}" \
   STATUS_NAME="${STATUS_NAME}" \
   COMMAND_NAME="${COMMAND_NAME}" \
   POLL_SLEEP="${POLL_SLEEP}" \
   AGENT_UI_DATA_DIR="${AGENT_UI_DATA_DIR:-}" \
+  ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
   ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
   python3 "$(agent_ui_bridge_py)" send "${flags[@]}"
 }
@@ -527,12 +701,21 @@ agent_ui_send_op() {
 
   AGENT_UI_ROOT="$(agent_ui_repo_root)" \
   AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+  AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+  AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
   BUNDLE_ID="${BUNDLE_ID}" \
   DUMP_NAME="${DUMP_NAME}" \
   STATUS_NAME="${STATUS_NAME}" \
   COMMAND_NAME="${COMMAND_NAME}" \
   POLL_SLEEP="${POLL_SLEEP}" \
   AGENT_UI_DATA_DIR="${AGENT_UI_DATA_DIR:-}" \
+  ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
   ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
   python3 "$(agent_ui_bridge_py)" send "${flags[@]}"
 }
+
+# Auto-lease when sourced by agent-ui CLI entrypoints. Nested children inherit
+# AGENT_UI_LOCK_HELD; verify-both sources this first so dual close-out stays atomic.
+if [[ "${AGENT_UI_SKIP_LEASE:-0}" != "1" ]]; then
+  agent_ui_ensure_lease || return 1
+fi

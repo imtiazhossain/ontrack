@@ -23,7 +23,7 @@ export {
     type AppIconSectionId,
     type PlatformIconNames
 } from './icons';
-export { durations, easings, springs } from './motion';
+export { durations, easings, motion, springs } from './motion';
 export { borders, radii } from './radii';
 export {
     BASE_WIDTH, MAX_SCALE, MIN_SCALE, moderateScale, scaleSize, scaleTypographyToken, windowScale

@@ -9,20 +9,28 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutUp, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   FieldLeadingIcon,
   fieldLeadingIconRowStyle,
 } from '@/components/primitives/field-leading-icon';
-import { borders, radii, shadows, spacing, type AppIconName } from '@/design-system';
+import {
+  borders,
+  motion,
+  radii,
+  shadows,
+  spacing,
+  type AppIconName,
+} from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
+import { DisclosureChevron } from './disclosure-chevron';
 import {
   placeDropdownMenu,
   type DropdownAnchor,
@@ -278,8 +286,9 @@ export function Dropdown<T extends string = string>({
             {selectedLabel}
           </AppText>
       </View>
-      <Symbol
-        name={isOpen ? 'chevron-up' : 'chevron-down'}
+      <DisclosureChevron
+        expanded={isOpen}
+        variant="down-up"
         size="sm"
         color={theme.textTertiary}
       />
@@ -316,7 +325,12 @@ export function Dropdown<T extends string = string>({
             <Animated.View
               accessibilityLabel={`${fieldLabel} menu`}
               accessibilityViewIsModal
-              entering={FadeInDown.duration(160)}
+              entering={FadeInDown.duration(motion.fade).reduceMotion(
+                ReduceMotion.System,
+              )}
+              exiting={FadeOutUp.duration(motion.fade).reduceMotion(
+                ReduceMotion.System,
+              )}
               style={[
                 styles.menu,
                 shadows.overlay,

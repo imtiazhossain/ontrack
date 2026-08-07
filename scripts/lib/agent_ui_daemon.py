@@ -56,7 +56,32 @@ def normalize_platform(raw: Any) -> str:
     return "ios"
 
 
-# Cap in-flight commands per platform so a runaway host cannot OOM the daemon.
+def normalize_slot(raw: Any) -> str | None:
+    """Optional agent device pool slot (1…N) for parallel hosts."""
+    if raw is None or raw is False:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    try:
+        n = int(text)
+    except (TypeError, ValueError):
+        return None
+    if n < 1 or n > 32:
+        return None
+    return str(n)
+
+
+def queue_key(platform: str, slot: str | None = None) -> str:
+    """Daemon FIFO key — platform, or platform:slot when a pool slot is set."""
+    pin = normalize_platform(platform)
+    slot_id = normalize_slot(slot)
+    if slot_id:
+        return f"{pin}:{slot_id}"
+    return pin
+
+
+# Cap in-flight commands per platform/slot so a runaway host cannot OOM the daemon.
 MAX_PENDING_PER_PLATFORM = 32
 # Retain completed statuses briefly so late waiters / retries can still match.
 MAX_STATUS_BY_NONCE = 64
@@ -66,7 +91,7 @@ class BridgeState:
     def __init__(self) -> None:
         # RLock: enqueue notifies both command + status waiters without deadlock.
         self._lock = threading.RLock()
-        # FIFO per platform — never overwrite an in-flight command.
+        # FIFO per platform (or platform:slot) — never overwrite an in-flight command.
         self.pending_by_platform: dict[str, list[dict[str, Any]]] = {}
         self.command_seq = 0
         self.command_cv = threading.Condition(self._lock)
@@ -89,6 +114,11 @@ class BridgeState:
             body = dict(payload)
             platform = normalize_platform(body.get("platform"))
             body["platform"] = platform
+            slot = normalize_slot(body.get("slot"))
+            if slot:
+                body["slot"] = int(slot)
+            else:
+                body.pop("slot", None)
             raw = body.get("nonce")
             try:
                 nonce = int(raw) if raw is not None else self._next_nonce()
@@ -97,7 +127,8 @@ class BridgeState:
             if nonce >= 9_007_199_254_740_991:  # Number.MAX_SAFE_INTEGER
                 nonce = self._next_nonce()
             body["nonce"] = nonce
-            queue = self.pending_by_platform.setdefault(platform, [])
+            key = queue_key(platform, slot)
+            queue = self.pending_by_platform.setdefault(key, [])
             if len(queue) >= MAX_PENDING_PER_PLATFORM:
                 # Drop oldest — host will time out; prefer fresh commands.
                 queue.pop(0)
@@ -110,17 +141,20 @@ class BridgeState:
             return nonce
 
     def take_command(
-        self, wait_ms: int, platform: str | None = None
+        self,
+        wait_ms: int,
+        platform: str | None = None,
+        slot: str | None = None,
     ) -> dict[str, Any] | None:
-        pin = normalize_platform(platform)
+        key = queue_key(platform, slot)
         deadline = time.time() + max(0, wait_ms) / 1000.0
         with self.command_cv:
             while True:
-                queue = self.pending_by_platform.get(pin) or []
+                queue = self.pending_by_platform.get(key) or []
                 if queue:
                     cmd = queue.pop(0)
                     if not queue:
-                        self.pending_by_platform.pop(pin, None)
+                        self.pending_by_platform.pop(key, None)
                     return cmd
                 remaining = deadline - time.time()
                 if remaining <= 0:
@@ -229,7 +263,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in {"/next", "/__agent_ui/next"}:
             wait_ms = int((qs.get("waitMs") or ["5000"])[0])
             platform = (qs.get("platform") or [None])[0]
-            cmd = STATE.take_command(wait_ms, platform=platform)
+            slot = (qs.get("slot") or [None])[0]
+            cmd = STATE.take_command(wait_ms, platform=platform, slot=slot)
             if cmd is None:
                 self._send(204)
                 return

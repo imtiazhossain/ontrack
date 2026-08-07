@@ -8,8 +8,9 @@ import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
+import { CollapsibleBody } from './collapsible-body';
+import { DisclosureChevron } from './disclosure-chevron';
 import { fieldTitleCase } from './field-title-case';
-import { Symbol } from './symbol';
 
 type CollapsibleSectionProps = PropsWithChildren<{
   title: string;
@@ -90,8 +91,8 @@ export function CollapsibleSection({
           <AppText variant="overline" color="tertiary" fit style={styles.title}>
             {titleText}
           </AppText>
-          <Symbol
-            name={expanded ? 'chevron-up' : 'chevron-right'}
+          <DisclosureChevron
+            expanded={expanded}
             size="sm"
             color={theme.textTertiary}
           />
@@ -125,7 +126,9 @@ export function CollapsibleSection({
           </AppText>
         ) : null}
       </View>
-      {expanded ? <View style={{ gap: spacing.sm }}>{children}</View> : null}
+      <CollapsibleBody expanded={expanded}>
+        <View style={{ gap: spacing.sm }}>{children}</View>
+      </CollapsibleBody>
     </View>
   );
 }

@@ -19,12 +19,15 @@ import {
   parseHexRgb,
   relativeLuminanceFromHex,
   resolveAtmosphereHeaderInk,
+  travelHomeAtmosphereHeaderScrimColors,
+  travelHomeAtmosphereTextShadowStyle,
   travelHomeSoloTripCardShadow,
 } from '../travel-home-atmosphere-ink';
 import {
   pickCuratedTravelHomeAtmosphere,
   resolveTravelHomeAtmosphereImage,
 } from '../travel-home-atmosphere-resolve';
+import { travelHomeAtmosphereScrimHeight } from '../travel-home-atmosphere-scrim';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
@@ -252,4 +255,44 @@ describe('Travel home atmosphere resolve', () => {
       pickCuratedTravelHomeAtmosphere('night', 0, [], 0).curatedHeaderTone,
     ).toBe('light');
   });
+
+  it('drops atmosphere text shadows — chrome scrim owns contrast', () => {
+    expect(travelHomeAtmosphereTextShadowStyle('light', '#E8EEF5')).toBeNull();
+    expect(travelHomeAtmosphereTextShadowStyle('light', '#0A1520')).toBeNull();
+    expect(travelHomeAtmosphereTextShadowStyle('dark', '#E8EEF5')).toBeNull();
+  });
+
+  it('adds a soft opposing header scrim when the plate washes out ink', () => {
+    const brightWhiteInk = travelHomeAtmosphereHeaderScrimColors(
+      'light',
+      '#E8EEF5',
+    );
+    expect(brightWhiteInk?.[0]).toMatch(/^rgba\(0,0,0,/);
+    expect(brightWhiteInk?.[3]).toBe('rgba(0,0,0,0)');
+
+    // Midtone busy plates still get a veil (not only ultra-bright washes).
+    const midWhiteInk = travelHomeAtmosphereHeaderScrimColors(
+      'light',
+      '#7A7A7A',
+    );
+    expect(midWhiteInk?.[0]).toMatch(/^rgba\(0,0,0,/);
+
+    // Dark night plate + white ink → no veil (glyphs already contrast).
+    expect(
+      travelHomeAtmosphereHeaderScrimColors('light', '#0A1520'),
+    ).toBeNull();
+
+    const brightBlackInk = travelHomeAtmosphereHeaderScrimColors(
+      'dark',
+      '#E8EEF5',
+    );
+    expect(brightBlackInk?.[0]).toMatch(/^rgba\(255,255,255,/);
+  });
+
+  it('sizes the chrome scrim to cover the status-bar band plus header copy', () => {
+    expect(travelHomeAtmosphereScrimHeight(59)).toBe(59 + 194);
+  });
 });
+
+
+

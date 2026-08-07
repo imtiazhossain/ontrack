@@ -22,6 +22,7 @@ Paste both assert outputs. Exceptions: pure docs/rules, host-only scripts, or us
 
 - Prefer named `--flow` / seeds over hand-built `--goto` / `--wait` chains.
 - Pin `AGENT_UI_PLATFORM=android` for Android; clear before iOS (sticky pin breaks default). `verify-both` does this.
+- **Headless pool by default** — agents claim a dedicated slot (`onTrack Agent N` / `onTrack_Agent_N`, max 5; wait if full). Do not set `ONTRACK_IOS_SIMULATOR_WINDOW=1` or run `ensure-android-emulator.sh --window` / `android:ensure:window` unless the user explicitly asks for a headed Simulator/AVD.
 - Reuse Metro when healthy; agents use `packager:ensure:start` — never `npm start` in agent shells. No prophylactic force-stop / `--force-reconnect`.
 - Assert/`--color` then **STOP** — no ritual handoff screenshot. Glyph orientation → source, not screenshots.
 - Leave devices on the changed surface (not splash/blank/error/unrelated tab).

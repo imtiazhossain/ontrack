@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 
 import { useSafeAreaChrome } from '@/components/primitives';
+import { motion } from '@/design-system';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import {
   travelSafeAreaBackground,
@@ -23,6 +24,8 @@ function TravelStack() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: process.env.EXPO_OS === 'android' ? 'fade_from_bottom' : 'default',
+        animationDuration: motion.page,
         // Transparent by default so itinerary sky chrome / in-header art can
         // show; screens that need the travel wash set contentStyle locally
         // (or inherit via TravelPlanDetailBody pageWash below the sky band).

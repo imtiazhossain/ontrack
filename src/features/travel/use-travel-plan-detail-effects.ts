@@ -37,6 +37,7 @@ import {
     AGENT_UI_DEMO_CHASE_OUTBOUND_ID,
     AGENT_UI_DEMO_CHASE_RETURN_ID,
 } from '@/utils/agent-ui/fixtures';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 
 type DetailEffectsOptions = {
   planId: string;
@@ -65,36 +66,40 @@ export function useTravelPlanDetailEffects({
 }: DetailEffectsOptions) {
   useFocusEffect(
     useCallback(() => {
-      const current = useTravel.getState().plans.find((item) => item.id === planId);
-      const normalized = normalizeTravelPlan(current);
-      let working = current;
-      if (
-        current &&
-        normalized &&
-        JSON.stringify(normalized) !== JSON.stringify(current)
-      ) {
-        working = { ...normalized, updatedAt: new Date().toISOString() };
-        useTravel.getState().savePlan(working);
-        const schedule = useSchedule.getState();
+      // Normalize + orphan repair can stringify large plans — wait until the
+      // stack push has settled so the itinerary transition stays fluid.
+      return deferAfterPageTransition(() => {
+        const current = useTravel.getState().plans.find((item) => item.id === planId);
+        const normalized = normalizeTravelPlan(current);
+        let working = current;
         if (
-          schedule.activities.some(
-            (activity) => activity.travelPlanId === working!.id,
-          )
+          current &&
+          normalized &&
+          JSON.stringify(normalized) !== JSON.stringify(current)
         ) {
-          schedule.replaceTravelActivities(
-            working.id,
-            travelCalendarDrafts(working),
-          );
+          working = { ...normalized, updatedAt: new Date().toISOString() };
+          useTravel.getState().savePlan(working);
+          const schedule = useSchedule.getState();
+          if (
+            schedule.activities.some(
+              (activity) => activity.travelPlanId === working!.id,
+            )
+          ) {
+            schedule.replaceTravelActivities(
+              working.id,
+              travelCalendarDrafts(working),
+            );
+          }
         }
-      }
-      // Always attempt orphan re-link after normalize — sync pull can strip
-      // confirmation URIs (https → dropped) before this remints ontrack-media.
-      if (working) {
-        const repaired = attachOrphanedFlightConfirmationUris(working, {
-          allPlans: useTravel.getState().plans,
-        });
-        if (repaired) useTravel.getState().savePlan(repaired);
-      }
+        // Always attempt orphan re-link after normalize — sync pull can strip
+        // confirmation URIs (https → dropped) before this remints ontrack-media.
+        if (working) {
+          const repaired = attachOrphanedFlightConfirmationUris(working, {
+            allPlans: useTravel.getState().plans,
+          });
+          if (repaired) useTravel.getState().savePlan(repaired);
+        }
+      });
     }, [planId]),
   );
 

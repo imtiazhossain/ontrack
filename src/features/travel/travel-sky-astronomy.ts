@@ -35,6 +35,13 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Full lunar disc path (circle) in SVG path commands. */
+export function moonDiscPath(cx: number, cy: number, r: number): string {
+  const top = `${round2(cx)} ${round2(cy - r)}`;
+  const bottom = `${round2(cx)} ${round2(cy + r)}`;
+  return `M${top} A${r} ${r} 0 1 1 ${bottom} A${r} ${r} 0 1 1 ${top} Z`;
+}
+
 /**
  * SVG path of the moon's lit region for a phase cycle (0 = new, 0.5 = full).
  * Standard terminator geometry: outer semicircular limb on the lit side plus
@@ -56,7 +63,7 @@ export function moonTerminatorPath(
   const top = `${round2(cx)} ${round2(cy - r)}`;
   const bottom = `${round2(cx)} ${round2(cy + r)}`;
   if (illum > 0.97) {
-    return `M${top} A${r} ${r} 0 1 1 ${bottom} A${r} ${r} 0 1 1 ${top} Z`;
+    return moonDiscPath(cx, cy, r);
   }
 
   const rx = round2(r * Math.abs(Math.cos(2 * Math.PI * cycle)));
@@ -70,6 +77,28 @@ export function moonTerminatorPath(
   const bulgeRight = crescent ? litRight : !litRight;
   const termSweep = bulgeRight ? 0 : 1;
   return `M${top} A${r} ${r} 0 0 ${outerSweep} ${bottom} A${rx} ${r} 0 0 ${termSweep} ${top} Z`;
+}
+
+/**
+ * Translucent phase-shadow path over a bright disc.
+ * - Near full → null (no shadow)
+ * - Near new → full disc (dim earthshine orb still visible)
+ * - Else → evenodd of full disc minus lit terminator so craters show through
+ */
+export function moonPhaseShadowPath(
+  cycle: number,
+  cx: number,
+  cy: number,
+  r: number,
+  southern = false,
+): { d: string; fillRule?: 'evenodd' } | null {
+  const illum = (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+  if (illum > 0.97) return null;
+  const disc = moonDiscPath(cx, cy, r);
+  if (illum < 0.04) return { d: disc };
+  const lit = moonTerminatorPath(cycle, cx, cy, r, southern);
+  if (!lit) return { d: disc };
+  return { d: `${disc} ${lit}`, fillRule: 'evenodd' };
 }
 
 /**

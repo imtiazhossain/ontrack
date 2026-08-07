@@ -139,10 +139,15 @@ describe('metro launch command contract', () => {
     const ensure = read('scripts/ensure-packager.sh');
     expect(ensure).toContain('--metro-only');
     expect(ensure).toContain('Metro-only: skipping device boot/reconnect');
+    // Pool heal used to exit 0 with "app not installed" and leave verify broken.
+    expect(ensure).toContain('packager_pool_clone_app_if_needed');
+    expect(ensure).toContain('agent_ui_pool_clone_ios_app');
 
     const host = read('scripts/lib/agent-ui-host.sh');
     expect(host).toContain('agent_ui_heal_packager');
     expect(host).toContain('AGENT_UI_SKIP_HEAL');
+    expect(host).toContain('agent_ui_pool_ensure_app_installed');
+    expect(host).toContain('agent_ui_soft_reconnect_dev_client');
 
     const open = read('scripts/agent-ui-open.sh');
     expect(open).toContain('agent_ui_heal_packager');
@@ -156,11 +161,87 @@ describe('metro launch command contract', () => {
     expect(sim).toContain('ios_sim_latest_ios_runtime');
     expect(sim).toContain('ONTRACK_IOS_SIMULATOR_WINDOW:=0');
     expect(sim).toContain('ios_sim_want_window');
+    expect(sim).toContain('ios_sim_pool_mode');
+    expect(sim).toContain('ios_sim_target');
     expect(sim).toContain('Booting preferred simulator (headless)');
     // Window open is gated — never unconditional open in ensure_preferred.
     expect(sim).toMatch(/if ios_sim_want_window; then[\s\S]*?ios_sim_open_focused/);
     expect(sim).toContain('-CurrentDeviceUDID');
     expect(sim).toContain('ios_sim_prune_peers_briefly');
+    // Coexist with user's headed Simulator: auto-minimize agents, pin if user opens one.
+    expect(sim).toContain('ios_sim_park_agent_windows');
+    expect(sim).toContain('ios_sim_enforce_agent_headless_gui');
+    expect(sim).toContain('ios_sim_start_agent_gui_reaper');
+    expect(sim).toContain('ios_sim_open_agent_headed');
+    expect(sim).toContain('ios_sim_mark_agent_headed');
+    expect(sim).toContain('ios_sim_shutdown_agent_named');
+    expect(sim).toContain('headed-agents');
+    expect(sim).toContain('AXMinimizeButton');
+    expect(sim).toContain('onTrack Agent');
+    // Explicit open centers the window (park geometry can leave it off-screen).
+    expect(sim).toContain('ios_sim_center_agent_window_named');
+    expect(sim).toContain('((dW - winW) div 2)');
+    expect(sim).toContain('AXPress');
+    expect(sim).toContain('UI element "${safe}" of list 1');
+    expect(sim).not.toContain('ios_sim_quit_gui');
+    expect(sim).not.toContain('killall Simulator');
+
+    const alerts = read('scripts/lib/ios_system_alert.py');
+    expect(alerts).toContain('restore_headless_gui');
+    expect(alerts).toContain('_preferred_boot_udid');
+    expect(alerts).toContain('ONTRACK_IOS_SIMULATOR_UDID');
+    expect(alerts).toContain('ios_sim_enforce_agent_headless_gui');
+    // May quit only when *we* opened Simulator for sheet dismiss — never as default headless.
+    expect(alerts).toContain('opened only for sheet dismiss');
+  });
+
+  it('pre-approves iOS URL schemes so openurl skips Open-in confirmation', () => {
+    // SpringBoard "Open in \"onTrack\"?" blocks reconnect until tapped.
+    // Mirror Expo CLI: write LaunchServices schemeapproval before boot/openurl.
+    const sim = read('scripts/lib/ios-simulator.sh');
+    expect(sim).toContain('ios_sim_approve_url_schemes');
+    expect(sim).toContain('com.apple.launchservices.schemeapproval.plist');
+    expect(sim).toContain('com.apple.CoreSimulator.CoreSimulatorBridge-->');
+    expect(sim).toContain('exp+ontrack');
+    expect(sim).toMatch(/ios_sim_approve_url_schemes "\$udid"/);
+    expect(sim).toContain('Rebooting simulator so URL scheme approval takes effect');
+
+    const ensure = read('scripts/ensure-packager.sh');
+    expect(ensure).toContain('ios_sim_approve_url_schemes');
+    expect(ensure).toContain('ios_system_alert.py');
+
+    const host = read('scripts/lib/agent-ui-host.sh');
+    expect(host).toContain('ios_sim_approve_url_schemes');
+
+    const pool = read('scripts/lib/agent-ui-pool.sh');
+    expect(pool).toContain('ios_sim_approve_url_schemes');
+
+    const ocr = read('scripts/lib/ios_ocr_alert.swift');
+    expect(ocr).toContain('"open in"');
+    expect(ocr).toContain('acceptNeedles');
+    // Location permission — Allow While Using App (never Don't Allow).
+    expect(ocr).toContain('use your location');
+    expect(ocr).toContain('allow while using app');
+    // Expo developer-menu intro — Continue; tools sheet — Escape.
+    expect(ocr).toContain('developer menu');
+    expect(ocr).toContain('"continue"');
+    expect(ocr).toContain('fast refresh');
+    expect(ocr).toContain('toggle performance monitor');
+
+    const alerts = read('scripts/lib/ios_system_alert.py');
+    expect(alerts).toContain('OPEN_IN_PHRASES');
+    expect(alerts).toContain('ACCEPT_PRIORITY');
+    expect(alerts).toContain('_is_open_in_prompt');
+    expect(alerts).toContain('LOCATION_PHRASES');
+    expect(alerts).toContain('LOCATION_ACCEPT_PRIORITY');
+    expect(alerts).toContain('_is_location_prompt');
+    expect(alerts).toContain('allow while using app');
+    expect(alerts).toContain('DEV_MENU_PHRASES');
+    expect(alerts).toContain('DEV_MENU_TOOLS_PHRASES');
+    expect(alerts).toContain('DEV_MENU_ACCEPT_PRIORITY');
+    expect(alerts).toContain('_is_dev_menu_prompt');
+    expect(alerts).toContain('_is_dev_menu_tools');
+    expect(alerts).toContain('dismissing Expo Dev Menu (Escape)');
   });
 
   it('times out wedged simctl RPCs and serializes ensure-packager device ops', () => {
@@ -194,6 +275,9 @@ describe('metro launch command contract', () => {
     expect(emu).toContain('ONTRACK_ANDROID_AVD:=Galaxy_S26');
     expect(emu).toContain('ONTRACK_ANDROID_EMULATOR_WINDOW:=0');
     expect(emu).toContain('android_emu_want_window');
+    expect(emu).toContain('android_emu_pool_mode');
+    expect(emu).toContain('android_emu_ensure_agent_avd');
+    expect(emu).toContain('onTrack_Agent_');
     expect(emu).toContain('Booting preferred emulator (headless)');
     expect(emu).toContain('-no-window');
     expect(emu).toContain('no-boot-anim');
@@ -232,7 +316,8 @@ describe('metro launch command contract', () => {
     expect(host).toContain('agent_ui_is_android');
     expect(host).toContain('AGENT_UI_ANDROID_WARM_WAIT_SECS');
     expect(host).toContain('agent_ui_bridge_recently_ok');
-    expect(host).toContain('skipping force-reconnect heal');
+    expect(host).toContain('soft reconnecting dev client');
+    expect(host).toContain('agent_ui_soft_reconnect_dev_client');
     expect(host).toContain('android_emu_ensure_adb_reverse');
     expect(host).toContain('reverse_was_missing');
     const packager = read('scripts/ensure-packager.sh');
@@ -256,6 +341,11 @@ describe('metro launch command contract', () => {
     const color = read('scripts/lib/agent_ui_color.py');
     expect(color).toContain('screencap');
     expect(color).toContain('_agent_ui_platform');
+    // Parked agent windows lose IOSurface — unpark + retry before failing.
+    expect(color).toContain('_ios_unpark_agent_window');
+    expect(color).toContain('screen surfaces');
+    const alerts = read('scripts/lib/ios_system_alert.py');
+    expect(alerts).toContain('screenshot surfaces unavailable');
     const recipe = read('scripts/agent-ui-android-travel-demo.sh');
     expect(recipe).toContain('AGENT_UI_PLATFORM=android');
     expect(recipe).toContain('travel-demo');

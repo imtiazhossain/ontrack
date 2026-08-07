@@ -44,7 +44,7 @@ type TravelHomeHeroCarouselProps = {
   scrollProgress?: SharedValue<number>;
 };
 
-/** Horizontal paging hero (1–3 images) with edit control. Page control lives on glass. */
+/** Horizontal paging hero (1–3 images) with edit control. Page ticks overlay on the trip card. */
 export function TravelHomeHeroCarousel({
   plan,
   width,

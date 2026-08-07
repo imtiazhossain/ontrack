@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 /** `light` = white header ink; `dark` = black header ink. */
 export type TravelAtmosphereHeaderInk = 'light' | 'dark';
 
@@ -117,4 +119,67 @@ export function atmosphereHeaderInkColors(tone: TravelAtmosphereHeaderInk): {
     return { ink: '#FFFFFF', muted: 'rgba(255,255,255,0.82)' };
   }
   return { ink: '#000000', muted: '#1A1A1A' };
+}
+
+/**
+ * Soft top-band veil behind Travel home header copy (status bar → tagline).
+ * Opposes ink and scales with plate luminance — readable without glyph
+ * drop shadows; scene stays recognizable (no hard pill).
+ */
+export function travelHomeAtmosphereHeaderScrimColors(
+  ink: TravelAtmosphereHeaderInk,
+  averageColor?: string,
+): readonly [string, string, string, string] | null {
+  const luma = averageColor
+    ? relativeLuminanceFromHex(averageColor)
+    : undefined;
+
+  if (ink === 'light') {
+    // Only skip on near-black night plates. Busy midtone sketches / skies
+    // still need a status-bar veil (sampled average under-reports brightness).
+    if (luma !== undefined && luma < 0.1) return null;
+    const need =
+      luma === undefined
+        ? 0.75
+        : Math.min(1, Math.max(0.45, (luma - 0.1) / 0.55));
+    const top = 0.4 + need * 0.28;
+    const mid = 0.26 + need * 0.22;
+    const low = 0.12 + need * 0.14;
+    return [
+      `rgba(0,0,0,${top.toFixed(2)})`,
+      `rgba(0,0,0,${mid.toFixed(2)})`,
+      `rgba(0,0,0,${low.toFixed(2)})`,
+      'rgba(0,0,0,0)',
+    ] as const;
+  }
+
+  // Black ink: soft light veil on bright plates only.
+  if (luma !== undefined && luma < 0.55) return null;
+  const need =
+    luma === undefined
+      ? 0.7
+      : Math.min(1, Math.max(0.4, (luma - 0.45) / 0.4));
+  const top = 0.24 + need * 0.24;
+  const mid = 0.14 + need * 0.16;
+  const low = 0.06 + need * 0.1;
+  return [
+    `rgba(255,255,255,${top.toFixed(2)})`,
+    `rgba(255,255,255,${mid.toFixed(2)})`,
+    `rgba(255,255,255,${low.toFixed(2)})`,
+    'rgba(255,255,255,0)',
+  ] as const;
+}
+
+/**
+ * @deprecated Atmosphere copy contrast is owned by `TravelHomeAtmosphereScrim`.
+ * Always returns null — kept so older call sites compile during the cutover.
+ */
+export function travelHomeAtmosphereTextShadowStyle(
+  _ink: TravelAtmosphereHeaderInk,
+  _averageColor?: string,
+): Pick<
+  TextStyle,
+  'textShadowColor' | 'textShadowOffset' | 'textShadowRadius'
+> | null {
+  return null;
 }

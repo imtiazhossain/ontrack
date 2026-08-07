@@ -8,6 +8,7 @@ import { AppText, Button, Input, useSafeAreaChrome } from '@/components/primitiv
 import { layout, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export default function OnboardingScreen() {
   const theme = useTheme();
@@ -60,10 +61,18 @@ export default function OnboardingScreen() {
               onChangeText={setGoal}
               placeholder="e.g. Build strength, stay consistent"
             />
-            <Button size="lg" onPress={finish} accessibilityLabel="Get started">
+            <Button
+              size="lg"
+              onPress={finish}
+              accessibilityLabel="Get started"
+              testID={AgentUiIds.onboarding.getStarted}>
               Get started
             </Button>
-            <Button variant="ghost" onPress={finish} accessibilityLabel="Skip onboarding">
+            <Button
+              variant="ghost"
+              onPress={finish}
+              accessibilityLabel="Skip onboarding"
+              testID={AgentUiIds.onboarding.skip}>
               Skip for now
             </Button>
           </View>

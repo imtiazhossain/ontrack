@@ -141,6 +141,108 @@ describe('agent-ui host scripts contract', () => {
     expect(metro).toContain('8191');
   });
 
+  it('claims a dedicated agent device pool slot (max 5) across entry points', () => {
+    const host = read('scripts/lib/agent-ui-host.sh');
+    const pool = read('scripts/lib/agent-ui-pool.sh');
+    expect(host).toContain('agent-ui-pool.sh');
+    expect(host).toContain('agent_ui_ensure_lease');
+    expect(pool).toContain('agent_ui_release_lease');
+    expect(pool).toContain('agent_ui_pool_shutdown_slot');
+    expect(pool).toContain('ios_sim_shutdown_agent_named');
+    expect(pool).toContain('android_emu_shutdown_named');
+    expect(pool).toContain('AGENT_UI_KEEP_DEVICES');
+    expect(pool).toContain('agent-ui-slots');
+    expect(pool).toContain('AGENT_UI_POOL_MAX');
+    expect(pool).toContain('onTrack Agent');
+    expect(pool).toContain('onTrack_Agent_');
+    expect(host).toContain('AGENT_UI_SKIP_LEASE');
+    expect(host).toContain('AGENT_UI_LOCK_WAIT_SECS');
+    expect(host).toContain('AGENT_UI_LOCK_DIR');
+    expect(host).toMatch(
+      /if \[\[ "\$\{AGENT_UI_SKIP_LEASE:-0\}" != "1" \]\]; then\s*agent_ui_ensure_lease/,
+    );
+    // Fresh pool slots: heal may boot without install — fall through to clone.
+    expect(host).toContain('agent_ui_pool_ensure_app_installed');
+    expect(host).toContain('Fall through to clone/launch');
+    expect(host).toContain('agent_ui_soft_reconnect_dev_client');
+    expect(host).toContain('agent_ui_write_slot_pin');
+    expect(host).toContain('agent_ui_pin_android_serial');
+    expect(host).toContain('never talk to Galaxy_S26');
+    expect(pool).toContain('agent_ui_pool_clone_ios_app');
+    expect(pool).toContain('agent_ui_pool_clone_android_app');
+    // ensure-packager sources pool.sh without host — clone must resolve ROOT alone.
+    expect(pool).toContain('agent_ui_pool_repo_root');
+
+    const verifyBoth = read('scripts/agent-ui-verify-both.sh');
+    expect(verifyBoth).toContain('agent-ui-host.sh');
+    expect(verifyBoth).toContain('AGENT_UI_LOCK_HELD');
+    expect(verifyBoth).toContain('AGENT_UI_SLOT');
+    expect(verifyBoth).toContain('AGENT_UI_SKIP_LEASE');
+
+    const ensure = read('scripts/ensure-packager.sh');
+    expect(ensure).toContain('AGENT_UI_SKIP_LEASE=1');
+    expect(ensure).toContain('packager_pool_clone_app_if_needed');
+    expect(ensure).toContain('Installed ${BUNDLE_ID} onto pool');
+    expect(ensure).toContain('packager_write_slot_pin');
+
+    const bridge = read('scripts/lib/agent_ui_bridge.py');
+    expect(bridge).toContain('write_android_slot_pin_file');
+    expect(bridge).toContain('write-slot-pin');
+    expect(bridge).toContain('files/agent-ui-pin.json');
+
+    const daemon = read('scripts/lib/agent_ui_daemon.py');
+    expect(daemon).toContain('queue_key');
+    expect(daemon).toContain('normalize_slot');
+
+    // Functional: two slots can be held at once; a 3rd waits when max=2.
+    const script = `
+set -euo pipefail
+ROOT=${JSON.stringify(root)}
+export AGENT_UI_ROOT="$ROOT"
+export AGENT_UI_POOL_DIR="$ROOT/.cursor/agent-ui-pool-test"
+export AGENT_UI_POOL_MAX=2
+export AGENT_UI_LOCK_WAIT_SECS=1
+export AGENT_UI_USE_POOL=1
+export AGENT_UI_POOL_BIND_DEVICES=0
+rm -rf "$AGENT_UI_POOL_DIR"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/lib/agent-ui-host.sh"
+test "\${AGENT_UI_LOCK_ACQUIRED:-0}" = "1"
+test -n "\${AGENT_UI_SLOT:-}"
+test -d "$AGENT_UI_POOL_DIR/\${AGENT_UI_SLOT}.lockdir"
+SLOT1="$AGENT_UI_SLOT"
+# Nested inherit must not block or steal release duty.
+AGENT_UI_POOL_DIR="$AGENT_UI_POOL_DIR" AGENT_UI_POOL_MAX=2 AGENT_UI_POOL_BIND_DEVICES=0 \
+AGENT_UI_SLOT="$SLOT1" \
+AGENT_UI_LOCK_DIR="$AGENT_UI_LOCK_DIR" AGENT_UI_LOCK_HELD=1 AGENT_UI_LOCK_ACQUIRED=0 \
+AGENT_UI_LOCK_WAIT_SECS=1 \
+  bash -c 'source "'"$ROOT"'/scripts/lib/agent-ui-host.sh"'
+# Sibling claims the other free slot and holds it briefly.
+env -u AGENT_UI_SLOT \
+  AGENT_UI_POOL_DIR="$AGENT_UI_POOL_DIR" AGENT_UI_POOL_MAX=2 AGENT_UI_USE_POOL=1 \
+  AGENT_UI_POOL_BIND_DEVICES=0 \
+  AGENT_UI_LOCK_HELD=0 AGENT_UI_LOCK_ACQUIRED=0 AGENT_UI_LOCK_WAIT_SECS=1 \
+  bash -c 'source "'"$ROOT"'/scripts/lib/agent-ui-host.sh"; printf %s "$AGENT_UI_SLOT" >"$AGENT_UI_POOL_DIR/slot2"; sleep 2' &
+child=$!
+sleep 0.3
+test -f "$AGENT_UI_POOL_DIR/slot2"
+# Hold both slots busy: parent still holds SLOT1; child holds SLOT2.
+# Third waiter must fail after LOCK_WAIT_SECS=1.
+set +e
+env -u AGENT_UI_SLOT \
+  AGENT_UI_POOL_DIR="$AGENT_UI_POOL_DIR" AGENT_UI_POOL_MAX=2 AGENT_UI_USE_POOL=1 \
+  AGENT_UI_POOL_BIND_DEVICES=0 \
+  AGENT_UI_LOCK_HELD=0 AGENT_UI_LOCK_ACQUIRED=0 AGENT_UI_LOCK_WAIT_SECS=1 \
+  bash -c 'source "'"$ROOT"'/scripts/lib/agent-ui-host.sh"' 2>/tmp/agent-ui-pool-wait.err
+rc=$?
+set -e
+wait "$child" || true
+test "$rc" -ne 0
+grep -qE 'agent device slot|device slots are busy' /tmp/agent-ui-pool-wait.err
+`;
+    execFileSync('bash', ['-c', script], { encoding: 'utf8', timeout: 30_000 });
+  });
+
   it('verification entry points gate on app-up before bridge work', () => {
     for (const script of [
       'scripts/agent-ui.sh',

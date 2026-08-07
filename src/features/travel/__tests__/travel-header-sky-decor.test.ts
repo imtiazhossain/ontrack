@@ -36,6 +36,9 @@ describe('travel header sky décor', () => {
     expect(night).toContain('travel-sky-aurora-destinations');
     expect(day).toContain('SoftCloud');
     expect(day).toContain('DaySun');
+    expect(day).toContain('cloudCover');
+    expect(day).toContain('driftAmp');
+    expect(night).toContain('driftAmp');
   });
 
   it('keeps sun and moon round under plate stretch', () => {
@@ -43,18 +46,38 @@ describe('travel header sky décor', () => {
       join(process.cwd(), 'src/features/travel/travel-sky-plate.ts'),
       'utf8',
     );
+    const phaseMoon = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-phase-moon.tsx'),
+      'utf8',
+    );
     expect(plate).toContain('celestialDiscHostStyle');
     expect(plate).toContain('aspectRatio: 1');
-    expect(night).toContain('celestialDiscHostStyle');
+    expect(phaseMoon).toContain('celestialDiscHostStyle');
     expect(day).toContain('celestialDiscHostStyle');
   });
 
-  it('renders a realistic terminator moon with surface detail', () => {
-    expect(night).toContain('moonTerminatorPath');
-    expect(night).toContain('ClipPath');
-    expect(night).toContain('MOON_CRATERS');
-    expect(night).toContain('MOON_MARIA');
-    expect(night).toContain('MOON_TYCHO');
+  it('renders an itinerary phase moon with always-visible disc and dark-side craters', () => {
+    const phaseMoon = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-phase-moon.tsx'),
+      'utf8',
+    );
+    const travelHome = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      'utf8',
+    );
+    expect(night).toContain('PhaseMoon');
+    // Travel home must not paint its own moon — itinerary sky only.
+    expect(travelHome).not.toContain('PhaseMoon');
+    expect(travelHome).not.toContain('TravelHomePhaseMoon');
+    expect(phaseMoon).toContain('moonPhaseShadowPath');
+    expect(phaseMoon).toContain('MOON_CRATERS');
+    expect(phaseMoon).toContain('MOON_MARIA');
+    expect(phaseMoon).toContain('MOON_TYCHO');
+    // Bright base under translucent shadow — new moon + dark craters stay visible.
+    expect(phaseMoon).not.toContain('if (!litPath) return null');
+    expect(phaseMoon).toContain('fillRule');
+    // RN SVG ignores rgba alpha in stopColor — use stopOpacity for halos.
+    expect(phaseMoon).toContain('stopOpacity');
   });
 
   it('shows rain streaks and lightning for wet weather', () => {
@@ -81,6 +104,11 @@ describe('travel header sky décor', () => {
     expect(sky).toContain('useTiltSkyMotion');
     expect(night).toContain('MotionLayer');
     expect(night).toContain('motion.energy');
+    expect(night).toContain('TwinklingStar');
+    expect(night).not.toContain('PulsingStar');
+    // Per-star opacity shimmer — not a shared layer breathe or radius pulse.
+    expect(night).toContain('starSeedUnit');
+    expect(night).not.toContain('r * (0.92');
     expect(day).toContain('MotionLayer');
     expect(day).toContain('motion.energy');
     const motion = readFileSync(
@@ -109,6 +137,10 @@ describe('travel header sky décor', () => {
       join(process.cwd(), 'src/features/travel/travel-plan-detail-body.tsx'),
       'utf8',
     );
+    const height = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-header-sky-height.ts'),
+      'utf8',
+    );
     // Single plate from window y=0 — aurora/day washes stay live behind the clock.
     expect(hero).toContain('TravelHeaderSkyDecor');
     expect(hero).toContain('useTravelAtmosphere');
@@ -119,14 +151,27 @@ describe('travel header sky décor', () => {
     expect(hero).toContain('resolveAtmosphereHeaderInk');
     expect(hero).toContain('atmosphereHeaderInkColors');
     expect(hero).toContain('statusBandRatio');
+    expect(hero).toContain('TRAVEL_HEADER_SKY_FADE_TAIL');
+    expect(hero).toContain('TRAVEL_HEADER_DATES_SKY_OVERLAP');
     expect(hero).toContain('priority: 1');
     expect(hero).not.toContain('skyOnHeader');
     expect(hero.match(/<TravelHeaderSkyDecor/g)).toHaveLength(1);
     expect(body).toContain('transparentScreen');
-    expect(body).toContain('pageWash');
+    expect(body).toContain('travelPlanSkyPageWashStyle');
+    expect(body).toContain('resolveHeaderSkyWashTop');
+    expect(height).toContain('travelPlanSkyPageWashStyle');
     expect(flourish).toContain('TravelHeaderSkyDecor');
     expect(flourish).toContain('styles.skyBehind');
     expect(sky).toContain('StyleSheet.absoluteFill');
+    // Soft horizon — sky art dissolves into theme paper just below the dates.
+    expect(sky).toContain('LinearGradient');
+    expect(sky).toContain('bottomFade');
+    expect(sky).toContain('fadeTo');
+    expect(hero).toContain('fadeTo={pageBase}');
+    expect(hero).toContain('travelPageBg');
+    // Location ground band (trees / town / city) under celestial art.
+    expect(sky).toContain('TravelSkyGround');
+    expect(sky).toContain('resolveTravelSkyGroundKind');
   });
 });
 
@@ -143,5 +188,28 @@ describe('safe-area chrome overlay', () => {
     expect(chrome).toContain('useSafeAreaChromeOverlay');
     expect(appSafe).toContain('useSafeAreaChromeOverlayLayer');
     expect(appSafe).toContain('chromeOverlay');
+    // Fabric: Image + overlay hosts stay mounted (opacity), never remount siblings.
+    expect(appSafe).toContain('collapsable={false}');
+    expect(appSafe).toContain('lastImageRef');
+    expect(appSafe).not.toContain('{chromeImage ? (');
+    expect(appSafe).not.toContain('{chromeOverlay ? (');
+  });
+
+  it('gates itinerary sky decor until after the stack push settles', () => {
+    const hero = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
+      'utf8',
+    );
+    const detail = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-plan-detail.tsx'),
+      'utf8',
+    );
+    expect(hero).toContain('enableSkyDecor');
+    expect(hero).toContain('TravelHeaderSkyDecor');
+    expect(detail).toContain('TravelPlanDetailEntrance');
+    expect(detail).toContain('deferAfterPageTransition');
+    expect(detail).toContain('enableSkyDecor={false}');
+    expect(hero).not.toContain('skyFxOpacity');
+    expect(hero).not.toContain('deferUntilIdle');
   });
 });

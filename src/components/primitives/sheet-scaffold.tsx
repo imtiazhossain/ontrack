@@ -13,9 +13,14 @@ import {
     type StyleProp,
     type ViewStyle,
 } from 'react-native';
+import Animated, {
+    FadeIn,
+    ReduceMotion,
+    SlideInUp,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radii, type AppIconName } from '@/design-system';
+import { motion, radii, springs, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -127,6 +132,8 @@ export function SheetScaffold({
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [scrollKey, title, visible]);
 
+  // Dismiss unmounts immediately — holding a Modal for exit anim traps touches
+  // and makes the next navigation feel stuck under an invisible overlay.
   if (!visible) return null;
 
   const close = () => {
@@ -136,14 +143,26 @@ export function SheetScaffold({
 
   return (
     <Modal
-      animationType="slide"
+      animationType="none"
       onRequestClose={close}
       presentationStyle="overFullScreen"
       transparent
       visible>
-      <View
-        accessibilityViewIsModal
-        style={[styles.modalRoot, { backgroundColor: theme.overlayScrim, paddingTop: insets.top }]}>
+      <View accessibilityViewIsModal style={styles.modalRoot}>
+        {/*
+          Scrim fades in place; card slides up separately. Native Modal slide
+          would drag the dim with the sheet.
+        */}
+        <Animated.View
+          entering={FadeIn.duration(motion.fade).reduceMotion(
+            ReduceMotion.System,
+          )}
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.overlayScrim },
+          ]}
+        />
         {dismissOnBackdropPress ? (
           <Pressable
             testID={backdropTestID}
@@ -157,8 +176,12 @@ export function SheetScaffold({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
           pointerEvents="box-none"
-          style={styles.avoid}>
-          <View
+          style={[styles.avoid, { paddingTop: insets.top }]}>
+          <Animated.View
+            entering={SlideInUp.springify()
+              .damping(springs.gentle.damping)
+              .stiffness(springs.gentle.stiffness)
+              .reduceMotion(ReduceMotion.System)}
             onLayout={(event) => {
               if (!lockHeight || lockedHeight != null) return;
               const next = Math.round(event.nativeEvent.layout.height);
@@ -209,7 +232,7 @@ export function SheetScaffold({
               {children}
             </ScrollView>
             {footer ? <View style={{ paddingTop: spacing.md }}>{footer}</View> : null}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
         <AppPromptHost embedded />
       </View>

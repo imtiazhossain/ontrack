@@ -2,7 +2,13 @@ import { Image } from 'expo-image';
 import { memo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { AppText, Card, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  Card,
+  CollapsibleBody,
+  DisclosureChevron,
+  Symbol,
+} from '@/components/primitives';
 import { layout, radii, spacing, typography } from '@/design-system';
 import type { CombinedCompletion } from '@/features/todos/grocery-utils';
 import { useTheme } from '@/hooks/use-theme';
@@ -154,14 +160,14 @@ export const MealCard = memo(function MealCard({
             {done} of {tasks.length} checked
           </AppText>
         </View>
-        <Symbol
-          name={collapsed ? 'chevron-right' : 'chevron-up'}
+        <DisclosureChevron
+          expanded={!collapsed}
           size={19}
           color={theme.textSecondary}
         />
       </Pressable>
-      {!collapsed ? (
-        <>
+      <CollapsibleBody expanded={!collapsed}>
+        <View>
           {(safeHttpsUrl(recipe.sourceUrl) || listOwner) ? (
             <View style={styles.mealActions}>
               {safeHttpsUrl(recipe.sourceUrl) ? (
@@ -178,7 +184,9 @@ export const MealCard = memo(function MealCard({
                     Open source
                   </AppText>
                 </Pressable>
-              ) : <View />}
+              ) : (
+                <View />
+              )}
               {listOwner ? (
                 <Pressable
                   accessibilityRole="button"
@@ -199,8 +207,8 @@ export const MealCard = memo(function MealCard({
               onToggle={() => onToggleTask(task)}
             />
           ))}
-        </>
-      ) : null}
+        </View>
+      </CollapsibleBody>
     </Card>
   );
 });
