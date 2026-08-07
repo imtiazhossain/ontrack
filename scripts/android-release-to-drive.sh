@@ -4,7 +4,7 @@
 # Usage (from repo root):
 #   npm run android:release-to-drive
 #   ./scripts/android-release-to-drive.sh
-#   ./scripts/android-release-to-drive.sh --upload-only   # reuse existing APK
+#   ./scripts/android-release-to-drive.sh --upload-only   # reuse newest local APK
 #   ./scripts/android-release-to-drive.sh --no-upload     # build only
 #
 # Prerequisites:
@@ -20,7 +20,7 @@
 #   - OTA (`npm run update:production`) cannot ship native module changes.
 #     Use this script when Kotlin/Java under modules/ (or other native code) changed.
 #   - Always deletes existing *.apk in the folder before upload so only one remains.
-#   - Uploaded name is onTrack-<expo.version>-android-release.apk (from app.json).
+#   - Uploaded name is onTrack-<expo.version>-<YYYYMMDD-HHMMSS>-android-release.apk
 
 set -euo pipefail
 
@@ -34,9 +34,7 @@ if [[ -z "$APP_VERSION" ]]; then
   echo "error: could not read expo.version from app.json" >&2
   exit 1
 fi
-APK_NAME="onTrack-${APP_VERSION}-android-release.apk"
 APK_SRC="$ROOT/android/app/build/outputs/apk/release/app-release.apk"
-APK_DEST="$ROOT/$APK_NAME"
 JAVA_HOME_DEFAULT="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
 
 DO_BUILD=1
@@ -74,8 +72,24 @@ fi
 
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
+# Newest repo-root sideload APK (timestamped or legacy name).
+newest_local_apk() {
+  local newest=""
+  shopt -s nullglob
+  local candidates=( "$ROOT"/onTrack-*.apk )
+  shopt -u nullglob
+  ((${#candidates[@]})) || { printf ''; return 0; }
+  # shellcheck disable=SC2012
+  newest="$(ls -t "${candidates[@]}" 2>/dev/null | head -1 || true)"
+  printf '%s' "$newest"
+}
+
 if [[ "$DO_BUILD" -eq 1 ]]; then
-  echo "==> Building release APK v${APP_VERSION} (commit $SHA)"
+  BUILD_STAMP="$(date +%Y%m%d-%H%M%S)"
+  APK_NAME="onTrack-${APP_VERSION}-${BUILD_STAMP}-android-release.apk"
+  APK_DEST="$ROOT/$APK_NAME"
+
+  echo "==> Building release APK v${APP_VERSION} @ ${BUILD_STAMP} (commit $SHA)"
   cd "$ROOT/android"
   GRADLE_ARGS=()
   if [[ "$CLEAN_NATIVE" -eq 1 ]]; then
@@ -96,13 +110,19 @@ if [[ "$DO_BUILD" -eq 1 ]]; then
   cp -f "$APK_SRC" "$APK_DEST"
   echo "Built $(du -h "$APK_DEST" | awk '{print $1}') → $APK_DEST"
 else
-  if [[ ! -f "$APK_DEST" && -f "$APK_SRC" ]]; then
+  APK_DEST="$(newest_local_apk)"
+  if [[ -z "$APK_DEST" && -f "$APK_SRC" ]]; then
+    BUILD_STAMP="$(date +%Y%m%d-%H%M%S)"
+    APK_NAME="onTrack-${APP_VERSION}-${BUILD_STAMP}-android-release.apk"
+    APK_DEST="$ROOT/$APK_NAME"
     cp -f "$APK_SRC" "$APK_DEST"
   fi
-  if [[ ! -f "$APK_DEST" ]]; then
-    echo "error: no APK at $APK_DEST (run without --upload-only first)" >&2
+  if [[ -z "$APK_DEST" || ! -f "$APK_DEST" ]]; then
+    echo "error: no local APK in $ROOT (run without --upload-only first)" >&2
     exit 1
   fi
+  APK_NAME="$(basename "$APK_DEST")"
+  echo "==> Reusing local APK $APK_NAME"
 fi
 
 if [[ "$DO_UPLOAD" -eq 0 ]]; then
