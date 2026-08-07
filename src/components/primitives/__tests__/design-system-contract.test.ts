@@ -80,7 +80,9 @@ describe('canonical design-system contract', () => {
     // Modal slide would drag the dim with the card — keep native anim off.
     expect(scaffold).toContain('animationType="none"');
     expect(scaffold).toContain('FadeIn');
-    expect(scaffold).toContain('SlideInUp');
+    expect(scaffold).toContain('SlideInDown');
+    expect(scaffold).toContain('springs.sheet');
+    expect(scaffold).toContain('overshootClamping(1)');
     expect(scaffold).toContain('overlayScrim');
     expect(scaffold).not.toContain('animationType="slide"');
     // Exit must unmount immediately — holding Modal for exit traps touches

@@ -359,6 +359,16 @@ describe('agent-ui flows', () => {
     expect(steps?.[1]).toMatchObject({ op: 'seed', to: 'travel-demo' });
     expect(steps?.some((s) => s.op === 'goto')).toBe(true);
     expect(steps?.some((s) => s.op === 'wait')).toBe(true);
+    const addActivity = resolveAgentUiFlow('travel-demo-add-activity');
+    expect(addActivity?.[2]).toMatchObject({
+      op: 'goto',
+      to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/activity`,
+    });
+    expect(
+      addActivity?.some(
+        (s) => s.op === 'wait' && s.prefix === 'ontrack.travel.itineraryAdd.',
+      ),
+    ).toBe(true);
     expect(
       steps?.every(
         (s) => s.op !== 'wait' || s.ms != null || s.timeoutMs === AGENT_UI_WAIT_TIMEOUT_MS,

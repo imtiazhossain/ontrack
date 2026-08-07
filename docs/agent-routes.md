@@ -54,9 +54,16 @@ Pin is required when iOS Simulator and Android Emulator are both running — oth
 ./scripts/agent-ui.sh once --flow travel-demo-add-flight \
   --assert-prefix travel.itineraryAdd.
 
+./scripts/agent-ui.sh once --flow travel-demo-add-activity \
+  --assert-exists travel.itineraryAdd.time \
+  --assert-exists travel.itineraryAdd.endTime \
+  --assert-contains travel.itineraryAdd.time From \
+  --assert-contains travel.itineraryAdd.endTime To
+
 # Named flow — seed + navigate + settle in one round trip
 ./scripts/agent-ui-flow.sh travel-demo
 ./scripts/agent-ui-flow.sh travel-demo-add-flight
+./scripts/agent-ui-flow.sh travel-demo-add-activity
 ./scripts/agent-ui-flow.sh open-new-trip
 ./scripts/agent-ui-flow.sh checklist-demo
 ./scripts/agent-ui-flow.sh grocery-demo

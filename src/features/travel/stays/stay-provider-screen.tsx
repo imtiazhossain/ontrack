@@ -16,7 +16,6 @@ import {
     type StayProvider,
 } from '@/features/travel/stays/provider';
 import { StayProviderLogo } from '@/features/travel/stays/stay-provider-logo';
-import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl } from '@/features/travel/travel-list-actions';
 import {
@@ -288,7 +287,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
             goBackOrReplace(router, { pathname: '/travel/[id]', params: { id: planId } })
           }
         />
-        <TravelHeaderFlourish style={styles.headerCopy} contentStyle={{ gap: rs.sm }}>
+        <View style={[styles.headerCopy, { gap: rs.sm }]}>
           <AppText
             variant="overline"
             fit
@@ -323,7 +322,7 @@ export function StayProviderScreen({ planId }: { planId: string }) {
             ]}>
             Choose a provider. Your destination, dates, and travelers are ready to go.
           </AppText>
-        </TravelHeaderFlourish>
+        </View>
       </View>
 
       <TravelSurfaceCard padding={0}>

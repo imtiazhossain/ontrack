@@ -72,6 +72,15 @@ function starSeedUnit(seed: number, salt: number): number {
   return (n < 0 ? n + 10007 : n) / 10007;
 }
 
+/** Triangle flash 0→1→0 over `[0, 2*width)` of a unit cycle; else 0. */
+function unitFlash(t: number, width: number): number {
+  'worklet';
+  if (width <= 0) return 0;
+  if (t < width) return t / width;
+  if (t < width * 2) return 1 - (t - width) / width;
+  return 0;
+}
+
 /** One shared driver for the whole bright field — phases make flashes feel independent. */
 function useStarTwinkleClock(active: boolean): SharedValue<number> {
   const clock = useSharedValue(0);
@@ -83,7 +92,7 @@ function useStarTwinkleClock(active: boolean): SharedValue<number> {
     }
     clock.value = 0;
     clock.value = withRepeat(
-      withTiming(1, { duration: 10000, easing: Easing.linear }),
+      withTiming(1, { duration: 7000, easing: Easing.linear }),
       -1,
       false,
     );
@@ -117,26 +126,35 @@ function TwinklingStar({
   clock: SharedValue<number>;
 }) {
   const phase = starSeedUnit(seed, 1);
-  const flashWidth = 0.035 + starSeedUnit(seed, 3) * 0.04;
-  const peak = 0.55 + starSeedUnit(seed, 5) * 0.45;
+  // Wide enough to read as a sparkle; still short vs the rest gap.
+  const flashWidth = 0.055 + starSeedUnit(seed, 3) * 0.07;
+  const peak = 0.75 + starSeedUnit(seed, 5) * 0.25;
+  // Dim between flashes so the brightening is obvious (was ~0.78 — nearly static).
+  const rest = 0.32 + starSeedUnit(seed, 7) * 0.22;
   const doubleFlash = seed % 7 === 0 || seed % 11 === 0;
-  const size = Math.max(1.6, r * 1.85);
+  const secondBurst = seed % 5 === 0 || seed % 13 === 0;
+  const size = Math.max(1.8, r * 2);
 
   const style = useAnimatedStyle(() => {
     const t = (clock.value + phase) % 1;
-    let flash = 0;
-    if (t < flashWidth) flash = t / flashWidth;
-    else if (t < flashWidth * 2) flash = 1 - (t - flashWidth) / flashWidth;
-    if (doubleFlash) {
-      const t2 = (t + 0.11) % 1;
-      const w2 = flashWidth * 0.75;
-      let f2 = 0;
-      if (t2 < w2) f2 = t2 / w2;
-      else if (t2 < w2 * 2) f2 = 1 - (t2 - w2) / w2;
-      flash = Math.max(flash, f2 * 0.72);
+    let flash = unitFlash(t, flashWidth);
+    if (secondBurst) {
+      flash = Math.max(flash, unitFlash((t + 0.48) % 1, flashWidth * 0.85) * 0.9);
     }
+    if (doubleFlash) {
+      flash = Math.max(
+        flash,
+        unitFlash((t + 0.1) % 1, flashWidth * 0.7) * 0.78,
+      );
+    }
+    // Soft always-on shimmer so the field never freezes between sparks.
+    const shimmerT = (clock.value * 1.6 + phase * 2.3) % 1;
+    const shimmer = unitFlash(shimmerT, 0.5);
+    const floor = rest + shimmer * 0.14;
+    const bright = floor + flash * peak * (1 - floor);
     return {
-      opacity: baseOpacity * (0.78 + flash * peak * 0.22),
+      opacity: baseOpacity * bright,
+      transform: [{ scale: 0.88 + flash * 0.42 + shimmer * 0.08 }],
     };
   });
 
@@ -336,24 +354,42 @@ export function TravelSkyNight({
     return all.slice(0, n);
   }, [cloudy, dateKey, desert, destination, fx.dimStarScale]);
 
-  const { twinkleStars, staticBrightStars } = useMemo(() => {
+  const { twinkleStars, staticBrightStars, staticDimStars } = useMemo(() => {
     type Twinkle = (typeof stars)[number] & { seed: number };
     if (!liveFx || !fx.twinkle || fx.twinkleMax <= 0) {
       return {
         twinkleStars: [] as Twinkle[],
         staticBrightStars: stars,
+        staticDimStars: dimStars,
       };
     }
-    const ranked = stars
+    // Prefer catalog stars, then brighter dim-field fillers so the dense
+    // plate sparkles — not only a handful of named points.
+    const brightRanked = stars
       .map((s, i) => ({ s, i }))
       .sort((a, b) => a.s.mag - b.s.mag);
-    const twinkle = ranked.slice(0, fx.twinkleMax);
-    const twinkleKeys = new Set(twinkle.map(({ s }) => s.name));
+    const fieldRanked = dimStars
+      .map((s, i) => ({ s, i: stars.length + i }))
+      .sort((a, b) => b.s.opacity - a.s.opacity);
+    const fieldBudget = Math.min(
+      fieldRanked.length,
+      Math.max(8, Math.round(fx.twinkleMax * 0.45)),
+    );
+    const brightBudget = Math.min(
+      brightRanked.length,
+      fx.twinkleMax - Math.min(fieldBudget, fx.twinkleMax),
+    );
+    const picked = [
+      ...brightRanked.slice(0, brightBudget),
+      ...fieldRanked.slice(0, Math.min(fieldBudget, fx.twinkleMax - brightBudget)),
+    ];
+    const twinkleKeys = new Set(picked.map(({ s }) => s.name));
     return {
-      twinkleStars: twinkle.map(({ s, i }) => ({ ...s, seed: i + 1 })),
+      twinkleStars: picked.map(({ s, i }) => ({ ...s, seed: i + 1 })),
       staticBrightStars: stars.filter((s) => !twinkleKeys.has(s.name)),
+      staticDimStars: dimStars.filter((s) => !twinkleKeys.has(s.name)),
     };
-  }, [fx.twinkle, fx.twinkleMax, liveFx, stars]);
+  }, [dimStars, fx.twinkle, fx.twinkleMax, liveFx, stars]);
 
   const starOpacityMul =
     (condition.rain ? 0.4 : 1) * (showAurora ? 0.85 : 1) * (desert ? 1.12 : 1);
@@ -408,7 +444,7 @@ export function TravelSkyNight({
           height="100%"
           viewBox={SKY_PLATE_VIEWBOX}
           preserveAspectRatio="none">
-          {dimStars.map((s) => (
+          {staticDimStars.map((s) => (
             <Circle
               key={s.name}
               cx={s.x}

@@ -17,7 +17,7 @@ export interface ScreenHeaderProps {
   subtitleIcon?: AppIconName;
   leading?: ReactNode;
   trailing?: ReactNode;
-  /** Decorative layer behind the title copy (e.g. travel flight-path flourish). */
+  /** Optional decorative layer behind the title copy. */
   decoration?: ReactNode;
   /** Canonical dismiss control. When present it always renders as the top-right neutral X. */
   onClose?: () => void;

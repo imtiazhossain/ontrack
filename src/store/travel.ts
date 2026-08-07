@@ -131,3 +131,19 @@ export function orderTravelPlansByRecency(
     return a.startDate.localeCompare(b.startDate) || a.createdAt.localeCompare(b.createdAt);
   });
 }
+
+/** Current/upcoming trips first (endDate ≥ today), then past — each bucket keeps recency order. */
+export function orderTravelPlansForLauncher(
+  plans: TravelPlan[],
+  recentPlanIds: readonly string[],
+  today: string,
+): TravelPlan[] {
+  const sorted = orderTravelPlansByRecency(plans, recentPlanIds);
+  const current: TravelPlan[] = [];
+  const past: TravelPlan[] = [];
+  for (const plan of sorted) {
+    if (plan.endDate >= today) current.push(plan);
+    else past.push(plan);
+  }
+  return [...current, ...past];
+}

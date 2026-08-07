@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 const FLIGHT_PATH_FLOURISH = require('../../../assets/images/travel/flight-path-flourish.png');
 
 /**
- * Compact hero flourish — provided plane + trail asset, behind title copy.
+ * Compact hero flourish — plane + trail asset behind itinerary title copy.
+ * Itinerary plan hero only — do not reuse on sheets or other travel pages.
  */
 export function TravelFlightPathArc() {
   const { s } = useResponsive();
@@ -34,30 +34,21 @@ export function TravelFlightPathArc() {
 }
 
 /**
- * Places {@link TravelFlightPathArc} behind header copy (title / pin / subtitle).
- * Use around custom travel header text columns; prefer `TravelScreenHeader` for
- * standard `ScreenHeader` pages.
+ * Places {@link TravelFlightPathArc} behind itinerary header copy.
+ * Use only on the main itinerary hero ({@link TravelPlanHero}).
  */
 export function TravelHeaderFlourish({
   children,
   style,
   contentStyle,
-  /** When false, caller paints {@link TravelHeaderSkyDecor} on a wider row. */
-  sky = true,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   /** Applied to the foreground title stack (gap, padding). */
   contentStyle?: StyleProp<ViewStyle>;
-  sky?: boolean;
 }) {
   return (
     <View style={[styles.wrap, style]}>
-      {sky ? (
-        <View style={styles.skyBehind} pointerEvents="none">
-          <TravelHeaderSkyDecor />
-        </View>
-      ) : null}
       <View style={styles.flourishBehind} pointerEvents="none">
         <TravelFlightPathArc />
       </View>
@@ -80,10 +71,6 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     minWidth: 0,
     flexShrink: 1,
-  },
-  skyBehind: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 0,
   },
   flourishBehind: {
     position: 'absolute',

@@ -4,7 +4,7 @@ import type { ViewStyle } from 'react-native';
 export const SKY_VIEW_W = 360;
 export const SKY_VIEW_H = 140;
 /** Keep sun/moon discs fully below the status-bar band. */
-export const SKY_CELESTIAL_CLEARANCE = 34;
+export const SKY_CELESTIAL_CLEARANCE = 18;
 
 /**
  * Single full-plate viewBox — the sky renders once on app-shell chrome

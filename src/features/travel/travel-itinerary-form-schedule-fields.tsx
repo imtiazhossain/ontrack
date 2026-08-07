@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, DateField, Input, TimeField } from '@/components/primitives';
+import { AppText, DateField, TimeField } from '@/components/primitives';
 import type { FlightTripType } from '@/features/travel/flight-roundtrip-draft';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import {
@@ -19,14 +19,12 @@ type TravelItineraryFormScheduleFieldsProps = {
   startMinutes: number | null;
   endDate: string;
   endMinutes: number | null;
-  duration: string;
   planStartDate: string;
   planEndDate: string;
   onDateChange: (value: string) => void;
   onStartMinutesChange: (value: number) => void;
   onEndDateChange: (value: string) => void;
   onEndMinutesChange: (value: number) => void;
-  onDurationChange: (value: string) => void;
 };
 
 export function TravelItineraryFormScheduleFields({
@@ -36,20 +34,18 @@ export function TravelItineraryFormScheduleFields({
   startMinutes,
   endDate,
   endMinutes,
-  duration,
   planStartDate,
   planEndDate,
   onDateChange,
   onStartMinutesChange,
   onEndDateChange,
   onEndMinutesChange,
-  onDurationChange,
 }: TravelItineraryFormScheduleFieldsProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const { spacing: rs } = useResponsive();
   const usesRange = kind === 'stay' || kind === 'flight' || kind === 'rental';
-  const showDuration = kind === 'activity';
+  const showActivityTimes = kind === 'activity';
   const rangeStartLabel =
     kind === 'stay'
       ? 'Check-in'
@@ -131,6 +127,50 @@ export function TravelItineraryFormScheduleFields({
             </View>
           </View>
         </>
+      ) : showActivityTimes ? (
+        <>
+          <DateField
+            testID={AgentUiIds.travel.itineraryAdd.date}
+            value={date}
+            stackedLabel="Date *"
+            placeholder="Select date"
+            minimumDate={planStartDate}
+            maximumDate={planEndDate}
+            onChange={onDateChange}
+            {...itinerarySheetFieldProps(chrome, 'calendar')}
+          />
+          <View style={[styles.twoColumns, { gap: rs.sm }]}>
+            <View style={styles.flex}>
+              <TimeField
+                testID={AgentUiIds.travel.itineraryAdd.time}
+                value={startMinutes}
+                stackedLabel="From *"
+                placeholder="Select time"
+                showChevron
+                onChange={(next) => {
+                  onStartMinutesChange(next);
+                  if (endMinutes !== null && endMinutes <= next) {
+                    onEndMinutesChange(Math.min(next + 60, 24 * 60 - 1));
+                  }
+                }}
+                accessibilityLabel="From time, required"
+                {...itinerarySheetFieldProps(chrome, 'clock')}
+              />
+            </View>
+            <View style={styles.flex}>
+              <TimeField
+                testID={AgentUiIds.travel.itineraryAdd.endTime}
+                value={endMinutes}
+                stackedLabel="To *"
+                placeholder="Select time"
+                showChevron
+                onChange={onEndMinutesChange}
+                accessibilityLabel="To time, required"
+                {...itinerarySheetFieldProps(chrome, 'clock')}
+              />
+            </View>
+          </View>
+        </>
       ) : (
         <View style={[styles.twoColumns, { gap: rs.sm }]}>
           <View style={styles.flex}>
@@ -158,17 +198,6 @@ export function TravelItineraryFormScheduleFields({
           </View>
         </View>
       )}
-      {showDuration ? (
-        <Input
-          value={duration}
-          onChangeText={onDurationChange}
-          icon="clock"
-          stackedLabel="Duration (minutes) *"
-          placeholder="e.g. 60"
-          keyboardType="number-pad"
-          {...itinerarySheetFieldProps(chrome, 'clock')}
-        />
-      ) : null}
     </View>
   );
 }

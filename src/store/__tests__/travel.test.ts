@@ -3,7 +3,11 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 import { ALL_ACCOUNTS_TEST_TRIP } from '@/constants/travel';
 import type { TravelPlan } from '@/features/travel/types';
 import { resetPersistBackendForTests, STORAGE_KEYS } from '@/services/storage';
-import { orderTravelPlansByRecency, useTravel } from '@/store/travel';
+import {
+  orderTravelPlansByRecency,
+  orderTravelPlansForLauncher,
+  useTravel,
+} from '@/store/travel';
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
@@ -144,5 +148,17 @@ describe('travel trip recency', () => {
 
     expect(useTravel.getState().recentPlanIds).toEqual(['first', 'second']);
     expect(useTravel.getState().plans.find((item) => item.id === first.id)?.updatedAt).toBe(updatedAt);
+  });
+
+  it('lists upcoming trips before past trips on the launcher', () => {
+    const past = plan('past', '2026-06-01');
+    const upcoming = plan('upcoming', '2026-09-01');
+    const today = '2026-08-07';
+
+    // Past interacted more recently must still stay below upcoming.
+    expect(orderTravelPlansForLauncher([past, upcoming], ['past'], today).map((p) => p.id)).toEqual([
+      'upcoming',
+      'past',
+    ]);
   });
 });
