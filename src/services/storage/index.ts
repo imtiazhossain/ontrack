@@ -21,6 +21,8 @@ export const STORAGE_KEYS = {
   health: 'ontrack/health/v1',
   flightParserMemory: 'ontrack/travel-flight-parser-memory/v1',
   usageAnalytics: 'ontrack/usage-analytics/v1',
+  /** Floating tab carousel order by last focus (device-local). */
+  tabRecency: 'ontrack/tab-recency/v1',
   /** Dev Mode toggle + live-account snapshot (sandbox isolation). */
   devMode: 'ontrack/dev-mode/v1',
 } as const;

@@ -1,10 +1,13 @@
 import { useRouter, type Href } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppText,
   Symbol,
   useSafeAreaChrome,
+  useSafeAreaChromeOverlay,
 } from '@/components/primitives';
 import { fontFamilies } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
@@ -102,8 +105,9 @@ export function TravelPlanHero({
 }) {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const atmosphere = useTravelAtmosphere();
-  const { s, spacing: rs, typography, layout } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const dayCount = tripDayCount(plan.startDate, plan.endDate);
   const placeName = tripHeroPlaceName(plan.destination, plan.title);
   const destination = plan.destination.trim();
@@ -112,10 +116,12 @@ export function TravelPlanHero({
     destination.toLowerCase() !== placeName.toLowerCase();
   const pinMute = theme.textSecondary;
 
-  // Dynamic sky lives in the header (stack fills often cover app-shell chrome
-  // below the inset). Status bar gets a matching static wash so the bands join
-  // without duplicating stars/clouds/moon.
-  const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(128));
+  // One continuous sky plate on app-shell chrome (status bar + header).
+  // Stack content stays transparent over this band so aurora/day washes stay live.
+  const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
+  const skyChromeHeight = insets.top + skyContentBand;
+  const statusBandRatio =
+    skyChromeHeight > 0 ? insets.top / skyChromeHeight : 0;
   const skyDestination = destination || atmosphere.destination || '';
   const skyCondition = resolveHeaderSkyCondition({
     themeDark: theme.name === 'dark',
@@ -125,42 +131,50 @@ export function TravelPlanHero({
     destination: skyDestination,
     latitude: atmosphere.latitude,
   });
-  // Priority > layout wash: child focus effects run before parents, so without
-  // this the travel stack's black chrome would cover the night-sky status band.
-  useSafeAreaChrome(
-    headerSkyChromeColor({
-      themeDark: theme.name === 'dark',
-      look: skyCondition.look,
-    }),
-    { priority: 1 },
+  const skyChrome = headerSkyChromeColor({
+    themeDark: theme.name === 'dark',
+    look: skyCondition.look,
+    destination: skyDestination,
+  });
+  useSafeAreaChrome(skyChrome, { priority: 1 });
+  const skyOverlay = useMemo(
+    () => (
+      <TravelHeaderSkyDecor
+        destination={skyDestination}
+        dateKey={plan.startDate}
+        latitude={atmosphere.latitude}
+        longitude={atmosphere.longitude}
+        timeOfDay={atmosphere.timeOfDay}
+        weatherCode={atmosphere.weatherCode}
+        timezone={atmosphere.timezone}
+        statusBandRatio={statusBandRatio}
+      />
+    ),
+    [
+      atmosphere.latitude,
+      atmosphere.longitude,
+      atmosphere.timeOfDay,
+      atmosphere.timezone,
+      atmosphere.weatherCode,
+      plan.startDate,
+      skyDestination,
+      statusBandRatio,
+    ],
   );
-  const edgeBleed = layout.screenPadding;
+  useSafeAreaChromeOverlay(skyOverlay, skyChromeHeight, { priority: 1 });
 
   return (
     <View style={[styles.hero, { gap: Math.max(rs.md, s(20)) }]}>
       <View style={[styles.headerBlock, { minHeight: skyContentBand }]}>
         <View
-          pointerEvents="none"
           style={[
-            styles.skyOnHeader,
+            styles.titleRow,
             {
-              height: skyContentBand,
-              marginHorizontal: -edgeBleed,
+              gap: rs.md,
+              // Breathing room under the status-bar band of the chrome sky.
+              paddingTop: Math.max(rs.lg, s(24)),
             },
           ]}>
-          <TravelHeaderSkyDecor
-            destination={skyDestination}
-            dateKey={plan.startDate}
-            latitude={atmosphere.latitude}
-            longitude={atmosphere.longitude}
-            timeOfDay={atmosphere.timeOfDay}
-            weatherCode={atmosphere.weatherCode}
-            timezone={atmosphere.timezone}
-            // Header-only plate — celestial clearance from the top of this band.
-            statusBandRatio={0}
-          />
-        </View>
-        <View style={[styles.titleRow, { gap: rs.md }]}>
           <TravelHeroGlassIconButton
             icon="back"
             size={Math.max(32, s(32))}
@@ -262,11 +276,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     overflow: 'visible',
-  },
-  skyOnHeader: {
-    ...StyleSheet.absoluteFill,
-    bottom: undefined,
-    zIndex: 0,
   },
   titleRow: {
     position: 'relative',

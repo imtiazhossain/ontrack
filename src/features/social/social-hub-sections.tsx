@@ -256,6 +256,11 @@ export function SocialQuickActions({
   const available = width - layout.screenPadding * 2 - spacing.xs * 4;
   // Leave a tiny pixel-rounding reserve so five columns stay on one row at @3x.
   const tileWidth = Math.max(52, Math.floor(available / 5) - 2);
+  const labelPadX = Math.max(2, spacing.xs - 1);
+  // Shared size for every tile — sized so the longest single word still fits.
+  const labelFontSize = Math.max(10, Math.min(11.5, Math.floor((tileWidth - labelPadX * 2) / 5.6)));
+  const labelLineHeight = Math.round(labelFontSize * 1.28);
+  const labelBlockHeight = labelLineHeight * 2;
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -265,11 +270,12 @@ export function SocialQuickActions({
       <View style={[styles.quickGrid, { gap: spacing.xs }]}>
         {SOCIAL_QUICK_ACTIONS.map((action) => {
           const tone = socialActionTones[action.tone];
+          const a11yLabel = action.label.replace(/\n/g, ' ');
           return (
             <SocialPressable
               key={action.id}
               testID={AgentUiIds.social.quickAction(action.id)}
-              accessibilityLabel={action.label}
+              accessibilityLabel={a11yLabel}
               onPress={() => onAction(action.id)}
               style={[
                 styles.quickTile,
@@ -278,7 +284,7 @@ export function SocialQuickActions({
                   minHeight: Math.max(88, s(96)),
                   backgroundColor: chrome.surface,
                   borderColor: chrome.border,
-                  paddingHorizontal: Math.max(3, spacing.xs),
+                  paddingHorizontal: labelPadX,
                   paddingVertical: spacing.sm,
                   gap: spacing.xs,
                   ...socialShadow(chrome.shadow),
@@ -296,14 +302,23 @@ export function SocialQuickActions({
                 ]}>
                 <Symbol name={action.icon} size="md" color={tone.foreground} />
               </View>
-              <AppText
-                variant="caption"
-                align="center"
-                fit
-                fitMinimumScale={0.58}
-                style={{ color: chrome.ink }}>
-                {action.label}
-              </AppText>
+              <View style={[styles.quickLabelSlot, { height: labelBlockHeight }]}>
+                <AppText
+                  variant="caption"
+                  align="center"
+                  numberOfLines={2}
+                  maxFontSizeMultiplier={1.1}
+                  style={[
+                    styles.quickLabel,
+                    {
+                      color: chrome.ink,
+                      fontSize: labelFontSize,
+                      lineHeight: labelLineHeight,
+                    },
+                  ]}>
+                  {action.label}
+                </AppText>
+              </View>
             </SocialPressable>
           );
         })}
@@ -617,6 +632,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderCurve: 'continuous',
+  },
+  quickLabelSlot: {
+    alignSelf: 'stretch',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  quickLabel: {
+    width: '100%',
   },
   sectionHeader: {
     minHeight: 44,

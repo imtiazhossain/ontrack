@@ -7,9 +7,9 @@ describe('pickRankedEntry', () => {
 
   it('lets a higher-priority leaf beat a later layout registration', () => {
     const layout = { id: 'layout', priority: 0, seq: 2, color: '#000000' };
-    const hero = { id: 'hero', priority: 1, seq: 1, color: '#0A1424' };
+    const hero = { id: 'hero', priority: 1, seq: 1, color: '#0C1423' };
     // Child focus effects run before parents, so layout gets the higher seq.
-    expect(pickRankedEntry([hero, layout])?.color).toBe('#0A1424');
+    expect(pickRankedEntry([hero, layout])?.color).toBe('#0C1423');
   });
 
   it('breaks equal priority ties with later seq', () => {

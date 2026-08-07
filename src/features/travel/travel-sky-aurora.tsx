@@ -15,17 +15,7 @@ import Svg, { Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg
 import { SKY_PLATE_VIEWBOX, SKY_VIEW_W } from '@/features/travel/travel-sky-plate';
 import type { TiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
 
-/**
- * Destinations where a night-sky aurora curtain is a meaningful place cue.
- * Iceland is the hero case; other high-latitude belts share the treatment.
- */
-export function destinationShowsAurora(destination: string): boolean {
-  const d = destination.trim().toLowerCase();
-  if (!d) return false;
-  return /iceland|reykjav|akureyri|norway|troms|svalbard|lapland|fairbanks|yellowknife|icelandic/.test(
-    d,
-  );
-}
+export { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 
 /**
  * Soft aurora curtains for Iceland (and kin) night headers.
@@ -77,7 +67,9 @@ export function TravelSkyAurora({
     };
   });
 
-  const y0 = statusBand + 6;
+  // Reach into the status-bar band so the green/teal veil continues behind the
+  // clock (celestial discs stay cleared separately via SKY_CELESTIAL_CLEARANCE).
+  const y0 = Math.max(0, statusBand * 0.2);
   const y1 = statusBand + 52;
 
   return (

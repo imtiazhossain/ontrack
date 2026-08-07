@@ -5,7 +5,7 @@ import {
   moonTerminatorPath,
 } from '@/features/travel/travel-sky-astronomy';
 import { destinationSkyAccents } from '@/features/travel/travel-sky-accents';
-import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora';
+import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 import {
   headerSkyChromeColor,
   resolveHeaderSkyCondition,
@@ -213,10 +213,17 @@ describe('headerSkyChromeColor', () => {
   it('returns a night wash under dark theme and matching day washes', () => {
     expect(
       headerSkyChromeColor({ themeDark: true, look: 'sunny' }),
-    ).toBe('#0A1424');
+    ).toBe('#0C1423');
     expect(
       headerSkyChromeColor({ themeDark: false, look: 'night-clear' }),
-    ).toBe('#0A1424');
+    ).toBe('#0C1423');
+    expect(
+      headerSkyChromeColor({
+        themeDark: true,
+        look: 'night-clear',
+        destination: 'Reykjavík, Iceland',
+      }),
+    ).toBe('#1E3A42');
     expect(
       headerSkyChromeColor({ themeDark: false, look: 'sunny' }),
     ).toBe('#DCE8F1');

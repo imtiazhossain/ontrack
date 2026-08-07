@@ -3,7 +3,7 @@
 #   commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK
 #
 # Agent / human phrases that mean this script:
-#   "run the push script" · "push script" · "ship push" · "ship:push"
+#   "push" · "run the push script" · "push script" · "ship push" · "ship:push"
 #
 # Usage (from repo root):
 #   npm run ship:push -- -m "Why this ships"

@@ -25,6 +25,7 @@ import Svg, {
 
 import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
 import {
+  celestialDiscHostStyle,
   SKY_CELESTIAL_CLEARANCE,
   SKY_PLATE_VIEWBOX,
   SKY_VIEW_H,
@@ -306,27 +307,39 @@ function DaySun({
 
   const core = warm ? '#FFB85C' : '#FFE08A';
   const halo = warm ? 'rgba(255,140,70,0.35)' : 'rgba(255,220,120,0.4)';
+  const sunR = 10;
+  const box = sunR * 4.4;
+  const pad = box / 2;
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, style]}>
+    <>
       <SunRays cx={cx} cy={cy} warm={warm} energy={motion.energy} />
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox={SKY_PLATE_VIEWBOX}
-        preserveAspectRatio="none">
-        <Defs>
-          <RadialGradient id="sunHalo" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={halo} />
-            <Stop offset="55%" stopColor={halo} stopOpacity={0.35} />
-            <Stop offset="100%" stopColor={halo} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={cx} cy={cy} r={22} fill="url(#sunHalo)" />
-        <Circle cx={cx} cy={cy} r={10} fill={core} />
-        <Circle cx={cx - 2.5} cy={cy - 2.5} r={3.5} fill="rgba(255,255,255,0.35)" />
-      </Svg>
-    </Animated.View>
+      <View pointerEvents="none" style={celestialDiscHostStyle(cx, cy, box)}>
+        <Animated.View style={[{ flex: 1 }, style]}>
+          <Svg
+            width="100%"
+            height="100%"
+            viewBox={`${cx - pad} ${cy - pad} ${box} ${box}`}
+            preserveAspectRatio="xMidYMid meet">
+            <Defs>
+              <RadialGradient id="sunHalo" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor={halo} />
+                <Stop offset="55%" stopColor={halo} stopOpacity={0.35} />
+                <Stop offset="100%" stopColor={halo} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={cx} cy={cy} r={22} fill="url(#sunHalo)" />
+            <Circle cx={cx} cy={cy} r={sunR} fill={core} />
+            <Circle
+              cx={cx - 2.5}
+              cy={cy - 2.5}
+              r={3.5}
+              fill="rgba(255,255,255,0.35)"
+            />
+          </Svg>
+        </Animated.View>
+      </View>
+    </>
   );
 }
 

@@ -11,14 +11,14 @@ import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
 /**
  * Theme + weather sky for itinerary headers.
- * Painted in the header band (dynamic art). Status bar uses a matching static
- * wash via `headerSkyChromeColor` so stack fills cannot hide the scenery.
+ * Painted once on app-shell chrome (status bar + header) so aurora / day washes
+ * stay continuous behind the clock. `headerSkyChromeColor` is the solid underlay.
  * Night: projected stars, phase moon, satellites, meteors, aurora.
  * Day: sun rays / clouds / flocking birds with dawn/dusk palettes.
  * Both: rain/lightning FX and destination accents (tropical/desert/fog).
  *
- * @param statusBandRatio Fraction reserved above celestial bodies (0 when the
- *   plate is header-only).
+ * @param statusBandRatio Fraction of the plate reserved for the status-bar band
+ *   (celestial discs stay below the clock / Dynamic Island).
  */
 export function TravelHeaderSkyDecor({
   statusBandRatio = 0.35,

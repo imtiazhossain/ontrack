@@ -22,16 +22,16 @@ export type SocialQuickAction = {
 };
 
 export const SOCIAL_QUICK_ACTIONS: SocialQuickAction[] = [
-  { id: 'invite-trip', label: 'Invite to Trip', icon: 'flight', tone: 'trip' },
+  { id: 'invite-trip', label: 'Invite to\nTrip', icon: 'flight', tone: 'trip' },
   { id: 'challenge', label: 'Challenge', icon: 'games', tone: 'challenge' },
-  { id: 'share-calendar', label: 'Share Calendar', icon: 'calendar', tone: 'calendar' },
-  { id: 'share-todos', label: 'Share To-Do', icon: 'tasks', tone: 'tasks' },
+  { id: 'share-calendar', label: 'Share\nCalendar', icon: 'calendar', tone: 'calendar' },
+  { id: 'share-todos', label: 'Share\nTo-Do', icon: 'tasks', tone: 'tasks' },
   { id: 'chat', label: 'Chat', icon: 'chat', tone: 'chat' },
-  { id: 'share-workout', label: 'Share Workout', icon: 'gym', tone: 'workout' },
-  { id: 'share-photos', label: 'Share Photos', icon: 'photo', tone: 'photos' },
-  { id: 'share-story', label: 'Share Story', icon: 'plus-circle', tone: 'story' },
-  { id: 'poll', label: 'Poll / Vote', icon: 'insights', tone: 'poll' },
-  { id: 'create-group', label: 'Create Group', icon: 'people', tone: 'group' },
+  { id: 'share-workout', label: 'Share\nWorkout', icon: 'gym', tone: 'workout' },
+  { id: 'share-photos', label: 'Share\nPhotos', icon: 'photo', tone: 'photos' },
+  { id: 'share-story', label: 'Share\nStory', icon: 'plus-circle', tone: 'story' },
+  { id: 'poll', label: 'Poll /\nVote', icon: 'insights', tone: 'poll' },
+  { id: 'create-group', label: 'Create\nGroup', icon: 'people', tone: 'group' },
 ];
 
 export type SocialFeedScope = 'friend' | 'group';

@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Tabs, useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
     Pressable,
     StyleSheet,
@@ -29,6 +29,7 @@ import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAddons } from '@/store/addons';
+import { useTabRecency } from '@/store/tab-recency';
 import { useTodos } from '@/store/todos';
 import { useUI } from '@/store/ui';
 import {
@@ -46,6 +47,7 @@ import {
   routeIndexForPosition,
   shortestTargetPosition,
 } from './floating-tab-bar-motion';
+import { orderRoutesByRecency } from './tab-recency';
 
 type FloatingTabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>['tabBar']>
@@ -148,23 +150,26 @@ export function FloatingTabBar({
   const setCarouselBrowse = useUI((store) => store.setCarouselBrowse);
   const setTabBarHeight = useUI((store) => store.setTabBarHeight);
   const enabledAddons = useAddons((store) => store.enabled);
+  const lastFocusedAt = useTabRecency((store) => store.lastFocusedAt);
+  const recordTabFocus = useTabRecency((store) => store.recordTabFocus);
   const openTaskCount = useTodos(
     (store) => store.tasks.filter((task) => !task.completed).length,
   );
-  const visibleRoutes = useMemo(
-    () =>
-      state.routes.filter((route) => {
-        if (route.name === 'workouts') return enabledAddons.fitness;
-        if (route.name === 'plants') return enabledAddons.plants;
-        if (route.name === 'travel') return enabledAddons.travel;
-        if (route.name === 'vision-board') return enabledAddons['vision-board'];
-        if (route.name === 'games') return enabledAddons.games;
-        if (route.name === 'vehicles') return enabledAddons.vehicles;
-        if (route.name === 'health') return process.env.EXPO_OS === 'ios' && enabledAddons.health;
-        return route.name in TAB_META;
-      }),
-    [enabledAddons, state.routes],
-  );
+  const visibleRoutes = useMemo(() => {
+    const enabled = state.routes.filter((route) => {
+      if (route.name === 'workouts') return enabledAddons.fitness;
+      if (route.name === 'plants') return enabledAddons.plants;
+      if (route.name === 'travel') return enabledAddons.travel;
+      if (route.name === 'vision-board') return enabledAddons['vision-board'];
+      if (route.name === 'games') return enabledAddons.games;
+      if (route.name === 'vehicles') return enabledAddons.vehicles;
+      if (route.name === 'health') {
+        return process.env.EXPO_OS === 'ios' && enabledAddons.health;
+      }
+      return route.name in TAB_META;
+    });
+    return orderRoutesByRecency(enabled, lastFocusedAt);
+  }, [enabledAddons, lastFocusedAt, state.routes]);
 
   useEffect(() => {
     // Locked-open nav + clear any stuck swipe/collapse flags from older builds
@@ -175,6 +180,20 @@ export function FloatingTabBar({
       carouselPendingRouteName: null,
     });
   }, []);
+
+  const focusedRouteName = state.routes[state.index]?.name;
+  // Wait until optimistic tab selection settles, then record on the next frame
+  // so highlight handoff (pending → focused) isn’t fighting a ring reshuffle.
+  useEffect(() => {
+    if (pendingRouteName) return;
+    if (!focusedRouteName || !(focusedRouteName in TAB_META)) return;
+    const routeName = focusedRouteName;
+    const frame = requestAnimationFrame(() => {
+      if (useUI.getState().carouselPendingRouteName) return;
+      recordTabFocus(routeName);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusedRouteName, pendingRouteName, recordTabFocus]);
 
   useEffect(() => {
     if (!isAgentUiEnabled()) return;
@@ -256,9 +275,8 @@ export function FloatingTabBar({
     });
   };
   // Clear optimistic selection only after navigation has focused the tab.
-  // Clearing in the tap handler made `focused` (still the old route) flash
-  // back for a frame before React Navigation caught up.
-  useEffect(() => {
+  // Layout so pending→focused highlight handoff doesn’t paint a stale accent.
+  useLayoutEffect(() => {
     if (!pendingRouteName) return;
     if (selectedRoute?.name !== pendingRouteName) return;
     if (routeCount <= 0) return;
@@ -357,7 +375,28 @@ export function FloatingTabBar({
     ],
   }));
 
-  useEffect(() => {
+  const routeOrderKey = routeNames.join('|');
+  const prevRouteOrderKeyRef = useRef(routeOrderKey);
+  // Recency reorder changes which route sits at `selectedIndex`. Sync the
+  // shared carousel offset during render so Reanimated doesn’t paint one frame
+  // of the old index (accent appearing to jump old↔new).
+  if (
+    prevRouteOrderKeyRef.current !== routeOrderKey &&
+    !pendingRouteName &&
+    routeCount > 0
+  ) {
+    prevRouteOrderKeyRef.current = routeOrderKey;
+    motionEpoch.value += 1;
+    positionItems.value = rebasePosition(
+      positionItems.value,
+      selectedIndex,
+      routeCount,
+    );
+  } else if (prevRouteOrderKeyRef.current !== routeOrderKey) {
+    prevRouteOrderKeyRef.current = routeOrderKey;
+  }
+
+  useLayoutEffect(() => {
     if (pendingRouteName) return;
     if (carouselBrowse?.anchorRouteName === selectedRoute.name) return;
     if (routeCount <= 0) return;
@@ -381,6 +420,7 @@ export function FloatingTabBar({
     selectedIndex,
     selectedRoute.name,
     routeCount,
+    routeOrderKey,
   ]);
 
   // Pinned bar, always expanded. Dock width must match carouselWidth math

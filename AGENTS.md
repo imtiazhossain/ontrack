@@ -28,7 +28,7 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 - Metro: `npm run packager:ensure` / `packager:ensure:start` — **never** `npm start` in agent shells (Cursor kills it). Node 24 (`.nvmrc`).
 - Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
 - Sideload APK → Drive replace: `npm run android:release-to-drive` → **android-release-apk** skill.
-- **Push / ship script** (commit → PR → merge main → delete branch → TestFlight OTA → Drive APK): `npm run ship:push -- -m "…"`. Phrases: “run the push script”, “push script”, “ship push”. Script: `scripts/ship-push.sh`.
+- **`push`** (also “push script” / “ship push”) → `npm run ship:push -- -m "…"` — commit → PR → merge main → delete branch → TestFlight OTA → Drive APK. Script: `scripts/ship-push.sh`.
 - Dual verify: `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route)
 - `npm run typecheck` · `npm test` · `npm run lint`
 
