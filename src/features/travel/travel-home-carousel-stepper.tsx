@@ -9,9 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 
 type TravelHomeCarouselStepperProps = {
   count: number;
@@ -25,8 +23,8 @@ const MAX_SLOTS = 3;
 const SETTLE_MS = 220;
 
 /**
- * Compact page ticks for Travel Home heroes — small thin lines, centered on
- * the top edge of the glass scoop (one per swipeable thumbnail).
+ * Compact page ticks for Travel Home heroes — small thin lines overlaid on the
+ * visible hero band, just above the glass scoop (one per swipeable thumbnail).
  *
  * Active highlight tracks scroll progress for a smooth crossfade while swiping.
  * Each tick keeps a static inactive fill so lines paint on first frame (animated
@@ -34,6 +32,9 @@ const SETTLE_MS = 220;
  *
  * Always mount a shell (collapse when ≤1 page) so Fabric siblings of BlurView
  * / glass underlays don’t remount mid-frame.
+ *
+ * On-image chrome: light ticks + soft shadow so they read on bright or dark
+ * destination plates.
  */
 export function TravelHomeCarouselStepper({
   count,
@@ -41,9 +42,7 @@ export function TravelHomeCarouselStepper({
   progress: progressProp,
   style,
 }: TravelHomeCarouselStepperProps) {
-  const theme = useTheme();
   const { s } = useResponsive();
-  const dark = theme.name === 'dark';
   const pageCount = Math.max(0, Math.min(MAX_SLOTS, count));
   const activeIndex = Math.max(0, Math.min(Math.max(pageCount - 1, 0), index));
   const visible = pageCount > 1;
@@ -52,8 +51,8 @@ export function TravelHomeCarouselStepper({
   const lineH = Math.max(2, s(2));
   const gap = Math.max(4, s(5));
   const padY = Math.max(3, s(3));
-  const inactiveColor = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.28)';
-  const activeColor = dark ? '#FFFFFF' : travelHomeTokens.colors.brandBlue;
+  const inactiveColor = 'rgba(255,255,255,0.45)';
+  const activeColor = '#FFFFFF';
 
   const fallbackProgress = useSharedValue(activeIndex);
   const progress = progressProp ?? fallbackProgress;
@@ -89,7 +88,20 @@ export function TravelHomeCarouselStepper({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[styles.wrap, { paddingTop: padY }, style]}>
-      <View style={[styles.row, { gap, height: lineH }]}>
+      <View
+        style={[
+          styles.row,
+          {
+            gap,
+            height: lineH,
+            // Soft lift so white ticks stay readable on pale sky / bright plates.
+            shadowColor: '#000',
+            shadowOpacity: 0.45,
+            shadowRadius: 2,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 2,
+          },
+        ]}>
         {Array.from({ length: pageCount }, (_, slot) => (
           <Tick
             key={`tick-${slot}`}

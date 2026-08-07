@@ -4,6 +4,9 @@ import { RefreshControl, type RefreshControlProps } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { refreshAppData } from '@/services/cloud/sync';
 
+/** Hard cap so a hung cloud call cannot leave the spinner up forever. */
+export const PULL_REFRESH_TIMEOUT_MS = 12_000;
+
 /** Shared pull-to-refresh: cloud pull + optional page-specific work. */
 export function usePullToRefresh(extra?: () => void | Promise<void>) {
   const theme = useTheme();
@@ -11,6 +14,13 @@ export function usePullToRefresh(extra?: () => void | Promise<void>) {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      setRefreshing(false);
+    };
+    const timeout = setTimeout(finish, PULL_REFRESH_TIMEOUT_MS);
     void (async () => {
       try {
         await refreshAppData();
@@ -18,7 +28,8 @@ export function usePullToRefresh(extra?: () => void | Promise<void>) {
       } catch {
         // Surface stays usable; page can show its own error UI if needed.
       } finally {
-        setRefreshing(false);
+        clearTimeout(timeout);
+        finish();
       }
     })();
   }, [extra]);

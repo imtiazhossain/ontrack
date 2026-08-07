@@ -6,6 +6,8 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
+
 export type TiltSkyMotion = {
   /** -1…1 left ↔ right tilt */
   tiltX: SharedValue<number>;
@@ -85,7 +87,11 @@ export function useTiltSkyMotion(): TiltSkyMotion {
       }
     };
 
-    void start();
+    // Sensors + dynamic import are expensive — only start after the itinerary
+    // push has settled (sky decor itself mounts post-transition).
+    const cancelIdle = deferAfterPageTransition(() => {
+      void start();
+    });
 
     const appSub = AppState.addEventListener('change', (state) => {
       active = state === 'active';
@@ -96,6 +102,7 @@ export function useTiltSkyMotion(): TiltSkyMotion {
 
     return () => {
       cancelled = true;
+      cancelIdle();
       subscription?.remove();
       appSub.remove();
     };

@@ -34,6 +34,7 @@ export function TravelHomeSectionHeader({
   const ink = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
   const muted = dark ? theme.textTertiary : travelHomeTokens.colors.inkMuted;
   const titleSize = Math.max(18, s(travelHomeTokens.sizes.sectionTitle));
+  const searchTextSize = Math.max(15, s(travelHomeTokens.sizes.searchFieldText));
   const showCount = count !== undefined && count > 0;
   const circle = Math.max(22, s(travelHomeTokens.sizes.countCircle));
   const tripsWord = count === 1 ? 'trip' : 'trips';
@@ -41,6 +42,7 @@ export function TravelHomeSectionHeader({
   const padY = Math.max(8, s(8));
   const radius = Math.max(14, s(16));
   const fieldHeight = Math.max(36, s(38));
+  const searchIconSize = Math.max(14, Math.round(searchTextSize * 0.92));
   const showSearch = typeof onSearchQueryChange === 'function';
   const searchAgent = useAgentUiTarget(AgentUiIds.travel.list.search, {
     label: title,
@@ -82,7 +84,7 @@ export function TravelHomeSectionHeader({
                 : 'rgba(255,255,255,0.28)',
             },
           ]}>
-          <Symbol name="search" size={Math.max(14, s(15))} color={muted} />
+          <Symbol name="search" size={searchIconSize} color={muted} />
           <TextInput
             ref={searchAgent.ref as never}
             testID={searchAgent.testID}
@@ -104,10 +106,10 @@ export function TravelHomeSectionHeader({
               paddingVertical: 0,
               color: ink,
               fontFamily: travelHomeFontFamily,
-              fontSize: titleSize,
-              lineHeight: titleSize * 1.15,
+              fontSize: searchTextSize,
+              lineHeight: Math.round(searchTextSize * 1.2),
               fontWeight: '400',
-              letterSpacing: -0.3,
+              letterSpacing: -0.2,
             }}
           />
           {searchQuery.trim() ? (

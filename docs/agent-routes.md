@@ -26,6 +26,8 @@ npm run android:push-fixture -- path/to/chase.png
 
 Pin is required when iOS Simulator and Android Emulator are both running — otherwise either app may answer `/next`. Prefer `verify` / `once` **batches** over many solo `send` ops on Android.
 
+**Simulator lease:** agent-ui CLI entrypoints take `.cursor/agent-ui.lockdir` so parallel threads cannot interleave commands on the shared sim. Wait for the holder to finish; escape hatch `AGENT_UI_SKIP_LEASE=1` only.
+
 ## Fast path (use this)
 
 ```bash

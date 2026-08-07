@@ -23,7 +23,13 @@ from pathlib import Path
 
 CACHE_CLEAR_SECS = 90
 
-# Prefer soft dismiss over Settings / Done.
+# Set when ensure_simulator_app() launches Simulator.app for click mapping.
+# Cleared by restore_headless_gui() — only quits if *we* opened it; never kills
+# a Simulator.app the user already had open.
+_opened_simulator_for_dismiss = False
+
+# Prefer soft dismiss over Settings / Done (account sheets).
+# Location permission is handled separately (must Allow, not Don't Allow).
 DISMISS_PRIORITY = (
     "not now",
     "cancel",
@@ -31,6 +37,58 @@ DISMISS_PRIORITY = (
     "later",
     "don't allow",
     "dont allow",
+)
+
+# "Open in \"onTrack\"?" — Cancel would abort the launch; prefer Open.
+ACCEPT_PRIORITY = (
+    "open",
+)
+
+# Location permission — agents need While Using (weather / travel departure).
+LOCATION_ACCEPT_PRIORITY = (
+    "allow while using app",
+    "allow while using the app",
+    "always allow",
+    "allow once",
+    "allow",
+)
+
+# Expo development-client intro sheet ("This is the developer menu…").
+DEV_MENU_ACCEPT_PRIORITY = (
+    "continue",
+)
+
+OPEN_IN_PHRASES = (
+    "open in",
+)
+
+LOCATION_PHRASES = (
+    "use your location",
+    "your location?",
+    "location services",
+)
+
+DEV_MENU_PHRASES = (
+    "developer menu",
+    "useful tools in development",
+    "development builds",
+    # Full Expo Dev Menu (tools) — not the first-run intro.
+    "toggle performance monitor",
+    "toggle element inspector",
+    "fast refresh",
+    "open devtools",
+    "source code explorer",
+    "runtime version",
+)
+
+# Tools sheet specifically — Escape closes it (no Continue button).
+DEV_MENU_TOOLS_PHRASES = (
+    "toggle performance monitor",
+    "toggle element inspector",
+    "fast refresh",
+    "open devtools",
+    "source code explorer",
+    "runtime version",
 )
 
 
@@ -82,16 +140,22 @@ def mark_clear() -> None:
     cache_path().write_text(str(int(time.time())), encoding="utf-8")
 
 
+def _ios_sim_target() -> str:
+    return (os.environ.get("ONTRACK_IOS_SIMULATOR_UDID") or "").strip() or "booted"
+
+
 def take_screenshot(path: Path) -> None:
-    proc = subprocess.run(
-        ["xcrun", "simctl", "io", "booted", "screenshot", str(path)],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0 or not path.is_file():
-        detail = (proc.stderr or proc.stdout or "").strip()
-        raise SystemExit(f"error: iOS screenshot failed: {detail or proc.returncode}")
+    # Shared retry/unpark path — parked agent windows lose IOSurface otherwise.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import agent_ui_color as color  # type: ignore
+
+    try:
+        color.capture_screenshot(path)
+    except SystemExit as exc:
+        detail = str(exc)
+        raise SystemExit(
+            detail.replace("error: screenshot failed:", "error: iOS screenshot failed:", 1)
+        ) from exc
 
 
 def _redact_emails(text: str) -> str:
@@ -132,12 +196,24 @@ def simulator_running() -> bool:
     )
 
 
-def ensure_simulator_app() -> None:
-    if simulator_running():
-        return
-    print("agent-ui: opening Simulator.app to dismiss system sheet…", file=sys.stderr)
-    # Resolve a booted UDID so we don't restore a multi-device layout.
-    boot_udid = ""
+def _want_simulator_window() -> bool:
+    return (os.environ.get("ONTRACK_IOS_SIMULATOR_WINDOW") or "0").strip() in (
+        "1",
+        "true",
+        "TRUE",
+        "yes",
+        "YES",
+    )
+
+
+def _preferred_sim_name() -> str:
+    return (os.environ.get("ONTRACK_IOS_SIMULATOR") or "").strip()
+
+
+def _preferred_boot_udid() -> str:
+    pinned = (os.environ.get("ONTRACK_IOS_SIMULATOR_UDID") or "").strip()
+    if pinned:
+        return pinned
     try:
         raw = subprocess.run(
             ["xcrun", "simctl", "list", "devices", "booted", "-j"],
@@ -146,15 +222,33 @@ def ensure_simulator_app() -> None:
             text=True,
         ).stdout
         data = json.loads(raw or "{}")
-        for devices in data.get("devices", {}).values():
-            for device in devices:
-                if device.get("state") == "Booted":
-                    boot_udid = device.get("udid") or ""
-                    break
-            if boot_udid:
-                break
     except json.JSONDecodeError:
-        boot_udid = ""
+        return ""
+    prefer = _preferred_sim_name().lower()
+    fallback = ""
+    for devices in data.get("devices", {}).values():
+        for device in devices:
+            if device.get("state") != "Booted":
+                continue
+            udid = str(device.get("udid") or "")
+            name = str(device.get("name") or "")
+            if not udid:
+                continue
+            if prefer and name.lower() == prefer:
+                return udid
+            if not fallback:
+                fallback = udid
+    return fallback
+
+
+def ensure_simulator_app() -> None:
+    global _opened_simulator_for_dismiss
+    if simulator_running():
+        _raise_target_simulator_window()
+        return
+    print("agent-ui: opening Simulator.app to dismiss system sheet…", file=sys.stderr)
+    boot_udid = _preferred_boot_udid()
+    _opened_simulator_for_dismiss = True
     if boot_udid:
         subprocess.run(
             ["open", "-a", "Simulator", "--args", f"-CurrentDeviceUDID={boot_udid}"],
@@ -167,19 +261,186 @@ def ensure_simulator_app() -> None:
     while time.time() < deadline:
         if simulator_running():
             time.sleep(0.8)
+            _raise_target_simulator_window()
             return
         time.sleep(0.25)
+
+
+def _raise_target_simulator_window() -> None:
+    """Raise the preferred device window for click mapping (headed dismiss only)."""
+    name = _preferred_sim_name()
+    if not name:
+        return
+    # AppleScript string literal — device names are ASCII pool labels.
+    safe = name.replace("\\", "\\\\").replace('"', '\\"')
+    script = f'''
+tell application "System Events"
+  if not (exists process "Simulator") then return
+  tell process "Simulator"
+    set frontmost to true
+    repeat with w in (get every window)
+      try
+        set wn to name of w as text
+        if wn contains "{safe}" then
+          try
+            perform action "AXRaise" of w
+          end try
+          return
+        end if
+      end try
+    end repeat
+  end tell
+end tell
+'''
+    try:
+        subprocess.run(
+            ["osascript", "-e", script],
+            check=False,
+            capture_output=True,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def restore_headless_gui() -> None:
+    """Restore coexistence: keep user's Simulator; park agent windows off-screen.
+
+    Only quits Simulator.app when this process opened it solely for sheet dismiss.
+    """
+    global _opened_simulator_for_dismiss
+    opened_by_us = _opened_simulator_for_dismiss
+    _opened_simulator_for_dismiss = False
+    if _want_simulator_window():
+        return
+    if opened_by_us:
+        print(
+            "agent-ui: quitting Simulator.app (opened only for sheet dismiss)",
+            file=sys.stderr,
+        )
+        try:
+            subprocess.run(
+                ["osascript", "-e", 'tell application "Simulator" to quit'],
+                check=False,
+                capture_output=True,
+                timeout=8,
+            )
+        except subprocess.TimeoutExpired:
+            pass
+        return
+    # User's Simulator stays up — park agent pool windows so they stay "background".
+    sim_sh = repo_root() / "scripts" / "lib" / "ios-simulator.sh"
+    if not sim_sh.is_file():
+        return
+    try:
+        subprocess.run(
+            [
+                "bash",
+                "-c",
+                f'source "{sim_sh}" && ios_sim_enforce_agent_headless_gui',
+            ],
+            check=False,
+            capture_output=True,
+            timeout=15,
+            env={**os.environ, "ONTRACK_IOS_SIMULATOR_WINDOW": "0"},
+        )
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _phrases_or_text_match(result: dict, needles: tuple[str, ...]) -> bool:
+    phrases = [str(p).lower() for p in (result.get("phrases") or [])]
+    text = str(result.get("text") or "").lower()
+    if any(any(needle in p for needle in needles) for p in phrases):
+        return True
+    return any(needle in text for needle in needles)
+
+
+def _is_open_in_prompt(result: dict) -> bool:
+    return _phrases_or_text_match(result, OPEN_IN_PHRASES)
+
+
+def _is_location_prompt(result: dict) -> bool:
+    return _phrases_or_text_match(result, LOCATION_PHRASES)
+
+
+def _is_dev_menu_prompt(result: dict) -> bool:
+    return _phrases_or_text_match(result, DEV_MENU_PHRASES)
+
+
+def _is_dev_menu_tools(result: dict) -> bool:
+    return _phrases_or_text_match(result, DEV_MENU_TOOLS_PHRASES)
+
+
+def _priority_matches_label(label: str, needle: str) -> bool:
+    # Short affirmatives must be exact — avoid "Continue with Apple", title "Allow …".
+    if needle in ("open", "allow", "continue"):
+        return label == needle
+    return needle == label or needle in label
+
+
+def _pick_accept_target(targets: list, priority: tuple[str, ...]) -> dict | None:
+    ranked: list[tuple[int, dict]] = []
+    for target in targets:
+        if not isinstance(target, dict):
+            continue
+        label = str(target.get("label") or "").strip().lower()
+        action = str(target.get("action") or "").strip().lower()
+        matched = any(_priority_matches_label(label, needle) for needle in priority)
+        if action != "accept" and not matched:
+            continue
+        if not matched and action == "accept":
+            # Accept-tagged but not in this sheet's priority — skip (e.g. stray Allow).
+            continue
+        try:
+            rank = next(
+                i
+                for i, needle in enumerate(priority)
+                if _priority_matches_label(label, needle)
+            )
+        except StopIteration:
+            continue
+        ranked.append((rank, target))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: item[0])
+    return ranked[0][1]
 
 
 def pick_dismiss_target(result: dict) -> dict | None:
     targets = result.get("targets") or []
     if not isinstance(targets, list):
         return None
+
+    # Deep-link confirmation: click Open (never Cancel / Escape).
+    if _is_open_in_prompt(result):
+        accepted = _pick_accept_target(targets, ACCEPT_PRIORITY)
+        if accepted is not None:
+            return accepted
+
+    # Location permission: Allow While Using App (never Don't Allow / Escape-deny).
+    if _is_location_prompt(result):
+        accepted = _pick_accept_target(targets, LOCATION_ACCEPT_PRIORITY)
+        if accepted is not None:
+            return accepted
+
+    # Expo developer-menu intro: Continue (Escape also ok as fallback).
+    if _is_dev_menu_prompt(result):
+        accepted = _pick_accept_target(targets, DEV_MENU_ACCEPT_PRIORITY)
+        if accepted is not None:
+            return accepted
+
     ranked: list[tuple[int, dict]] = []
     for target in targets:
         if not isinstance(target, dict):
             continue
         label = str(target.get("label") or "").strip().lower()
+        action = str(target.get("action") or "").strip().lower()
+        if action == "accept":
+            continue
+        # Location sheets must not soft-deny via Don't Allow.
+        if _is_location_prompt(result) and ("don't allow" in label or "dont allow" in label):
+            continue
         try:
             rank = next(i for i, needle in enumerate(DISMISS_PRIORITY) if needle in label)
         except StopIteration:
@@ -192,8 +453,37 @@ def pick_dismiss_target(result: dict) -> dict | None:
 
 
 def simulator_window_frame() -> tuple[float, float, float, float] | None:
-    """Return (x, y, width, height) of Simulator front window in global screen points."""
-    script = """
+    """Return (x, y, width, height) of the preferred Simulator window in screen points."""
+    name = _preferred_sim_name()
+    safe = name.replace("\\", "\\\\").replace('"', '\\"') if name else ""
+    if safe:
+        script = f'''
+tell application "System Events"
+  if not (exists process "Simulator") then return ""
+  tell process "Simulator"
+    repeat with w in (get every window)
+      try
+        set wn to name of w as text
+        if wn contains "{safe}" then
+          set p to position of w
+          set s to size of w
+          return ((item 1 of p) as text) & "," & ((item 2 of p) as text) & "," & ((item 1 of s) as text) & "," & ((item 2 of s) as text)
+        end if
+      end try
+    end repeat
+    try
+      set w to front window
+      set p to position of w
+      set s to size of w
+      return ((item 1 of p) as text) & "," & ((item 2 of p) as text) & "," & ((item 1 of s) as text) & "," & ((item 2 of s) as text)
+    on error
+      return ""
+    end try
+  end tell
+end tell
+'''
+    else:
+        script = """
 tell application "System Events"
   if not (exists process "Simulator") then return ""
   tell process "Simulator"
@@ -300,13 +590,33 @@ def send_escape() -> None:
 
 
 def dismiss_blocking(result: dict) -> bool:
-    """Prefer clicking OCR'd 'Not Now'; Escape is a reliable fallback for account sheets."""
+    """Click the right control for the sheet; Escape only for soft-dismiss sheets."""
     ensure_simulator_app()
+    # Expo Dev Menu tools sheet (Reload / Fast refresh): Escape — don't poke toggles.
+    if _is_dev_menu_tools(result):
+        print("agent-ui: dismissing Expo Dev Menu (Escape)", file=sys.stderr)
+        send_escape()
+        time.sleep(0.35)
+        return True
     target = pick_dismiss_target(result)
     clicked = False
     if target is not None:
         clicked = click_dismiss_target(target)
         time.sleep(0.45)
+    if not clicked and _is_open_in_prompt(result):
+        # Escape cancels the deep link — never use it for "Open in …?".
+        print(
+            "agent-ui: Open-in sheet present but Open control not found — retry OCR",
+            file=sys.stderr,
+        )
+        return False
+    if not clicked and _is_location_prompt(result):
+        # Escape can deny / leave the sheet — never use it for location.
+        print(
+            "agent-ui: location sheet present but Allow control not found — retry OCR",
+            file=sys.stderr,
+        )
+        return False
     if not clicked:
         print("agent-ui: sending Escape to dismiss system sheet", file=sys.stderr)
         send_escape()
@@ -332,40 +642,64 @@ def ensure_clear(*, force: bool = False) -> int:
     if platform == "android":
         return 0
 
-    first = probe(force=force)
-    if not first.get("blocking"):
-        if not first.get("cached"):
-            mark_clear()
+    try:
+        try:
+            first = probe(force=force)
+        except SystemExit as exc:
+            detail = str(exc)
+            # Scheme pre-approval covers Open-in; don't fail verify when the
+            # parked agent window still has no IOSurface after retries.
+            if "screen surfaces" in detail.lower() or "screenshot failed" in detail.lower():
+                print(
+                    "agent-ui: iOS alert OCR skipped (screenshot surfaces unavailable) — continuing",
+                    file=sys.stderr,
+                )
+                mark_clear()
+                return 0
+            raise
+        if not first.get("blocking"):
+            if not first.get("cached"):
+                mark_clear()
+            return 0
+
+        phrases = ", ".join(first.get("phrases") or ["system alert"])
+        buttons = ", ".join(first.get("buttons") or [])
+        print(
+            f"agent-ui: iOS system sheet detected ({phrases}"
+            + (f"; buttons: {buttons}" if buttons else "")
+            + ") — dismissing…",
+            file=sys.stderr,
+        )
+        dismiss_blocking(first)
+
+        second = probe(force=True)
+        if second.get("blocking"):
+            # One retry with a fresh OCR target (sheet may have shifted).
+            dismiss_blocking(second)
+            third = probe(force=True)
+            if third.get("blocking"):
+                phrases2 = ", ".join(third.get("phrases") or phrases.split(", "))
+                if _is_location_prompt(third):
+                    hint = 'Tap "Allow While Using App" on the location sheet'
+                elif _is_dev_menu_prompt(third):
+                    hint = 'Tap "Continue" on the Expo developer-menu intro'
+                else:
+                    hint = (
+                        'Tap "Not Now" on the simulator (or sign out of iCloud on the sim)'
+                    )
+                print(
+                    f"error: iOS system sheet still blocking UI ({phrases2}). "
+                    f"{hint}, then retry. Set AGENT_UI_SKIP_IOS_ALERTS=1 to bypass.",
+                    file=sys.stderr,
+                )
+                return 1
+
+        mark_clear()
+        print("agent-ui: iOS system sheet cleared", file=sys.stderr)
         return 0
-
-    phrases = ", ".join(first.get("phrases") or ["system alert"])
-    buttons = ", ".join(first.get("buttons") or [])
-    print(
-        f"agent-ui: iOS system sheet detected ({phrases}"
-        + (f"; buttons: {buttons}" if buttons else "")
-        + ") — dismissing…",
-        file=sys.stderr,
-    )
-    dismiss_blocking(first)
-
-    second = probe(force=True)
-    if second.get("blocking"):
-        # One retry with a fresh OCR target (sheet may have shifted).
-        dismiss_blocking(second)
-        third = probe(force=True)
-        if third.get("blocking"):
-            phrases2 = ", ".join(third.get("phrases") or phrases.split(", "))
-            print(
-                f"error: iOS system sheet still blocking UI ({phrases2}). "
-                'Tap "Not Now" on the simulator (or sign out of iCloud on the sim), '
-                "then retry. Set AGENT_UI_SKIP_IOS_ALERTS=1 to bypass.",
-                file=sys.stderr,
-            )
-            return 1
-
-    mark_clear()
-    print("agent-ui: iOS system sheet cleared", file=sys.stderr)
-    return 0
+    finally:
+        # Never leave agent pool windows visible after a headless dismiss path.
+        restore_headless_gui()
 
 
 def main(argv: list[str]) -> int:

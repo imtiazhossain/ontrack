@@ -15,7 +15,7 @@ import {
     LoadingBlock,
     RouteErrorBoundary,
 } from '@/components/primitives';
-import { spacing } from '@/design-system';
+import { motion, spacing } from '@/design-system';
 import { UsageAnalyticsTracker } from '@/features/analytics/usage-analytics-tracker';
 import { AuthSessionProvider, useAuthSession } from '@/features/auth/auth-provider';
 import { withoutGuestDirtyTracking } from '@/features/auth/guest-dirty-tracking';
@@ -146,6 +146,10 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
             headerTitle: '',
             headerShadowVisible: false,
             headerStyle: { backgroundColor: theme.backgroundPrimary },
+            // Prefer continuous native push over hard cuts; Android fades in
+            // from below so material transitions don’t snap.
+            animation: process.env.EXPO_OS === 'android' ? 'fade_from_bottom' : 'default',
+            animationDuration: motion.page,
             ...(process.env.EXPO_OS === 'ios'
               ? {
                   unstable_headerLeftItems: () => [

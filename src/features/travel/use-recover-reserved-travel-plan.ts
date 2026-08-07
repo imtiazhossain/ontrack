@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useTravel } from '@/store/travel';
@@ -14,6 +14,7 @@ import {
  */
 export function useRecoverReservedTravelPlan(planId: string | undefined): void {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const plan = useTravel((state) =>
     typeof planId === 'string'
       ? state.plans.find((item) => item.id === planId)
@@ -21,7 +22,8 @@ export function useRecoverReservedTravelPlan(planId: string | undefined): void {
   );
 
   useEffect(() => {
-    if (!planId || plan) return;
+    // Prefetched stack screens can't use imperative router — wait for focus.
+    if (!isFocused || !planId || plan) return;
     if (!isReservedAgentUiTripId(planId)) return;
 
     const recovered = recoverMissingReservedTravelPlan(planId);
@@ -33,5 +35,5 @@ export function useRecoverReservedTravelPlan(planId: string | undefined): void {
     } catch {
       // Expo Router can throw if the navigator is not ready yet.
     }
-  }, [plan, planId, router]);
+  }, [isFocused, plan, planId, router]);
 }

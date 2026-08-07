@@ -29,14 +29,14 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 - Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
 - Sideload APK → Drive replace: `npm run android:release-to-drive` → **android-release-apk** skill.
 - **`push`** (also “push script” / “ship push”) → `npm run ship:push -- -m "…"` — commit → PR → merge main → delete branch → TestFlight OTA → Drive APK. Script: `scripts/ship-push.sh`.
-- Dual verify: `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route)
+- Dual verify (headless pool by default): `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route). Uses dedicated `onTrack Agent N` devices (max 5 parallel; wait if full). Headed Simulator/AVD only when the user asks.
 - `npm run typecheck` · `npm test` · `npm run lint`
 
 Prefer leaving Metro up for Fast Refresh. Details: agent-ui skill + `package.json` scripts.
 
 ## Agent close-out
 
-App-affecting change → typecheck/tests + **dual iOS/Android** verify via agent-ui skill (`verify` if on route, else `once`/`flow`; assert/`--color`; no ritual screenshot). Stamp `ontrack.*` testIDs on new/edited interactive controls. Migrations → `supabase db push` same turn.
+App-affecting change → typecheck/tests + **dual iOS/Android** verify via agent-ui skill (`verify` if on route, else `once`/`flow`; assert/`--color`; no ritual screenshot). Stay **headless** unless the user asks for a headed Simulator/AVD. Stamp `ontrack.*` testIDs on new/edited interactive controls. Migrations → `supabase db push` same turn.
 
 ## Non-negotiable UI
 

@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  CollapsibleBody,
+  DisclosureChevron,
+  Symbol,
+} from '@/components/primitives';
 import type { AppIconName, TypeVariant } from '@/design-system';
 import { radii } from '@/design-system';
 import {
@@ -195,8 +200,8 @@ export function TravelCollapsibleSection({
                   : travelCardFill(theme),
               },
             ]}>
-            <Symbol
-              name={expanded ? 'chevron-up' : 'chevron-right'}
+            <DisclosureChevron
+              expanded={expanded}
               size={nested ? 12 : 'sm'}
               color={accent}
             />
@@ -231,17 +236,24 @@ export function TravelCollapsibleSection({
     </View>
   );
 
-  const body =
-    expanded ? (
+  const body = (
+    <CollapsibleBody expanded={expanded}>
       <View
         style={
           card
-            ? { padding: flushContent ? spacing.xxs : compact ? spacing.xs : spacing.md }
+            ? {
+                padding: flushContent
+                  ? spacing.xxs
+                  : compact
+                    ? spacing.xs
+                    : spacing.md,
+              }
             : undefined
         }>
         {children}
       </View>
-    ) : null;
+    </CollapsibleBody>
+  );
 
   if (card) {
     return (

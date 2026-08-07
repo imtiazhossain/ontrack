@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, CollapsibleBody, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
@@ -368,7 +368,7 @@ export function TravelItineraryTimeline({
                       overlineLineHeight={typography.overline.lineHeight}
                       onToggleDay={onToggleDay}
                     />
-                    {dayExpanded ? (
+                    <CollapsibleBody expanded={dayExpanded}>
                       <View style={{ gap: rs.xs }}>
                         {firstUpcomingIndex === 0 ? (
                           <TimelineNowMarker
@@ -548,7 +548,7 @@ export function TravelItineraryTimeline({
                           })}
                         </TravelHomeGlass>
                       </View>
-                    ) : null}
+                    </CollapsibleBody>
                   </View>
                 </View>
               </View>

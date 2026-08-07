@@ -122,7 +122,7 @@ export function TravelCoTravelerStack({
         <Modal
           visible
           transparent
-          animationType="none"
+          animationType="fade"
           statusBarTranslucent
           onRequestClose={collapseSilent}>
           <Pressable

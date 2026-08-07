@@ -18,8 +18,25 @@ let blockingNeedles = [
   "verification failed",
   "update apple id",
   "sign in to apple",
+  "open in",
+  // Location permission — agents must Allow While Using App (not Don't Allow).
+  "use your location",
+  "your location?",
+  "location services",
+  // Expo dev-client intro — Continue / close so verify is not stuck under it.
+  "developer menu",
+  "useful tools in development",
+  "development builds",
+  // Expo Dev Menu tools sheet (Reload / Fast refresh) — Escape / close.
+  "toggle performance monitor",
+  "toggle element inspector",
+  "fast refresh",
+  "open devtools",
+  "source code explorer",
+  "runtime version",
 ]
 
+/// Soft dismiss (account / soft-deny sheets). Never preferred for location.
 let dismissNeedles = [
   "not now",
   "cancel",
@@ -28,6 +45,17 @@ let dismissNeedles = [
   "don't allow",
   "dont allow",
   "done",
+]
+
+/// Affirmative actions — Open-in → Open; location → Allow While Using App; dev menu → Continue.
+let acceptNeedles = [
+  "open",
+  "allow while using app",
+  "allow while using the app",
+  "allow once",
+  "always allow",
+  "allow",
+  "continue",
 ]
 
 guard CommandLine.arguments.count > 1 else {
@@ -56,6 +84,18 @@ do {
   exit(2)
 }
 
+func isButtonLabel(_ normalized: String, needles: [String]) -> Bool {
+  needles.contains { needle in
+    // Exact match for short affirmatives — titles like
+    // "Allow 'onTrack' to use your location?" / "Open in …" / auth
+    // "Continue with Apple" must not become targets.
+    if needle == "open" || needle == "allow" || needle == "continue" {
+      return normalized == needle
+    }
+    return normalized == needle || normalized.contains(needle)
+  }
+}
+
 var lines: [String] = []
 var targets: [[String: Any]] = []
 for observation in request.results ?? [] {
@@ -63,9 +103,9 @@ for observation in request.results ?? [] {
   let text = candidate.string
   lines.append(text)
   let normalized = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-  guard dismissNeedles.contains(where: { normalized == $0 || normalized.contains($0) }) else {
-    continue
-  }
+  let isDismiss = isButtonLabel(normalized, needles: dismissNeedles)
+  let isAccept = isButtonLabel(normalized, needles: acceptNeedles)
+  guard isDismiss || isAccept else { continue }
   // Vision boxes are normalized, origin bottom-left. Convert center to top-left origin.
   let box = observation.boundingBox
   let cx = box.origin.x + box.size.width / 2
@@ -74,6 +114,7 @@ for observation in request.results ?? [] {
     "label": text,
     "x": cx,
     "y": cyTopLeft,
+    "action": isAccept ? "accept" : "dismiss",
   ])
 }
 

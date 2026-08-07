@@ -7,11 +7,13 @@ import {
   restoreTravelPlansFromDocuments,
   seedAgentUiFixture,
 } from './fixtures';
+import { applyAgentUiSlotFromUnknown } from './slot';
 import {
   AGENT_UI_ANDROID_WAIT_TIMEOUT_MS,
   AGENT_UI_WAIT_TIMEOUT_MS,
   resolveAgentUiFlow,
 } from './flows';
+import { AgentUiIds } from './ids';
 import {
     isAgentUiOverlayEnabled,
     setAgentUiOverlayEnabled,
@@ -36,6 +38,34 @@ import {
     resolveAgentUiDestination,
 } from './route';
 import { scrollAgentUiTargetIntoView } from './scroll-into-view';
+
+/** Fresh pool clones land on /welcome — continue as guest before seed/flow. */
+async function ensurePastWelcomeGate(): Promise<boolean> {
+  const route = getAgentUiRoute() || '';
+  if (route !== '/welcome' && !route.startsWith('/welcome?')) {
+    return true;
+  }
+  const guestId = AgentUiIds.auth.guest;
+  const deadline = Date.now() + (Platform.OS === 'android' ? 12000 : 8000);
+  let tapped = false;
+  while (Date.now() < deadline) {
+    const current = getAgentUiRoute() || '';
+    if (current && current !== '/welcome' && !current.startsWith('/welcome?')) {
+      return true;
+    }
+    if (!tapped && getAgentUiTarget(guestId)) {
+      if (!tapAgentUiTarget(guestId)) return false;
+      tapped = true;
+    }
+    await sleep(50);
+  }
+  const finalRoute = getAgentUiRoute() || '';
+  return Boolean(
+    finalRoute &&
+      finalRoute !== '/welcome' &&
+      !finalRoute.startsWith('/welcome?'),
+  );
+}
 
 export type AgentUiOp =
   | 'dump'
@@ -82,6 +112,8 @@ export type AgentUiRequest = {
   nonce?: number | string | string[];
   /** Host pin: ios | android (daemon routes per platform). */
   platform?: string | string[];
+  /** Agent device pool slot (daemon routes per slot). */
+  slot?: number | string | string[];
 };
 
 export type ParsedAgentUiUrl = {
@@ -151,6 +183,8 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
     const prefix = parsed.searchParams.get('prefix') ?? undefined;
     const x = parsed.searchParams.get('x') ?? undefined;
     const y = parsed.searchParams.get('y') ?? undefined;
+    const slot = parsed.searchParams.get('slot') ?? undefined;
+    applyAgentUiSlotFromUnknown(slot);
     return {
       op,
       ...(id ? { id } : {}),
@@ -158,6 +192,7 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
       ...(prefix ? { prefix } : {}),
       ...(x ? { x } : {}),
       ...(y ? { y } : {}),
+      ...(slot ? { slot } : {}),
     };
   } catch {
     const opMatch = /[?&]op=([^&]+)/i.exec(url);
@@ -166,6 +201,7 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
     const prefixMatch = /[?&]prefix=([^&]+)/i.exec(url);
     const xMatch = /[?&]x=([^&]+)/i.exec(url);
     const yMatch = /[?&]y=([^&]+)/i.exec(url);
+    const slotMatch = /[?&]slot=([^&]+)/i.exec(url);
     const id = idMatch?.[1] ? decodeURIComponent(idMatch[1]) : undefined;
     const to = toMatch?.[1] ? decodeURIComponent(toMatch[1]) : undefined;
     const prefix = prefixMatch?.[1]
@@ -173,6 +209,10 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
       : undefined;
     const x = xMatch?.[1] ? decodeURIComponent(xMatch[1]) : undefined;
     const y = yMatch?.[1] ? decodeURIComponent(yMatch[1]) : undefined;
+    const slot = slotMatch?.[1]
+      ? decodeURIComponent(slotMatch[1])
+      : undefined;
+    applyAgentUiSlotFromUnknown(slot);
     return {
       op: parseOp(opMatch?.[1] ?? 'dump'),
       ...(id ? { id } : {}),
@@ -180,6 +220,7 @@ export function parseAgentUiUrl(url: string): ParsedAgentUiUrl | null {
       ...(prefix ? { prefix } : {}),
       ...(x ? { x } : {}),
       ...(y ? { y } : {}),
+      ...(slot ? { slot } : {}),
     };
   }
 }
@@ -199,6 +240,7 @@ export async function handleAgentUiRequest(
   options: { emitStatus?: boolean } = {},
 ): Promise<boolean> {
   const emitStatus = options.emitStatus !== false;
+  applyAgentUiSlotFromUnknown(request.slot);
 
   if (!isAgentUiEnabled()) {
     if (emitStatus) {
@@ -227,6 +269,18 @@ export async function handleAgentUiRequest(
           op: 'flow',
           ok: false,
           detail: `Unknown flow: ${flowName ?? '(missing)'}`,
+        });
+      }
+      return false;
+    }
+    if (!(await ensurePastWelcomeGate())) {
+      if (emitStatus) {
+        await writeAgentUiStatus({
+          op: 'flow',
+          id: flowName,
+          ok: false,
+          detail: 'Stuck on /welcome (guest continue failed)',
+          route: getAgentUiRoute(),
         });
       }
       return false;
@@ -310,6 +364,17 @@ export async function handleAgentUiRequest(
 
   if (op === 'seed') {
     const seedName = to ?? id;
+    if (!(await ensurePastWelcomeGate())) {
+      if (emitStatus) {
+        await writeAgentUiStatus({
+          op: 'seed',
+          ok: false,
+          detail: 'Stuck on /welcome (guest continue failed)',
+          route: getAgentUiRoute(),
+        });
+      }
+      return false;
+    }
     const seeded =
       normalizeFixtureName(seedName) === 'travel-restore-documents'
         ? await restoreTravelPlansFromDocuments()

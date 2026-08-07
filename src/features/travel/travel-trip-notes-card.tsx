@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  CollapsibleBody,
+  DisclosureChevron,
+  Symbol,
+} from '@/components/primitives';
 import { fontFamilies, radii } from '@/design-system';
 import { TRAVEL_TITLE_ICON_GAP } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
@@ -142,14 +147,14 @@ export function TravelTripNotesCard({
               width: chevronBox,
             },
           ]}>
-          <Symbol
-            name={expanded ? 'chevron-up' : 'chevron-right'}
+          <DisclosureChevron
+            expanded={expanded}
             size="sm"
             color={noteTone.fg}
           />
         </View>
       </Pressable>
-      {expanded ? (
+      <CollapsibleBody expanded={expanded}>
         <Pressable
           ref={editAgent.ref}
           testID={editTestID}
@@ -188,7 +193,7 @@ export function TravelTripNotesCard({
             {bodyCopy}
           </AppText>
         </Pressable>
-      ) : null}
+      </CollapsibleBody>
     </TravelHomeGlass>
   );
 }

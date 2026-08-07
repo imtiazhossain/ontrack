@@ -5,6 +5,7 @@ import {
   atmosphereHeaderInkColors,
   type TravelAtmosphereHeaderInk,
 } from '@/features/travel/travel-home-atmosphere-ink';
+import { wrapAtmosphereLocationCaption } from '@/features/travel/travel-home-atmosphere-location';
 import { TravelHomeAtmosphereText } from '@/features/travel/travel-home-atmosphere-text';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
@@ -40,9 +41,8 @@ export function TravelHomeHeader({
   const { s, spacing: rs } = useResponsive();
   const dark = theme.name === 'dark';
   // Default white over photo; only flip to black when the plate sample is bright.
-  const { ink, muted } = atmosphereHeaderInkColors(
-    dark ? 'light' : headerInk,
-  );
+  const effectiveInk = dark ? 'light' : headerInk;
+  const { ink, muted } = atmosphereHeaderInkColors(effectiveInk);
   const brand = dark ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
   const addVisual = Math.max(44, s(travelHomeTokens.sizes.addButton));
   const addHit = Math.max(travelHomeTokens.sizes.touchTargetMin, addVisual);
@@ -50,7 +50,17 @@ export function TravelHomeHeader({
   const taglineSize = Math.max(13, s(travelHomeTokens.type.heroTagline));
   const locationSize = Math.max(12, s(12));
   const titleToTagline = Math.max(6, s(travelHomeTokens.type.titleToTaglineGap));
-  const caption = locationLabel?.replace(/\s+/g, ' ').trim();
+  const captionSpoken = locationLabel?.replace(/\s+/g, ' ').trim();
+  const caption = captionSpoken
+    ? wrapAtmosphereLocationCaption(captionSpoken)
+    : undefined;
+  const locationLines = caption ? caption.split('\n').length : 0;
+  const taglineLineHeight = Math.round(taglineSize * 1.28);
+  const locationLineHeight = Math.round(locationSize * 1.28);
+  /** Long place names wrap to two lines beside the tagline. */
+  const taglineRowMinHeight = locationLines > 0
+    ? Math.max(taglineLineHeight, locationLineHeight * locationLines)
+    : taglineLineHeight;
   /** Clear air between trail tip and the add FAB. */
   const trailButtonGap = Math.max(12, s(14));
   /** Keep the plane off the title ink — shortens the flex trail. */
@@ -174,7 +184,7 @@ export function TravelHomeHeader({
           {
             marginTop: titleToTagline,
             gap: Math.max(8, s(10)),
-            minHeight: Math.round(Math.max(taglineSize, locationSize) * 1.28),
+            minHeight: taglineRowMinHeight,
           },
         ]}>
         <TravelHomeAtmosphereText
@@ -186,7 +196,7 @@ export function TravelHomeHeader({
             color: muted,
             fontFamily: travelHomeFontFamily,
             fontSize: taglineSize,
-            lineHeight: Math.round(taglineSize * 1.28),
+            lineHeight: taglineLineHeight,
             fontWeight: '400',
             letterSpacing: 0,
             includeFontPadding: false,
@@ -200,16 +210,16 @@ export function TravelHomeHeader({
             style={styles.locationSlot}>
             <TravelHomeAtmosphereText
               accessibilityRole="text"
-              accessibilityLabel={`Atmosphere location, ${caption}`}
+              accessibilityLabel={`Atmosphere location, ${captionSpoken}`}
               allowFontScaling
               maxFontSizeMultiplier={1.15}
-              numberOfLines={1}
+              numberOfLines={2}
               containerStyle={styles.locationTextWrap}
               style={{
                 color: muted,
                 fontFamily: travelHomeFontFamily,
                 fontSize: locationSize,
-                lineHeight: Math.round(locationSize * 1.28),
+                lineHeight: locationLineHeight,
                 fontWeight: '400',
                 letterSpacing: 0.15,
                 includeFontPadding: false,
@@ -239,7 +249,7 @@ const styles = StyleSheet.create({
   },
   taglineRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     width: '100%',
   },
@@ -249,12 +259,11 @@ const styles = StyleSheet.create({
   locationSlot: {
     flex: 1,
     minWidth: 0,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   locationTextWrap: {
     width: '100%',
-    maxWidth: '100%',
   },
   motifBand: {
     flex: 1,

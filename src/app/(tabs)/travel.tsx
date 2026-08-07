@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -10,7 +11,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyState, Screen, appPrompt, useSafeAreaChrome } from '@/components/primitives';
+import {
+    EmptyState,
+    Screen,
+    appPrompt,
+    useSafeAreaChrome,
+    useSafeAreaChromeOverlay,
+} from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
@@ -22,6 +29,11 @@ import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { repairTravelPlansChatAccess } from '@/features/travel/travel-chat-roster';
 import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
+import { travelHomeAtmosphereHeaderScrimColors } from '@/features/travel/travel-home-atmosphere-ink';
+import {
+    TravelHomeAtmosphereScrim,
+    travelHomeAtmosphereScrimHeight,
+} from '@/features/travel/travel-home-atmosphere-scrim';
 import {
     TravelHomeBackground,
     travelHomeAtmosphereHeight,
@@ -47,8 +59,10 @@ import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
 import { orderTravelPlansByRecency, useTravel } from '@/store/travel';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 import { toDateKey } from '@/utils/date';
 import { newId } from '@/utils/id';
+import { warmHrefsAfterTransition } from '@/utils/warm-navigation';
 
 /** Primary travel planning tab — trip launcher (tools live on trip hub). */
 export default function TravelScreen() {
@@ -262,9 +276,11 @@ function TravelScreenContent() {
 
   const friendsPlan = sortedPlans.find((plan) => plan.id === friendsPlanId);
   const openFriends = (planId: string) => {
-    interactWithPlan(planId);
+    // Open the sheet first — list reorder waits so the modal isn't fighting
+    // a scroll/layout reshuffle on the same frame as the tap.
     setFriendsPlanId(planId);
     setFriendsVisible(true);
+    deferAfterPageTransition(() => interactWithPlan(planId));
   };
   const closeFriends = () => {
     appPrompt.dismiss();
@@ -272,12 +288,61 @@ function TravelScreenContent() {
   };
 
   const openItinerary = (planId: string) => {
-    interactWithPlan(planId);
+    // Push only — list reorder / scroll follow wait until the itinerary
+    // transition has settled so the JS thread stays free for the animation.
     router.push({
       pathname: '/travel/[id]',
       params: { id: planId },
     } as never);
+    deferAfterPageTransition(() => interactWithPlan(planId));
   };
+
+  // Warm itinerary JS + prefetch the active/next trip after the tab settles.
+  const warmTripIds = useMemo(() => {
+    const candidates = [
+      activeTripId,
+      ...visibleLauncherPlans.map((plan) => plan.id),
+    ].filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const unique: string[] = [];
+    for (const id of candidates) {
+      if (!unique.includes(id)) unique.push(id);
+      if (unique.length >= 2) break;
+    }
+    return unique;
+  }, [activeTripId, visibleLauncherPlans]);
+
+  useEffect(() => {
+    if (showForm || editingDetailsPlanId) return;
+    const cancelModule = deferAfterPageTransition(() => {
+      // Evaluate the itinerary module graph before the user taps through.
+      void import('@/features/travel/travel-plan-detail');
+    });
+    const cancelRoutes =
+      warmTripIds.length === 0
+        ? undefined
+        : warmHrefsAfterTransition(
+            warmTripIds.map((id) => ({
+              pathname: '/travel/[id]',
+              params: { id },
+            })) as never,
+          );
+    return () => {
+      cancelModule();
+      cancelRoutes?.();
+    };
+  }, [editingDetailsPlanId, showForm, warmTripIds]);
+
+  // Prefetch cover URIs for warmed trips so the itinerary hero isn't blank/laggy.
+  useEffect(() => {
+    if (warmTripIds.length === 0) return;
+    return deferAfterPageTransition(() => {
+      for (const id of warmTripIds) {
+        const plan = plans.find((item) => item.id === id);
+        const uri = plan?.coverUri?.trim();
+        if (uri) void Image.prefetch(uri).catch(() => undefined);
+      }
+    });
+  }, [plans, warmTripIds]);
 
   const creatingPlanRef = useRef(false);
   const createPlan = () => {
@@ -338,7 +403,7 @@ function TravelScreenContent() {
   };
 
   const beginEditingDetails = (plan: TravelPlan) => {
-    interactWithPlan(plan.id);
+    // Swap to the editor before list reorder so the tap feels instant.
     setEditingDetailsPlanId(plan.id);
     setEditTitle(plan.title);
     setEditMode(plan.mode ?? 'flight');
@@ -349,6 +414,7 @@ function TravelScreenContent() {
     setEditEndDate(plan.endDate);
     setEditCoverUri(plan.coverUri);
     setDetailsError(undefined);
+    deferAfterPageTransition(() => interactWithPlan(plan.id));
   };
 
   const openCoverPickerOnEdit =
@@ -428,13 +494,39 @@ function TravelScreenContent() {
     tripDestinations: atmosphereDestinations,
   });
 
+  const atmosphereHeight = travelHomeAtmosphereHeight(windowHeight, insets.top);
+  // Dark theme keeps white header ink; match the header’s effective tone.
+  const atmosphereHeaderInk =
+    theme.name === 'dark' ? 'light' : atmosphereImage.headerInk;
+  const atmosphereScrim = useMemo(() => {
+    if (
+      !travelHomeAtmosphereHeaderScrimColors(
+        atmosphereHeaderInk,
+        atmosphereImage.averageColor,
+      )
+    ) {
+      return undefined;
+    }
+    return (
+      <TravelHomeAtmosphereScrim
+        headerInk={atmosphereHeaderInk}
+        averageColor={atmosphereImage.averageColor}
+      />
+    );
+  }, [atmosphereHeaderInk, atmosphereImage.averageColor]);
+  const atmosphereScrimHeight = travelHomeAtmosphereScrimHeight(insets.top);
+
   // Paint atmosphere on the app-shell chrome so it fills the status-bar band
   // (in-screen absolute layers are clipped by SafeAreaView and can't).
   // Hero band only — mock fades into paper before Your Trips (not full-page).
   useSafeAreaChrome(atmosphereImage.skyColor, {
     backgroundImage: atmosphereImage.source,
-    backgroundImageHeight: travelHomeAtmosphereHeight(windowHeight, insets.top),
+    backgroundImageHeight: atmosphereHeight,
     backgroundImageBlurRadius: travelHomeTokens.sizes.heroBlurRadius,
+  });
+  // Soft contrast veil behind status-bar chrome + Travel title/tagline.
+  useSafeAreaChromeOverlay(atmosphereScrim, atmosphereScrimHeight, {
+    priority: 1,
   });
 
   if (editingPlan) {

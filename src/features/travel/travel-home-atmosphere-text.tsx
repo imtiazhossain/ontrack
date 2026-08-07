@@ -20,8 +20,8 @@ type TravelHomeAtmosphereTextProps = {
 };
 
 /**
- * Atmosphere-band copy wrapper — crisp ink only (no glow / textShadow).
- * Soft halos looked blurry over bright sky when scrolling the photo wash.
+ * Atmosphere-band copy. Contrast comes from `TravelHomeAtmosphereScrim`
+ * on the status-bar chrome — no per-glyph drop shadow.
  */
 export function TravelHomeAtmosphereText({
   children,

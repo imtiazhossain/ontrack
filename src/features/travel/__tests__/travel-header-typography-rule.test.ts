@@ -15,7 +15,8 @@ describe('travel section header typography', () => {
   });
 
   it('shows expand and collapse affordances on compact nested sections', () => {
-    expect(source).toContain("name={expanded ? 'chevron-up' : 'chevron-right'}");
+    expect(source).toContain('DisclosureChevron');
+    expect(source).toContain('expanded={expanded}');
     expect(source).not.toContain('{compact && nested ? null : (');
   });
 

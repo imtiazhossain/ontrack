@@ -1,5 +1,6 @@
 import { Easing } from 'react-native-reanimated';
 
+/** Short settles for chrome; keep under ~300ms so motion never feels sticky. */
 export const durations = {
   fast: 160,
   base: 260,
@@ -17,4 +18,18 @@ export const springs = {
   gentle: { damping: 22, stiffness: 200, mass: 1 },
   bouncy: { damping: 14, stiffness: 220, mass: 0.9 },
   stiff: { damping: 26, stiffness: 380, mass: 1 },
+} as const;
+
+/** Named settles — prefer these over ad-hoc ms so surfaces stay consistent. */
+export const motion = {
+  /** Collapsing menus, section bodies, card expand/collapse. */
+  disclosure: durations.base,
+  /** Opacity crossfades / menu panel enter. */
+  fade: durations.fast,
+  /** Surrounding layout reflow after disclose. */
+  layout: durations.base,
+  /** Native stack push/pop settle (ms). */
+  page: 280,
+  /** Chevron / small chrome rotates. */
+  chrome: durations.fast,
 } as const;

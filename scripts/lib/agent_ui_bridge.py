@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -39,9 +40,19 @@ def agent_ui_platform() -> str:
 
 def agent_ui_device() -> str | None:
     """Optional device pin (adb serial / sim UDID)."""
-    for key in ("AGENT_UI_DEVICE", "ONTRACK_ANDROID_SERIAL", "ANDROID_SERIAL"):
+    for key in (
+        "AGENT_UI_DEVICE",
+        "ONTRACK_ANDROID_SERIAL",
+        "ANDROID_SERIAL",
+        "ONTRACK_IOS_SIMULATOR_UDID",
+    ):
         raw = (os.environ.get(key) or "").strip()
         if raw:
+            # Prefer android serials only when pinned to android.
+            if key == "ONTRACK_IOS_SIMULATOR_UDID" and agent_ui_platform() == "android":
+                continue
+            if key in {"ONTRACK_ANDROID_SERIAL", "ANDROID_SERIAL"} and agent_ui_platform() != "android":
+                continue
             return raw
     if agent_ui_platform() != "android":
         return None
@@ -56,16 +67,108 @@ def agent_ui_device() -> str | None:
     return None
 
 
+def agent_ui_slot() -> int | None:
+    """Optional agent device pool slot (1…N)."""
+    raw = (os.environ.get("AGENT_UI_SLOT") or "").strip()
+    if not raw:
+        return None
+    try:
+        n = int(raw)
+    except ValueError:
+        return None
+    if n < 1 or n > 32:
+        return None
+    return n
+
+
+def ios_sim_target() -> str:
+    """simctl device id: pinned UDID, else booted."""
+    udid = (os.environ.get("ONTRACK_IOS_SIMULATOR_UDID") or "").strip()
+    return udid or "booted"
+
+
 def stamp_platform(payload: dict) -> dict:
     body = dict(payload)
     body["platform"] = agent_ui_platform()
+    slot = agent_ui_slot()
+    if slot is not None:
+        body["slot"] = slot
     device = agent_ui_device()
     if device and agent_ui_platform() == "android":
         body["device"] = device
         # Keep adb helpers aligned even when only AGENT_UI_DEVICE was set.
         os.environ.setdefault("ONTRACK_ANDROID_SERIAL", device)
         os.environ.setdefault("ANDROID_SERIAL", device)
+    elif device and agent_ui_platform() == "ios":
+        body["device"] = device
+        os.environ.setdefault("ONTRACK_IOS_SIMULATOR_UDID", device)
     return body
+
+
+def _android_adb_bin() -> str | None:
+    for key in ("ADB_BIN", "ANDROID_ADB"):
+        raw = (os.environ.get(key) or "").strip()
+        if raw and Path(raw).is_file():
+            return raw
+    home = Path.home()
+    for candidate in (
+        home / "Library/Android/sdk/platform-tools/adb",
+        Path(os.environ.get("ANDROID_HOME", "")) / "platform-tools/adb",
+        Path(os.environ.get("ANDROID_SDK_ROOT", "")) / "platform-tools/adb",
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    which = shutil.which("adb")
+    return which
+
+
+def write_android_slot_pin_file(slot: int) -> bool:
+    """Write files/agent-ui-pin.json inside the Android app via run-as (debug builds)."""
+    adb = _android_adb_bin()
+    if not adb:
+        return False
+    serial = (
+        (os.environ.get("ONTRACK_ANDROID_SERIAL") or "").strip()
+        or (os.environ.get("ANDROID_SERIAL") or "").strip()
+        or (os.environ.get("AGENT_UI_DEVICE") or "").strip()
+    )
+    bundle = (os.environ.get("BUNDLE_ID") or "com.imtihoss.ontracknow").strip()
+    pin_json = json.dumps({"slot": slot}, separators=(",", ":"))
+    # Expo Paths.document → app files/ on Android.
+    script = (
+        "mkdir -p files && "
+        f"printf '%s' '{pin_json}' > files/agent-ui-pin.json"
+    )
+    cmd = [adb]
+    if serial:
+        cmd.extend(["-s", serial])
+    cmd.extend(["shell", "run-as", bundle, "sh", "-c", script])
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=8, check=False
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return proc.returncode == 0
+
+
+def write_slot_pin_file() -> bool:
+    """Write agent-ui-pin.json so the app polls the matching daemon queue."""
+    slot = agent_ui_slot()
+    if slot is None:
+        return False
+    if agent_ui_platform() == "android":
+        return write_android_slot_pin_file(slot)
+    try:
+        data = resolve_data_dir()
+        pin = data / "Documents" / "agent-ui-pin.json"
+        pin.parent.mkdir(parents=True, exist_ok=True)
+        pin.write_text(json.dumps({"slot": slot}), encoding="utf-8")
+        return True
+    except SystemExit:
+        return False
+    except OSError:
+        return False
 
 
 def android_host_dump_path(root: Path | None = None) -> Path:
@@ -100,7 +203,11 @@ def resolve_data_dir(root: Path | None = None) -> Path:
             return path
 
     root = root or repo_root()
+    target = ios_sim_target()
+    # Per-device cache so parallel pool slots do not share one Documents path.
     cache = root / CACHE_REL
+    if target != "booted":
+        cache = root / Path(".cursor") / f"agent-ui-data-dir-{target}"
     if cache.is_file():
         cached = cache.read_text(encoding="utf-8").strip()
         if cached:
@@ -111,7 +218,14 @@ def resolve_data_dir(root: Path | None = None) -> Path:
 
     try:
         proc = subprocess.run(
-            ["xcrun", "simctl", "get_app_container", "booted", BUNDLE_ID, "data"],
+            [
+                "xcrun",
+                "simctl",
+                "get_app_container",
+                target,
+                BUNDLE_ID,
+                "data",
+            ],
             check=False,
             capture_output=True,
             text=True,
@@ -382,6 +496,7 @@ def send(
         raise SystemExit("payload must be a JSON object")
 
     payload = stamp_platform(resolve_payload_ids(payload))
+    write_slot_pin_file()
     transport = TRANSPORT.lower().strip()
     # Android has no simctl Documents file transport — daemon only.
     if agent_ui_platform() == "android" and transport != "daemon":
@@ -959,8 +1074,18 @@ def main(argv: list[str] | None = None) -> int:
 
     p_ensure = sub.add_parser("ensure-daemon", help="start daemon if needed")
 
+    p_pin = sub.add_parser(
+        "write-slot-pin",
+        help="write agent-ui-pin.json for the current AGENT_UI_SLOT (iOS Documents / Android files)",
+    )
+
     args = parser.parse_args(argv)
     root = repo_root()
+
+    if args.cmd == "write-slot-pin":
+        ok = write_slot_pin_file()
+        print(json.dumps({"ok": ok, "slot": agent_ui_slot()}, separators=(",", ":")))
+        return 0 if ok else 1
 
     if args.cmd == "data-dir":
         if args.refresh:

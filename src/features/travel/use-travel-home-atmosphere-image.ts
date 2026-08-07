@@ -7,6 +7,7 @@ import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import {
   travelTimeOfDay,
   travelWeatherMood,
+  type TravelTimeOfDay,
 } from '@/features/travel/travel-atmosphere-model';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import { mergeAtmospherePlaces } from '@/features/travel/travel-home-atmosphere-queries';
@@ -77,6 +78,7 @@ export function useTravelHomeAtmosphereImage({
   headerInk: TravelAtmosphereHeaderInk;
   /** Dominant / average plate color when known (`#RRGGBB`). */
   averageColor?: string;
+  timeOfDay: TravelTimeOfDay;
 } {
   const theme = useTheme();
   const dark = theme.name === 'dark';
@@ -194,5 +196,7 @@ export function useTravelHomeAtmosphereImage({
     headerInk,
     /** Dominant plate color for solo-trip card lift / header ink. */
     averageColor: image.averageColor,
+    /** Local time-of-day used for the plate (drives night moon overlay). */
+    timeOfDay,
   };
 }

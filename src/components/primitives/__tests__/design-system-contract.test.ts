@@ -18,7 +18,9 @@ describe('canonical design-system contract', () => {
       'PanelTitle',
       'StatusBadge',
       'MetaList',
+      'CollapsibleBody',
       'CollapsibleSection',
+      'DisclosureChevron',
       'ToolbarRow',
       'ActionChip',
       'ActionChipRow',
@@ -71,6 +73,21 @@ describe('canonical design-system contract', () => {
       expect(source).not.toMatch(/font(?:Size|Family|Weight)\s*:/);
       expect(source).toMatch(/useResponsive|AppText|Button|ScreenHeader/);
     }
+  });
+
+  it('fades sheet scrim separately from the sliding card', () => {
+    const scaffold = read('src/components/primitives/sheet-scaffold.tsx');
+    // Modal slide would drag the dim with the card — keep native anim off.
+    expect(scaffold).toContain('animationType="none"');
+    expect(scaffold).toContain('FadeIn');
+    expect(scaffold).toContain('SlideInUp');
+    expect(scaffold).toContain('overlayScrim');
+    expect(scaffold).not.toContain('animationType="slide"');
+    // Exit must unmount immediately — holding Modal for exit traps touches
+    // and makes the next page feel stuck.
+    expect(scaffold).not.toContain('FadeOut');
+    expect(scaffold).not.toContain('SlideOutDown');
+    expect(scaffold).not.toContain('presented');
   });
 
   it('routes Travel sheets and actions through shared primitives', () => {
@@ -129,6 +146,8 @@ describe('canonical design-system contract', () => {
     expect(travelTab).toContain('style={travelStyle}');
     expect(travelTab).toContain('useTravelPageStyle(theme)');
     expect(travelTab).toContain('useSafeAreaChrome(');
+    expect(travelTab).toContain('useSafeAreaChromeOverlay(');
+    expect(travelTab).toContain('TravelHomeAtmosphereScrim');
     expect(travelTab).toContain('atmosphereImage.skyColor');
     expect(travelTab).toContain('backgroundImage: atmosphereImage.source');
     expect(travelLayout).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');

@@ -44,6 +44,7 @@ import {
   tabTestIdForRoute,
   unregisterAgentUiTarget,
 } from '@/utils/agent-ui';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 
 import {
   canonicalPositionForRoute,
@@ -224,6 +225,31 @@ export function BottomNavBar({
   const selectedVisibleIndex = visibleRoutes.findIndex(
     (route) => route.key === selectedRoute?.key,
   );
+
+  // Preload left/right rail neighbors so the first hop off a cold tab isn't a hitch.
+  const neighborRouteKey = useMemo(() => {
+    if (selectedVisibleIndex < 0) return '';
+    return [selectedVisibleIndex - 1, selectedVisibleIndex + 1]
+      .map((index) => visibleRoutes[index]?.name ?? '')
+      .join('|');
+  }, [selectedVisibleIndex, visibleRoutes]);
+
+  useEffect(() => {
+    if (!neighborRouteKey) return;
+    const names = neighborRouteKey.split('|').filter(Boolean);
+    if (names.length === 0) return;
+    return deferAfterPageTransition(() => {
+      for (const name of names) {
+        const route = visibleRoutes.find((item) => item.name === name);
+        if (!route) continue;
+        try {
+          navigation.preload(route.name, route.params);
+        } catch {
+          // Older navigators / incomplete preload — ignore.
+        }
+      }
+    });
+  }, [navigation, neighborRouteKey, visibleRoutes]);
   const carouselWidth = Math.min(
     width - layout.screenPadding * 2,
     MAX_CAROUSEL_WIDTH,
@@ -451,11 +477,17 @@ export function BottomNavBar({
   // Pinned bar, always expanded. Dock width must match carouselWidth math
   // (screen padding + max width) so the infinite track clips and swipes correctly.
   const bottomLabelPad = insets.bottom > 0 ? 6 : spacing.sm;
-  // Same column as tabs (icon row + caption + indicator). Disc can be larger
-  // than the 24pt icon slot — centers still share the icon baseline.
+  // Center discs on the full tab chrome (glyph + label), not the icon row alone —
+  // a caption stand-in would re-lock arrows to the glyph baseline and look high.
   const arrowButtonSize = Math.max(28, s(30));
   const arrowIconSize = Math.max(16, s(17));
-  const tabCaptionLineHeight = s(11);
+  const tabCaptionStyle = {
+    fontSize: s(9.5),
+    lineHeight: s(11),
+    width: '100%' as const,
+    minWidth: 0,
+    flexShrink: 1,
+  };
   const dark = theme.name === 'dark';
   // Frosted discs — match bar glass (BlurView underlay; never nest remounting chrome).
   const arrowIconColor = dark ? theme.textSecondary : palette.ink1;
@@ -480,14 +512,12 @@ export function BottomNavBar({
           hitSlop={4}
           onPress={() => nudgeCarousel(isPrev ? 1 : -1)}
           style={({ pressed }) => [
-            // Same column rhythm as tabs: icon row + caption stand-in + indicator.
-            styles.tab,
+            styles.railArrowHit,
             {
               width: itemWidth,
               minHeight: layout.minTapTarget,
               paddingVertical: spacing.xxs,
               paddingHorizontal: s(2),
-              height: '100%',
             },
             pressed && styles.railArrowPressed,
           ]}>
@@ -495,8 +525,6 @@ export function BottomNavBar({
             style={[
               styles.railArrowGlyph,
               {
-                // Same role as styles.iconSlot — size may differ; centers still
-                // share the tab icon baseline when paired with the caption stand-in.
                 width: arrowButtonSize,
                 height: arrowButtonSize,
                 borderRadius: arrowButtonSize / 2,
@@ -523,10 +551,6 @@ export function BottomNavBar({
               color={arrowIconColor}
             />
           </View>
-          <View style={{ height: tabCaptionLineHeight, width: '100%' }} />
-          <View
-            style={[styles.indicator, { backgroundColor: 'transparent' }]}
-          />
         </Pressable>
       </AgentTestId>
     );
@@ -698,15 +722,13 @@ export function BottomNavBar({
                 fitMinimumScale={0.68}
                 maxFontSizeMultiplier={1.1}
                 align="center"
-                style={{
-                  color,
-                  fontWeight: visuallySelected ? '600' : '400',
-                  fontSize: s(9.5),
-                  lineHeight: s(11),
-                  width: '100%',
-                  minWidth: 0,
-                  flexShrink: 1,
-                }}>
+                style={[
+                  tabCaptionStyle,
+                  {
+                    color,
+                    fontWeight: visuallySelected ? '600' : '400',
+                  },
+                ]}>
                 {meta.label}
               </AppText>
               <View
@@ -773,6 +795,16 @@ const styles = StyleSheet.create({
     minWidth: 0,
     width: '100%',
     height: '100%',
+  },
+  // Fill the rail column and center the disc on icon+label (tabs use the
+  // same stretched height with a centered glyph+caption stack).
+  railArrowHit: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
   },
   railArrowGlyph: {
     alignItems: 'center',

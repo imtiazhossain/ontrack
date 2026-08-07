@@ -56,9 +56,16 @@ export const AGENT_UI_FLOWS = {
     { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
+    // Entrance shell paints first; wait for post-transition Loaded tree.
     {
       op: 'wait',
-      prefix: 'ontrack.travel.planDetail.',
+      id: 'ontrack.travel.planDetail.section.transport',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    // Sky overlay mounts with Loaded chrome (enableSkyDecor) — after transport.
+    {
+      op: 'wait',
+      id: 'ontrack.travel.chrome.skyDecor',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
@@ -157,7 +164,7 @@ export const AGENT_UI_FLOWS = {
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
     {
       op: 'wait',
-      prefix: 'ontrack.travel.planDetail.',
+      id: 'ontrack.travel.planDetail.section.timeline',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
     // Expand then scroll — Edit sits below the fold on Android (~384×832).
@@ -190,7 +197,7 @@ export const AGENT_UI_FLOWS = {
     { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
     {
       op: 'wait',
-      prefix: 'ontrack.travel.planDetail.',
+      id: 'ontrack.travel.planDetail.section.timeline',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
     {

@@ -42,6 +42,10 @@ function MotionLayer({
   energy,
   tiltX,
   tiltY,
+  /** Horizontal drift amplitude in plate px (0 = tilt-only). */
+  driftAmp = 0,
+  /** One-way drift duration ms; higher = lazier clouds. */
+  driftMs = 28000,
   children,
 }: {
   depth: number;
@@ -49,9 +53,12 @@ function MotionLayer({
   energy: SharedValue<number>;
   tiltX: SharedValue<number>;
   tiltY: SharedValue<number>;
+  driftAmp?: number;
+  driftMs?: number;
   children: ReactNode;
 }) {
   const idle = useSharedValue(0.72);
+  const drift = useSharedValue(0);
   useEffect(() => {
     idle.value = withDelay(
       delayMs,
@@ -66,13 +73,34 @@ function MotionLayer({
     );
   }, [delayMs, idle]);
 
+  useEffect(() => {
+    if (driftAmp <= 0) return;
+    drift.value = 0;
+    drift.value = withDelay(
+      delayMs,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [delayMs, drift, driftAmp, driftMs]);
+
   const style = useAnimatedStyle(() => {
     const shine = interpolate(energy.value, [0, 1], [idle.value, 1]);
+    const glide = driftAmp > 0 ? interpolate(drift.value, [0, 1], [-driftAmp, driftAmp]) : 0;
     return {
       opacity: shine,
       transform: [
-        { translateX: tiltX.value * 14 * depth },
-        { translateY: tiltY.value * 9 * depth },
+        { translateX: tiltX.value * 14 * depth + glide },
+        {
+          translateY:
+            tiltY.value * 9 * depth +
+            (driftAmp > 0 ? interpolate(drift.value, [0, 1], [-1.2, 1.2]) * depth : 0),
+        },
       ],
     };
   });
@@ -509,8 +537,17 @@ export function TravelSkyDay({
   const accents = condition.accents;
   const sunY = Math.min(SKY_VIEW_H - 30, statusBand + SKY_CELESTIAL_CLEARANCE);
   const sunX = condition.look === 'sunrise' ? 72 : condition.look === 'sunset' ? 300 : 220;
-  // Desert clear skies stay cloudless; weather clouds always win.
-  const showClouds = palette.denseClouds || !accents.desert;
+  const cover = condition.cloudCover;
+  // Weather clouds (partly / dense) always paint — including desert. Clear stays
+  // a light decorative shelf unless the destination is desert-clear.
+  const showClouds =
+    cover === 'dense' ||
+    cover === 'partly' ||
+    (cover === 'light' && !accents.desert);
+  const denseClouds = cover === 'dense' || palette.denseClouds;
+  const partlyClouds = cover === 'partly';
+  const cloudScale = denseClouds ? 1 : partlyClouds ? 0.92 : 0.78;
+  const cloudOpacityMul = denseClouds ? 1 : partlyClouds ? 0.88 : 0.72;
   const overcastLook = condition.look === 'cloudy' || condition.look === 'rain';
   const birdColor = accents.tropical
     ? 'rgba(35,45,60,0.8)'
@@ -547,10 +584,12 @@ export function TravelSkyDay({
 
       {showClouds ? (
         <>
-          {/* Far cloud shelf — small, hazy, barely moves with tilt */}
+          {/* Far cloud shelf — slow lazy drift + light tilt */}
           <MotionLayer
             depth={0.28}
             delayMs={60}
+            driftAmp={10}
+            driftMs={36000}
             energy={motion.energy}
             tiltX={motion.tiltX}
             tiltY={motion.tiltY}>
@@ -562,24 +601,26 @@ export function TravelSkyDay({
               <SoftCloud
                 cx={120}
                 cy={24}
-                scale={palette.denseClouds ? 1.05 : 0.8}
+                scale={1.05 * cloudScale}
                 fill={palette.cloud}
-                opacity={palette.cloudOpacity * 0.55}
+                opacity={palette.cloudOpacity * 0.55 * cloudOpacityMul}
               />
               <SoftCloud
                 cx={250}
                 cy={34}
-                scale={palette.denseClouds ? 0.95 : 0.7}
+                scale={0.95 * cloudScale}
                 fill={palette.cloud}
-                opacity={palette.cloudOpacity * 0.5}
+                opacity={palette.cloudOpacity * 0.5 * cloudOpacityMul}
               />
             </Svg>
           </MotionLayer>
 
-          {/* Near cloud layer — larger, rides tilt visibly */}
+          {/* Near cloud layer — faster drift, rides tilt */}
           <MotionLayer
             depth={0.9}
             delayMs={120}
+            driftAmp={22}
+            driftMs={24000}
             energy={motion.energy}
             tiltX={motion.tiltX}
             tiltY={motion.tiltY}>
@@ -591,39 +632,39 @@ export function TravelSkyDay({
               <SoftCloud
                 cx={70}
                 cy={42}
-                scale={palette.denseClouds ? 1.35 : 1}
+                scale={1.35 * cloudScale}
                 fill={palette.cloud}
-                opacity={palette.cloudOpacity}
+                opacity={palette.cloudOpacity * cloudOpacityMul}
               />
               <SoftCloud
                 cx={170}
                 cy={28}
-                scale={palette.denseClouds ? 1.5 : 1.15}
+                scale={1.5 * cloudScale}
                 fill={palette.cloud}
-                opacity={palette.cloudOpacity * 0.9}
+                opacity={palette.cloudOpacity * 0.9 * cloudOpacityMul}
               />
               <SoftCloud
                 cx={280}
                 cy={48}
-                scale={palette.denseClouds ? 1.4 : 0.95}
+                scale={1.4 * cloudScale}
                 fill={palette.cloud}
-                opacity={palette.cloudOpacity * 0.85}
+                opacity={palette.cloudOpacity * 0.85 * cloudOpacityMul}
               />
-              {palette.denseClouds ? (
+              {denseClouds || partlyClouds ? (
                 <>
                   <SoftCloud
                     cx={120}
                     cy={58}
-                    scale={1.2}
+                    scale={(denseClouds ? 1.2 : 1.05) * cloudScale}
                     fill={palette.cloud}
-                    opacity={palette.cloudOpacity * 0.8}
+                    opacity={palette.cloudOpacity * 0.8 * cloudOpacityMul}
                   />
                   <SoftCloud
                     cx={230}
                     cy={36}
-                    scale={1.25}
+                    scale={(denseClouds ? 1.25 : 1.1) * cloudScale}
                     fill={palette.cloud}
-                    opacity={palette.cloudOpacity * 0.75}
+                    opacity={palette.cloudOpacity * 0.75 * cloudOpacityMul}
                   />
                 </>
               ) : null}
@@ -667,7 +708,7 @@ export function TravelSkyDay({
         </>
       ) : null}
 
-      {accents.desert && !palette.denseClouds ? <HeatShimmer /> : null}
+      {accents.desert && !denseClouds && !partlyClouds ? <HeatShimmer /> : null}
       {accents.fog && overcastLook ? <FogWisps /> : null}
 
       <TravelSkyWeatherFx

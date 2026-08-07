@@ -107,8 +107,9 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     onOpenTrip(plan.id);
   };
   const viewItinerary = () => {
-    haptics.tap();
+    // Navigate first — haptic after so it never delays the stack push.
     onViewItinerary(plan.id);
+    haptics.tap();
   };
   const itineraryLabel = `View itinerary for ${destinationLabel}`;
   const itineraryAgent = useAgentUiTarget(AgentUiIds.travel.list.itinerary(plan.id), {
@@ -159,8 +160,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       </Text>
     </>
   );
-  const showStepper = heroPager.count > 1;
-
   return (
     // Shadow and overflow:hidden cannot share one view on iOS — split so the
     // large mock corner radii actually clip the destination hero.
@@ -187,30 +186,52 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             borderRadius: radius,
           },
         ]}>
-        <TravelHomeHeroCarousel
-          plan={plan}
-          width={cardWidth}
-          onEdit={() => onEditTrip(plan.id)}
-          scrollProgress={heroScrollProgress}
-          onActiveImageChange={(uri, index, pageCount) => {
-            setHeroPager((previous) => {
-              // Ignore transient empty reports so ticks stay visible once known.
-              if (pageCount <= 0 && previous.count > 1) return previous;
-              if (previous.index === index && previous.count === pageCount) {
-                return previous;
-              }
-              return { index, count: pageCount };
-            });
-            setHeroFrostUri(uri);
-            onActiveImageChange?.(plan.id, uri);
-          }}
-        />
+        <View collapsable={false} style={styles.heroWrap}>
+          <TravelHomeHeroCarousel
+            plan={plan}
+            width={cardWidth}
+            onEdit={() => onEditTrip(plan.id)}
+            scrollProgress={heroScrollProgress}
+            onActiveImageChange={(uri, index, pageCount) => {
+              setHeroPager((previous) => {
+                // Ignore transient empty reports so ticks stay visible once known.
+                if (pageCount <= 0 && previous.count > 1) return previous;
+                if (previous.index === index && previous.count === pageCount) {
+                  return previous;
+                }
+                return { index, count: pageCount };
+              });
+              setHeroFrostUri(uri);
+              onActiveImageChange?.(plan.id, uri);
+            }}
+          />
+          {/*
+            Page ticks overlay the visible hero band (above the glass scoop),
+            not the meta panel — keeps them on the photo toward its bottom.
+          */}
+          <View
+            collapsable={false}
+            pointerEvents="none"
+            style={[
+              styles.stepperOverlay,
+              {
+                bottom:
+                  bodyOverlap +
+                  Math.max(6, s(travelHomeTokens.sizes.carouselBottomInset)),
+              },
+            ]}>
+            <TravelHomeCarouselStepper
+              count={heroPager.count}
+              index={heroPager.index}
+              progress={heroScrollProgress}
+            />
+          </View>
+        </View>
 
         {/*
           Glass meta panel overlaps the hero with large top radii. iOS uses
           BlurView; Android frosts a blurred hero plate + light tint so the
           scoop reads as glass (not clear plastic, not opaque milk).
-          Page dashes sit flush on the top edge of the glass scoop.
         */}
         <TravelHomeGlass
           frost={
@@ -233,25 +254,16 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             },
           ]}>
           {/*
-            Always mount this slot as a Fabric sibling of BlurView. Toggling it
-            with showStepper caused iOS SIGABRT:
+            Always mount this collapsed slot as a Fabric sibling of BlurView.
+            Toggling a real child here caused iOS SIGABRT:
             `unmountChildComponentView` index mismatch on the meta glass plate
-            (child y≈-12, pointerEvents=none — this stepper).
+            (child y≈-12, pointerEvents=none — former in-glass stepper).
           */}
           <View
             collapsable={false}
             pointerEvents="none"
-            style={
-              showStepper
-                ? [styles.stepperSlot, { marginBottom: Math.max(2, s(4)) }]
-                : styles.stepperSlotCollapsed
-            }>
-            <TravelHomeCarouselStepper
-              count={heroPager.count}
-              index={heroPager.index}
-              progress={heroScrollProgress}
-            />
-          </View>
+            style={styles.stepperSlotCollapsed}
+          />
           <AgentTestId
             testID={AgentUiIds.travel.list.openHub(plan.id)}
             label={`Open ${plan.title}`}
@@ -264,9 +276,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingTop: showStepper
-                    ? Math.max(6, s(8))
-                    : travelHomeTokens.spacing.bodyTop,
+                  paddingTop: travelHomeTokens.spacing.bodyTop,
                   paddingBottom: travelHomeTokens.spacing.locationToDivider,
                   gap: travelHomeTokens.spacing.titleToLocation,
                   opacity: pressed ? 0.92 : 1,
@@ -451,17 +461,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
+  heroWrap: {
+    width: '100%',
+  },
   metaPanel: {
     zIndex: 1,
     borderCurve: 'continuous',
   },
-  stepperSlot: {
-    alignSelf: 'stretch',
-    width: '100%',
-    // Above Android frost underlays in TravelHomeGlass.
-    zIndex: 3,
+  stepperOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    alignItems: 'center',
   },
-
   stepperSlotCollapsed: {
     height: 0,
     marginTop: 0,

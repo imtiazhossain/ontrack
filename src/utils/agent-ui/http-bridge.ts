@@ -1,11 +1,29 @@
 import Constants from 'expo-constants';
+import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import type { AgentUiRequest } from './handle-agent-ui-url';
 import type { AgentUiStatusPayload } from './persist';
+import {
+  applyAgentUiSlotFromUnknown,
+  getAgentUiSlot,
+} from './slot';
 
 function agentUiPlatformParam(): 'ios' | 'android' {
   return Platform.OS === 'android' ? 'android' : 'ios';
+}
+
+/** Host may write Documents/agent-ui-pin.json before the JS bridge mounts. */
+function refreshSlotFromPinFile(): void {
+  if (getAgentUiSlot() != null) return;
+  try {
+    const file = new File(Paths.document, 'agent-ui-pin.json');
+    if (!file.exists) return;
+    const raw = JSON.parse(String(file.text())) as { slot?: unknown };
+    applyAgentUiSlotFromUnknown(raw?.slot);
+  } catch {
+    /* ignore */
+  }
 }
 
 const DAEMON_PORT = 8191;
@@ -95,6 +113,10 @@ export async function fetchAgentUiCommand(
   waitMs = DEFAULT_WAIT_MS,
 ): Promise<AgentUiRequest | null> {
   const platform = agentUiPlatformParam();
+  refreshSlotFromPinFile();
+  const slot = getAgentUiSlot();
+  const slotQuery =
+    slot != null && slot >= 1 ? `&slot=${encodeURIComponent(String(slot))}` : '';
   // Prefer the cached working base first so we do not open parallel /next
   // waits against Metro proxy + daemon (was a source of dropped commands).
   const bases = candidateBases();
@@ -103,7 +125,7 @@ export async function fetchAgentUiCommand(
     bases.splice(0, bases.length, cachedBase, ...rest);
   }
   for (const base of bases) {
-    const url = `${base}/next?waitMs=${Math.max(0, waitMs)}&platform=${platform}`;
+    const url = `${base}/next?waitMs=${Math.max(0, waitMs)}&platform=${platform}${slotQuery}`;
     try {
       const res = await fetch(url, {
         method: 'GET',
@@ -124,6 +146,16 @@ export async function fetchAgentUiCommand(
         typeof pinned === 'string' &&
         pinned.length > 0 &&
         pinned !== platform
+      ) {
+        void requeueAgentUiCommand(request);
+        continue;
+      }
+      const cmdSlot = (request as { slot?: unknown }).slot;
+      applyAgentUiSlotFromUnknown(cmdSlot);
+      if (
+        slot != null &&
+        cmdSlot != null &&
+        String(cmdSlot) !== String(slot)
       ) {
         void requeueAgentUiCommand(request);
         continue;

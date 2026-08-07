@@ -1,0 +1,65 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const root = process.cwd();
+const read = (relative: string) => readFileSync(join(root, relative), 'utf8');
+
+describe('collapsible motion contract', () => {
+  it('exports shared disclosure primitives and motion settles', () => {
+    expect(read('src/components/primitives/index.ts')).toContain('CollapsibleBody');
+    expect(read('src/components/primitives/index.ts')).toContain('DisclosureChevron');
+    expect(read('src/design-system/motion.ts')).toContain('disclosure');
+    expect(read('src/design-system/motion.ts')).toContain('page');
+    expect(read('src/design-system/index.ts')).toContain('motion');
+  });
+
+  it('routes shared section collapses through CollapsibleBody', () => {
+    for (const relative of [
+      'src/components/primitives/collapsible-section.tsx',
+      'src/features/travel/travel-collapsible-section.tsx',
+      'src/features/travel/travel-trip-notes-card.tsx',
+      'src/features/todos/grocery-rows.tsx',
+    ]) {
+      const source = read(relative);
+      expect(source).toContain('CollapsibleBody');
+      expect(source).toContain('DisclosureChevron');
+    }
+  });
+
+  it('keeps initially-expanded bodies in normal flow and never returns null', () => {
+    const source = read('src/components/primitives/collapsible-body.tsx');
+    expect(source).toContain('motionEnabled');
+    expect(source).toContain('keepMounted');
+    expect(source).toContain('collapsedShell');
+    expect(source).not.toContain('return null');
+    expect(source).not.toContain('height: undefined');
+  });
+
+  it('keeps itinerary body sections eager; detail gates heavy tree after push', () => {
+    const body = read('src/features/travel/travel-plan-detail-body.tsx');
+    const detail = read('src/features/travel/travel-plan-detail.tsx');
+    expect(body).toContain('TravelTransportSections');
+    expect(body).toContain('TravelItineraryTimeline');
+    expect(body).not.toContain('belowFoldReady');
+    expect(body).not.toContain('deferUntilIdle');
+    // Plan detail paints a light entrance shell, then mounts Loaded after settle.
+    expect(detail).toContain('TravelPlanDetailEntrance');
+    expect(detail).toContain('deferAfterPageTransition');
+  });
+
+  it('keeps stack page transitions on a shared settle duration', () => {
+    for (const relative of [
+      'src/app/_layout.tsx',
+      'src/app/travel/_layout.tsx',
+      'src/app/plants/_layout.tsx',
+      'src/app/vehicles/_layout.tsx',
+      'src/app/health/_layout.tsx',
+      'src/app/(tabs)/to-do/_layout.tsx',
+      'src/app/(tabs)/vision-board/_layout.tsx',
+    ]) {
+      const source = read(relative);
+      expect(source).toContain('motion.page');
+      expect(source).toContain('animationDuration');
+    }
+  });
+});

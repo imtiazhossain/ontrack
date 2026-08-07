@@ -6,6 +6,7 @@ from __future__ import annotations
 import colorsys
 import math
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -115,6 +116,84 @@ def _android_serial() -> str | None:
     return None
 
 
+def _ios_screen_surfaces_timeout(detail: str) -> bool:
+    low = detail.lower()
+    return "screen surfaces" in low or "timeout waiting for screen" in low
+
+
+def _ios_unpark_agent_window() -> None:
+    """Bring the preferred agent Simulator window on-screen so IOSurface wakes.
+
+    Pool coexistence parks `onTrack Agent *` windows at {-20000,-20000}, which
+    often makes `simctl io screenshot` fail with "Timeout waiting for screen
+    surfaces". Raise briefly before capture; caller re-parks afterward.
+    """
+    import os
+
+    name = (os.environ.get("ONTRACK_IOS_SIMULATOR") or "").strip()
+    if not name or "Agent" not in name:
+        return
+    if subprocess.run(
+        ["pgrep", "-x", "Simulator"], check=False, capture_output=True
+    ).returncode != 0:
+        return
+    safe = name.replace("\\", "\\\\").replace('"', '\\"')
+    script = f'''
+tell application "System Events"
+  if not (exists process "Simulator") then return
+  tell process "Simulator"
+    repeat with w in (get every window)
+      try
+        set wn to name of w as text
+        if wn contains "{safe}" then
+          set position of w to {{40, 40}}
+          try
+            perform action "AXRaise" of w
+          end try
+          return
+        end if
+      end try
+    end repeat
+  end tell
+end tell
+'''
+    try:
+        subprocess.run(
+            ["osascript", "-e", script],
+            check=False,
+            capture_output=True,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _ios_reparks_agent_windows() -> None:
+    import os
+    from pathlib import Path
+
+    root = Path(os.environ.get("AGENT_UI_ROOT") or os.environ.get("ROOT") or "")
+    if not root.is_dir():
+        root = Path(__file__).resolve().parents[2]
+    sim_sh = root / "scripts" / "lib" / "ios-simulator.sh"
+    if not sim_sh.is_file():
+        return
+    try:
+        subprocess.run(
+            [
+                "bash",
+                "-c",
+                f'source "{sim_sh}" && ios_sim_park_agent_windows',
+            ],
+            check=False,
+            capture_output=True,
+            timeout=10,
+            env={**os.environ, "ONTRACK_IOS_SIMULATOR_WINDOW": "0"},
+        )
+    except subprocess.TimeoutExpired:
+        pass
+
+
 def capture_screenshot(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if _agent_ui_platform() == "android":
@@ -140,16 +219,41 @@ def capture_screenshot(path: Path) -> Path:
         path.write_bytes(proc.stdout)
         return path
 
-    proc = subprocess.run(
-        ["xcrun", "simctl", "io", "booted", "screenshot", str(path)],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0 or not path.is_file():
-        detail = (proc.stderr or proc.stdout or "").strip()
-        raise SystemExit(f"error: screenshot failed: {detail or proc.returncode}")
-    return path
+    import os
+    import time
+
+    target = (os.environ.get("ONTRACK_IOS_SIMULATOR_UDID") or "").strip() or "booted"
+    last_detail = ""
+    unparked = False
+    try:
+        for attempt in range(4):
+            if path.is_file():
+                path.unlink(missing_ok=True)
+            proc = subprocess.run(
+                ["xcrun", "simctl", "io", target, "screenshot", str(path)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0 and path.is_file() and path.stat().st_size > 0:
+                return path
+            last_detail = (proc.stderr or proc.stdout or "").strip()
+            if _ios_screen_surfaces_timeout(last_detail) and attempt < 3:
+                if not unparked:
+                    print(
+                        "agent-ui: iOS screen surfaces timed out — unparking agent window…",
+                        file=sys.stderr,
+                    )
+                    _ios_unpark_agent_window()
+                    unparked = True
+                time.sleep(1.0 + attempt * 0.5)
+                continue
+            break
+    finally:
+        if unparked:
+            _ios_reparks_agent_windows()
+
+    raise SystemExit(f"error: screenshot failed: {last_detail or 'unknown'}")
 
 
 def assert_element_color(

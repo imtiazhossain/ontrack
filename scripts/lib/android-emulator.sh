@@ -45,6 +45,119 @@ android_emu_want_window() {
   esac
 }
 
+android_emu_pool_mode() {
+  case "${AGENT_UI_POOL_MODE:-0}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Create onTrack_Agent_N AVDs (Galaxy_S26-class) when missing.
+android_emu_ensure_agent_avd() {
+  local name template="${ONTRACK_ANDROID_AVD_TEMPLATE:-Galaxy_S26}"
+  name="$(android_emu_preferred_name)"
+  if android_emu_avd_exists; then
+    android_emu_ensure_hw_keyboard
+    return 0
+  fi
+  if [[ ! "$name" =~ ^onTrack_Agent_[0-9]+$ ]]; then
+    echo "error: no AVD named '${name}' (create it or set ONTRACK_ANDROID_AVD)" >&2
+    return 1
+  fi
+
+  local sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+  local avdmanager=""
+  if [[ -x "${sdk_root}/cmdline-tools/latest/bin/avdmanager" ]]; then
+    avdmanager="${sdk_root}/cmdline-tools/latest/bin/avdmanager"
+  else
+    avdmanager="$(command -v avdmanager 2>/dev/null || true)"
+  fi
+  if [[ -z "$avdmanager" ]]; then
+    # Fallback: clone template AVD config (fresh userdata).
+    local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+    local src_ini="${home}/${template}.ini"
+    local src_avd="${home}/${template}.avd"
+    if [[ ! -f "$src_ini" || ! -d "$src_avd" ]]; then
+      echo "error: cannot create '${name}' — missing template AVD '${template}' and avdmanager" >&2
+      return 1
+    fi
+    echo "Creating agent AVD ${name} (clone config from ${template})…"
+    mkdir -p "${home}/${name}.avd"
+    # Copy config only — not userdata (large / stale).
+    if [[ -f "${src_avd}/config.ini" ]]; then
+      cp "${src_avd}/config.ini" "${home}/${name}.avd/config.ini"
+    else
+      echo "error: template ${template} has no config.ini" >&2
+      return 1
+    fi
+    # Optional hardware skin bits.
+    [[ -f "${src_avd}/hardware-qemu.ini" ]] && cp "${src_avd}/hardware-qemu.ini" "${home}/${name}.avd/" || true
+    python3 - "$home" "$name" "$template" <<'PY'
+import pathlib, sys
+home, name, template = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+ini = home / f"{name}.ini"
+ini.write_text(
+    f"avd.ini.encoding=UTF-8\n"
+    f"path={home / (name + '.avd')}\n"
+    f"path.rel=avd/{name}.avd\n"
+    f"target=android-36\n",
+    encoding="utf-8",
+)
+conf = home / f"{name}.avd" / "config.ini"
+text = conf.read_text(encoding="utf-8")
+for old, new in (
+    (f"AvdId={template}", f"AvdId={name}"),
+    (f"avd.name={template}", f"avd.name={name}"),
+    ("avd.id=<build>", f"avd.id={name}"),
+    ("avd.name=<build>", f"avd.name={name}"),
+):
+    text = text.replace(old, new)
+conf.write_text(text, encoding="utf-8")
+print(f"Cloned AVD config {template} → {name}", file=sys.stderr)
+PY
+    android_emu_ensure_hw_keyboard
+    return 0
+  fi
+
+  local pkg="system-images;android-36;google_apis;arm64-v8a"
+  echo "Creating agent AVD ${name} (pixel_9_pro_xl / ${pkg})…"
+  # non-interactive: no custom hardware profile prompt
+  printf 'no\n' | "$avdmanager" create avd -n "$name" -k "$pkg" -d pixel_9_pro_xl --force >/dev/null 2>&1 || {
+    echo "error: avdmanager failed to create '${name}'" >&2
+    return 1
+  }
+  # Match Galaxy_S26 display metrics when template config is available.
+  local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+  local conf="${home}/${name}.avd/config.ini"
+  local tmpl="${home}/${template}.avd/config.ini"
+  if [[ -f "$conf" && -f "$tmpl" ]]; then
+    python3 - "$conf" "$tmpl" <<'PY'
+import re, sys
+from pathlib import Path
+conf, tmpl = Path(sys.argv[1]), Path(sys.argv[2])
+text = conf.read_text(encoding="utf-8")
+src = tmpl.read_text(encoding="utf-8")
+keys = (
+    "hw.lcd.width", "hw.lcd.height", "hw.lcd.density",
+    "hw.keyboard", "hw.keyboard.charmap", "hw.keyboard.lid",
+    "hw.ramSize",
+)
+for key in keys:
+    m = re.search(rf"(?m)^{re.escape(key)}\s*=\s*(.*)$", src)
+    if not m:
+        continue
+    val = m.group(1).strip()
+    if re.search(rf"(?m)^{re.escape(key)}\s*=", text):
+        text = re.sub(rf"(?m)^{re.escape(key)}\s*=\s*.*$", f"{key}={val}", text, count=1)
+    else:
+        text = text.rstrip() + f"\n{key}={val}\n"
+conf.write_text(text, encoding="utf-8")
+PY
+  fi
+  android_emu_ensure_hw_keyboard
+  return 0
+}
+
 # True when the preferred AVD is running with `-no-window` / headless qemu.
 android_emu_is_headless() {
   local name
@@ -108,6 +221,22 @@ android_emu_preferred_serial() {
       return 0
     fi
   done < <("$adb_bin" devices 2>/dev/null | awk '/^emulator-[0-9]+[[:space:]]+device/{print $1}')
+}
+
+# Shut down a specific AVD by name (pool agent cleanup). Leaves other AVDs alone.
+android_emu_shutdown_named() {
+  local name="${1:-}" serial adb_bin
+  [[ -n "$name" ]] || return 0
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 0
+  serial="$(
+    ONTRACK_ANDROID_AVD="$name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+  )"
+  if [[ -z "$serial" ]]; then
+    return 0
+  fi
+  echo "Shutting down agent emulator: ${name} (${serial})" >&2
+  "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
 }
 
 android_emu_avd_exists() {
@@ -182,8 +311,12 @@ android_emu_set_clipboard() {
 }
 
 # Shut down every running emulator except keep_serial (so adb default device is unique).
+# No-op in agent pool mode — other slots / headed AVDs must stay up.
 android_emu_shutdown_others() {
   local keep_serial="${1:-}" adb_bin serial
+  if android_emu_pool_mode; then
+    return 0
+  fi
   adb_bin="$(android_emu_sdk_bin adb)"
   [[ -n "$adb_bin" ]] || return 0
   while IFS= read -r serial; do
@@ -261,9 +394,13 @@ ensure_preferred_android_emulator() {
     return 1
   fi
   if ! android_emu_avd_exists; then
-    echo "error: no AVD named '${name}' (create it or set ONTRACK_ANDROID_AVD)" >&2
-    echo "hint: emulator -list-avds" >&2
-    return 1
+    if android_emu_pool_mode || [[ "$name" =~ ^onTrack_Agent_[0-9]+$ ]]; then
+      android_emu_ensure_agent_avd || return 1
+    else
+      echo "error: no AVD named '${name}' (create it or set ONTRACK_ANDROID_AVD)" >&2
+      echo "hint: emulator -list-avds" >&2
+      return 1
+    fi
   fi
 
   android_emu_ensure_hw_keyboard

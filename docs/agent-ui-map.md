@@ -438,6 +438,13 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.prompt.close`          | Prompt / alert dismiss (X)        |
 | `ontrack.prompt.action.<index>` | Prompt action by visible position |
 
+## Onboarding (`/onboarding`)
+
+| testID                          | Control           |
+| ------------------------------- | ----------------- |
+| `ontrack.onboarding.getStarted` | Get started       |
+| `ontrack.onboarding.skip`       | Skip for now      |
+
 ## Travel list (`/(tabs)/travel`)
 
 Trip launcher home. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live at the **top of plan detail** (`/travel/<id>`). Legacy `/travel/<id>/hub` redirects there.
@@ -445,7 +452,7 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
 | `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish behind travel titles |
-| `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky (stars/moon, sun/clouds, rain/lightning) behind titles |
+| `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky + location ground (stars/moon, sun/clouds, town/trees) behind titles |
 | `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
 | `ontrack.travel.list.section.atmosphereLocation` | Layout anchor — atmosphere photo place caption            |
 | `ontrack.travel.list.search`                     | Full-width Your Trips search (placeholder label)          |
@@ -574,6 +581,14 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.profile.apiUsage`         | Open Integrations (also via Developer Tools) |
 | `ontrack.profile.developer`        | Open Developer Tools hub |
 | `ontrack.profile.usageAnalytics`   | Toggle first-party usage analytics |
+
+### Route error boundary (recoverable crash shell)
+
+| ID | Control |
+|----|---------|
+| `ontrack.errorBoundary.root` | Crash / failed-route shell |
+| `ontrack.errorBoundary.retry` | Try again |
+| `ontrack.errorBoundary.sendReport` | Send crash report (share/email crash log file) |
 
 ### Developer Tools (`/developer`, `account_flags.developer_tools`)
 

@@ -14,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, {
   Circle,
-  ClipPath,
   Defs,
   Ellipse,
   G,
@@ -28,14 +27,13 @@ import {
   approximateLatitudeForDestination,
   dimFieldStars,
   moonPhaseCycle,
-  moonTerminatorPath,
   projectStarsToPlate,
 } from '@/features/travel/travel-sky-astronomy';
 import { destinationShowsAurora } from '@/features/travel/travel-sky-aurora-destinations';
 import { TravelSkyAurora } from '@/features/travel/travel-sky-aurora';
 import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
+import { PhaseMoon } from '@/features/travel/travel-phase-moon';
 import {
-  celestialDiscHostStyle,
   SKY_CELESTIAL_CLEARANCE,
   SKY_PLATE_VIEWBOX,
   SKY_VIEW_H,
@@ -48,41 +46,54 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 function MotionLayer({
   depth,
-  delayMs,
   energy,
   tiltX,
   tiltY,
+  driftAmp = 0,
+  driftMs = 32000,
+  delayMs = 0,
   children,
 }: {
   depth: number;
-  delayMs: number;
   energy: SharedValue<number>;
   tiltX: SharedValue<number>;
   tiltY: SharedValue<number>;
+  driftAmp?: number;
+  driftMs?: number;
+  delayMs?: number;
   children: ReactNode;
 }) {
-  const idle = useSharedValue(0.55);
+  const drift = useSharedValue(0);
   useEffect(() => {
-    idle.value = withDelay(
+    if (driftAmp <= 0) return;
+    drift.value = 0;
+    drift.value = withDelay(
       delayMs,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0.42, { duration: 1700, easing: Easing.inOut(Easing.quad) }),
+          withTiming(1, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         false,
       ),
     );
-  }, [delayMs, idle]);
+  }, [delayMs, drift, driftAmp, driftMs]);
 
+  // Stable plate opacity — per-star shimmer carries the sparkle; a layer-wide
+  // breathe made the whole field pulse in lockstep. Clouds optionally glide.
   const style = useAnimatedStyle(() => {
-    const twinkle = interpolate(energy.value, [0, 1], [idle.value * 0.85, 1]);
+    const lift = interpolate(energy.value, [0, 1], [0.94, 1]);
+    const glide = driftAmp > 0 ? interpolate(drift.value, [0, 1], [-driftAmp, driftAmp]) : 0;
     return {
-      opacity: twinkle,
+      opacity: lift,
       transform: [
-        { translateX: tiltX.value * 16 * depth },
-        { translateY: tiltY.value * 10 * depth },
+        { translateX: tiltX.value * 16 * depth + glide },
+        {
+          translateY:
+            tiltY.value * 10 * depth +
+            (driftAmp > 0 ? interpolate(drift.value, [0, 1], [-1, 1]) * depth : 0),
+        },
       ],
     };
   });
@@ -90,48 +101,94 @@ function MotionLayer({
   return <Animated.View style={[StyleSheet.absoluteFill, style]}>{children}</Animated.View>;
 }
 
-function PulsingStar({
+/** Deterministic 0…1 from a small integer seed (no Math in worklets). */
+function starSeedUnit(seed: number, salt: number): number {
+  const n = (seed * 7919 + salt * 104729) % 10007;
+  return (n < 0 ? n + 10007 : n) / 10007;
+}
+
+/**
+ * Independent opacity flashes — quick rise/fall with long, varied rests.
+ * No radius breathe (that reads as a synchronized pulse).
+ */
+function TwinklingStar({
   cx,
   cy,
   r,
-  delayMs,
+  seed,
   baseOpacity,
   color,
 }: {
   cx: number;
   cy: number;
   r: number;
-  delayMs: number;
+  seed: number;
   baseOpacity: number;
   color: string;
 }) {
-  const pulse = useSharedValue(0);
+  const shimmer = useSharedValue(0);
+  const delayMs = Math.round(starSeedUnit(seed, 1) * 5200);
+  const holdMs = Math.round(1600 + starSeedUnit(seed, 2) * 6400);
+  const flashUpMs = Math.round(140 + starSeedUnit(seed, 3) * 260);
+  const flashDownMs = Math.round(220 + starSeedUnit(seed, 4) * 380);
+  const peak = 0.55 + starSeedUnit(seed, 5) * 0.45;
+  const doubleFlash = seed % 7 === 0 || seed % 11 === 0;
+
   useEffect(() => {
-    pulse.value = withDelay(
-      delayMs,
-      withRepeat(
-        withSequence(
-          withTiming(1, {
-            duration: 1400 + (delayMs % 700),
-            easing: Easing.inOut(Easing.sin),
+    const gapMs = Math.round(60 + starSeedUnit(seed, 6) * 140);
+    const cycle = doubleFlash
+      ? withSequence(
+          withTiming(0, { duration: holdMs }),
+          withTiming(peak, {
+            duration: flashUpMs,
+            easing: Easing.out(Easing.cubic),
           }),
           withTiming(0, {
-            duration: 1600 + (delayMs % 500),
-            easing: Easing.inOut(Easing.sin),
+            duration: flashDownMs,
+            easing: Easing.in(Easing.quad),
           }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [delayMs, pulse]);
+          withTiming(0, { duration: gapMs }),
+          withTiming(peak * 0.72, {
+            duration: Math.round(flashUpMs * 0.75),
+            easing: Easing.out(Easing.cubic),
+          }),
+          withTiming(0, {
+            duration: Math.round(flashDownMs * 0.9),
+            easing: Easing.in(Easing.quad),
+          }),
+        )
+      : withSequence(
+          withTiming(0, { duration: holdMs }),
+          withTiming(peak, {
+            duration: flashUpMs,
+            easing: Easing.out(Easing.cubic),
+          }),
+          withTiming(0, {
+            duration: flashDownMs,
+            easing: Easing.in(Easing.quad),
+          }),
+        );
+
+    shimmer.value = withDelay(delayMs, withRepeat(cycle, -1, false));
+  }, [
+    delayMs,
+    doubleFlash,
+    flashDownMs,
+    flashUpMs,
+    holdMs,
+    peak,
+    seed,
+    shimmer,
+  ]);
 
   const animatedProps = useAnimatedProps(() => ({
-    opacity: baseOpacity * (0.55 + pulse.value * 0.45),
-    r: r * (0.92 + pulse.value * 0.18),
+    // Soft floor → brief sparkle; radius stays fixed.
+    opacity: baseOpacity * (0.78 + shimmer.value * 0.22),
   }));
 
-  return <AnimatedCircle cx={cx} cy={cy} fill={color} animatedProps={animatedProps} />;
+  return (
+    <AnimatedCircle cx={cx} cy={cy} r={r} fill={color} animatedProps={animatedProps} />
+  );
 }
 
 function Satellite({
@@ -254,178 +311,6 @@ function ShootingStar({
   );
 }
 
-/** Fixed lunar-surface features, positioned as fractions of the moon radius. */
-const MOON_MARIA = [
-  { fx: -0.34, fy: -0.3, frx: 0.34, fry: 0.26 },
-  { fx: 0.06, fy: -0.4, frx: 0.24, fry: 0.18 },
-  { fx: 0.34, fy: -0.08, frx: 0.2, fry: 0.26 },
-  { fx: -0.12, fy: 0.12, frx: 0.4, fry: 0.28 },
-] as const;
-
-const MOON_CRATERS = [
-  { fx: 0.46, fy: 0.3, fr: 0.13 },
-  { fx: 0.18, fy: 0.52, fr: 0.09 },
-  { fx: -0.52, fy: 0.34, fr: 0.11 },
-  { fx: 0.55, fy: -0.38, fr: 0.08 },
-  { fx: -0.26, fy: -0.58, fr: 0.07 },
-] as const;
-
-/** Tycho — larger crater near the southern limb with a faint ray splash. */
-const MOON_TYCHO = { fx: -0.06, fy: 0.62, fr: 0.12 } as const;
-
-/**
- * Phase-accurate realistic moon: lit region from terminator-arc geometry,
- * surface shading + maria + craters clipped to the lit side, faint
- * earthshine disc behind, soft glow halo.
- */
-function PhaseMoon({
-  cx,
-  cy,
-  r,
-  cycle,
-  southern,
-  motion,
-}: {
-  cx: number;
-  cy: number;
-  r: number;
-  cycle: number;
-  southern: boolean;
-  motion: TiltSkyMotion;
-}) {
-  const litPath = moonTerminatorPath(cycle, cx, cy, r, southern);
-  if (!litPath) return null;
-
-  const idle = useSharedValue(0.88);
-  useEffect(() => {
-    idle.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0.84, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [idle]);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: interpolate(motion.energy.value, [0, 1], [idle.value, 1]),
-    transform: [
-      { translateX: motion.tiltX.value * 3 },
-      { translateY: motion.tiltY.value * 2 },
-    ],
-  }));
-
-  // Square host — full-plate `preserveAspectRatio="none"` would oval the disc.
-  const box = r * 3.6;
-  const pad = r * 1.8;
-
-  return (
-    <View
-      pointerEvents="none"
-      style={celestialDiscHostStyle(cx, cy, box)}>
-      <Animated.View style={[{ flex: 1 }, style]}>
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox={`${cx - pad} ${cy - pad} ${box} ${box}`}
-          preserveAspectRatio="xMidYMid meet">
-          <Defs>
-            <RadialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="rgba(232,238,248,0.22)" />
-              <Stop offset="100%" stopColor="rgba(232,238,248,0)" />
-            </RadialGradient>
-            <RadialGradient
-              id="moonSurface"
-              gradientUnits="userSpaceOnUse"
-              cx={cx - r * 0.28}
-              cy={cy - r * 0.32}
-              r={r * 1.6}>
-              <Stop offset="0%" stopColor="#F8FAFC" />
-              <Stop offset="55%" stopColor="#DCE3EC" />
-              <Stop offset="100%" stopColor="#A9B5C4" />
-            </RadialGradient>
-            <ClipPath id="moonLit">
-              <Path d={litPath} />
-            </ClipPath>
-          </Defs>
-
-          {/* Halo + faint earthshine on the dark side */}
-          <Circle cx={cx} cy={cy} r={r * 1.6} fill="url(#moonGlow)" />
-          <Circle cx={cx} cy={cy} r={r} fill="rgba(214,224,238,0.12)" />
-
-          <G clipPath="url(#moonLit)">
-            <Circle cx={cx} cy={cy} r={r} fill="url(#moonSurface)" />
-            {/* Maria — darker basalt plains */}
-            {MOON_MARIA.map((m, i) => (
-              <Ellipse
-                key={`maria-${i}`}
-                cx={cx + m.fx * r}
-                cy={cy + m.fy * r}
-                rx={m.frx * r}
-                ry={m.fry * r}
-                fill="rgba(96,112,134,0.34)"
-              />
-            ))}
-            {/* Craters — dark floor inside a light rim */}
-            {MOON_CRATERS.map((c, i) => (
-              <G key={`crater-${i}`}>
-                <Circle
-                  cx={cx + c.fx * r}
-                  cy={cy + c.fy * r}
-                  r={c.fr * r}
-                  fill="none"
-                  stroke="rgba(240,246,252,0.5)"
-                  strokeWidth={c.fr * r * 0.35}
-                />
-                <Circle
-                  cx={cx + c.fx * r + c.fr * r * 0.12}
-                  cy={cy + c.fy * r + c.fr * r * 0.12}
-                  r={c.fr * r * 0.72}
-                  fill="rgba(84,99,120,0.42)"
-                />
-              </G>
-            ))}
-            {/* Tycho + ray splash */}
-            <Circle
-              cx={cx + MOON_TYCHO.fx * r}
-              cy={cy + MOON_TYCHO.fy * r}
-              r={MOON_TYCHO.fr * r}
-              fill="rgba(238,244,250,0.6)"
-            />
-            {[-40, 0, 42].map((deg) => {
-              const rad = ((deg - 90) * Math.PI) / 180;
-              const x0 = cx + MOON_TYCHO.fx * r;
-              const y0 = cy + MOON_TYCHO.fy * r;
-              return (
-                <Line
-                  key={`ray-${deg}`}
-                  x1={x0}
-                  y1={y0}
-                  x2={x0 + Math.cos(rad) * r * 0.55}
-                  y2={y0 - Math.sin(rad) * r * 0.55}
-                  stroke="rgba(235,242,250,0.3)"
-                  strokeWidth={r * 0.07}
-                  strokeLinecap="round"
-                />
-              );
-            })}
-            {/* Limb darkening — spherical falloff at the edge */}
-            <Circle
-              cx={cx}
-              cy={cy}
-              r={r * 0.93}
-              fill="none"
-              stroke="rgba(52,66,88,0.28)"
-              strokeWidth={r * 0.16}
-            />
-          </G>
-        </Svg>
-      </Animated.View>
-    </View>
-  );
-}
-
 export function TravelSkyNight({
   condition,
   destination,
@@ -479,13 +364,12 @@ export function TravelSkyNight({
   const starOpacityMul =
     (condition.rain ? 0.4 : 1) * (showAurora ? 0.85 : 1) * (desert ? 1.12 : 1);
   const clearSky = !condition.rain && !cloudy;
-  // Open sky between title and + — keep below the status band so chrome joins cleanly.
+  // Below the status band so the disc clears the clock / Dynamic Island.
   const moonY = Math.min(
     SKY_VIEW_H - 40,
     statusBand + SKY_CELESTIAL_CLEARANCE,
   );
   const moonX = 220;
-  /** Compact accent — larger than a star, still smaller than header icon buttons. */
   const moonR = 7;
 
   return (
@@ -521,7 +405,6 @@ export function TravelSkyNight({
 
       <MotionLayer
         depth={0.3}
-        delayMs={0}
         energy={motion.energy}
         tiltX={motion.tiltX}
         tiltY={motion.tiltY}>
@@ -545,7 +428,6 @@ export function TravelSkyNight({
 
       <MotionLayer
         depth={0.75}
-        delayMs={180}
         energy={motion.energy}
         tiltX={motion.tiltX}
         tiltY={motion.tiltY}>
@@ -555,12 +437,12 @@ export function TravelSkyNight({
           viewBox={SKY_PLATE_VIEWBOX}
           preserveAspectRatio="none">
           {stars.map((s, i) => (
-            <PulsingStar
+            <TwinklingStar
               key={s.name}
               cx={s.x}
               cy={s.y}
               r={s.r}
-              delayMs={(i * 137) % 2400}
+              seed={i + 1}
               baseOpacity={Math.min(1, s.opacity * starOpacityMul)}
               color={s.mag < 1 ? '#FFF8E8' : '#F7F3E8'}
             />
@@ -571,7 +453,9 @@ export function TravelSkyNight({
       {cloudy ? (
         <MotionLayer
           depth={1.1}
-          delayMs={340}
+          delayMs={80}
+          driftAmp={condition.cloudCover === 'partly' ? 14 : 18}
+          driftMs={condition.cloudCover === 'partly' ? 28000 : 34000}
           energy={motion.energy}
           tiltX={motion.tiltX}
           tiltY={motion.tiltY}>
@@ -580,7 +464,14 @@ export function TravelSkyNight({
             height="100%"
             viewBox={SKY_PLATE_VIEWBOX}
             preserveAspectRatio="none">
-            <G opacity={condition.rain ? 0.55 : 0.4}>
+            <G
+              opacity={
+                condition.rain
+                  ? 0.55
+                  : condition.cloudCover === 'partly'
+                    ? 0.32
+                    : 0.4
+              }>
               <Ellipse cx={80} cy={36} rx={70} ry={18} fill="rgba(40,55,80,0.55)" />
               <Ellipse cx={200} cy={28} rx={90} ry={22} fill="rgba(35,50,75,0.5)" />
               <Ellipse cx={300} cy={42} rx={65} ry={16} fill="rgba(45,60,85,0.45)" />
@@ -596,6 +487,7 @@ export function TravelSkyNight({
         cycle={cycle}
         southern={lat < 0}
         motion={motion}
+        gradientId="itineraryPhaseMoon"
       />
 
       {clearSky ? (

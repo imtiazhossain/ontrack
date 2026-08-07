@@ -8,10 +8,19 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { create } from 'zustand';
 
-import { appTextStyle, borders, layout, radii, spacing, type Theme } from '@/design-system';
+import {
+  appTextStyle,
+  borders,
+  layout,
+  motion,
+  radii,
+  spacing,
+  springs,
+  type Theme,
+} from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
@@ -208,7 +217,7 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
     <Animated.View
       key={request.id}
       accessibilityViewIsModal
-      entering={FadeIn.duration(170)}
+      entering={FadeIn.duration(motion.fade).reduceMotion(ReduceMotion.System)}
       pointerEvents="box-none"
       style={[styles.overlay, embedded ? styles.embeddedOverlay : undefined]}>
       <BlurView
@@ -229,7 +238,10 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
         ]}
       />
       <Animated.View
-        entering={FadeInDown.springify().damping(20).stiffness(220)}
+        entering={FadeInDown.springify()
+          .damping(springs.gentle.damping)
+          .stiffness(springs.gentle.stiffness)
+          .reduceMotion(ReduceMotion.System)}
         style={[
           styles.card,
           {

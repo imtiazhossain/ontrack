@@ -23,6 +23,7 @@ import {
 } from '@/components/primitives';
 import {
     layout,
+    motion,
     spacing,
 } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
@@ -303,10 +304,10 @@ export function TodoListScreen({ listId }: { listId: string }) {
             renderItem={({ item, drag, getIndex, isActive }) => (
               <Animated.View
                 entering={FadeInDown.delay(Math.min(getIndex() ?? 0, 5) * 36).duration(
-                  220,
+                  motion.layout,
                 )}
-                exiting={FadeOutLeft.duration(180)}
-                layout={LinearTransition.duration(220)}
+                exiting={FadeOutLeft.duration(motion.fade)}
+                layout={LinearTransition.duration(motion.layout)}
                 style={isActive ? styles.activeTaskRow : undefined}
               >
                 <TodoRow

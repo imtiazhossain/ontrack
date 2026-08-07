@@ -301,6 +301,10 @@ export const AgentUiIds = {
     privacy: 'ontrack.auth.privacy',
     terms: 'ontrack.auth.terms',
   },
+  onboarding: {
+    getStarted: 'ontrack.onboarding.getStarted',
+    skip: 'ontrack.onboarding.skip',
+  },
   games: {
     challengeFriend: 'ontrack.games.hub.challengeFriend',
     balloonPopCard: 'ontrack.games.hub.balloonPop',
@@ -797,6 +801,11 @@ export const AgentUiIds = {
   chrome: {
     back: 'ontrack.chrome.back',
     headerBack: 'ontrack.chrome.headerBack',
+  },
+  errorBoundary: {
+    root: 'ontrack.errorBoundary.root',
+    retry: 'ontrack.errorBoundary.retry',
+    sendReport: 'ontrack.errorBoundary.sendReport',
   },
   agentUi: {
     /** __DEV__ overlay root — present when AgentUiOverlay is mounted. */

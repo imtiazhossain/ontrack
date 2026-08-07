@@ -128,13 +128,19 @@ export const travelHomeTokens = {
     itineraryHorizontalPadding: 12,
     /** Display title — matches reference visual cap-height (~69px @ 853 → ~46pt). */
     displayTitle: 46,
-    /** “Your Trips” — ref ~42–50px @ 863 → ~19–23pt @ 390; keep below trip titles. */
+    /** “Your Trips” plain title — ref ~42–50px @ 863 → ~19–23pt @ 390; keep below trip titles. */
     sectionTitle: 20,
+    /**
+     * Search-field placeholder/value inside the ~38pt pill — sits with the
+     * leading search glyph; sectionTitle is too tall for the field.
+     */
+    searchFieldText: 16,
     tripTitle: 28,
     heroMinHeight: 0,
     carouselActiveDot: 7,
     carouselInactiveDot: 5,
     carouselDotGap: 6,
+    /** Inset above the glass scoop — page ticks sit on the visible hero band. */
     carouselBottomInset: 10,
     /** Keep atmosphere recognizable (0 = crisp photo). */
     heroBlurRadius: 0,
