@@ -57,6 +57,8 @@ export function TravelHomeGlass({
   const darkPlate = inverted
     ? theme.name !== 'dark'
     : theme.name === 'dark';
+  /** Inverted CTAs (View Itinerary) need charcoal; theme dark frost stays softer. */
+  const invertedDark = inverted && darkPlate;
 
   if (clear) {
     return (
@@ -92,13 +94,25 @@ export function TravelHomeGlass({
           style={[
             StyleSheet.absoluteFill,
             { zIndex: 0 },
-            darkPlate ? styles.androidTintDark : styles.androidTintLight,
+            invertedDark
+              ? styles.androidTintInverted
+              : darkPlate
+                ? styles.androidTintDark
+                : styles.androidTintLight,
           ]}
         />
         {children}
       </View>
     );
   }
+
+  const darkFill = invertedDark
+    ? allowsBlur
+      ? 'rgba(0, 0, 0, 0.58)'
+      : 'rgba(0, 0, 0, 0.68)'
+    : allowsBlur
+      ? 'rgba(0, 0, 0, 0.32)'
+      : 'rgba(0, 0, 0, 0.55)';
 
   return (
     <View
@@ -111,9 +125,7 @@ export function TravelHomeGlass({
             ? 'rgba(255,255,255,0.16)'
             : 'rgba(255,255,255,0.65)',
           backgroundColor: darkPlate
-            ? allowsBlur
-              ? 'rgba(0, 0, 0, 0.32)'
-              : 'rgba(0, 0, 0, 0.55)'
+            ? darkFill
             : allowsBlur
               ? 'rgba(255, 255, 255, 0.32)'
               : 'rgba(255, 255, 255, 0.78)',
@@ -149,14 +161,20 @@ const styles = StyleSheet.create({
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.42) 45%, rgba(255,255,255,0.62) 100%)',
   },
-  /**
-   * Inverted CTA (View Itinerary). Match iOS medium grey
-   * (`rgba(0,0,0,0.32)` + dark blur ≈ #A9A9A9) — prior 0.68 read black.
-   */
+  /** Theme dark frost (search / chips) — soft grey glass. */
   androidTintDark: {
     backgroundColor: 'rgba(12, 16, 24, 0.32)',
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(36,42,54,0.38) 0%, rgba(12,16,24,0.28) 50%, rgba(8,12,18,0.36) 100%)',
+  },
+  /**
+   * Inverted CTA (View Itinerary) + count badge on light paper.
+   * Charcoal over white ≈ #727479 — 0.32 washed-out; solid 0.68 read black.
+   */
+  androidTintInverted: {
+    backgroundColor: 'rgba(12, 16, 24, 0.58)',
+    experimental_backgroundImage:
+      'linear-gradient(160deg, rgba(36,42,54,0.64) 0%, rgba(12,16,24,0.54) 50%, rgba(8,12,18,0.62) 100%)',
   },
   clearLight: {
     borderWidth: 1,
