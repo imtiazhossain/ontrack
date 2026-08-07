@@ -64,7 +64,6 @@ export function TravelItineraryForm({
   startMinutes,
   endDate,
   endMinutes,
-  duration,
   details,
   bookingUrl,
   photoUris,
@@ -96,7 +95,6 @@ export function TravelItineraryForm({
   onStartMinutesChange,
   onEndDateChange,
   onEndMinutesChange,
-  onDurationChange,
   onDetailsChange,
   onBookingUrlChange,
   onPhotoUrisChange,
@@ -120,7 +118,6 @@ export function TravelItineraryForm({
   startMinutes: number | null;
   endDate: string;
   endMinutes: number | null;
-  duration: string;
   details: string;
   bookingUrl: string;
   photoUris: string[];
@@ -153,7 +150,6 @@ export function TravelItineraryForm({
   onStartMinutesChange: (value: number) => void;
   onEndDateChange: (value: string) => void;
   onEndMinutesChange: (value: number) => void;
-  onDurationChange: (value: string) => void;
   onDetailsChange: (value: string) => void;
   onBookingUrlChange: (value: string) => void;
   onPhotoUrisChange: (uris: string[]) => void;
@@ -361,14 +357,12 @@ export function TravelItineraryForm({
         startMinutes={startMinutes}
         endDate={endDate}
         endMinutes={endMinutes}
-        duration={duration}
         planStartDate={planStartDate}
         planEndDate={planEndDate}
         onDateChange={onDateChange}
         onStartMinutesChange={onStartMinutesChange}
         onEndDateChange={onEndDateChange}
         onEndMinutesChange={onEndMinutesChange}
-        onDurationChange={onDurationChange}
       />
 
       {kind === 'flight' ? (

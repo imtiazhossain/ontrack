@@ -16,7 +16,7 @@ import {
 import Animated, {
     FadeIn,
     ReduceMotion,
-    SlideInUp,
+    SlideInDown,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -150,8 +150,9 @@ export function SheetScaffold({
       visible>
       <View accessibilityViewIsModal style={styles.modalRoot}>
         {/*
-          Scrim fades in place; card slides up separately. Native Modal slide
-          would drag the dim with the sheet.
+          Scrim fades in place; card rises from below. Native Modal slide
+          would drag the dim with the sheet. (Reanimated: SlideInDown =
+          start below viewport → settle at target.)
         */}
         <Animated.View
           entering={FadeIn.duration(motion.fade).reduceMotion(
@@ -178,9 +179,11 @@ export function SheetScaffold({
           pointerEvents="box-none"
           style={[styles.avoid, { paddingTop: insets.top }]}>
           <Animated.View
-            entering={SlideInUp.springify()
-              .damping(springs.gentle.damping)
-              .stiffness(springs.gentle.stiffness)
+            entering={SlideInDown.springify()
+              .damping(springs.sheet.damping)
+              .stiffness(springs.sheet.stiffness)
+              .mass(springs.sheet.mass)
+              .overshootClamping(1)
               .reduceMotion(ReduceMotion.System)}
             onLayout={(event) => {
               if (!lockHeight || lockedHeight != null) return;

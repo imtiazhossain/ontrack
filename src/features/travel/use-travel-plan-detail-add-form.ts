@@ -71,7 +71,7 @@ export function useTravelPlanDetailAddForm({
     startsWithEmptySchedule ? '' : plan.endDate || plan.startDate,
   );
   const [endMinutes, setEndMinutes] = useState<number | null>(() =>
-    startsWithEmptySchedule ? null : 11 * 60,
+    startsWithEmptySchedule ? null : 10 * 60,
   );
   const [duration, setDuration] = useState('60');
   const [details, setDetails] = useState('');
@@ -118,7 +118,7 @@ export function useTravelPlanDetailAddForm({
     setStartMinutes(9 * 60);
     setDate(plan.startDate);
     setEndDate(plan.endDate);
-    setEndMinutes(11 * 60);
+    setEndMinutes(10 * 60);
     setFlightDetails(emptyFlightDetailsDraft());
     setFlightTripType('one-way');
     setReturnFlightTitle('');
@@ -160,6 +160,7 @@ export function useTravelPlanDetailAddForm({
       } else {
         setDate(plan.startDate);
         setStartMinutes(9 * 60);
+        setEndMinutes(10 * 60);
       }
     },
     [defaultTransportDetails, plan.endDate, plan.startDate, resetAddForm],

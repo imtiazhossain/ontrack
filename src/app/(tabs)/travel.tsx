@@ -57,7 +57,11 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
-import { orderTravelPlansByRecency, useTravel } from '@/store/travel';
+import {
+    orderTravelPlansByRecency,
+    orderTravelPlansForLauncher,
+    useTravel,
+} from '@/store/travel';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 import { toDateKey } from '@/utils/date';
@@ -151,11 +155,10 @@ function TravelScreenContent() {
     () => sortedPlans.filter((plan) => isCurrentOrUpcomingTrip(plan, today)),
     [sortedPlans, today],
   );
-  const pastPlans = useMemo(
-    () => sortedPlans.filter((plan) => !isCurrentOrUpcomingTrip(plan, today)),
-    [sortedPlans, today],
+  const launcherPlans = useMemo(
+    () => orderTravelPlansForLauncher(plans, recentPlanIds, today),
+    [plans, recentPlanIds, today],
   );
-  const launcherPlans = currentPlans.length > 0 ? currentPlans : pastPlans;
   const [tripSearchQuery, setTripSearchQuery] = useState('');
   const visibleLauncherPlans = useMemo(
     () => filterTravelPlansByQuery(launcherPlans, tripSearchQuery),

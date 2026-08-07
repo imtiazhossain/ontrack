@@ -1,7 +1,6 @@
 import { View } from 'react-native';
 
 import { AppText, Button, SheetScaffold } from '@/components/primitives';
-import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds } from '@/utils/agent-ui';
 
@@ -33,7 +32,6 @@ export function TravelCalendarUpdatedModal({
       eyebrow="Success"
       title="Calendar Updated"
       subtitle="Your latest trip changes are now reflected in your schedule."
-      decoration={<TravelFlightPathArc />}
       onClose={onBackToTravel}
       closeAccessibilityLabel="Back to Travel"
       closeTestID={AgentUiIds.travel.calendarUpdated.dismiss}>

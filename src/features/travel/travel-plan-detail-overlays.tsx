@@ -178,7 +178,6 @@ export function TravelPlanDetailOverlays({
         startMinutes={form.startMinutes}
         endDate={form.endDate}
         endMinutes={form.endMinutes}
-        duration={form.duration}
         details={form.details}
         bookingUrl={form.bookingUrl}
         photoUris={form.photoUris}
@@ -210,7 +209,6 @@ export function TravelPlanDetailOverlays({
         onStartMinutesChange={form.setStartMinutes}
         onEndDateChange={form.setEndDate}
         onEndMinutesChange={form.setEndMinutes}
-        onDurationChange={form.setDuration}
         onDetailsChange={form.setDetails}
         onBookingUrlChange={form.setBookingUrl}
         onPhotoUrisChange={form.setPhotoUris}

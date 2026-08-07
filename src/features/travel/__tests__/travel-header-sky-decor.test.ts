@@ -108,6 +108,7 @@ describe('travel header sky décor', () => {
     expect(night).toContain('motion.energy');
     expect(night).toContain('TwinklingStar');
     expect(night).toContain('useStarTwinkleClock');
+    expect(night).toContain('unitFlash');
     expect(night).not.toContain('PulsingStar');
     // Fabric-safe View twinkles + shared clock — not animated SVG props.
     expect(night).not.toContain('useAnimatedProps');
@@ -115,6 +116,9 @@ describe('travel header sky décor', () => {
     expect(night).not.toContain('Animated.createAnimatedComponent');
     expect(day).not.toContain('Animated.createAnimatedComponent');
     expect(night).toContain('starSeedUnit');
+    // Keep flash amplitude readable — do not regress to ~0.78 rest floor.
+    expect(night).not.toContain('0.78 + flash');
+    expect(night).toContain('staticDimStars');
     expect(night).not.toContain('r * (0.92');
     expect(day).toContain('MotionLayer');
     expect(day).toContain('motion.energy');
@@ -174,8 +178,11 @@ describe('travel header sky décor', () => {
     expect(body).toContain('travelPlanSkyPageWashStyle');
     expect(body).toContain('resolveHeaderSkyWashTop');
     expect(height).toContain('travelPlanSkyPageWashStyle');
-    expect(flourish).toContain('TravelHeaderSkyDecor');
-    expect(flourish).toContain('styles.skyBehind');
+    // Flight-path flourish is itinerary-hero-only (no nested sky décor).
+    expect(flourish).toContain('TravelFlightPathArc');
+    expect(flourish).not.toContain('TravelHeaderSkyDecor');
+    expect(flourish).not.toContain('skyBehind');
+    expect(hero).toContain('TravelHeaderFlourish');
     expect(sky).toContain('StyleSheet.absoluteFill');
     // Soft horizon — sky art dissolves into theme paper just below the dates.
     expect(sky).toContain('LinearGradient');

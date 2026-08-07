@@ -215,7 +215,7 @@ export function TravelPlanHero({
             testID={AgentUiIds.chrome.back}
             onPress={() => goBackOrReplace(router, '/(tabs)/travel' as Href)}
           />
-          <TravelHeaderFlourish style={styles.headerCopy} sky={false}>
+          <TravelHeaderFlourish style={styles.headerCopy}>
             <AppText
               variant="overline"
               fit

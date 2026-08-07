@@ -451,7 +451,7 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
-| `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish behind travel titles |
+| `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish on itinerary hero only |
 | `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky + location ground (stars/moon, sun/clouds, town/trees) behind titles |
 | `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
 | `ontrack.travel.list.section.atmosphereLocation` | Layout anchor — atmosphere photo place caption            |
@@ -739,7 +739,9 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 | `ontrack.travel.itineraryAdd.tripType.one-way` | Add Flight: one-way trip type                                            |
 | `ontrack.travel.itineraryAdd.tripType.round-trip` | Add Flight: roundtrip trip type                                       |
 | `ontrack.travel.itineraryAdd.date`             | Itinerary departure/start date                                           |
-| `ontrack.travel.itineraryAdd.time`             | Itinerary departure/start time                                           |
+| `ontrack.travel.itineraryAdd.time`             | Itinerary departure/start time (activity: From)                          |
+| `ontrack.travel.itineraryAdd.endDate`          | Itinerary end/arrival date                                               |
+| `ontrack.travel.itineraryAdd.endTime`          | Itinerary end/arrival time (activity: To)                                |
 | `ontrack.travel.itineraryAdd.returnDate`       | Roundtrip returning departure date                                       |
 | `ontrack.travel.itineraryAdd.returnTime`       | Roundtrip returning departure time                                       |
 | `ontrack.travel.itineraryAdd.returnEndDate`    | Roundtrip returning arrival date                                         |

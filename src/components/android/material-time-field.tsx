@@ -19,6 +19,7 @@ import {
 import { radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
 import { formatMinutes, nowMinutes } from '@/utils/date';
 
 /**
@@ -56,6 +57,17 @@ export function MaterialTimeField({
   const displayValue = hasValue ? formatMinutes(minutes) : placeholder;
   const resolvedA11yLabel = accessibilityLabel ?? label ?? stackedLabel ?? 'Time';
   const stacked = Boolean(stackedLabel);
+  const openPicker = () => setShowPicker(true);
+  // Registry required for agent-ui dump/assert/tap — bare RN testID is not enough.
+  const agent = useAgentUiTarget(testID, {
+    label: stackedLabel ?? resolvedA11yLabel,
+    value: displayValue,
+    onPress: disabled ? undefined : openPicker,
+  });
+  useAgentUiTarget(testID ? `${testID}.done` : undefined, {
+    label: 'Done',
+    onPress: () => setShowPicker(false),
+  });
 
   return (
     <View style={styles.wrapper}>
@@ -65,11 +77,14 @@ export function MaterialTimeField({
         </AppText>
       ) : null}
       <Pressable
+        ref={agent.ref}
+        onLayout={agent.onLayout}
         accessibilityRole="button"
         accessibilityLabel={resolvedA11yLabel}
         accessibilityValue={{ text: displayValue }}
         disabled={disabled}
-        onPress={() => setShowPicker(true)}
+        onPress={openPicker}
+        testID={testID}
         style={({ pressed }) => [
           styles.field,
           fieldLeadingIconRowStyle({
@@ -136,7 +151,7 @@ export function MaterialTimeField({
             onChange(dateToMinutes(selected));
             setShowPicker(false);
           }}
-          testID={testID}
+          testID={testID ? `${testID}-picker` : undefined}
         />
       ) : null}
     </View>

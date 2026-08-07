@@ -197,6 +197,22 @@ export function useTravelPlanDetailAddItem({
       if (form.kind === 'flight' && span > 3 * 24 * 60) {
         return addItemError('Flight duration looks too long. Check the arrival time.');
       }
+    } else if (form.kind === 'activity') {
+      if (
+        form.endMinutes === null ||
+        form.endMinutes < 0 ||
+        form.endMinutes >= 24 * 60
+      ) {
+        return addItemError('Choose an end time.');
+      }
+      const span = form.endMinutes - form.startMinutes;
+      if (!Number.isFinite(span) || span <= 0) {
+        return addItemError('End time must be after start time.');
+      }
+      if (span > 1440) {
+        return addItemError('Duration must be between 1 and 1,440 minutes.');
+      }
+      durationMinutes = span;
     } else if (
       !isMoment &&
       form.kind !== 'transport' &&

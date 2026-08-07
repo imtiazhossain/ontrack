@@ -18,6 +18,8 @@ export const springs = {
   gentle: { damping: 22, stiffness: 200, mass: 1 },
   bouncy: { damping: 14, stiffness: 220, mass: 0.9 },
   stiff: { damping: 26, stiffness: 380, mass: 1 },
+  /** Modal sheets — near-critical so tall SlideInDown settles without bounce. */
+  sheet: { damping: 36, stiffness: 280, mass: 1 },
 } as const;
 
 /** Named settles — prefer these over ad-hoc ms so surfaces stay consistent. */

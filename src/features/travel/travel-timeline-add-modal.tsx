@@ -1,13 +1,17 @@
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
 import { AppText, Card, SheetScaffold, Symbol } from '@/components/primitives';
-import { TravelFlightPathArc } from '@/features/travel/travel-flight-path-arc';
+import { springs } from '@/design-system';
 import { kindChrome, kindIcon } from '@/features/travel/travel-kind-chrome';
 import { travelMainCardFill } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
+
+const CHOICE_ENTER_STAGGER_MS = 48;
+const CHOICE_ENTER_BASE_DELAY_MS = 70;
 
 type TimelineChoice = {
   kind: TravelItemKind;
@@ -26,9 +30,11 @@ const TIMELINE_CHOICES: TimelineChoice[] = [
 
 function TimelineKindChoice({
   choice,
+  index,
   onSelect,
 }: {
   choice: TimelineChoice;
+  index: number;
   onSelect: (kind: TravelItemKind) => void;
 }) {
   const theme = useTheme();
@@ -36,39 +42,47 @@ function TimelineKindChoice({
   const { spacing, s } = useResponsive();
   const iconSize = Math.max(46, s(48));
   return (
-    <Card
-      onPress={() => onSelect(choice.kind)}
-      testID={AgentUiIds.travel.timelineAdd.kind(choice.kind)}
-      accessibilityLabel={choice.label}
-      style={[
-        styles.choice,
-        {
-          gap: spacing.md,
-          backgroundColor:
-            theme.name === 'light' ? travelMainCardFill(theme) : theme.backgroundSunken,
-          borderColor: theme.separator,
-        },
-      ]}>
-      <View
+    <Animated.View
+      entering={FadeInDown.delay(CHOICE_ENTER_BASE_DELAY_MS + index * CHOICE_ENTER_STAGGER_MS)
+        .springify()
+        .damping(springs.bouncy.damping)
+        .stiffness(springs.bouncy.stiffness)
+        .mass(springs.bouncy.mass)
+        .reduceMotion(ReduceMotion.System)}>
+      <Card
+        onPress={() => onSelect(choice.kind)}
+        testID={AgentUiIds.travel.timelineAdd.kind(choice.kind)}
+        accessibilityLabel={choice.label}
         style={[
-          styles.choiceIcon,
+          styles.choice,
           {
-            width: iconSize,
-            height: iconSize,
-            borderRadius: iconSize / 2,
-            backgroundColor: colors.tint,
+            gap: spacing.md,
+            backgroundColor:
+              theme.name === 'light' ? travelMainCardFill(theme) : theme.backgroundSunken,
+            borderColor: theme.separator,
           },
         ]}>
-        <Symbol name={kindIcon(choice.kind)} size="lg" color={colors.accent} />
-      </View>
-      <View style={[styles.choiceCopy, { gap: spacing.xxs }]}>
-        <AppText variant="subheading" fit>{choice.label}</AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={2}>
-          {choice.description}
-        </AppText>
-      </View>
-      <Symbol name="chevron-right" size="sm" color={colors.accent} />
-    </Card>
+        <View
+          style={[
+            styles.choiceIcon,
+            {
+              width: iconSize,
+              height: iconSize,
+              borderRadius: iconSize / 2,
+              backgroundColor: colors.tint,
+            },
+          ]}>
+          <Symbol name={kindIcon(choice.kind)} size="lg" color={colors.accent} />
+        </View>
+        <View style={[styles.choiceCopy, { gap: spacing.xxs }]}>
+          <AppText variant="subheading" fit>{choice.label}</AppText>
+          <AppText variant="caption" color="secondary" numberOfLines={2}>
+            {choice.description}
+          </AppText>
+        </View>
+        <Symbol name="chevron-right" size="sm" color={colors.accent} />
+      </Card>
+    </Animated.View>
   );
 }
 
@@ -88,13 +102,17 @@ export function TravelTimelineAddModal({
       eyebrow="Itinerary"
       title="Add to Timeline"
       subtitle="Choose what you’d like to add."
-      decoration={<TravelFlightPathArc />}
       onClose={onClose}
       closeAccessibilityLabel="Close add to timeline"
       closeTestID={AgentUiIds.travel.timelineAdd.close}>
       <View style={{ gap: spacing.sm }}>
-        {TIMELINE_CHOICES.map((choice) => (
-          <TimelineKindChoice key={choice.kind} choice={choice} onSelect={onSelect} />
+        {TIMELINE_CHOICES.map((choice, index) => (
+          <TimelineKindChoice
+            key={choice.kind}
+            choice={choice}
+            index={index}
+            onSelect={onSelect}
+          />
         ))}
       </View>
     </SheetScaffold>

@@ -23,7 +23,6 @@ import {
     compareOnGoogleFlights,
     isValidFlightLocation,
 } from '@/features/travel/provider';
-import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import {
     itinerarySheetChrome,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
@@ -248,7 +247,7 @@ export function FlightSearchScreen({
             goBackOrReplace(router, { pathname: '/travel/[id]', params: { id: planId } })
           }
         />
-        <TravelHeaderFlourish style={styles.headerCopy} contentStyle={{ gap: rs.sm }}>
+        <View style={[styles.headerCopy, { gap: rs.sm }]}>
           <AppText
             variant="overline"
             fit
@@ -285,7 +284,7 @@ export function FlightSearchScreen({
             ]}>
             Live availability and total prices without leaving onTrack.
           </AppText>
-        </TravelHeaderFlourish>
+        </View>
       </View>
 
       <TravelSurfaceCard padding={0}>

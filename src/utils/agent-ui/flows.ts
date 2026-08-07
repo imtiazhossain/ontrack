@@ -113,6 +113,18 @@ export const AGENT_UI_FLOWS = {
     // Sheet chrome paints after route; avoid mid-open screenshots/taps.
     { op: 'wait', ms: 250 },
   ],
+  /** Add Activity sheet — From/To time fields (no Duration). */
+  'travel-demo-add-activity': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-demo' },
+    { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}/add/activity` },
+    {
+      op: 'wait',
+      prefix: 'ontrack.travel.itineraryAdd.',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'wait', ms: 250 },
+  ],
   'travel-demo-add-flight-connecting': [
     { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },

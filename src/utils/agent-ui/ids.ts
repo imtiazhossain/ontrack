@@ -423,7 +423,7 @@ export const AgentUiIds = {
   },
   travel: {
     chrome: {
-      /** Layout anchor — itinerary flight-path flourish behind travel page titles. */
+      /** Layout anchor — flight-path flourish on the main itinerary hero only. */
       flightPath: 'ontrack.travel.chrome.flightPath',
       /** Layout anchor — night stars / day sunshine behind travel page titles. */
       skyDecor: 'ontrack.travel.chrome.skyDecor',
