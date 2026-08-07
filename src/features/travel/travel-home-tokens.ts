@@ -94,8 +94,12 @@ export const travelHomeTokens = {
     cardGap: 14,
     editInset: 14,
     headerBottom: 8,
-    /** Pull the white body up over the hero so bodyTop curves sit on the photo. */
-    bodyOverlap: 22,
+    /**
+     * Pull the meta panel up over the hero so the title row sits on frosted
+     * glass (design scoop). Keep in sync with visible hero via
+     * `travelHomeImageHeight` (adds this overlap back into image height).
+     */
+    bodyOverlap: 56,
     /** White meta panel top inset (below bodyTop curve). */
     bodyTop: 12,
   },

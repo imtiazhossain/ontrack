@@ -66,9 +66,9 @@ describe('travel home kit contract', () => {
     expect(glass).not.toContain('rgba(12, 16, 24, 0.68)');
   });
 
-  it('frosts Android trip-card scoops with a blurred hero plate (glass, not milk)', () => {
-    // expo-blur defaults to blurMethod none on Android — clear plastic scoop.
-    // Opaque milk also fails the glass read. Blurred hero + translucent tint.
+  it('frosts trip-card scoops with a hero-aligned plate on iOS and Android', () => {
+    // Scoop must stay pixel-aligned with the hero (no +offset shift). iOS uses
+    // sharp underlay + BlurView; Android pre-blurs. LinearGradient milks to paper.
     const glass = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
       'utf8',
@@ -77,14 +77,21 @@ describe('travel home kit contract', () => {
       join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
       'utf8',
     );
-    expect(glass).toContain('blurRadius');
-    expect(glass).toContain('androidTintLightFrosted');
+    const tokens = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-tokens.ts'),
+      'utf8',
+    );
+    expect(glass).toContain('frost.overlap - frost.heroHeight');
+    expect(glass).toContain('LinearGradient');
+    expect(glass).toContain('contentPosition={{ top: \'50%\', left: \'50%\' }}');
     expect(glass).toContain('backgroundColor: \'transparent\'');
+    expect(glass).not.toContain('overlap + 40');
     expect(glass).not.toContain('bodyFill');
-    // Children must stay direct flex kids — a chrome wrapper broke search+badge row.
     expect(glass).not.toContain('androidChrome');
+    expect(tokens).toMatch(/bodyOverlap:\s*56/);
     expect(card).toContain('frost=');
-    expect(card).toContain('androidFrostSource');
+    expect(card).toContain('heroFrostSource');
+    expect(card).not.toContain('Platform.OS === \'android\' &&');
     expect(card).not.toContain('BlurTargetView');
     expect(card).not.toContain('panelFill');
   });

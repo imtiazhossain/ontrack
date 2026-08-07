@@ -1,5 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { Image, type ImageSource } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Platform,
   StyleSheet,
@@ -13,9 +14,9 @@ import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * Android photo-backed frost — blurred hero plate aligned to the scoop so the
- * edge reads like iOS UIVisualEffect (expo-blur’s default Android path is
- * clear plastic).
+ * Photo-backed frost — hero plate aligned to the scoop so the edge reads as
+ * continuous glass over the destination image (live BlurView alone samples
+ * paper below the hero; Android expo-blur defaults to clear plastic).
  */
 export type TravelHomeGlassFrost = {
   /** Remote URI, bundled require(), or expo-image source. */
@@ -42,8 +43,8 @@ type TravelHomeGlassProps = ViewProps & {
    */
   clear?: boolean;
   /**
-   * Android: frosted glass over a photo. Blurred hero underlay + light tint
-   * (not opaque milk, not clear plastic).
+   * Frosted glass over a photo (trip-card scoop). Sharp/blurred hero underlay
+   * + milk-out tint on iOS and Android.
    */
   frost?: TravelHomeGlassFrost;
 };
@@ -51,8 +52,8 @@ type TravelHomeGlassProps = ViewProps & {
 /**
  * Shared glass plate for Travel chrome.
  *
- * - Default (iOS): frosted BlurView (home / photo-backed surfaces).
- * - Default (Android) + `frost`: blurred hero plate + translucent tint.
+ * - `frost`: hero-aligned plate + milk-out (trip-card scoop, both OS).
+ * - Default (iOS): frosted BlurView (home / atmosphere-backed surfaces).
  * - Default (Android) without frost: translucent material wash.
  * - `clear`: translucent cool tint + sheen (itinerary on flat wash).
  *
@@ -91,10 +92,11 @@ export function TravelHomeGlass({
     );
   }
 
-  if (Platform.OS === 'android') {
-    // Glide BlurTransformation caps at 25 — use the max for strongest frost.
-    // Skip photo blur on constrained tiers (tint-only wash).
-    const imageBlurRadius = allowsBlur ? 25 : 0;
+  if (frost) {
+    // Android Glide BlurTransformation caps at 25. iOS uses a sharp underlay
+    // + BlurView for real UIVisualEffect glass (pre-blur looks muddy).
+    const imageBlurRadius =
+      Platform.OS === 'android' && allowsBlur ? 25 : 0;
 
     return (
       <View
@@ -105,13 +107,12 @@ export function TravelHomeGlass({
           {
             borderColor: darkPlate
               ? 'rgba(255,255,255,0.18)'
-              : 'rgba(255,255,255,0.7)',
-            // Keep the plate transparent so the frosted hero shows through.
+              : 'rgba(255,255,255,0.55)',
             backgroundColor: 'transparent',
           },
           style,
         ]}>
-        {frost && allowsBlur ? (
+        {allowsBlur ? (
           <Image
             pointerEvents="none"
             source={
@@ -121,43 +122,91 @@ export function TravelHomeGlass({
             }
             blurRadius={imageBlurRadius}
             contentFit="cover"
-            contentPosition={{ top: '48%', left: '50%' }}
+            // Match remote trip heroes (center). Misaligned crop seams the scoop.
+            contentPosition={{ top: '50%', left: '50%' }}
             accessible={false}
             importantForAccessibility="no"
             recyclingKey={`travel-glass-frost-${imageBlurRadius}`}
-            // Align to the hero behind the scoop, then bleed a bit into the
-            // meta body so the frosted edge reads taller than the 22pt overlap.
-            // `filter` strengthens frost on Android new-arch; typings lag.
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: frost.overlap + 40 - frost.heroHeight,
-              height: frost.heroHeight,
-              zIndex: 0,
-              filter: 'blur(16px)',
-            } as object}
+            // Pin to the same frame as the destination hero so the scoop edge
+            // is continuous (no +offset shift — that desynced the city plate).
+            style={[
+              {
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: frost.overlap - frost.heroHeight,
+                height: frost.heroHeight,
+                zIndex: 0,
+              },
+              Platform.OS === 'android'
+                ? ({ filter: 'blur(16px)' } as object)
+                : null,
+            ]}
           />
         ) : null}
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={
+              allowsBlur ? (intensity ?? (darkPlate ? 36 : 48)) : 0
+            }
+            tint={darkPlate ? 'dark' : 'light'}
+            pointerEvents="none"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        <LinearGradient
+          pointerEvents="none"
+          colors={
+            darkPlate
+              ? [
+                  'rgba(12, 16, 24, 0.22)',
+                  'rgba(12, 16, 24, 0.55)',
+                  'rgba(12, 16, 24, 0.92)',
+                  'rgba(12, 16, 24, 1)',
+                ]
+              : [
+                  'rgba(255, 255, 255, 0.18)',
+                  'rgba(255, 255, 255, 0.55)',
+                  'rgba(255, 255, 255, 0.92)',
+                  '#FFFFFF',
+                ]
+          }
+          locations={[0, 0.28, 0.58, 0.82]}
+          style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
+        />
+        {/*
+          Children stay direct flex kids of this plate so callers’ row/gap/
+          padding styles keep working (section search + count badge, etc.).
+          Frost underlays are absolute; chrome paints above.
+        */}
+        {children}
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'android') {
+    return (
+      <View
+        {...rest}
+        collapsable={false}
+        style={[
+          styles.glass,
+          {
+            borderColor: darkPlate
+              ? 'rgba(255,255,255,0.18)'
+              : 'rgba(255,255,255,0.7)',
+            backgroundColor: 'transparent',
+          },
+          style,
+        ]}>
         <View
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
             { zIndex: 0 },
-            darkPlate
-              ? frost
-                ? styles.androidTintDarkFrosted
-                : styles.androidTintDark
-              : frost
-                ? styles.androidTintLightFrosted
-                : styles.androidTintLight,
+            darkPlate ? styles.androidTintDark : styles.androidTintLight,
           ]}
         />
-        {/*
-          Children stay direct flex kids of this plate so callers’ row/gap/
-          padding styles keep working (section search + count badge, etc.).
-          Frost underlays are absolute + zIndex 0; chrome paints above.
-        */}
         {children}
       </View>
     );
@@ -205,20 +254,6 @@ const styles = StyleSheet.create({
   glass: {
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  /**
-   * Photo-backed scoop — light material so blur reads through, milking out
-   * toward the title block (same idea as iOS light blur over a hero).
-   */
-  androidTintLightFrosted: {
-    backgroundColor: 'rgba(255, 255, 255, 0.36)',
-    experimental_backgroundImage:
-      'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.42) 28%, rgba(255,255,255,0.78) 62%, rgba(255,255,255,0.94) 100%)',
-  },
-  androidTintDarkFrosted: {
-    backgroundColor: 'rgba(8, 12, 20, 0.4)',
-    experimental_backgroundImage:
-      'linear-gradient(180deg, rgba(12,16,24,0.32) 0%, rgba(12,16,24,0.48) 30%, rgba(12,16,24,0.78) 65%, rgba(12,16,24,0.94) 100%)',
   },
   /** Non-photo chrome (chips / inverted CTA). */
   androidTintLight: {
