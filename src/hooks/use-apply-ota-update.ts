@@ -5,18 +5,12 @@ import { AppState, Platform } from 'react-native';
 import { applyAvailableOtaUpdate } from '@/services/updates/apply-ota';
 
 /**
- * Production builds: download OTAs on launch/foreground and reload as soon as
- * one is ready so users do not need a second kill→open cycle.
+ * Production builds: download OTAs on launch/foreground. Apply happens on the
+ * next cold start — same-session `reloadAsync` races AppContext/Fabric on iOS
+ * and aborts via expo-updates ErrorRecovery (itinerary open after OTA).
  */
 export function useApplyOtaUpdate() {
-  const { isUpdatePending } = Updates.useUpdates();
   const checkingRef = useRef(false);
-
-  useEffect(() => {
-    if (__DEV__ || Platform.OS === 'web' || !Updates.isEnabled) return;
-    if (!isUpdatePending) return;
-    void Updates.reloadAsync().catch(() => undefined);
-  }, [isUpdatePending]);
 
   useEffect(() => {
     if (__DEV__ || Platform.OS === 'web' || !Updates.isEnabled) return;
