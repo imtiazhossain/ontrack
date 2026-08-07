@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { usePageSurfaceBackground } from '@/components/primitives';
 import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -42,6 +43,8 @@ export function TravelHomeBackground({
   /** Content-space height of the upper atmosphere band. */
   const contentPhotoHeight = travelHomeAtmosphereHeight(height, insets.top) - insets.top;
   const paper = dark ? theme.backgroundPrimary : travelHomeTokens.colors.surface;
+  // Transparent Screen on Travel home — publish paper so the tab dock matches.
+  usePageSurfaceBackground(paper, { priority: 1 });
 
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.root]}>

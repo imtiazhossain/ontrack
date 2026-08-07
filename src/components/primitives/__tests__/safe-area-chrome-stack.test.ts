@@ -1,3 +1,4 @@
+import { isPageSurfaceColor } from '@/components/primitives/safe-area-chrome';
 import { pickRankedEntry } from '@/components/primitives/safe-area-chrome-stack';
 
 describe('pickRankedEntry', () => {
@@ -16,5 +17,13 @@ describe('pickRankedEntry', () => {
     const first = { id: 'a', priority: 0, seq: 1, color: '#111111' };
     const second = { id: 'b', priority: 0, seq: 2, color: '#222222' };
     expect(pickRankedEntry([first, second])?.color).toBe('#222222');
+  });
+});
+
+describe('isPageSurfaceColor', () => {
+  it('accepts opaque fills and rejects transparent', () => {
+    expect(isPageSurfaceColor('#141210')).toBe(true);
+    expect(isPageSurfaceColor('transparent')).toBe(false);
+    expect(isPageSurfaceColor(undefined)).toBe(false);
   });
 });

@@ -36,6 +36,8 @@ export { ProgressRing } from './progress-ring';
 export { RouteErrorBoundary } from './route-error-boundary';
 export {
   SafeAreaChrome,
+  usePageSurfaceBackground,
+  usePageSurfaceBackgroundColor,
   useSafeAreaChrome,
   useSafeAreaChromeOverlay,
 } from './safe-area-chrome';

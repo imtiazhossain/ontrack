@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-07T09:36:09Z",
-  "idCount": 447,
+  "generatedAt": "2026-08-07T16:38:06Z",
+  "idCount": 448,
   "byId": {
     "ontrack.activityForm.analyzePhoto": {
       "feature": "activityForm",
@@ -997,11 +997,11 @@
         "src/components/primitives/date-field.tsx",
         "src/components/primitives/dropdown-layout.ts",
         "src/components/primitives/dropdown.tsx",
+        "src/components/primitives/safe-area-chrome-stack.ts",
         "src/components/primitives/safe-area-chrome.tsx",
         "src/components/primitives/sheet-scaffold.tsx",
         "src/components/primitives/time-field.ios.tsx",
-        "src/design-system/shadows.ts",
-        "src/design-system/themes.ts"
+        "src/design-system/shadows.ts"
       ],
       "keyPaths": [
         "developer.overlay",
@@ -1076,7 +1076,7 @@
       "files": [
         "src/app/(tabs)/calendar.tsx",
         "src/app/agent/ui.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
+        "src/components/navigation/bottom-nav-bar.tsx",
         "src/components/primitives/back-button.tsx",
         "src/features/account/developer-hub.tsx",
         "src/features/social/social-hub-screen.tsx",
@@ -2293,7 +2293,7 @@
         "src/app/activity-form.tsx",
         "src/app/detail/sleep/[id].tsx",
         "src/app/share-event.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
+        "src/components/navigation/bottom-nav-bar.tsx",
         "src/features/account/developer-storage.ts",
         "src/features/agents/agent-manager.tsx",
         "src/features/auth/auth-provider.tsx",
@@ -2821,6 +2821,7 @@
         "src/features/travel/chat.ts",
         "src/features/travel/travel-chat-screen.tsx",
         "src/services/ai/vision-transport.ts",
+        "src/services/travel/travel-collaboration-shared.ts",
         "src/store/agents.ts"
       ],
       "keyPaths": [
@@ -2924,7 +2925,7 @@
       "entry": "src/app/(tabs)/_layout.tsx",
       "skill": null,
       "files": [
-        "src/components/navigation/floating-tab-bar.tsx"
+        "src/components/navigation/bottom-nav-bar.tsx"
       ],
       "keyPaths": [
         "carouselNext",
@@ -2936,7 +2937,7 @@
       "entry": "src/app/(tabs)/_layout.tsx",
       "skill": null,
       "files": [
-        "src/components/navigation/floating-tab-bar.tsx"
+        "src/components/navigation/bottom-nav-bar.tsx"
       ],
       "keyPaths": [
         "carouselPrev",
@@ -2966,6 +2967,23 @@
         "tabs.checklists"
       ]
     },
+    "ontrack.tabs.dock": {
+      "feature": "tabs",
+      "entry": "src/app/(tabs)/_layout.tsx",
+      "skill": null,
+      "files": [
+        "src/components/navigation/bottom-nav-bar.tsx",
+        "src/components/primitives/safe-area-chrome.tsx",
+        "src/components/primitives/screen.tsx",
+        "src/features/daily-tracking/day-view.tsx",
+        "src/features/travel/travel-home-background.tsx",
+        "src/features/travel/travel-itinerary-add-sheet.tsx"
+      ],
+      "keyPaths": [
+        "dock",
+        "tabs.dock"
+      ]
+    },
     "ontrack.tabs.games": {
       "feature": "tabs",
       "entry": "src/app/(tabs)/_layout.tsx",
@@ -2977,12 +2995,12 @@
         "src/app/(tabs)/games.tsx",
         "src/app/_layout.tsx",
         "src/app/games/balloon-pop.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
+        "src/components/navigation/bottom-nav-bar.tsx",
+        "src/components/navigation/tab-recency.ts",
         "src/design-system/icons.ts",
         "src/features/account/terms-of-use-content.ts",
         "src/features/design-system/design-system-catalog.ts",
-        "src/features/games/balloon-pop/balloon-pop-hud.tsx",
-        "src/features/games/balloon-pop/balloon-pop-screen.tsx"
+        "src/features/games/balloon-pop/balloon-pop-hud.tsx"
       ],
       "keyPaths": [
         "games",
@@ -3076,14 +3094,14 @@
         "src/app/(tabs)/social.tsx",
         "src/app/f/[code].tsx",
         "src/app/vehicles/[id]/settings.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
+        "src/components/navigation/bottom-nav-bar.tsx",
+        "src/components/navigation/tab-recency.ts",
         "src/features/design-system/design-system-catalog.ts",
         "src/features/games/games-hub.tsx",
         "src/features/social/social-action-modal.tsx",
         "src/features/social/social-chrome.ts",
         "src/features/social/social-feed-model.ts",
-        "src/features/social/social-feed.tsx",
-        "src/features/social/social-friends-modal.tsx"
+        "src/features/social/social-feed.tsx"
       ],
       "keyPaths": [
         "social",
@@ -3196,8 +3214,8 @@
         "src/app/detail/gym-active/[id].tsx",
         "src/app/detail/gym/[id].tsx",
         "src/app/onboarding.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
-        "src/constants/seed.ts"
+        "src/components/navigation/bottom-nav-bar.tsx",
+        "src/components/navigation/tab-recency.ts"
       ],
       "keyPaths": [
         "tabs.workouts",
@@ -3245,7 +3263,7 @@
         "src/app/plants/new.tsx",
         "src/app/share-event.tsx",
         "src/app/share-import.tsx",
-        "src/components/navigation/floating-tab-bar.tsx"
+        "src/components/navigation/bottom-nav-bar.tsx"
       ],
       "keyPaths": [
         "clear",
@@ -5460,6 +5478,7 @@
       "files": [
         "src/app/(tabs)/travel.tsx",
         "src/app/travel/flights/search+api.ts",
+        "src/features/travel/expenses/expense-math.ts",
         "src/features/travel/expenses/travel-expenses-sheet.tsx",
         "src/features/travel/fixtures/chase-roundtrip-confirmation.ts",
         "src/features/travel/flight-confirmation-fields.ts",
@@ -5468,8 +5487,7 @@
         "src/features/travel/flight-journey-card.tsx",
         "src/features/travel/flight-journey-model.ts",
         "src/features/travel/flights/flight-search-screen.tsx",
-        "src/features/travel/itinerary-visibility.ts",
-        "src/features/travel/provider.ts"
+        "src/features/travel/itinerary-visibility.ts"
       ],
       "keyPaths": [
         "travel.timeline.traveler",
@@ -6371,7 +6389,7 @@
       "files": [
         "src/app/detail/gym-active/[id].tsx",
         "src/app/onboarding.tsx",
-        "src/components/navigation/floating-tab-bar.tsx",
+        "src/components/navigation/bottom-nav-bar.tsx",
         "src/features/auth/auth-provider.tsx",
         "src/features/todos/todo-lists-overview.tsx",
         "src/features/vision-board/vision-board-canvas-item.tsx",
@@ -6755,6 +6773,7 @@
         "ontrack.tabs.carousel.next",
         "ontrack.tabs.carousel.prev",
         "ontrack.tabs.checklists",
+        "ontrack.tabs.dock",
         "ontrack.tabs.games",
         "ontrack.tabs.health",
         "ontrack.tabs.insights",

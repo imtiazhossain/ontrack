@@ -122,8 +122,9 @@ Dump/status/command files live in the app Documents directory:
 | `ontrack.tabs.visionBoard`                                | Vision Board     | addon                                                                                                 |
 | `ontrack.tabs.games`                                      | Games            | addon                                                                                                 |
 | `ontrack.tabs.vehicles`                                   | Vehicles         | addon                                                                                                 |
-| `ontrack.tabs.carousel.prev`                              | Previous tabs    | Left rail arrow — nudge floating tab carousel                                                         |
-| `ontrack.tabs.carousel.next`                              | Next tabs        | Right rail arrow — nudge floating tab carousel                                                        |
+| `ontrack.tabs.carousel.prev`                              | Previous tabs    | Left rail arrow — nudge bottom nav carousel                                                         |
+| `ontrack.tabs.carousel.next`                              | Next tabs        | Right rail arrow — nudge bottom nav carousel                                                        |
+| `ontrack.tabs.dock`                                       | Bottom nav       | Layout anchor — page-matching bottom nav fill (not tappable)                                          |
 | `ontrack.vehicles.list.add`                               | Vehicles         | Add a vehicle                                                                                         |
 | `ontrack.vehicles.list.vehicle.<vehicleId>`               | Vehicles         | Open a vehicle (`vehicle-agent-ui-demo` via `vehicle-demo`)                                           |
 | `ontrack.vehicles.detail.settings`                        | Vehicle detail   | Open vehicle settings                                                                                 |

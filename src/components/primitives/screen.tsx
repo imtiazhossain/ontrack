@@ -17,6 +17,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useAgentUiScrollContainer } from '@/utils/agent-ui/use-agent-ui-scroll-container';
 
+import {
+  usePageSurfaceBackground,
+  useSafeAreaChrome,
+} from './safe-area-chrome';
+
 interface ScreenProps extends PropsWithChildren {
   /** Scrollable content (default) or a fixed layout */
   scroll?: boolean;
@@ -69,6 +74,14 @@ export function Screen({
     flattened?.backgroundColor !== undefined
       ? flattened.backgroundColor
       : theme.backgroundPrimary;
+  const surfaceColor =
+    typeof backgroundColor === 'string' ? backgroundColor : undefined;
+  // Paint page fill into the non-scrolling status-bar shell. Priority -1 so
+  // Today / Travel / auth washes (default 0+) still win when they register.
+  useSafeAreaChrome(surfaceColor, { priority: -1 });
+  // Tab dock matches this page fill (skipped when transparent — Travel paper
+  // and other scenic underlays register their own solid surface).
+  usePageSurfaceBackground(surfaceColor);
 
   const paddingStyle: ViewStyle = {
     // The app shell owns the non-scrolling top safe area.

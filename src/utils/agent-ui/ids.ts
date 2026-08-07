@@ -17,6 +17,8 @@ export const AgentUiIds = {
     health: 'ontrack.tabs.health',
     carouselPrev: 'ontrack.tabs.carousel.prev',
     carouselNext: 'ontrack.tabs.carousel.next',
+    /** Layout anchor for the page-matching bottom nav fill (not tappable). */
+    dock: 'ontrack.tabs.dock',
   },
   health: {
     settings: 'ontrack.health.settings',

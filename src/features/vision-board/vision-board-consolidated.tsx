@@ -55,7 +55,7 @@ export function VisionBoardConsolidated() {
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
-    layout.floatingTabBarBaseHeight + insets.bottom;
+    layout.bottomNavBarBaseHeight + insets.bottom;
   const { width: windowWidth } = useWindowDimensions();
   const categories = useVisionBoard((state) => state.categories);
   const items = useVisionBoard((state) => state.items);

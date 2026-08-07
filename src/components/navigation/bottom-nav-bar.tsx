@@ -21,7 +21,11 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { AppText, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  Symbol,
+  usePageSurfaceBackgroundColor,
+} from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { radii } from '@/design-system';
 import { palette } from '@/design-system/colors';
@@ -46,10 +50,10 @@ import {
   rebasePosition,
   routeIndexForPosition,
   shortestTargetPosition,
-} from './floating-tab-bar-motion';
+} from './bottom-nav-bar-motion';
 import { orderRoutesByRecency } from './tab-recency';
 
-type FloatingTabBarProps = Parameters<
+type BottomNavBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>['tabBar']>
 >[0];
 
@@ -127,13 +131,15 @@ const TAB_META: Record<
   },
 };
 
-export function FloatingTabBar({
+export function BottomNavBar({
   state,
   descriptors,
   navigation,
-}: FloatingTabBarProps) {
+}: BottomNavBarProps) {
   'use no memo';
   const theme = useTheme();
+  const pageSurface = usePageSurfaceBackgroundColor();
+  const barBackground = pageSurface ?? theme.backgroundPrimary;
   const router = useRouter();
   const { weather: homeWeather, icon: homeWeatherIcon } = useHomeWeather();
   const todayTabIcon: AppIconName = homeWeatherIcon ?? 'today';
@@ -426,10 +432,13 @@ export function FloatingTabBar({
   // Pinned bar, always expanded. Dock width must match carouselWidth math
   // (screen padding + max width) so the infinite track clips and swipes correctly.
   const bottomLabelPad = insets.bottom > 0 ? 6 : spacing.sm;
-  const arrowButtonSize = Math.max(34, s(36));
-  const arrowIconSize = Math.max(17, s(18));
+  // Same column as tabs (icon row + caption + indicator). Disc can be larger
+  // than the 24pt icon slot — centers still share the icon baseline.
+  const arrowButtonSize = Math.max(28, s(30));
+  const arrowIconSize = Math.max(16, s(17));
+  const tabCaptionLineHeight = s(11);
   const dark = theme.name === 'dark';
-  // Frosted discs — match dock glass (BlurView underlay; never nest remounting chrome).
+  // Frosted discs — match bar glass (BlurView underlay; never nest remounting chrome).
   const arrowIconColor = dark ? theme.textSecondary : palette.ink1;
 
   const renderRailArrow = (
@@ -445,32 +454,36 @@ export function FloatingTabBar({
         }
         label={isPrev ? 'Previous tabs' : 'Next tabs'}
         onPress={() => nudgeCarousel(isPrev ? 1 : -1)}
-        style={[
-          styles.railArrow,
-          {
-            width: itemWidth,
-            minHeight: layout.minTapTarget,
-            paddingVertical: spacing.xxs,
-          },
-        ]}>
+        style={[styles.railArrow, { width: itemWidth }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isPrev ? 'Previous tabs' : 'Next tabs'}
           hitSlop={4}
           onPress={() => nudgeCarousel(isPrev ? 1 : -1)}
           style={({ pressed }) => [
-            styles.railArrowHit,
+            // Same column rhythm as tabs: icon row + caption stand-in + indicator.
+            styles.tab,
+            {
+              width: itemWidth,
+              minHeight: layout.minTapTarget,
+              paddingVertical: spacing.xxs,
+              paddingHorizontal: s(2),
+              height: '100%',
+            },
             pressed && styles.railArrowPressed,
           ]}>
           <View
             style={[
               styles.railArrowGlyph,
               {
+                // Same role as styles.iconSlot — size may differ; centers still
+                // share the tab icon baseline when paired with the caption stand-in.
                 width: arrowButtonSize,
                 height: arrowButtonSize,
                 borderRadius: arrowButtonSize / 2,
+                // Neutral glass — avoid cool navy tints that seam on warm pages.
                 backgroundColor: dark
-                  ? 'rgba(8, 12, 22, 0.36)'
+                  ? 'rgba(0, 0, 0, 0.28)'
                   : 'rgba(255, 255, 255, 0.36)',
                 borderWidth: StyleSheet.hairlineWidth,
                 borderColor: dark
@@ -491,53 +504,43 @@ export function FloatingTabBar({
               color={arrowIconColor}
             />
           </View>
-          {/* Match tab caption height so the disc lines up with tab icons. */}
-          <View style={{ height: s(11), width: '100%' }} />
+          <View style={{ height: tabCaptionLineHeight, width: '100%' }} />
+          <View
+            style={[styles.indicator, { backgroundColor: 'transparent' }]}
+          />
         </Pressable>
       </AgentTestId>
     );
   };
 
-  // Blur as sibling underlay only — never parent remounting tab chrome.
-  // Children inside BlurView caused Fabric `unmountChildComponentView` crashes.
+  // Bar paints the focused page fill so the rail reads as continuous
+  // surface — not a cooler frosted plate. Blur stays on rail arrows only
+  // (never nest remounting chrome inside BlurView — Fabric crash).
   return (
-    <View
-      onLayout={(event) =>
-        setTabBarHeight(event.nativeEvent.layout.height)
-      }
-      pointerEvents="box-none"
-      style={[
-        styles.dock,
-        {
-          height: layout.floatingTabBarBaseHeight + bottomLabelPad,
-          maxWidth: MAX_CAROUSEL_WIDTH + layout.screenPadding * 2,
-          paddingHorizontal: layout.screenPadding,
-          paddingTop: spacing.xxs,
-          paddingBottom: bottomLabelPad,
-          // Frosted dock so Travel (and other tabs) keep a glass chrome edge.
-          backgroundColor: dark
-            ? 'rgba(8, 12, 22, 0.42)'
-            : 'rgba(255, 255, 255, 0.42)',
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: dark
-            ? 'rgba(255,255,255,0.12)'
-            : 'rgba(255,255,255,0.55)',
-          overflow: 'hidden',
-        },
-      ]}>
-      <BlurView
-        intensity={dark ? 42 : 56}
-        tint={dark ? 'dark' : 'light'}
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      />
+    <AgentTestId testID={AgentUiIds.tabs.dock}>
       <View
+        onLayout={(event) =>
+          setTabBarHeight(event.nativeEvent.layout.height)
+        }
+        pointerEvents="box-none"
         style={[
-          styles.capsule,
+          styles.bar,
           {
-            backgroundColor: 'transparent',
+            height: layout.bottomNavBarBaseHeight + bottomLabelPad,
+            maxWidth: MAX_CAROUSEL_WIDTH + layout.screenPadding * 2,
+            paddingHorizontal: layout.screenPadding,
+            paddingTop: spacing.xxs,
+            paddingBottom: bottomLabelPad,
+            backgroundColor: barBackground,
           },
         ]}>
+        <View
+          style={[
+            styles.capsule,
+            {
+              backgroundColor: 'transparent',
+            },
+          ]}>
         <View
           style={[
             styles.railEdge,
@@ -713,12 +716,13 @@ export function FloatingTabBar({
           {renderRailArrow('next')}
         </View>
       </View>
-    </View>
+      </View>
+    </AgentTestId>
   );
 }
 
 const styles = StyleSheet.create({
-  dock: {
+  bar: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -746,18 +750,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   railArrow: {
-    alignItems: 'center',
-    justifyContent: 'center',
     minWidth: 0,
     width: '100%',
     height: '100%',
-  },
-  railArrowHit: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
   },
   railArrowGlyph: {
     alignItems: 'center',

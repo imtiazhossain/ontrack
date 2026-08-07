@@ -5,7 +5,12 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isActivityEnabled } from '@/addons/registry';
-import { AppText, EmptyState, IconButton } from '@/components/primitives';
+import {
+  AppText,
+  EmptyState,
+  IconButton,
+  usePageSurfaceBackground,
+} from '@/components/primitives';
 import { ActivityCard } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
 import { layout, shadows, spacing } from '@/design-system';
@@ -51,10 +56,12 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // Today doesn't use Screen — publish fill so the tab dock matches the page.
+  usePageSurfaceBackground(theme.backgroundPrimary);
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
-    layout.floatingTabBarBaseHeight + insets.bottom;
+    layout.bottomNavBarBaseHeight + insets.bottom;
   const aiEnabled = usePreferences((s) => s.aiEnabled);
   const enabledAddons = useAddons((s) => s.enabled);
   const notifyPageInteraction = useUI((state) => state.notifyPageInteraction);

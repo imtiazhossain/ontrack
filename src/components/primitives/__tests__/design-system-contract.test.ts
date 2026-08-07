@@ -147,6 +147,17 @@ describe('canonical design-system contract', () => {
     expect(dayHeader).toContain('useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour))');
   });
 
+  it('extends Screen page fill into the status-bar shell and tab dock', () => {
+    const screen = read('src/components/primitives/screen.tsx');
+    const chrome = read('src/components/primitives/safe-area-chrome.tsx');
+    const dayView = read('src/features/daily-tracking/day-view.tsx');
+    expect(screen).toContain('useSafeAreaChrome(');
+    expect(screen).toContain('priority: -1');
+    expect(screen).toContain('usePageSurfaceBackground(');
+    expect(chrome).toContain('usePageSurfaceBackgroundColor');
+    expect(dayView).toContain('usePageSurfaceBackground(theme.backgroundPrimary)');
+  });
+
   it('uses X dismissal instead of full-width Cancel actions on migrated surfaces', () => {
     const files = [
       'src/app/(tabs)/travel.tsx',

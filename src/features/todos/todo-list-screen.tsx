@@ -53,7 +53,7 @@ export function TodoListScreen({ listId }: { listId: string }) {
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
-    layout.floatingTabBarBaseHeight + insets.bottom;
+    layout.bottomNavBarBaseHeight + insets.bottom;
   const { user } = useAuthSession();
   const dateLocale = usePreferences((state) => state.dateLocale);
   const list = useTodos((state) => state.lists.find((item) => item.id === listId));
