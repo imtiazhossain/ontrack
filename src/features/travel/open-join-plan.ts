@@ -1,6 +1,6 @@
 import { travelInviteLocalId } from '@/features/travel/travel-invite-codec';
 import type { TravelPlan } from '@/features/travel/types';
-import { markInviteSnapshotItinerary } from '@/services/travel/itinerary-collaboration';
+import { markInviteSnapshotItinerary } from '@/features/travel/itinerary-visibility';
 
 /**
  * Merge an approved open-join resolution into an existing local plan.

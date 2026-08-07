@@ -56,8 +56,8 @@ import {
 } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
-    isTravelExpenseMemberPlan,
     publishTravelTripExpenses,
     pullTravelTripExpenses,
     shouldSyncTravelExpenses,
@@ -178,7 +178,7 @@ export function TravelExpensesSheet({
         if (merged) onSavePlan(merged);
         // Host: push local expenses so friends can pull them.
         if (
-          !isTravelExpenseMemberPlan(current) &&
+          !isTravelMemberPlan(current) &&
           current.expenses.length > 0
         ) {
           await publishTravelTripExpenses(current).catch(() => undefined);

@@ -2,7 +2,7 @@ import { useAvatarCache } from '@/features/account/avatar-cache';
 import { getSupabaseClient } from '@/services/cloud/supabase';
 import { asNonEmptyString, asString } from '@/utils/parse';
 
-import { TravelInviteError } from './share';
+import { TravelInviteError } from './travel-invite-error';
 import type { TravelPlan, TravelTripRosterPerson } from './types';
 
 /** Canonical trip id for host-scoped RPCs (member copies use hostTripId). */

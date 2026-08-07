@@ -5,15 +5,23 @@ import {
     type TravelParticipant,
     type TravelPlan,
 } from '@/features/travel/types';
-import {
-    isTravelExpenseMemberId,
-    isTravelExpenseMemberPlan,
-} from '@/services/travel/expense-collaboration';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import { newId } from '@/utils/id';
 
 import { normalizeCurrencyCode } from './format-money';
 import type { FxRates } from './fx-rates';
 import { convertAmount } from './fx-rates';
+
+const MEMBER_ID_PREFIX = 'member:';
+
+/** Durable shared roster id for a signed-in co-traveler. */
+export function travelExpenseMemberId(userId: string): string {
+  return `${MEMBER_ID_PREFIX}${userId}`;
+}
+
+export function isTravelExpenseMemberId(id: string): boolean {
+  return id.startsWith(MEMBER_ID_PREFIX);
+}
 
 export type ExpensePerson = {
   id: string;
@@ -26,7 +34,7 @@ export type ExpensePerson = {
 
 function memberUserId(id: string): string | undefined {
   if (!isTravelExpenseMemberId(id)) return undefined;
-  const userId = id.slice('member:'.length).trim();
+  const userId = id.slice(MEMBER_ID_PREFIX.length).trim();
   return userId || undefined;
 }
 
@@ -40,7 +48,7 @@ export function expensePeople(
     'id' | 'participants' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName' | 'sharedExpensePeople'
   >,
 ): ExpensePerson[] {
-  const isMember = isTravelExpenseMemberPlan(plan);
+  const isMember = isTravelMemberPlan(plan);
   const people: ExpensePerson[] = [
     { id: TRAVEL_EXPENSE_SELF_ID, name: 'You', isSelf: true },
   ];

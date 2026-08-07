@@ -1,14 +1,25 @@
 import { travelChatAccessCode } from '@/features/travel/chat';
-import { expensePersonIdAliases } from '@/features/travel/expenses/expense-math';
+import {
+    expensePersonIdAliases,
+    isTravelExpenseMemberId,
+    travelExpenseMemberId,
+} from '@/features/travel/expenses/expense-math';
 import { normalizeCurrencyCode } from '@/features/travel/expenses/format-money';
 import { normalizeTravelExpense } from '@/features/travel/normalize';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
     TRAVEL_EXPENSE_HOST_ID,
     TRAVEL_EXPENSE_SELF_ID,
     type TravelExpense,
     type TravelPlan,
 } from '@/features/travel/types';
-import { getSupabaseClient } from '@/services/cloud/supabase';
+import {
+    authenticatedTravelCollaborationClient,
+    collaborationMessageFrom,
+    fetchTravelTripRpc,
+    sharedTravelTripId,
+    shouldSyncTravelCollaboration,
+} from '@/services/travel/travel-collaboration-shared';
 import { usePreferences } from '@/store/preferences';
 import { useTravel } from '@/store/travel';
 import { asNonEmptyString, asString } from '@/utils/parse';
@@ -31,51 +42,20 @@ export type TravelExpenseSnapshot = {
   stale?: boolean;
 };
 
-const MEMBER_ID_PREFIX = 'member:';
+/** Re-export leaf helpers so existing collaboration import sites keep working. */
+export { isTravelExpenseMemberId, travelExpenseMemberId };
 
-export function travelExpenseMemberId(userId: string): string {
-  return `${MEMBER_ID_PREFIX}${userId}`;
-}
-
-export function isTravelExpenseMemberId(id: string): boolean {
-  return id.startsWith(MEMBER_ID_PREFIX);
-}
-
-/** Member copies joined via invite/open-join (not the host's canonical plan). */
-export function isTravelExpenseMemberPlan(
-  plan: Pick<
-    TravelPlan,
-    'id' | 'chatAccessCode' | 'hostTripId' | 'hostDisplayName'
-  >,
-): boolean {
-  if (plan.chatAccessCode) return true;
-  const hostTripId = plan.hostTripId?.trim();
-  if (!hostTripId || hostTripId === plan.id) return false;
-  return Boolean(plan.hostDisplayName?.trim());
-}
-
-export function sharedExpenseTripId(plan: TravelPlan): string | undefined {
-  if (plan.hostTripId?.trim()) return plan.hostTripId.trim();
-  if (!isTravelExpenseMemberPlan(plan)) return plan.id;
-  return undefined;
-}
-
-function messageFrom(error: { message?: string } | null, fallback: string) {
-  return error?.message?.trim() || fallback;
-}
+export const sharedExpenseTripId = sharedTravelTripId;
+export const shouldSyncTravelExpenses = shouldSyncTravelCollaboration;
 
 async function authenticatedClient() {
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new TravelExpenseCollaborationError(
-      'Shared trip expenses are not configured for this build.',
-    );
-  }
-  const { data, error } = await client.auth.getSession();
-  if (error || !data.session) {
-    throw new TravelExpenseCollaborationError('Sign in to sync trip expenses.');
-  }
-  return { client, userId: data.session.user.id, user: data.session.user };
+  return authenticatedTravelCollaborationClient(
+    TravelExpenseCollaborationError,
+    {
+      unconfigured: 'Shared trip expenses are not configured for this build.',
+      unsignedIn: 'Sign in to sync trip expenses.',
+    },
+  );
 }
 
 function hostDisplayNameFromSession(user: {
@@ -152,7 +132,7 @@ export function expensesForPublish(
 ): TravelExpense[] {
   const aliases = expensePersonIdAliases(plan);
   const mapHostLocalId = (id: string) => aliases.get(id) ?? id;
-  if (!isTravelExpenseMemberPlan(plan) || !localUserId) {
+  if (!isTravelMemberPlan(plan) || !localUserId) {
     if (aliases.size === 0) return plan.expenses;
     return plan.expenses.map((expense) =>
       remapExpenseIds(expense, mapHostLocalId),
@@ -207,7 +187,7 @@ export function peopleForPublish(
       continue;
     }
     const publishId =
-      isTravelExpenseMemberPlan(plan) &&
+      isTravelMemberPlan(plan) &&
       localUserId &&
       person.id === TRAVEL_EXPENSE_SELF_ID
         ? travelExpenseMemberId(localUserId)
@@ -216,7 +196,7 @@ export function peopleForPublish(
       people.push({ id: publishId, name: person.name });
     }
   }
-  if (isTravelExpenseMemberPlan(plan) && localUserId) {
+  if (isTravelMemberPlan(plan) && localUserId) {
     const memberId = travelExpenseMemberId(localUserId);
     const memberName = usePreferences.getState().name.trim() || 'Traveler';
     if (!people.some((person) => person.id === memberId)) {
@@ -250,7 +230,7 @@ export function mergeSharedExpenseSnapshot(
 ): TravelPlan | undefined {
   const remoteUpdatedAt = snapshot.updatedAt;
   const localUpdatedAt = plan.sharedExpensesUpdatedAt;
-  const asMember = isTravelExpenseMemberPlan(plan) || Boolean(plan.chatAccessCode);
+  const asMember = isTravelMemberPlan(plan) || Boolean(plan.chatAccessCode);
 
   if (
     localUpdatedAt &&
@@ -283,15 +263,6 @@ export function mergeSharedExpenseSnapshot(
   };
 }
 
-export function shouldSyncTravelExpenses(plan: TravelPlan): boolean {
-  return Boolean(
-    plan.participants.length > 0 ||
-      plan.chatAccessCode ||
-      plan.openJoinCode ||
-      plan.hostTripId,
-  );
-}
-
 export async function publishTravelTripExpenses(
   plan: TravelPlan,
 ): Promise<TravelExpenseSnapshot | undefined> {
@@ -308,7 +279,7 @@ export async function publishTravelTripExpenses(
     tripId = mapped.trim();
   }
 
-  const asMember = isTravelExpenseMemberPlan(plan);
+  const asMember = isTravelMemberPlan(plan);
   const hostName = asMember
     ? plan.hostDisplayName?.trim() || 'Host'
     : hostDisplayNameFromSession(user);
@@ -322,7 +293,7 @@ export async function publishTravelTripExpenses(
   });
   if (error) {
     throw new TravelExpenseCollaborationError(
-      messageFrom(error, 'Trip expenses could not be shared.'),
+      collaborationMessageFrom(error, 'Trip expenses could not be shared.'),
     );
   }
   const snapshot = parseSnapshot(data);
@@ -353,33 +324,27 @@ export async function pullTravelTripExpenses(
   if (!shouldSyncTravelExpenses(plan)) return undefined;
   const { client, userId } = await authenticatedClient();
   const tripId = sharedExpenseTripId(plan);
-  const access = travelChatAccessCode(plan);
 
-  let data: unknown;
-  let error: { message?: string } | null = null;
-  if (access && isTravelExpenseMemberPlan(plan)) {
-    ({ data, error } = await client.rpc('fetch_travel_trip_expenses_by_access', {
-      access_code: access,
-    }));
-  } else if (tripId) {
-    ({ data, error } = await client.rpc('fetch_travel_trip_expenses', {
-      requested_trip_id: tripId,
-    }));
-  } else if (access) {
-    ({ data, error } = await client.rpc('fetch_travel_trip_expenses_by_access', {
-      access_code: access,
-    }));
-  } else {
-    return undefined;
-  }
+  const rpc = await fetchTravelTripRpc({
+    client,
+    plan,
+    tripId,
+    byTrip: (id) =>
+      client.rpc('fetch_travel_trip_expenses', { requested_trip_id: id }),
+    byAccess: (access) =>
+      client.rpc('fetch_travel_trip_expenses_by_access', {
+        access_code: access,
+      }),
+  });
+  if (!rpc) return undefined;
 
-  if (error) {
+  if (rpc.error) {
     throw new TravelExpenseCollaborationError(
-      messageFrom(error, 'Trip expenses could not be refreshed.'),
+      collaborationMessageFrom(rpc.error, 'Trip expenses could not be refreshed.'),
     );
   }
-  if (data == null) return undefined;
-  const snapshot = parseSnapshot(data);
+  if (rpc.data == null) return undefined;
+  const snapshot = parseSnapshot(rpc.data);
   if (!snapshot) return undefined;
   const merged = mergeSharedExpenseSnapshot(plan, snapshot, userId);
   if (!merged) return undefined;

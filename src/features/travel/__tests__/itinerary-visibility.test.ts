@@ -2,8 +2,10 @@ import {
   canViewerSeeItineraryItem,
   compactSharedItineraryPayload,
   isItineraryItemOwnedBy,
+  itineraryShareCueLabel,
   mergeOwnedItineraryItemWithRemote,
   pickNewerItineraryItem,
+  preserveOwnedItinerarySecrets,
   visibleItineraryForViewer,
 } from '../itinerary-visibility';
 import { normalizeTravelItineraryItem } from '../normalize';
@@ -163,6 +165,51 @@ describe('itinerary visibility', () => {
     });
     expect(pickNewerItineraryItem(older, newer).title).toBe('Newer');
     expect(pickNewerItineraryItem(newer, older).title).toBe('Newer');
+  });
+
+  it('preserves local booking secrets when remote schedule wins', () => {
+    const local = flightItem({
+      bookingUrl: 'https://example.com/mine',
+      flight: {
+        airline: 'AA',
+        flightNumber: '100',
+        confirmationCode: 'SECRET',
+        seat: '12A',
+        departureAirport: 'MIA',
+        arrivalAirport: 'JFK',
+      },
+    });
+    const remote = flightItem({
+      title: 'Updated title',
+      flight: {
+        airline: 'AA',
+        flightNumber: '100',
+        departureAirport: 'MIA',
+        arrivalAirport: 'LGA',
+      },
+    });
+    const preserved = preserveOwnedItinerarySecrets(local, remote);
+    expect(preserved.title).toBe('Updated title');
+    expect(preserved.flight?.arrivalAirport).toBe('LGA');
+    expect(preserved.flight?.confirmationCode).toBe('SECRET');
+    expect(preserved.flight?.seat).toBe('12A');
+    expect(preserved.bookingUrl).toBe('https://example.com/mine');
+  });
+
+  it('labels share cues for owners and co-travelers', () => {
+    expect(itineraryShareCueLabel(privateItem(), 'user-me')).toBe('Only you');
+    expect(
+      itineraryShareCueLabel(
+        flightItem({ ownerUserId: 'user-me', shareMode: 'trip' }),
+        'user-me',
+      ),
+    ).toBe('Shared with trip');
+    expect(
+      itineraryShareCueLabel(
+        flightItem({ ownerUserId: 'user-host', shareMode: 'trip' }),
+        'user-me',
+      ),
+    ).toBe('From co-traveler');
   });
 });
 

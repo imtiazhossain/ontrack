@@ -1,10 +1,10 @@
+import { markInviteSnapshotItinerary } from '@/features/travel/itinerary-visibility';
+import type { TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 import {
   itemsForPublish,
   mergeItinerarySnapshot,
-  markInviteSnapshotItinerary,
   parseRemoteItineraryItem,
 } from '../itinerary-collaboration';
-import type { TravelItineraryItem, TravelPlan } from '@/features/travel/types';
 
 function planWith(
   itinerary: TravelItineraryItem[],

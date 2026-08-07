@@ -25,6 +25,8 @@ describe('top safe-area invariant', () => {
     expect(appSafeArea).toContain("edges={['top']}");
     expect(appSafeArea).toContain('SafeAreaChromeProvider');
     expect(safeAreaChrome).toContain('useSafeAreaChrome');
+    expect(safeAreaChrome).toContain('priority');
+    expect(safeAreaChrome).toContain('pickRankedEntry');
   });
 
   it('does not place the device top inset inside route content', () => {

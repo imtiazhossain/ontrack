@@ -37,7 +37,10 @@ import {
     titleCaseTravelKind,
     TRAVEL_TITLE_ICON_GAP,
 } from '@/features/travel/travel-chrome';
-import { isItineraryItemOwnedBy } from '@/features/travel/itinerary-visibility';
+import {
+    isItineraryItemOwnedBy,
+    itineraryShareCueLabel,
+} from '@/features/travel/itinerary-visibility';
 import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
 import {
     kindAccent,
@@ -209,16 +212,7 @@ export function TravelTimelineNode({
   const { user } = useAuthSession();
   const localUserId = user?.id;
   const ownsItem = isItineraryItemOwnedBy(item, localUserId);
-  const shareCue =
-    ownsItem && (item.shareMode ?? 'private') === 'private'
-      ? 'Only you'
-      : ownsItem && (item.shareMode ?? 'private') === 'trip'
-        ? 'Shared with trip'
-        : ownsItem && (item.shareMode ?? 'private') === 'selected'
-          ? 'Shared with selected'
-          : !ownsItem && item.ownerUserId
-            ? 'From co-traveler'
-            : undefined;
+  const shareCue = itineraryShareCueLabel(item, localUserId);
   const [notesOpen, setNotesOpen] = useState(false);
   const [editingTransport, setEditingTransport] = useState(false);
   const [bookingOpen, setBookingOpen] = useState<Extract<

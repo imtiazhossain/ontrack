@@ -3,9 +3,9 @@ import type {
   TravelFlightLeg,
   TravelItineraryItem,
   TravelItemShareMode,
+  TravelPlan,
   TravelRentalDetails,
   TravelStayDetails,
-  TravelTransportDetails,
 } from '@/features/travel/types';
 import { asString } from '@/utils/parse';
 
@@ -38,6 +38,35 @@ export function normalizeSharedWithUserIds(value: unknown): string[] | undefined
     ),
   );
   return ids.length ? ids : undefined;
+}
+
+export function travelItemShareModeLabel(mode: TravelItemShareMode): string {
+  if (mode === 'trip') return 'Everyone on trip';
+  if (mode === 'selected') return 'Choose people';
+  return 'Only me';
+}
+
+export function travelItemShareModeHint(mode: TravelItemShareMode): string {
+  if (mode === 'trip') return 'All co-travelers can see this stop.';
+  if (mode === 'selected') return 'Only the people you pick can see it.';
+  return 'Hidden from everyone else on this trip.';
+}
+
+/** Compact cue on timeline cards for ownership / share state. */
+export function itineraryShareCueLabel(
+  item: Pick<
+    TravelItineraryItem,
+    'ownerUserId' | 'shareMode'
+  >,
+  localUserId: string | undefined,
+): string | undefined {
+  const ownsItem = isItineraryItemOwnedBy(item, localUserId);
+  const mode = normalizeTravelItemShareMode(item.shareMode);
+  if (ownsItem && mode === 'private') return 'Only you';
+  if (ownsItem && mode === 'trip') return 'Shared with trip';
+  if (ownsItem && mode === 'selected') return 'Shared with selected';
+  if (!ownsItem && item.ownerUserId) return 'From co-traveler';
+  return undefined;
 }
 
 /** Owner for visibility: explicit owner, else treat as local/self. */
@@ -130,12 +159,6 @@ function stripStaySecrets(
   return Object.keys(rest).length ? rest : undefined;
 }
 
-function stripTransportSecrets(
-  details: TravelTransportDetails | undefined,
-): TravelTransportDetails | undefined {
-  return details;
-}
-
 /**
  * Shape stored in `travel_trip_itinerary_items.payload` — schedule/route safe
  * for co-travelers; strips confirmation codes, seats, booking URLs, and local media.
@@ -163,12 +186,57 @@ export function compactSharedItineraryPayload(
     ...(sharedWithUserIds ? { sharedWithUserIds } : {}),
     sharedUpdatedAt: item.sharedUpdatedAt,
     flight: item.kind === 'flight' ? stripFlightSecrets(item.flight) : undefined,
-    transport:
-      item.kind === 'transport'
-        ? stripTransportSecrets(item.transport)
-        : undefined,
+    transport: item.kind === 'transport' ? item.transport : undefined,
     rental: item.kind === 'rental' ? stripRentalSecrets(item.rental) : undefined,
     stay: item.kind === 'stay' ? stripStaySecrets(item.stay) : undefined,
+  };
+}
+
+/** Re-apply local booking secrets when a newer remote schedule/share wins. */
+export function preserveOwnedItinerarySecrets(
+  local: TravelItineraryItem,
+  remote: TravelItineraryItem,
+): TravelItineraryItem {
+  return {
+    ...remote,
+    bookingUrl: local.bookingUrl ?? remote.bookingUrl,
+    photoUris: local.photoUris ?? remote.photoUris,
+    flight:
+      remote.flight || local.flight
+        ? {
+            ...(remote.flight ?? local.flight!),
+            confirmationCode:
+              local.flight?.confirmationCode ?? remote.flight?.confirmationCode,
+            seat: local.flight?.seat ?? remote.flight?.seat,
+            confirmationUris:
+              local.flight?.confirmationUris ?? remote.flight?.confirmationUris,
+            passengerName:
+              local.flight?.passengerName ?? remote.flight?.passengerName,
+          }
+        : undefined,
+    stay:
+      remote.stay || local.stay
+        ? {
+            ...(remote.stay ?? local.stay!),
+            confirmationCode:
+              local.stay?.confirmationCode ?? remote.stay?.confirmationCode,
+            reservationEmail:
+              local.stay?.reservationEmail ?? remote.stay?.reservationEmail,
+            confirmationUris:
+              local.stay?.confirmationUris ?? remote.stay?.confirmationUris,
+            notes: local.stay?.notes ?? remote.stay?.notes,
+          }
+        : undefined,
+    rental:
+      remote.rental || local.rental
+        ? {
+            ...(remote.rental ?? local.rental!),
+            confirmationCode:
+              local.rental?.confirmationCode ?? remote.rental?.confirmationCode,
+            confirmationUris:
+              local.rental?.confirmationUris ?? remote.rental?.confirmationUris,
+          }
+        : undefined,
   };
 }
 
@@ -207,4 +275,76 @@ export function pickNewerItineraryItem(
   if (remoteAt && !localAt) return remote;
   if (localAt && !remoteAt) return local;
   return preferLocalWhenTied ? local : remote;
+}
+
+export function markInviteSnapshotItinerary(
+  itinerary: TravelItineraryItem[],
+  hostUserId: string | undefined,
+): TravelItineraryItem[] {
+  const stampedAt = new Date().toISOString();
+  return itinerary.map((item) => ({
+    ...item,
+    ownerUserId: hostUserId?.trim() || item.ownerUserId,
+    shareMode: 'trip' as const,
+    sharedUpdatedAt: item.sharedUpdatedAt ?? stampedAt,
+  }));
+}
+
+/** Stamp owner + private default on local items missing collaboration fields. */
+export function stampOwnedItineraryDefaults(
+  plan: TravelPlan,
+  localUserId: string | undefined,
+): TravelPlan {
+  if (!localUserId) {
+    return {
+      ...plan,
+      itinerary: plan.itinerary.map((item) => ({
+        ...item,
+        shareMode: normalizeTravelItemShareMode(item.shareMode),
+      })),
+    };
+  }
+  return {
+    ...plan,
+    itinerary: plan.itinerary.map((item) => {
+      if (item.ownerUserId && item.ownerUserId !== localUserId) {
+        return {
+          ...item,
+          shareMode: normalizeTravelItemShareMode(item.shareMode),
+        };
+      }
+      return {
+        ...item,
+        ownerUserId: item.ownerUserId?.trim() || localUserId,
+        shareMode: normalizeTravelItemShareMode(item.shareMode),
+      };
+    }),
+  };
+}
+
+/** Touch LWW timestamp when share settings or owned content change. */
+export function touchItineraryItemShare(
+  item: TravelItineraryItem,
+  patch: Partial<
+    Pick<
+      TravelItineraryItem,
+      'shareMode' | 'sharedWithUserIds' | 'ownerUserId'
+    >
+  >,
+  ownerUserId: string | undefined,
+): TravelItineraryItem {
+  const shareMode = normalizeTravelItemShareMode(
+    patch.shareMode ?? item.shareMode,
+  );
+  return {
+    ...item,
+    ...patch,
+    ownerUserId: patch.ownerUserId ?? item.ownerUserId ?? ownerUserId,
+    shareMode,
+    sharedWithUserIds:
+      shareMode === 'selected'
+        ? patch.sharedWithUserIds ?? item.sharedWithUserIds
+        : undefined,
+    sharedUpdatedAt: new Date().toISOString(),
+  };
 }
