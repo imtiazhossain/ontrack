@@ -122,9 +122,16 @@ describe('travel header sky décor', () => {
       join(process.cwd(), 'src/features/travel/use-tilt-sky-motion.ts'),
       'utf8',
     );
-    expect(motion).toContain('expo-sensors');
+    // Probe native module before import — package barrel fatals on binaries
+    // without ExponentPedometer (TestFlight crash on itinerary open).
+    expect(motion).toContain('requireOptionalNativeModule');
+    expect(motion).toContain('ExponentDeviceMotion');
+    expect(motion).toContain('expo-sensors/build/DeviceMotion');
     expect(motion).toContain('DeviceMotion');
     expect(motion).toContain('useReducedMotion');
+    expect(motion).not.toMatch(
+      /await import\(\s*['"]expo-sensors['"]\s*\)/,
+    );
   });
 
   it('keeps sun and moon below the status-bar band', () => {
