@@ -27,7 +27,7 @@ describe('applyAvailableOtaUpdate', () => {
     expect(fetchUpdateAsync).not.toHaveBeenCalled();
   });
 
-  it('fetches and reloads when a new update is available', async () => {
+  it('fetches but does not same-session reload when a new update is available', async () => {
     const fetchUpdateAsync = jest.fn(async () => ({ isNew: true }));
     const reloadAsync = jest.fn(async () => undefined);
     await expect(
@@ -38,9 +38,10 @@ describe('applyAvailableOtaUpdate', () => {
           reloadAsync,
         }),
       ),
-    ).resolves.toBe('reloaded');
+    ).resolves.toBe('downloaded');
     expect(fetchUpdateAsync).toHaveBeenCalledTimes(1);
-    expect(reloadAsync).toHaveBeenCalledTimes(1);
+    // Cold-start apply only — in-session reloadAsync races AppContext/Fabric.
+    expect(reloadAsync).not.toHaveBeenCalled();
   });
 
   it('does not reload when fetch is not new', async () => {

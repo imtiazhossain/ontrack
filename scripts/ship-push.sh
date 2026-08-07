@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Full ship flow for onTrack:
-#   commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK
+#   commit → branch → PR → merge main → delete branch → TestFlight + device OTA
 #
 # Agent / human phrases that mean this script:
 #   "push" · "run the push script" · "push script" · "ship push" · "ship:push"
@@ -8,17 +8,19 @@
 # Usage (from repo root):
 #   npm run ship:push -- -m "Why this ships"
 #   npm run ship:push -- -m "…" --branch feat/travel-home-ui
-#   npm run ship:push -- --ota-apk-only -m "Reship current main"
-#   npm run ship:push -- -m "…" --skip-apk
+#   npm run ship:push -- --ota-only -m "Reship current main"
 #   npm run ship:push -- -m "…" --skip-ota
 #
 # Flags:
-#   -m, --message   Commit / PR / OTA message (required unless --ota-apk-only on clean main)
+#   -m, --message   Commit / PR / OTA message (required unless --ota-only on clean main)
 #   --branch        Feature branch name (default: ship/<slug>-<yyyymmdd>)
-#   --ota-apk-only  Skip git/PR; publish OTA + Drive APK from current HEAD
-#   --skip-ota      Skip TestFlight EAS Update
-#   --skip-apk      Skip Android release → Google Drive
+#   --ota-only      Skip git/PR; publish OTA from current HEAD (alias: --ota-apk-only)
+#   --skip-ota      Skip EAS Update publish
 #   --dry-run       Print steps only
+#
+# Android JS/assets ship via the `device` channel (same as update:device).
+# Rebuild/sideload APK only for native changes: npm run android:release-to-drive
+# (or eas build --profile device). Not part of this script.
 
 set -euo pipefail
 
@@ -27,9 +29,8 @@ cd "$ROOT"
 
 MESSAGE=""
 BRANCH=""
-OTA_APK_ONLY=0
+OTA_ONLY=0
 SKIP_OTA=0
-SKIP_APK=0
 DRY_RUN=0
 
 usage() {
@@ -72,9 +73,12 @@ while [[ $# -gt 0 ]]; do
       BRANCH="$2"
       shift 2
       ;;
-    --ota-apk-only) OTA_APK_ONLY=1; shift ;;
+    --ota-only|--ota-apk-only) OTA_ONLY=1; shift ;;
     --skip-ota) SKIP_OTA=1; shift ;;
-    --skip-apk) SKIP_APK=1; shift ;;
+    --skip-apk)
+      echo "warning: --skip-apk is obsolete (ship:push no longer builds APKs); ignoring" >&2
+      shift
+      ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help)
       usage
@@ -102,23 +106,23 @@ CURRENT_BRANCH="$(git branch --show-current)"
 PR_URL=""
 MERGE_SHA=""
 
-if [[ "$OTA_APK_ONLY" -eq 0 ]]; then
+if [[ "$OTA_ONLY" -eq 0 ]]; then
   if [[ "$DIRTY" -eq 0 ]]; then
     # Clean tree: if already ahead of origin/main on a feature branch, still PR/merge;
-    # if on main with nothing to ship via git, fall through to OTA+APK only.
+    # if on main with nothing to ship via git, fall through to OTA only.
     AHEAD=0
     if [[ "$CURRENT_BRANCH" != "main" ]]; then
       git fetch origin main --quiet 2>/dev/null || true
       AHEAD="$(git rev-list --count "origin/main..HEAD" 2>/dev/null || echo 0)"
     fi
     if [[ "$CURRENT_BRANCH" == "main" || "$AHEAD" -eq 0 ]]; then
-      echo "==> Working tree clean on $CURRENT_BRANCH — git/PR steps skipped (OTA/APK only)"
-      OTA_APK_ONLY=1
+      echo "==> Working tree clean on $CURRENT_BRANCH — git/PR steps skipped (OTA only)"
+      OTA_ONLY=1
     fi
   fi
 fi
 
-if [[ "$OTA_APK_ONLY" -eq 0 ]]; then
+if [[ "$OTA_ONLY" -eq 0 ]]; then
   [[ -n "$MESSAGE" ]] || die "pass -m \"commit/PR/OTA message\""
 
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
@@ -173,7 +177,7 @@ if [[ "$OTA_APK_ONLY" -eq 0 ]]; then
 
 ## Test plan
 - [ ] Smoke Travel / changed surfaces on iOS + Android
-- [ ] Confirm TestFlight OTA + Drive APK after merge
+- [ ] Confirm TestFlight + device channel OTA after merge
 
 EOF
 )"
@@ -196,7 +200,7 @@ EOF
   echo "    main @ $MERGE_SHA"
 else
   if [[ "$CURRENT_BRANCH" != "main" ]]; then
-    echo "==> --ota-apk-only: syncing to main first"
+    echo "==> --ota-only: syncing to main first"
     run git checkout main
     run git pull origin main
   elif [[ -n "$(git status -sb | grep -E '\[behind' || true)" ]]; then
@@ -209,24 +213,19 @@ else
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$(git log -1 --pretty=%s)"
   fi
-  echo "==> OTA/APK-only from main @ $MERGE_SHA"
+  echo "==> OTA-only from main @ $MERGE_SHA"
 fi
 
 OTA_MSG="$MESSAGE"
 [[ -n "$OTA_MSG" ]] || OTA_MSG="Ship $(git rev-parse --short HEAD)"
 
 if [[ "$SKIP_OTA" -eq 0 ]]; then
-  echo "==> Publishing TestFlight OTA"
+  echo "==> Publishing TestFlight OTA (iOS)"
   run npm run update:testflight -- --message "$OTA_MSG" --non-interactive
+  echo "==> Publishing device OTA (Android sideload)"
+  run npm run update:device -- --message "$OTA_MSG" --non-interactive
 else
-  echo "==> Skipping TestFlight OTA (--skip-ota)"
-fi
-
-if [[ "$SKIP_APK" -eq 0 ]]; then
-  echo "==> Building APK and uploading to Google Drive"
-  run npm run android:release-to-drive
-else
-  echo "==> Skipping Drive APK (--skip-apk)"
+  echo "==> Skipping EAS Update (--skip-ota)"
 fi
 
 echo
@@ -234,6 +233,5 @@ echo "======== ship:push complete ========"
 [[ -n "$PR_URL" ]] && echo "pr=$PR_URL"
 echo "main=$(git rev-parse --short HEAD)"
 echo "message=$OTA_MSG"
-[[ "$SKIP_OTA" -eq 0 ]] && echo "ota=testflight (see EAS Dashboard link above)"
-[[ "$SKIP_APK" -eq 0 ]] && echo "apk=see Drive file=/folder= lines above"
+[[ "$SKIP_OTA" -eq 0 ]] && echo "ota=testflight + device (see EAS Dashboard links above)"
 echo "===================================="

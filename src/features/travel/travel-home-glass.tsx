@@ -183,14 +183,19 @@ export function TravelHomeGlass({
         },
         style,
       ]}>
-      {allowsBlur ? (
-        <BlurView
-          intensity={intensity ?? (darkPlate ? 40 : 52)}
-          tint={darkPlate ? 'dark' : 'light'}
-          pointerEvents="none"
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
+      {/*
+        Always mount BlurView (intensity 0 when blur is gated). Conditionally
+        mounting/unmounting this Fabric sibling next to `children` SIGABRTs on
+        iOS (`unmountChildComponentView` / AppContextLost during create).
+      */}
+      <BlurView
+        intensity={
+          allowsBlur ? (intensity ?? (darkPlate ? 40 : 52)) : 0
+        }
+        tint={darkPlate ? 'dark' : 'light'}
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+      />
       {children}
     </View>
   );

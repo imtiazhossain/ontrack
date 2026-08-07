@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Build a local Android release APK and replace the shared Google Drive copy.
+# Use for native / runtimeVersion binary refreshes only — day-to-day JS ships via
+# `ship:push` / `update:device` (EAS Update on the device channel).
 #
 # Usage (from repo root):
 #   npm run android:release-to-drive

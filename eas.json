@@ -24,11 +24,15 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://ontrack.expo.app",
         "EXPO_PUBLIC_TRAVEL_SHARE_BASE_URL": "https://ontrack--links.expo.app"
       },
+      "android": {
+        "buildType": "apk"
+      },
       "ios": {
         "buildConfiguration": "Release",
         "resourceClass": "m-medium"
       }
     },
+
     "testflight": {
       "developmentClient": false,
       "distribution": "store",
