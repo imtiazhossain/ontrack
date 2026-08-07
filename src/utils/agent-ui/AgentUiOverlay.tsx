@@ -39,7 +39,7 @@ export function AgentUiOverlay() {
   const fabVisible = useSyncExternalStore(
     subscribeAgentUiOverlay,
     isAgentUiFabVisible,
-    () => true,
+    () => false,
   );
   const framesEpoch = useSyncExternalStore(
     subscribeAgentUiFrames,

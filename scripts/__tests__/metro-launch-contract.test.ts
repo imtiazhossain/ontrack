@@ -150,7 +150,10 @@ describe('metro launch command contract', () => {
 
   it('boots preferred simulator headless; GUI window is opt-in only', () => {
     const sim = read('scripts/lib/ios-simulator.sh');
-    expect(sim).toContain('ONTRACK_IOS_SIMULATOR:=iPhone 17 Pro');
+    expect(sim).toContain('ONTRACK_IOS_SIMULATOR:=onTrack iPhone 17 Pro');
+    expect(sim).toContain('ONTRACK_IOS_SIMULATOR_DEVICE_TYPE:=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro');
+    expect(sim).toContain('ios_sim_ensure_device_exists');
+    expect(sim).toContain('ios_sim_latest_ios_runtime');
     expect(sim).toContain('ONTRACK_IOS_SIMULATOR_WINDOW:=0');
     expect(sim).toContain('ios_sim_want_window');
     expect(sim).toContain('Booting preferred simulator (headless)');

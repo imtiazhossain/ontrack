@@ -36,11 +36,16 @@ Pin is required when iOS Simulator and Android Emulator are both running — oth
 
 # One-process once chain (flow/open + structural asserts)
 ./scripts/agent-ui.sh once --flow travel-demo-list \
-  --assert-exists travel.list.tripWeather.trip-agent-ui-demo \
+  --assert-exists travel.list.itinerary.trip-agent-ui-demo \
   --assert-route /travel
 
+# Trip tools (moved off Travel Home)
+./scripts/agent-ui.sh once --flow travel-demo-hub \
+  --assert-exists travel.list.tripWeather.trip-agent-ui-demo \
+  --assert-route /travel/trip-agent-ui-demo/hub
+
 # Leftover sheets: land flows dismiss travel overlays first; or once --dismiss
-./scripts/agent-ui.sh once --dismiss --flow travel-demo-list \
+./scripts/agent-ui.sh once --dismiss --flow travel-demo-hub \
   --assert-exists travel.list.currency.trip-agent-ui-demo
 
 ./scripts/agent-ui.sh once --flow travel-demo-add-flight \
@@ -104,6 +109,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 |------|----------------|
 | `travel-demo` | Seed demo trip → open plan detail |
 | `travel-demo-list` | Seed → travel list with demo itinerary button |
+| `travel-home` | Seed Iceland/Antigua visual fixtures → Travel Home list |
 | `travel-demo-add-flight` | Seed → add-flight sheet |
 | `travel-demo-add-flight-connecting` | Seed → United GUA→IAH→LGA connecting prefills Add Flight Name/route |
 | `travel-demo-add-flight-roundtrip` | Seed → Chase round-trip prefills → submit → expand outbound card (passenger ready) |

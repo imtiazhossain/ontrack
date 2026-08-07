@@ -10,8 +10,8 @@ import {
 import { isDevModeEnabled, useDevMode } from '@/store/dev-mode';
 
 import {
-  isAgentUiFabVisible,
-  restoreAgentUiFab,
+  isAgentUiOverlayEnabled,
+  setAgentUiOverlayEnabled,
   subscribeAgentUiOverlay,
 } from './overlay';
 import { isAgentUiEnabled } from './registry';
@@ -21,24 +21,24 @@ type Props = {
 };
 
 /**
- * When the Agent UI FAB is dismissed, a page-wide long-press restores it —
+ * When overlay paint is off, a page-wide long-press turns it on (and shows the FAB) —
  * only for developer-flagged accounts with Dev Mode on (agent-ui still __DEV__).
  * Wraps app content (not FullWindowOverlay) so touches stay pass-through.
  */
 export function AgentUiFabRestoreHost({ children }: Props) {
-  const fabVisible = useSyncExternalStore(
+  const overlayOn = useSyncExternalStore(
     subscribeAgentUiOverlay,
-    isAgentUiFabVisible,
-    () => true,
+    isAgentUiOverlayEnabled,
+    () => false,
   );
   const canUseDevTools = useCanUseDeveloperTools();
   const devModeEnabled = useDevMode((state) => state.enabled);
   const listening =
-    isAgentUiEnabled() && canUseDevTools && devModeEnabled && !fabVisible;
+    isAgentUiEnabled() && canUseDevTools && devModeEnabled && !overlayOn;
 
   const onRestore = useCallback(() => {
     if (!canUseDeveloperTools() || !isDevModeEnabled()) return;
-    restoreAgentUiFab();
+    setAgentUiOverlayEnabled(true);
   }, []);
 
   const gesture = useMemo(

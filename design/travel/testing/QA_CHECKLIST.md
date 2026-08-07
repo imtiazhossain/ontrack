@@ -1,0 +1,21 @@
+# Implementation QA Checklist
+
+- [ ] iOS and Android both compile/run
+- [ ] Safe areas/insets correct
+- [ ] Hero follows first visible trip + selected card image
+- [ ] Each trip supports 1–3 images
+- [ ] Carousel indicator is present and accurate
+- [ ] Destination image provider is abstracted from UI
+- [ ] Cache/prefetch/fallback works
+- [ ] Zero-trip state invites add trip
+- [ ] `View Itinerary` uses supplied signature SVG
+- [ ] No hardcoded destination image URLs in production code
+- [ ] Shared buttons/cards reused
+- [ ] Long destination wraps gracefully
+- [ ] Large text does not clip controls
+- [ ] VoiceOver/TalkBack labels exist
+- [ ] Android system back remains correct
+- [ ] Dark mode visually coherent
+- [ ] Reduced motion respected
+- [ ] Visual fixtures/screenshots pass
+- [ ] No unrelated redesigns

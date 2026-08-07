@@ -1,6 +1,8 @@
 import {
+    DESTINATION_COVER_MAX,
+    isAllowedDestinationCoverImageUrl,
     isUsableDestinationPhotoUrl,
-    lookupDestinationCoverUrl
+    lookupDestinationCoverUrls,
 } from '@/features/travel/destination-cover-lookup';
 import {
     persistTravelMomentPhotos,
@@ -16,11 +18,18 @@ const COVER_MISS_TTL_MS = 60_000;
 type CoverCacheEntry =
   | { kind: 'hit'; uri: string }
   | { kind: 'miss'; expiresAt: number };
+type HeroCacheEntry =
+  | { kind: 'hit'; uris: string[] }
+  | { kind: 'miss'; expiresAt: number };
 const coverCache = new Map<string, CoverCacheEntry>();
+const heroCache = new Map<string, HeroCacheEntry>();
 const inflight = new Map<string, Promise<string | undefined>>();
+const heroInflight = new Map<string, Promise<string[]>>();
 
 export {
+    DESTINATION_COVER_MAX,
     enlargeWikimediaThumb,
+    isAllowedDestinationCoverImageUrl,
     isUsableDestinationPhotoUrl
 } from '@/features/travel/destination-cover-lookup';
 
@@ -80,15 +89,60 @@ export function destinationCoverCandidates(plan: TravelPlan): string[] {
   return out;
 }
 
-function cacheKey(plan: TravelPlan): string {
-  // Prefix bumps invalidate stale negative caches after provider changes.
-  return `wiki-v5|${destinationCoverCandidates(plan).join('|').toLowerCase()}`;
+function coverApiUrl(place: string, limit = 1): string | undefined {
+  try {
+    const params = new URLSearchParams({ q: place });
+    if (limit > 1) params.set('limit', String(limit));
+    return resolveExpoApiUrl(`/api/destination-cover?${params.toString()}`, {
+      configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+      createNotConfiguredError: () => new Error('missing'),
+    });
+  } catch {
+    return undefined;
+  }
 }
 
-function coverApiUrl(place: string): string | undefined {
+function isLocalTravelPhotoUri(uri: string): boolean {
+  const lower = uri.trim().toLowerCase();
+  return (
+    lower.startsWith('file:') ||
+    lower.startsWith('content:') ||
+    lower.startsWith('ph://') ||
+    lower.startsWith('assets-library:')
+  );
+}
+
+/** Drop tracking query noise that can break native image loaders. */
+function normalizeCoverUri(uri: string): string {
+  const trimmed = uri.trim();
+  if (isLocalTravelPhotoUri(trimmed)) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.hostname.endsWith('wikimedia.org') ||
+      parsed.hostname.endsWith('wikipedia.org')
+    ) {
+      parsed.search = '';
+      return parsed.toString();
+    }
+  } catch {
+    // Keep original when URL parsing fails.
+  }
+  return trimmed;
+}
+
+/**
+ * RN Image cannot send Wikimedia's required User-Agent, so route remote covers
+ * through the Expo API proxy. Cache still stores the raw upstream HTTPS URL.
+ */
+export function proxyDestinationCoverImageUrl(
+  remoteUri: string,
+): string | undefined {
+  const normalized = normalizeCoverUri(remoteUri);
+  if (!isAllowedDestinationCoverImageUrl(normalized)) return undefined;
   try {
     return resolveExpoApiUrl(
-      `/api/destination-cover?q=${encodeURIComponent(place)}`,
+      `/api/destination-cover-image?src=${encodeURIComponent(normalized)}`,
       {
         configuredBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
         createNotConfiguredError: () => new Error('missing'),
@@ -99,9 +153,36 @@ function coverApiUrl(place: string): string | undefined {
   }
 }
 
+function toClientDisplayCoverUri(uri: string): string {
+  if (isLocalTravelPhotoUri(uri)) return uri;
+  return proxyDestinationCoverImageUrl(uri) ?? uri;
+}
+
+function pushUniqueUri(out: string[], uri: string | undefined): void {
+  const trimmed = uri?.trim();
+  if (!trimmed) return;
+  // Local custom/moment covers are file URIs; remotes must stay https-only.
+  if (!isLocalTravelPhotoUri(trimmed) && !isUsableDestinationPhotoUrl(trimmed)) {
+    return;
+  }
+  const normalized = normalizeCoverUri(trimmed);
+  const key = normalized.toLowerCase();
+  if (out.some((existing) => existing.toLowerCase() === key)) return;
+  out.push(normalized);
+}
+
 /** Prefer Expo API (server User-Agent) then direct Openverse fallback. */
 async function resolveRemoteCover(place: string): Promise<string | undefined> {
-  const apiUrl = coverApiUrl(place);
+  const urls = await resolveRemoteCovers(place, 1);
+  return urls[0];
+}
+
+async function resolveRemoteCovers(
+  place: string,
+  limit: number,
+): Promise<string[]> {
+  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, limit));
+  const apiUrl = coverApiUrl(place, capped);
   if (apiUrl) {
     try {
       const response = await fetchWithTimeout(
@@ -110,9 +191,17 @@ async function resolveRemoteCover(place: string): Promise<string | undefined> {
         COVER_FETCH_TIMEOUT_MS,
       );
       if (response.ok) {
-        const body = (await response.json()) as { uri?: string };
-        const uri = body.uri?.trim();
-        if (uri && isUsableDestinationPhotoUrl(uri)) return uri;
+        const body = (await response.json()) as {
+          uri?: string;
+          uris?: string[];
+        };
+        const out: string[] = [];
+        for (const candidate of body.uris ?? []) {
+          pushUniqueUri(out, candidate?.trim());
+          if (out.length >= capped) return out;
+        }
+        pushUniqueUri(out, body.uri?.trim());
+        if (out.length > 0) return out.slice(0, capped);
       }
     } catch {
       // Fall through to direct lookup.
@@ -121,13 +210,13 @@ async function resolveRemoteCover(place: string): Promise<string | undefined> {
 
   try {
     return await Promise.race([
-      lookupDestinationCoverUrl(place),
-      new Promise<undefined>((resolve) => {
-        setTimeout(() => resolve(undefined), COVER_FETCH_TIMEOUT_MS);
+      lookupDestinationCoverUrls(place, { limit: capped }),
+      new Promise<string[]>((resolve) => {
+        setTimeout(() => resolve([]), COVER_FETCH_TIMEOUT_MS);
       }),
     ]);
   } catch {
-    return undefined;
+    return [];
   }
 }
 
@@ -177,9 +266,9 @@ export async function fetchPlaceCoverUri(
   const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
   if (!places.length) return undefined;
 
-  const key = `place-v1|${places.join('|').toLowerCase()}`;
+  const key = `place-v2|${places.join('|').toLowerCase()}`;
   const cached = coverCache.get(key);
-  if (cached?.kind === 'hit') return cached.uri;
+  if (cached?.kind === 'hit') return toClientDisplayCoverUri(cached.uri);
   if (cached?.kind === 'miss') {
     if (cached.expiresAt > Date.now()) return undefined;
     coverCache.delete(key);
@@ -194,7 +283,7 @@ export async function fetchPlaceCoverUri(
         const next = await resolveRemoteCover(place);
         if (next) {
           coverCache.set(key, { kind: 'hit', uri: next });
-          return next;
+          return toClientDisplayCoverUri(next);
         }
       }
       coverCache.set(key, {
@@ -221,4 +310,83 @@ export async function fetchDestinationCoverUri(
   if (local) return local;
 
   return fetchPlaceCoverUri(destinationCoverCandidates(plan));
+}
+
+/**
+ * Up to 3 hero images for a trip card carousel.
+ * Local custom/moment cover stays first when present; remote fills the rest.
+ */
+export async function fetchDestinationHeroUris(
+  plan: TravelPlan,
+  limit: number = DESTINATION_COVER_MAX,
+): Promise<string[]> {
+  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, limit));
+  const local = localTripCoverUri(plan);
+  const out: string[] = [];
+  pushUniqueUri(out, local);
+  if (out.length >= capped) return out.map(toClientDisplayCoverUri);
+
+  const places = destinationCoverCandidates(plan)
+    .map((c) => c.trim())
+    .filter((c) => c.length >= 2);
+  if (!places.length) return out.map(toClientDisplayCoverUri);
+
+  const key = `hero-v5|${places.join('|').toLowerCase()}`;
+  const cached = heroCache.get(key);
+  if (cached?.kind === 'hit') {
+    for (const uri of cached.uris) {
+      pushUniqueUri(out, uri);
+      if (out.length >= capped) break;
+    }
+    return out.map(toClientDisplayCoverUri);
+  }
+  if (cached?.kind === 'miss') {
+    if (cached.expiresAt > Date.now()) return out.map(toClientDisplayCoverUri);
+    heroCache.delete(key);
+  }
+
+  const pending = heroInflight.get(key);
+  if (pending) {
+    const remote = await pending;
+    for (const uri of remote) {
+      pushUniqueUri(out, uri);
+      if (out.length >= capped) break;
+    }
+    return out.map(toClientDisplayCoverUri);
+  }
+
+  const request = (async () => {
+    try {
+      const collected: string[] = [];
+      for (const place of places) {
+        if (collected.length >= capped) break;
+        const next = await resolveRemoteCovers(place, capped - collected.length);
+        for (const uri of next) {
+          pushUniqueUri(collected, uri);
+          if (collected.length >= capped) break;
+        }
+      }
+      if (collected.length > 0) {
+        heroCache.set(key, { kind: 'hit', uris: collected });
+      } else {
+        heroCache.set(key, {
+          kind: 'miss',
+          expiresAt: Date.now() + COVER_MISS_TTL_MS,
+        });
+      }
+      return collected;
+    } catch {
+      return [];
+    } finally {
+      heroInflight.delete(key);
+    }
+  })();
+
+  heroInflight.set(key, request);
+  const remote = await request;
+  for (const uri of remote) {
+    pushUniqueUri(out, uri);
+    if (out.length >= capped) break;
+  }
+  return out.map(toClientDisplayCoverUri);
 }

@@ -16,6 +16,7 @@ KNOWN_FLOWS=(
   travel-list
   travel-demo
   travel-demo-list
+  travel-demo-hub
   travel-demo-add-flight
   travel-demo-add-flight-connecting
   travel-demo-add-flight-roundtrip

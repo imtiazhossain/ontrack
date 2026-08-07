@@ -1,0 +1,18 @@
+{
+  "screen": "travel-home",
+  "designVersion": "3.0.0",
+  "reference": "./references/travel-home-reference.png",
+  "originalReference": "./references/original-user-reference.png",
+  "spec": "./TRAVEL_DESIGN_SPEC.md",
+  "assets": "./assets",
+  "fixtures": "./fixtures/travel-home.fixture.json",
+  "platforms": [
+    "ios",
+    "android"
+  ],
+  "principle": "Spec and supplied assets are authoritative; screenshots validate appearance only.",
+  "strictVisualSpec": "./STRICT_VISUAL_SPEC.md",
+  "repairPrompt": "./REPAIR_EXISTING_IMPLEMENTATION.md",
+  "badImplementationReference": "./references/current-implementation/bad-current-implementation.png",
+  "migrationMode": "clean-replace-existing-presentation"
+}

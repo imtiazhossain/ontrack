@@ -1,14 +1,16 @@
+import { Image } from 'expo-image';
+import * as SystemUI from 'expo-system-ui';
 import type { PropsWithChildren } from 'react';
 import { useEffect } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import * as SystemUI from 'expo-system-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/use-theme';
 
 import {
-  SafeAreaChromeProvider,
-  useSafeAreaChromeColor,
+    SafeAreaChromeProvider,
+    useSafeAreaChromeBackground,
+    useSafeAreaChromeColor,
 } from './safe-area-chrome';
 
 /**
@@ -37,6 +39,11 @@ function AppSafeAreaFrame({
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   const theme = useTheme();
   const chromeColor = useSafeAreaChromeColor();
+  const {
+    image: chromeImage,
+    height: chromeImageHeight,
+    blurRadius: chromeImageBlurRadius,
+  } = useSafeAreaChromeBackground();
   const backgroundColor = chromeColor ?? theme.backgroundPrimary;
 
   useEffect(() => {
@@ -45,7 +52,20 @@ function AppSafeAreaFrame({
 
   return (
     <View style={[styles.fill, { backgroundColor }, style]}>
-      <SafeAreaView edges={['top']} style={styles.fill}>
+      {chromeImage ? (
+        <Image
+          pointerEvents="none"
+          source={chromeImage}
+          style={[
+            styles.chromeImage,
+            chromeImageHeight != null ? { height: chromeImageHeight } : StyleSheet.absoluteFill,
+          ]}
+          contentFit="cover"
+          contentPosition={{ top: '0%', left: '50%' }}
+          blurRadius={chromeImageBlurRadius}
+        />
+      ) : null}
+      <SafeAreaView edges={['top']} style={[styles.fill, styles.transparent]}>
         {children}
       </SafeAreaView>
     </View>
@@ -54,4 +74,13 @@ function AppSafeAreaFrame({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  transparent: { backgroundColor: 'transparent' },
+  chromeImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    zIndex: 0,
+  },
 });

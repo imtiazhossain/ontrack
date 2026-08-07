@@ -200,7 +200,7 @@ export function DeveloperHub() {
         testID={AgentUiIds.developer.section.diagnostics}>
         <SettingsToggleRow
           label="Overlay"
-          detail="Paint testID frames for screenshot triage. Drag the floating button; tap to toggle; long-press to hide. With Dev Mode on, long-press anywhere to show it again — or turn this switch on."
+          detail="Paint testID frames for screenshot triage. The floating button appears only while this is on — drag to move, tap to turn off, long-press to hide. With Dev Mode on, long-press anywhere to turn overlay back on."
           detailNumberOfLines={4}
           value={overlayOn}
           onValueChange={setAgentUiOverlayEnabled}

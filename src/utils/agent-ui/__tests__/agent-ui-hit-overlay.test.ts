@@ -87,12 +87,9 @@ describe('agent-ui hit-test', () => {
 
 describe('agent-ui overlay', () => {
   beforeEach(() => {
+    // Clear dismiss + leave paint off (FAB stays hidden until overlay is on).
+    setAgentUiOverlayEnabled(true);
     setAgentUiOverlayEnabled(false);
-    // Ensure FAB is visible for each case (dismiss leaves it hidden).
-    if (!isAgentUiFabVisible()) {
-      setAgentUiOverlayEnabled(true);
-      setAgentUiOverlayEnabled(false);
-    }
     mockWrite.mockClear();
   });
 
@@ -140,9 +137,17 @@ describe('agent-ui overlay', () => {
     expect(isAgentUiOverlayEnabled()).toBe(true);
   });
 
-  it('hides the FAB on dismiss and restores it when overlay is turned on', () => {
-    expect(isAgentUiFabVisible()).toBe(true);
+  it('hides the FAB unless overlay paint is on', () => {
+    expect(isAgentUiFabVisible()).toBe(false);
     setAgentUiOverlayEnabled(true);
+    expect(isAgentUiFabVisible()).toBe(true);
+    setAgentUiOverlayEnabled(false);
+    expect(isAgentUiFabVisible()).toBe(false);
+  });
+
+  it('hides the FAB on dismiss and restores it when overlay is turned on', () => {
+    setAgentUiOverlayEnabled(true);
+    expect(isAgentUiFabVisible()).toBe(true);
     dismissAgentUiFab();
     expect(isAgentUiFabVisible()).toBe(false);
     expect(isAgentUiOverlayEnabled()).toBe(false);
@@ -155,13 +160,16 @@ describe('agent-ui overlay', () => {
     expect(isAgentUiOverlayEnabled()).toBe(true);
   });
 
-  it('restores a dismissed FAB without enabling overlay paint', () => {
+  it('clearing dismiss alone does not show the FAB without overlay paint', () => {
+    setAgentUiOverlayEnabled(true);
     dismissAgentUiFab();
     expect(isAgentUiFabVisible()).toBe(false);
     expect(isAgentUiOverlayEnabled()).toBe(false);
     restoreAgentUiFab();
-    expect(isAgentUiFabVisible()).toBe(true);
+    expect(isAgentUiFabVisible()).toBe(false);
     expect(isAgentUiOverlayEnabled()).toBe(false);
+    setAgentUiOverlayEnabled(true);
+    expect(isAgentUiFabVisible()).toBe(true);
   });
 
 

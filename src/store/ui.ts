@@ -20,7 +20,10 @@ interface UIState {
   carouselPendingRouteName: string | null;
   tabBarHeight: number;
   setTabBarHeight: (height: number) => void;
-  /** Collapsed floating menu → small restore chip; expanded on open by default. */
+  /**
+   * Legacy collapse flag — nav stays locked open; kept so older callers /
+   * fixtures that force-expand remain harmless no-ops when set false.
+   */
   tabBarCollapsed: boolean;
   setTabBarCollapsed: (collapsed: boolean) => void;
   /** Epoch ms of last user page interaction — used to pause cloud sync briefly. */
@@ -49,7 +52,6 @@ export const useUI = create<UIState>((set) => ({
       carouselBrowse: null,
       carouselSwipeClaimed: false,
       carouselPendingRouteName: null,
-      tabBarCollapsed: true,
       lastPageInteractionAt: Date.now(),
     }),
 }));

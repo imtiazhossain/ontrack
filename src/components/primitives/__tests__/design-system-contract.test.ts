@@ -121,7 +121,8 @@ describe('canonical design-system contract', () => {
     expect(surface).not.toContain('radial-gradient');
     expect(travelTab).toContain('style={travelStyle}');
     expect(travelTab).toContain('useTravelPageStyle(theme)');
-    expect(travelTab).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
+    expect(travelTab).toContain('useSafeAreaChrome(');
+    expect(travelTab).toContain('travelSafeAreaBackground(theme)');
     expect(travelLayout).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
     expect(safeAreaChrome).toContain('useSafeAreaChrome');
     expect(rootLayout).toMatch(

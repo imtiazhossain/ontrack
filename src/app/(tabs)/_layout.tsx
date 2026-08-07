@@ -23,6 +23,9 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
           position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,

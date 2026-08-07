@@ -5,6 +5,8 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +35,8 @@ interface ScreenProps extends PropsWithChildren {
   onRefresh?: () => void | Promise<void>;
   /** Optional access to the shared scroll container for targeted in-screen navigation. */
   scrollRef?: RefObject<ScrollView | null>;
+  /** Forwarded after agent-ui scroll bookkeeping. */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
 export function Screen({
@@ -46,6 +50,7 @@ export function Screen({
   refresh = true,
   onRefresh,
   scrollRef,
+  onScroll,
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -54,6 +59,16 @@ export function Screen({
   const pull = usePullToRefresh(onRefresh);
   const viewportRef = useRef<View>(null);
   const agentScroll = useAgentUiScrollContainer(scrollRef, viewportRef);
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    agentScroll.onScroll?.(event);
+    onScroll?.(event);
+  };
+
+  const flattened = StyleSheet.flatten(style) as ViewStyle | undefined;
+  const backgroundColor =
+    flattened?.backgroundColor !== undefined
+      ? flattened.backgroundColor
+      : theme.backgroundPrimary;
 
   const paddingStyle: ViewStyle = {
     // The app shell owns the non-scrolling top safe area.
@@ -76,7 +91,7 @@ export function Screen({
     return (
       <View
         onTouchStart={notifyPageInteraction}
-        style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
+        style={[styles.fill, { backgroundColor }, style]}>
         <View style={[styles.fill, paddingStyle, contentStyle]}>{children}</View>
       </View>
     );
@@ -87,9 +102,10 @@ export function Screen({
       ref={viewportRef}
       onTouchStart={notifyPageInteraction}
       collapsable={false}
-      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }, style]}>
+      style={[styles.fill, { backgroundColor }, style]}>
       <ScrollView
         ref={agentScroll.scrollRef}
+        style={styles.scrollView}
         automaticallyAdjustKeyboardInsets
         scrollEnabled={scrollEnabled}
         contentInsetAdjustmentBehavior="never"
@@ -97,7 +113,7 @@ export function Screen({
         showsVerticalScrollIndicator={false}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
-        onScroll={agentScroll.onScroll}
+        onScroll={handleScroll}
         scrollEventThrottle={agentScroll.scrollEventThrottle}
         refreshControl={refresh ? pull.refreshControl : undefined}>
         {children}
@@ -108,5 +124,6 @@ export function Screen({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  scrollView: { flex: 1, backgroundColor: 'transparent' },
   scrollContent: { flexGrow: 1 },
 });

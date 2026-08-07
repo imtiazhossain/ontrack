@@ -38,6 +38,7 @@ import { useSchedule } from '@/store/schedule';
 import { useTravel } from '@/store/travel';
 import { AgentUiFabRestoreHost, AgentUiOverlay, AgentUiRouteSync } from '@/utils/agent-ui';
 import { todayKey } from '@/utils/date';
+import { ThemeToggleFab, ThemeToggleFabHost } from '@/utils/dev-theme-toggle';
 
 /** Expo Router catches render failures so the app never sticks on a blank white view. */
 export { RouteErrorBoundary as ErrorBoundary };
@@ -126,6 +127,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <NavigationSessionSync />
         <UsageAnalyticsTracker />
         <AgentUiFabRestoreHost>
+        <ThemeToggleFabHost>
         <Stack
           screenOptions={{
             headerShown: true,
@@ -297,9 +299,11 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         }}
       />
     </Stack>
+        </ThemeToggleFabHost>
         </AgentUiFabRestoreHost>
         {/* After Stack inside flex:1 so absolute overlay covers the window. */}
         <AgentUiOverlay />
+        <ThemeToggleFab />
     </View>
   );
 }

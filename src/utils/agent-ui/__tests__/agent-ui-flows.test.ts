@@ -49,11 +49,21 @@ jest.mock('@/features/account/dev-mode-controller', () => ({
   ensureDevModeSandboxSync: jest.fn(),
 }));
 
+const mockSetTabBarCollapsed = jest.fn();
+
 jest.mock('@/store/travel', () => ({
   useTravel: {
     getState: () => ({
       savePlan: mockSavePlan,
       recordPlanInteraction: mockRecordPlanInteraction,
+    }),
+  },
+}));
+
+jest.mock('@/store/ui', () => ({
+  useUI: {
+    getState: () => ({
+      setTabBarCollapsed: mockSetTabBarCollapsed,
     }),
   },
 }));
@@ -163,6 +173,28 @@ describe('agent-ui fixtures', () => {
     });
     expect(mockSavePlan).toHaveBeenCalledTimes(1);
     expect(mockRecordPlanInteraction).toHaveBeenCalledWith(AGENT_UI_DEMO_TRIP_ID);
+  });
+
+  it('seeds travel-home visual trips with Iceland first', () => {
+    mockSavePlan.mockClear();
+    mockRecordPlanInteraction.mockClear();
+    mockSetTabBarCollapsed.mockClear();
+    const result = seedAgentUiFixture('travel-home');
+    expect(result).toEqual({
+      fixture: 'travel-home',
+      primaryId: 'trip-travel-home-iceland',
+      planId: 'trip-travel-home-iceland',
+    });
+    expect(mockSavePlan).toHaveBeenCalledTimes(3);
+    expect(mockRecordPlanInteraction).toHaveBeenLastCalledWith(
+      'trip-travel-home-iceland',
+    );
+    expect(mockSetTabBarCollapsed).toHaveBeenCalledWith(false);
+    expect(normalizeFixtureName('travel-home')).toBe('travel-home');
+    expect(resolveAgentUiFlow('travel-home')?.[1]).toMatchObject({
+      op: 'seed',
+      to: 'travel-home',
+    });
   });
 
   it('builds and seeds checklist / grocery / health / vehicle fixtures', () => {
