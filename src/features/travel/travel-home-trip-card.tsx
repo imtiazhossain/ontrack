@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue } from 'react-native-reanimated';
 
 import { AppText } from '@/components/primitives';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
@@ -69,12 +69,15 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     ),
   );
   const [heroPager, setHeroPager] = useState({ index: 0, count: 0 });
+  /** Continuous hero page position for smooth glass tick crossfades. */
+  const heroScrollProgress = useSharedValue(0);
   /** Active remote hero URI — Android glass frosts this plate in the scoop. */
   const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
   useEffect(() => {
     setHeroPager({ index: 0, count: 0 });
+    heroScrollProgress.value = 0;
     setHeroFrostUri(undefined);
-  }, [plan.id]);
+  }, [plan.id, heroScrollProgress]);
   const destination = plan.destination.trim();
   const destinationLabel = destination || plan.title;
   const dark = theme.name === 'dark';
@@ -188,12 +191,16 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           plan={plan}
           width={cardWidth}
           onEdit={() => onEditTrip(plan.id)}
+          scrollProgress={heroScrollProgress}
           onActiveImageChange={(uri, index, pageCount) => {
-            setHeroPager((previous) =>
-              previous.index === index && previous.count === pageCount
-                ? previous
-                : { index, count: pageCount },
-            );
+            setHeroPager((previous) => {
+              // Ignore transient empty reports so ticks stay visible once known.
+              if (pageCount <= 0 && previous.count > 1) return previous;
+              if (previous.index === index && previous.count === pageCount) {
+                return previous;
+              }
+              return { index, count: pageCount };
+            });
             setHeroFrostUri(uri);
             onActiveImageChange?.(plan.id, uri);
           }}
@@ -242,6 +249,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             <TravelHomeCarouselStepper
               count={heroPager.count}
               index={heroPager.index}
+              progress={heroScrollProgress}
             />
           </View>
           <AgentTestId

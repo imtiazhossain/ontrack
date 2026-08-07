@@ -30,5 +30,6 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **Locality** → smallest entry file first; extract if touched file would stay >700 lines; prefer Shared patterns in `AGENTS.md`.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).
 - **Think cool** → UI should feel crafted/delightful (presence, one idea, restraint); for design/polish read `~/.cursor/skills/think-cool/SKILL.md`.
+- **Smooth transitions** → continuous / eased motion over abrupt snaps; never break functionality or fluidity (Development `.cursor/rules/smooth-transitions.mdc`).
 - **Optimize the code** → cleanup/rename/reuse/token-slim/temp removal; read `~/.cursor/skills/optimize-code/SKILL.md`.
 - **`push`** → always `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Same for “push script” / “ship push”. Flow: commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK. Do **not** treat bare `push` as plain git commit+push. Use `--ota-apk-only` to reship current main; `--skip-ota` / `--skip-apk` for partial runs.
