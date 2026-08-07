@@ -44,11 +44,11 @@ export function TravelHomeCarouselStepper({
   const activeIndex = Math.max(0, Math.min(Math.max(pageCount - 1, 0), index));
   const visible = pageCount > 1;
 
-  const lineW = Math.max(14, s(15));
-  const lineH = Math.max(2.5, s(3));
-  const gap = Math.max(5, s(6));
-  const padY = Math.max(4, s(4));
-  const padX = Math.max(8, s(9));
+  const lineW = Math.max(6, s(7));
+  const lineH = Math.max(1.25, s(1.5));
+  const gap = Math.max(2, s(2.5));
+  const padY = Math.max(2, s(2));
+  const padX = Math.max(4, s(4.5));
   const inactiveColor = 'rgba(255,255,255,0.45)';
   const activeColor = '#FFFFFF';
 
@@ -96,7 +96,7 @@ export function TravelHomeCarouselStepper({
           {
             paddingHorizontal: padX,
             paddingVertical: padY,
-            borderRadius: Math.max(10, s(11)),
+            borderRadius: Math.max(5, s(6)),
             gap,
           },
         ]}>
