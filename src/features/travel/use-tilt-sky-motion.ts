@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import {
@@ -24,7 +25,8 @@ function clamp(n: number, min: number, max: number): number {
 /**
  * Device-motion tilt for the itinerary header sky.
  * Falls back to idle (zeros) when sensors are unavailable, denied,
- * Reduce Motion is on, or the sky quality plan disables tilt. Safe on Simulator.
+ * Reduce Motion is on, or the sky quality plan disables tilt. Safe on Simulator
+ * and on TestFlight binaries that predate the expo-sensors native module.
  */
 export function useTiltSkyMotion(enabled = true): TiltSkyMotion {
   const tiltX = useSharedValue(0);
@@ -46,7 +48,16 @@ export function useTiltSkyMotion(enabled = true): TiltSkyMotion {
 
     const start = async () => {
       try {
-        const { DeviceMotion } = await import('expo-sensors');
+        // Build 49 (and any binary without expo-sensors linked) has no
+        // ExponentDeviceMotion / ExponentPedometer. The package barrel eagerly
+        // requires ExponentPedometer and fatals even inside try/catch around a
+        // package-root dynamic import. Probe first; only then load DeviceMotion
+        // directly (never the Pedometer barrel).
+        if (!requireOptionalNativeModule('ExponentDeviceMotion')) return;
+
+        const { default: DeviceMotion } = await import(
+          'expo-sensors/build/DeviceMotion.js'
+        );
         const available = await DeviceMotion.isAvailableAsync();
         if (!available || cancelled) return;
 
