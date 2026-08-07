@@ -26,3 +26,4 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **Stuck / slow step** → stop grinding. Prefer fixing the cause (often config/env/device pin / iOS system sheet) over long debug or repeated verify retries — see `stuck-check-config.mdc`.
 - **Locality** → smallest entry file first; extract if touched file would stay >700 lines; prefer Shared patterns in `AGENTS.md`.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).
+- **Push / ship script** → when the user says “run the push script”, “push script”, or “ship push”, run `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Flow: commit → branch → PR → merge main → delete branch → TestFlight OTA → Drive APK. Use `--ota-apk-only` to reship current main; `--skip-ota` / `--skip-apk` for partial runs.

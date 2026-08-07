@@ -103,6 +103,7 @@
     "android:run": "bash ./scripts/ensure-android-emulator.sh --window && expo run:android --device \"$(cat .cursor/android-emulator.serial 2>/dev/null || true)\"",
     "android:push-fixture": "bash ./scripts/android-push-fixture.sh",
     "android:release-to-drive": "bash ./scripts/android-release-to-drive.sh",
+    "ship:push": "bash ./scripts/ship-push.sh",
     "android:travel-demo": "bash ./scripts/agent-ui-android-travel-demo.sh",
     "agent-ui:verify-both": "bash ./scripts/agent-ui-verify-both.sh",
     "agent-ui:ios-alerts": "bash ./scripts/agent-ui-ios-alerts.sh",
