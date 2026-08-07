@@ -23,17 +23,17 @@ function clamp(n: number, min: number, max: number): number {
 
 /**
  * Device-motion tilt for the itinerary header sky.
- * Falls back to idle (zeros) when sensors are unavailable, denied, or
- * Reduce Motion is on. Safe on Simulator (no-op).
+ * Falls back to idle (zeros) when sensors are unavailable, denied,
+ * Reduce Motion is on, or the sky quality plan disables tilt. Safe on Simulator.
  */
-export function useTiltSkyMotion(): TiltSkyMotion {
+export function useTiltSkyMotion(enabled = true): TiltSkyMotion {
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
   const energy = useSharedValue(0);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (!enabled || reduceMotion) {
       tiltX.value = 0;
       tiltY.value = 0;
       energy.value = 0;
@@ -56,7 +56,8 @@ export function useTiltSkyMotion(): TiltSkyMotion {
           (await DeviceMotion.requestPermissionsAsync()).granted;
         if (!granted || cancelled) return;
 
-        DeviceMotion.setUpdateInterval(36);
+        // ~15 Hz is enough for parallax; higher rates burn JS during itinerary paint.
+        DeviceMotion.setUpdateInterval(66);
         subscription = DeviceMotion.addListener((sample) => {
           if (!active || cancelled) return;
 
@@ -106,7 +107,7 @@ export function useTiltSkyMotion(): TiltSkyMotion {
       subscription?.remove();
       appSub.remove();
     };
-  }, [energy, reduceMotion, tiltX, tiltY]);
+  }, [enabled, energy, reduceMotion, tiltX, tiltY]);
 
   return { tiltX, tiltY, energy };
 }

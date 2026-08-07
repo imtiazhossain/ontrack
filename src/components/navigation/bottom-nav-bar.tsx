@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { Tabs, useRouter, type Href } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
@@ -52,6 +52,7 @@ import {
   routeIndexForPosition,
   shortestTargetPosition,
 } from './bottom-nav-bar-motion';
+import { TAB_META } from './bottom-nav-tab-meta';
 import { orderRoutesByRecency } from './tab-recency';
 
 type BottomNavBarProps = Parameters<
@@ -71,66 +72,6 @@ const SNAP_SPRING = {
   stiffness: 230,
   mass: 0.78,
 } as const;
-
-const TAB_META: Record<
-  string,
-  { label: string; icon: AppIconName; href: Href }
-> = {
-  index: { label: 'Today', icon: 'today', href: '/(tabs)' },
-  calendar: {
-    label: 'Calendar',
-    icon: 'calendar',
-    href: '/(tabs)/calendar',
-  },
-  'to-do': {
-    label: 'Checklists',
-    icon: 'tasks',
-    href: '/(tabs)/to-do',
-  },
-  social: {
-    label: 'Social',
-    icon: 'people',
-    href: '/(tabs)/social',
-  },
-  insights: {
-    label: 'Insights',
-    icon: 'insights',
-    href: '/(tabs)/insights',
-  },
-  profile: {
-    label: 'Profile',
-    icon: 'profile',
-    href: '/(tabs)/profile',
-  },
-  workouts: {
-    label: 'Workout',
-    icon: 'gym',
-    href: '/(tabs)/workouts',
-  },
-  plants: { label: 'Plants', icon: 'plant', href: '/(tabs)/plants' },
-  travel: { label: 'Travel', icon: 'flight', href: '/(tabs)/travel' },
-  'vision-board': {
-    // Short chrome label so equal rail slots keep even visual gutters.
-    label: 'Vision',
-    icon: 'vision-board',
-    href: '/(tabs)/vision-board',
-  },
-  games: {
-    label: 'Games',
-    icon: 'games',
-    href: '/(tabs)/games',
-  },
-  vehicles: {
-    label: 'Vehicles',
-    icon: 'vehicles',
-    href: '/(tabs)/vehicles',
-  },
-  health: {
-    label: 'Health',
-    icon: 'health',
-    href: '/(tabs)/health',
-  },
-};
 
 export function BottomNavBar({
   state,
@@ -694,7 +635,7 @@ export function BottomNavBar({
                 pressed && styles.pressed,
               ]}>
               <View style={styles.iconSlot}>
-                <Symbol name={tabIcon} size={20} color={color} />
+                <Symbol name={tabIcon} size={s(20)} color={color} />
                 {badge > 0 ? (
                   <View
                     style={[

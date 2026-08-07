@@ -1,5 +1,3 @@
-import type { TextStyle } from 'react-native';
-
 /** `light` = white header ink; `dark` = black header ink. */
 export type TravelAtmosphereHeaderInk = 'light' | 'dark';
 
@@ -97,9 +95,8 @@ export function resolveAtmosphereHeaderInk({
   if (averageColor) {
     const luma = relativeLuminanceFromHex(averageColor);
     if (luma !== undefined) {
-      if (luma > 0.68) return 'dark';
-      if (luma < 0.5) return 'light';
-      // Mid band — honor curated tone when the plate author pinned one.
+      // Clear bright / dark plates; mid band may honor curated tone.
+      if (luma > 0.68 || luma < 0.5) return headerInkFromLuminance(luma);
       if (curatedTone) return curatedTone;
       return 'light';
     }
@@ -168,18 +165,4 @@ export function travelHomeAtmosphereHeaderScrimColors(
     `rgba(255,255,255,${low.toFixed(2)})`,
     'rgba(255,255,255,0)',
   ] as const;
-}
-
-/**
- * @deprecated Atmosphere copy contrast is owned by `TravelHomeAtmosphereScrim`.
- * Always returns null — kept so older call sites compile during the cutover.
- */
-export function travelHomeAtmosphereTextShadowStyle(
-  _ink: TravelAtmosphereHeaderInk,
-  _averageColor?: string,
-): Pick<
-  TextStyle,
-  'textShadowColor' | 'textShadowOffset' | 'textShadowRadius'
-> | null {
-  return null;
 }

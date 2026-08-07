@@ -1,9 +1,8 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -24,6 +23,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
+import { MotionLayer } from '@/features/travel/travel-sky-motion-layer';
 import {
   celestialDiscHostStyle,
   SKY_CELESTIAL_CLEARANCE,
@@ -31,82 +31,9 @@ import {
   SKY_VIEW_H,
   SKY_VIEW_W,
 } from '@/features/travel/travel-sky-plate';
+import type { TravelSkyFxPlan } from '@/features/travel/travel-sky-quality';
 import { TravelSkyWeatherFx } from '@/features/travel/travel-sky-weather-fx';
 import type { TiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-function MotionLayer({
-  depth,
-  delayMs,
-  energy,
-  tiltX,
-  tiltY,
-  /** Horizontal drift amplitude in plate px (0 = tilt-only). */
-  driftAmp = 0,
-  /** One-way drift duration ms; higher = lazier clouds. */
-  driftMs = 28000,
-  children,
-}: {
-  depth: number;
-  delayMs: number;
-  energy: SharedValue<number>;
-  tiltX: SharedValue<number>;
-  tiltY: SharedValue<number>;
-  driftAmp?: number;
-  driftMs?: number;
-  children: ReactNode;
-}) {
-  const idle = useSharedValue(0.72);
-  const drift = useSharedValue(0);
-  useEffect(() => {
-    idle.value = withDelay(
-      delayMs,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0.65, { duration: 2400, easing: Easing.inOut(Easing.quad) }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [delayMs, idle]);
-
-  useEffect(() => {
-    if (driftAmp <= 0) return;
-    drift.value = 0;
-    drift.value = withDelay(
-      delayMs,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: driftMs, easing: Easing.inOut(Easing.sin) }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [delayMs, drift, driftAmp, driftMs]);
-
-  const style = useAnimatedStyle(() => {
-    const shine = interpolate(energy.value, [0, 1], [idle.value, 1]);
-    const glide = driftAmp > 0 ? interpolate(drift.value, [0, 1], [-driftAmp, driftAmp]) : 0;
-    return {
-      opacity: shine,
-      transform: [
-        { translateX: tiltX.value * 14 * depth + glide },
-        {
-          translateY:
-            tiltY.value * 9 * depth +
-            (driftAmp > 0 ? interpolate(drift.value, [0, 1], [-1.2, 1.2]) * depth : 0),
-        },
-      ],
-    };
-  });
-
-  return <Animated.View style={[StyleSheet.absoluteFill, style]}>{children}</Animated.View>;
-}
 
 function SoftCloud({
   cx,
@@ -150,9 +77,9 @@ function SoftCloud({
 }
 
 /**
- * Animated bird — wing-flap loop (quadratic morph raised ↔ lowered) with a
- * slow drift across the plate. `frigate` gets longer, thinner wings for
- * tropical destinations.
+ * Animated bird — wing flap via cheap `scaleY` on a static path (no animated
+ * SVG `d` morph / Fabric `createAnimatedComponent`), plus a slow drift.
+ * `frigate` gets longer, thinner wings for tropical destinations.
  */
 function FlyingBird({
   y,
@@ -194,6 +121,9 @@ function FlyingBird({
   }, [delayMs, drift, duration, flap]);
 
   const span = (frigate ? 11.5 : 9) * scale;
+  const dip = frigate ? 0.42 : 0.7;
+  const wingPath = `M${-span} ${-dip * span} Q${-span * 0.45} ${-dip * 0.5 * span} 0 0 Q${span * 0.45} ${-dip * 0.5 * span} ${span} ${-dip * span}`;
+
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(drift.value, [0, 0.05, 0.92, 1], [0, 0.9, 0.9, 0]),
     transform: [
@@ -209,29 +139,30 @@ function FlyingBird({
     ],
   }));
 
-  const animatedProps = useAnimatedProps(() => {
-    const dip = frigate ? 0.42 : 0.7;
-    const tipY = interpolate(flap.value, [0, 1], [-dip, 0.32]) * span;
-    const midY = interpolate(flap.value, [0, 1], [-dip * 0.5, 0.1]) * span;
-    return {
-      d: `M${-span} ${tipY} Q${-span * 0.45} ${midY} 0 0 Q${span * 0.45} ${midY} ${span} ${tipY}`,
-    };
-  });
+  const flapStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scaleY: interpolate(flap.value, [0, 1], [1, frigate ? 0.28 : 0.38]),
+      },
+    ],
+  }));
 
   return (
     <Animated.View style={[styles.bird, style]}>
-      <Svg
-        width={span * 2 + 6}
-        height={span + 8}
-        viewBox={`${-span - 3} ${-span * 0.8} ${span * 2 + 6} ${span + 8}`}>
-        <AnimatedPath
-          animatedProps={animatedProps}
-          stroke={color}
-          strokeWidth={frigate ? 1 : 1.2}
-          fill="none"
-          strokeLinecap="round"
-        />
-      </Svg>
+      <Animated.View style={flapStyle}>
+        <Svg
+          width={span * 2 + 6}
+          height={span + 8}
+          viewBox={`${-span - 3} ${-span * 0.8} ${span * 2 + 6} ${span + 8}`}>
+          <Path
+            d={wingPath}
+            stroke={color}
+            strokeWidth={frigate ? 1 : 1.2}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </Svg>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -307,14 +238,22 @@ function DaySun({
   cy,
   motion,
   warm,
+  showRays,
+  animate,
 }: {
   cx: number;
   cy: number;
   motion: TiltSkyMotion;
   warm: boolean;
+  showRays: boolean;
+  animate: boolean;
 }) {
   const idle = useSharedValue(0.8);
   useEffect(() => {
+    if (!animate) {
+      idle.value = 0.92;
+      return;
+    }
     idle.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
@@ -323,7 +262,7 @@ function DaySun({
       -1,
       false,
     );
-  }, [idle]);
+  }, [animate, idle]);
 
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(motion.energy.value, [0, 1], [idle.value, 1]),
@@ -341,7 +280,9 @@ function DaySun({
 
   return (
     <>
-      <SunRays cx={cx} cy={cy} warm={warm} energy={motion.energy} />
+      {showRays && animate ? (
+        <SunRays cx={cx} cy={cy} warm={warm} energy={motion.energy} />
+      ) : null}
       <View pointerEvents="none" style={celestialDiscHostStyle(cx, cy, box)}>
         <Animated.View style={[{ flex: 1 }, style]}>
           <Svg
@@ -528,10 +469,12 @@ export function TravelSkyDay({
   condition,
   statusBand,
   motion,
+  fx,
 }: {
   condition: HeaderSkyCondition;
   statusBand: number;
   motion: TiltSkyMotion;
+  fx: TravelSkyFxPlan;
 }) {
   const palette = paletteFor(condition.look);
   const accents = condition.accents;
@@ -579,7 +522,14 @@ export function TravelSkyDay({
       </Svg>
 
       {palette.showSun ? (
-        <DaySun cx={sunX} cy={sunY} motion={motion} warm={palette.warmSun} />
+        <DaySun
+          cx={sunX}
+          cy={sunY}
+          motion={motion}
+          warm={palette.warmSun}
+          showRays={fx.sunRays}
+          animate={fx.liveFx}
+        />
       ) : null}
 
       {showClouds ? (
@@ -588,7 +538,7 @@ export function TravelSkyDay({
           <MotionLayer
             depth={0.28}
             delayMs={60}
-            driftAmp={10}
+            driftAmp={fx.cloudDrift ? 10 : 0}
             driftMs={36000}
             energy={motion.energy}
             tiltX={motion.tiltX}
@@ -619,7 +569,7 @@ export function TravelSkyDay({
           <MotionLayer
             depth={0.9}
             delayMs={120}
-            driftAmp={22}
+            driftAmp={fx.cloudDrift ? 22 : 0}
             driftMs={24000}
             energy={motion.energy}
             tiltX={motion.tiltX}
@@ -673,7 +623,7 @@ export function TravelSkyDay({
         </>
       ) : null}
 
-      {palette.showBirds ? (
+      {fx.birds && palette.showBirds ? (
         <>
           <FlyingBird
             y={statusBand + 34}
@@ -708,14 +658,19 @@ export function TravelSkyDay({
         </>
       ) : null}
 
-      {accents.desert && !denseClouds && !partlyClouds ? <HeatShimmer /> : null}
-      {accents.fog && overcastLook ? <FogWisps /> : null}
+      {fx.heatFog && accents.desert && !denseClouds && !partlyClouds ? (
+        <HeatShimmer />
+      ) : null}
+      {fx.heatFog && accents.fog && overcastLook ? <FogWisps /> : null}
 
-      <TravelSkyWeatherFx
-        rain={condition.rain}
-        lightning={condition.lightning}
-        dark={false}
-      />
+      {fx.weatherFx ? (
+        <TravelSkyWeatherFx
+          rain={condition.rain}
+          lightning={condition.lightning}
+          dark={false}
+          maxDrops={fx.rainDropMax}
+        />
+      ) : null}
     </View>
   );
 }

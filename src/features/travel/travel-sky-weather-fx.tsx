@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +10,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Line, Path } from 'react-native-svg';
 
@@ -38,40 +40,63 @@ const RAIN_DROPS = [
   { x: 330, delay: 110, len: 16, speed: 990 },
 ] as const;
 
+/** Shared ms clock — one `withRepeat` drives every drop phase. */
+const RAIN_CLOCK_MS = 4000;
+
+function useRainClock(active: boolean): SharedValue<number> {
+  const clock = useSharedValue(0);
+  useEffect(() => {
+    if (!active) {
+      cancelAnimation(clock);
+      clock.value = 0;
+      return;
+    }
+    clock.value = 0;
+    clock.value = withRepeat(
+      withTiming(1, { duration: RAIN_CLOCK_MS, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(clock);
+    };
+  }, [active, clock]);
+  return clock;
+}
+
 function RainDrop({
   x,
   delay,
   len,
   speed,
   color,
+  clock,
 }: {
   x: number;
   delay: number;
   len: number;
   speed: number;
   color: string;
+  clock: SharedValue<number>;
 }) {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(1, { duration: speed, easing: Easing.linear }),
-        -1,
-        false,
-      ),
-    );
-  }, [delay, speed, t]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: t.value * (SKY_VIEW_H + len) - len },
-    ],
-    opacity: interpolate(t.value, [0, 0.15, 0.85, 1], [0.15, 0.55, 0.55, 0.12]),
-  }));
+  const style = useAnimatedStyle(() => {
+    // Map shared 0…1 clock into this drop's fall cycle (phase by delay/speed).
+    const cycles = RAIN_CLOCK_MS / speed;
+    const phase = delay / speed;
+    const t = (clock.value * cycles + phase) % 1;
+    return {
+      transform: [{ translateY: t * (SKY_VIEW_H + len) - len }],
+      opacity: interpolate(t, [0, 0.15, 0.85, 1], [0.15, 0.55, 0.55, 0.12]),
+    };
+  });
 
   return (
-    <Animated.View style={[styles.drop, { left: `${(x / SKY_VIEW_W) * 100}%` }, style]}>
+    <Animated.View
+      style={[
+        styles.drop,
+        { left: `${(x / SKY_VIEW_W) * 100}%` },
+        style,
+      ]}>
       <Svg width={3} height={len} viewBox={`0 0 3 ${len}`}>
         <Line
           x1={1.5}
@@ -150,28 +175,34 @@ export function TravelSkyWeatherFx({
   rain,
   lightning,
   dark,
+  maxDrops = RAIN_DROPS.length,
 }: {
   rain: boolean;
   lightning: boolean;
   dark: boolean;
+  /** Cap drop count on reduced-quality devices. */
+  maxDrops?: number;
 }) {
+  const drops = rain
+    ? RAIN_DROPS.slice(0, Math.max(0, Math.min(RAIN_DROPS.length, maxDrops)))
+    : [];
+  const clock = useRainClock(drops.length > 0);
   if (!rain && !lightning) return null;
   const dropColor = dark ? 'rgba(180,210,240,0.55)' : 'rgba(70,100,130,0.45)';
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {rain
-        ? RAIN_DROPS.map((drop, index) => (
-            <RainDrop
-              key={`rain-${index}`}
-              x={drop.x}
-              delay={drop.delay}
-              len={drop.len}
-              speed={drop.speed}
-              color={dropColor}
-            />
-          ))
-        : null}
+      {drops.map((drop, index) => (
+        <RainDrop
+          key={`rain-${index}`}
+          x={drop.x}
+          delay={drop.delay}
+          len={drop.len}
+          speed={drop.speed}
+          color={dropColor}
+          clock={clock}
+        />
+      ))}
       {lightning ? (
         <>
           <LightningBolt delayMs={400} path="M210 8 L198 42 L214 42 L196 88" />

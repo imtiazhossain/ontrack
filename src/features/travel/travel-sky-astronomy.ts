@@ -20,10 +20,14 @@ export function moonPhaseCycle(date: Date): number {
   return cycle / SYNODIC_DAYS;
 }
 
+/** Illuminated fraction 0–1 from a phase cycle (0 = new, 0.5 = full). */
+export function moonIlluminationFromCycle(cycle: number): number {
+  return (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+}
+
 /** Illuminated fraction 0–1. */
 export function moonIllumination(date: Date): number {
-  const phase = moonPhaseCycle(date);
-  return (1 - Math.cos(2 * Math.PI * phase)) / 2;
+  return moonIlluminationFromCycle(moonPhaseCycle(date));
 }
 
 /** True when waxing (light grows on the right in N-hemisphere convention). */
@@ -57,7 +61,7 @@ export function moonTerminatorPath(
   r: number,
   southern = false,
 ): string {
-  const illum = (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+  const illum = moonIlluminationFromCycle(cycle);
   if (illum < 0.04) return '';
 
   const top = `${round2(cx)} ${round2(cy - r)}`;
@@ -92,7 +96,7 @@ export function moonPhaseShadowPath(
   r: number,
   southern = false,
 ): { d: string; fillRule?: 'evenodd' } | null {
-  const illum = (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+  const illum = moonIlluminationFromCycle(cycle);
   if (illum > 0.97) return null;
   const disc = moonDiscPath(cx, cy, r);
   if (illum < 0.04) return { d: disc };

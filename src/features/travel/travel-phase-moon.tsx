@@ -23,6 +23,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import {
+  moonIlluminationFromCycle,
   moonPhaseShadowPath,
   moonTerminatorPath,
 } from '@/features/travel/travel-sky-astronomy';
@@ -54,12 +55,9 @@ type PhaseMoonMotion = {
 };
 
 /**
- * Realtime phase moon: bright disc always present (visible at new moon),
- * surface craters/maria drawn on the full orb, translucent terminator
- * shadow so detail stays readable in the dark.
- *
- * Default `layout="plate"` positions into the itinerary sky plate.
- * `layout="host"` fills a square parent (Travel home atmosphere).
+ * Realtime phase moon for the itinerary sky plate: bright disc always
+ * present (visible at new moon), surface craters/maria on the full orb,
+ * translucent terminator shadow so detail stays readable in the dark.
  */
 export function PhaseMoon({
   cx,
@@ -68,7 +66,6 @@ export function PhaseMoon({
   cycle,
   southern,
   motion,
-  layout = 'plate',
   gradientId = 'phaseMoon',
 }: {
   cx: number;
@@ -77,14 +74,12 @@ export function PhaseMoon({
   cycle: number;
   southern: boolean;
   motion?: PhaseMoonMotion;
-  layout?: 'plate' | 'host';
   /** Prefix unique gradient ids when multiple moons mount. */
   gradientId?: string;
 }) {
   const shadow = moonPhaseShadowPath(cycle, cx, cy, r, southern);
   const litPath = moonTerminatorPath(cycle, cx, cy, r, southern);
-  // Same formula as `moonIllumination` — cycle already encodes phase.
-  const illumination = (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+  const illumination = moonIlluminationFromCycle(cycle);
 
   const idle = useSharedValue(0.9);
   useEffect(() => {
@@ -111,21 +106,17 @@ export function PhaseMoon({
     };
   });
 
-  // Hug the disc — extra pad only for the soft sky-plate halo.
-  const pad = layout === 'host' ? r * 1.08 : r * 1.8;
+  // Soft sky-plate halo — pad beyond the disc so the glow can breathe.
+  const pad = r * 1.8;
   const box = pad * 2;
   const glowOpacity = 0.1 + illumination * 0.14;
   // New-moon shadow stays translucent so the orb + craters remain visible.
   const shadowOpacity = illumination < 0.04 ? 0.62 : 0.52;
   const glowGrad = `${gradientId}Glow`;
   const surfaceGrad = `${gradientId}Surface`;
-  const hostStyle =
-    layout === 'plate'
-      ? celestialDiscHostStyle(cx, cy, box)
-      : { width: '100%' as const, height: '100%' as const };
 
   return (
-    <View pointerEvents="none" style={hostStyle}>
+    <View pointerEvents="none" style={celestialDiscHostStyle(cx, cy, box)}>
       <Animated.View style={[{ flex: 1 }, style]}>
         <Svg
           width="100%"
@@ -134,35 +125,24 @@ export function PhaseMoon({
           preserveAspectRatio="xMidYMid meet"
           style={{ backgroundColor: 'transparent' }}>
           <Defs>
-            {layout === 'plate' ? (
-              <RadialGradient id={glowGrad} cx="50%" cy="50%" r="50%">
-                {/* stopOpacity — rgba alpha in stopColor is ignored on RN SVG. */}
-                <Stop
-                  offset="0%"
-                  stopColor="#E8EEF8"
-                  stopOpacity={glowOpacity}
-                />
-                <Stop offset="100%" stopColor="#E8EEF8" stopOpacity={0} />
-              </RadialGradient>
-            ) : null}
+            <RadialGradient id={glowGrad} cx="50%" cy="50%" r="50%">
+              {/* stopOpacity — rgba alpha in stopColor is ignored on RN SVG. */}
+              <Stop
+                offset="0%"
+                stopColor="#E8EEF8"
+                stopOpacity={glowOpacity}
+              />
+              <Stop offset="100%" stopColor="#E8EEF8" stopOpacity={0} />
+            </RadialGradient>
             <RadialGradient
               id={surfaceGrad}
               gradientUnits="userSpaceOnUse"
               cx={cx - r * 0.28}
               cy={cy - r * 0.32}
               r={r * 1.6}>
-              <Stop
-                offset="0%"
-                stopColor={layout === 'host' ? '#C9D2DE' : '#F4F7FB'}
-              />
-              <Stop
-                offset="55%"
-                stopColor={layout === 'host' ? '#9AA6B6' : '#DCE3EC'}
-              />
-              <Stop
-                offset="100%"
-                stopColor={layout === 'host' ? '#6E7B8C' : '#B7C2D0'}
-              />
+              <Stop offset="0%" stopColor="#F4F7FB" />
+              <Stop offset="55%" stopColor="#DCE3EC" />
+              <Stop offset="100%" stopColor="#B7C2D0" />
             </RadialGradient>
             {litPath ? (
               <ClipPath id={`${gradientId}Lit`}>
@@ -171,9 +151,7 @@ export function PhaseMoon({
             ) : null}
           </Defs>
 
-          {layout === 'plate' ? (
-            <Circle cx={cx} cy={cy} r={r * 1.55} fill={`url(#${glowGrad})`} />
-          ) : null}
+          <Circle cx={cx} cy={cy} r={r * 1.55} fill={`url(#${glowGrad})`} />
 
           {/* Base disc — always drawn so new moon stays an orb. */}
           <Circle cx={cx} cy={cy} r={r} fill={`url(#${surfaceGrad})`} />

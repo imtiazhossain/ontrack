@@ -102,11 +102,18 @@ describe('travel header sky décor', () => {
 
   it('drives twinkle and ray shine from device tilt motion', () => {
     expect(sky).toContain('useTiltSkyMotion');
+    expect(sky).toContain('useTravelSkyQuality');
+    expect(sky).toContain('TravelSkyStaticWash');
     expect(night).toContain('MotionLayer');
     expect(night).toContain('motion.energy');
     expect(night).toContain('TwinklingStar');
+    expect(night).toContain('useStarTwinkleClock');
     expect(night).not.toContain('PulsingStar');
-    // Per-star opacity shimmer — not a shared layer breathe or radius pulse.
+    // Fabric-safe View twinkles + shared clock — not animated SVG props.
+    expect(night).not.toContain('useAnimatedProps');
+    expect(day).not.toContain('useAnimatedProps');
+    expect(night).not.toContain('Animated.createAnimatedComponent');
+    expect(day).not.toContain('Animated.createAnimatedComponent');
     expect(night).toContain('starSeedUnit');
     expect(night).not.toContain('r * (0.92');
     expect(day).toContain('MotionLayer');

@@ -11,6 +11,8 @@ import { TravelSkyGround } from '@/features/travel/travel-sky-ground';
 import { resolveTravelSkyGroundKind } from '@/features/travel/travel-sky-ground-kind';
 import { TravelSkyNight } from '@/features/travel/travel-sky-night';
 import { SKY_VIEW_H } from '@/features/travel/travel-sky-plate';
+import { TravelSkyStaticWash } from '@/features/travel/travel-sky-static-wash';
+import { useTravelSkyQuality } from '@/features/travel/use-travel-sky-quality';
 import { useTiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
@@ -19,11 +21,9 @@ import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
  * Theme + weather sky for itinerary headers.
  * Painted once on app-shell chrome (status bar + header) so aurora / day washes
  * stay continuous behind the clock. `headerSkyChromeColor` is the solid underlay.
- * Night: projected stars, phase moon, satellites, meteors, aurora.
- * Day: sun rays / clouds / flocking birds with dawn/dusk palettes.
- * Both: rain/lightning FX, destination accents, and a location ground band
- * (trees / town / city / cars) that soft-fades into theme paper just below
- * the dates card.
+ *
+ * Fidelity follows device capability (and can step down at runtime) from full
+ * motion → thinned FX → static SVG plate → static gradient wash.
  *
  * @param statusBandRatio Fraction of the plate reserved for the status-bar band
  *   (celestial discs stay below the clock / Dynamic Island).
@@ -53,7 +53,8 @@ export function TravelHeaderSkyDecor({
 } = {}) {
   const theme = useTheme();
   const dark = theme.name === 'dark';
-  const motion = useTiltSkyMotion();
+  const { plan } = useTravelSkyQuality();
+  const motion = useTiltSkyMotion(plan.tilt);
   const statusBand = Math.max(0, Math.min(0.55, statusBandRatio)) * SKY_VIEW_H;
   const condition = resolveHeaderSkyCondition({
     themeDark: dark,
@@ -84,34 +85,49 @@ export function TravelHeaderSkyDecor({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.fill}>
-        {night ? (
-          <TravelSkyNight
-            condition={condition}
-            destination={destination}
-            dateKey={dateKey}
-            latitude={latitude}
-            longitude={longitude}
-            statusBand={statusBand}
-            motion={motion}
+        {plan.quality === 'static' ? (
+          <TravelSkyStaticWash
+            chrome={chrome}
+            look={condition.look}
+            night={night}
+            fadeTo={horizon}
           />
         ) : (
-          <TravelSkyDay
-            condition={condition}
-            statusBand={statusBand}
-            motion={motion}
-          />
+          <>
+            {night ? (
+              <TravelSkyNight
+                condition={condition}
+                destination={destination}
+                dateKey={dateKey}
+                latitude={latitude}
+                longitude={longitude}
+                statusBand={statusBand}
+                motion={motion}
+                fx={plan}
+              />
+            ) : (
+              <TravelSkyDay
+                condition={condition}
+                statusBand={statusBand}
+                motion={motion}
+                fx={plan}
+              />
+            )}
+            {plan.ground ? (
+              <TravelSkyGround kind={groundKind} night={night} motion={motion} />
+            ) : null}
+            {/*
+              Short horizon dissolve into the theme base — not a sky wash down
+              the page. Ground foot eases into paper just below the dates card.
+            */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={['transparent', 'transparent', horizon]}
+              locations={[0.72, 0.88, 1]}
+              style={styles.bottomFade}
+            />
+          </>
         )}
-        <TravelSkyGround kind={groundKind} night={night} motion={motion} />
-        {/*
-          Short horizon dissolve into the theme base — not a sky wash down
-          the page. Ground foot eases into paper just below the dates card.
-        */}
-        <LinearGradient
-          pointerEvents="none"
-          colors={['transparent', 'transparent', horizon]}
-          locations={[0.72, 0.88, 1]}
-          style={styles.bottomFade}
-        />
       </View>
     </AgentTestId>
   );
