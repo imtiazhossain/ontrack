@@ -119,12 +119,12 @@ export const travelHomeTokens = {
      * travelers). Titles ellipsize on one line — keep this floor in sync with
      * `travelHomeImageHeight`.
      */
-    bodyOverlap: 56,
+    bodyOverlap: 66,
     /**
      * Title band top inset inside the frost scoop — keep enough milk above
      * the baseline so serifs don’t ride the photo→paper seam.
      */
-    bodyTop: 16,
+    bodyTop: 26,
     /** Location chip vertical padding. */
     locationChipPadV: 10,
     locationChipPadH: 12,
