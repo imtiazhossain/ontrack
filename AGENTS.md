@@ -28,7 +28,7 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 - Metro: `npm run packager:ensure` / `packager:ensure:start` — **never** `npm start` in agent shells (Cursor kills it). Node 24 (`.nvmrc`).
 - Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
 - Sideload APK (native / runtimeVersion only) → Drive replace: `npm run android:release-to-drive` → **android-release-apk** skill. Or `npm run build:device:android` (EAS, `device` channel).
-- **`push`** (also “push script” / “ship push”) → `npm run ship:push -- -m "…"` — commit → PR → merge main → delete branch → TestFlight + device OTA (no APK). Script: `scripts/ship-push.sh`.
+- **`push`** (also “push script” / “ship push”) → `npm run ship:push -- -m "…"` — patch-bump version + release notes/changelog → commit → PR → merge main → delete branch → TestFlight + device OTA (no APK). Script: `scripts/ship-push.sh`.
 - Dual verify (headless pool by default): `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route). Uses dedicated `onTrack Agent N` devices (max 5 parallel; wait if full). Headed Simulator/AVD only when the user asks.
 - `npm run typecheck` · `npm test` · `npm run lint`
 

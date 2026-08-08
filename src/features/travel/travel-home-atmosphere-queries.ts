@@ -1,4 +1,8 @@
 import {
+  DESTINATION_ICONIC_DRAW_SUFFIXES,
+  resolveIconicCoverQueries,
+} from '@/features/travel/destination-cover-icons';
+import {
   travelWeatherMood,
   type TravelTimeOfDay,
   type TravelWeatherMood,
@@ -112,17 +116,40 @@ export function travelHomeAtmosphereSearchQueries(
   const home = input.homeLabel?.trim();
 
   if (input.mode === 'trip' && destination) {
+    const iconic = resolveIconicCoverQueries(destination);
+    // Night / dusk → boost aurora-style draws when the pack includes them.
+    const nightBoost =
+      input.timeOfDay === 'night' || input.timeOfDay === 'dusk'
+        ? iconic.filter((query) =>
+            /aurora|northern\s+lights|night/i.test(query),
+          )
+        : [];
+    const drawSuffixes = DESTINATION_ICONIC_DRAW_SUFFIXES.map(
+      (suffix) => `${destination} ${suffix}`,
+    );
     return uniqueQueries([
-      `${destination} ${timeWords[0]} ${weatherWords[0]} travel`,
+      ...nightBoost,
+      ...iconic,
+      ...drawSuffixes,
+      // Weather/time flavor stays lower so street-weather stock does not win.
       `${destination} ${timeWords[0]} landscape`,
       `${destination} ${weatherWords[0]}`,
-      `${destination} travel landscape`,
       destination,
     ]);
   }
 
+  const homeIconic =
+    home && home.length >= 2 ? resolveIconicCoverQueries(home) : [];
   const homeFlavor =
-    home && home.length >= 2 ? [`${home} ${timeWords[0]} skyline`] : [];
+    home && home.length >= 2
+      ? [
+          ...homeIconic,
+          ...DESTINATION_ICONIC_DRAW_SUFFIXES.map(
+            (suffix) => `${home} ${suffix}`,
+          ),
+          `${home} ${timeWords[0]} skyline`,
+        ]
+      : [];
 
   return uniqueQueries([
     ...homeFlavor,

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Full ship flow for onTrack:
-#   commit → branch → PR → merge main → delete branch → TestFlight + device OTA
+#   patch-bump version + release notes/changelog → commit → branch → PR →
+#   merge main → delete branch → TestFlight + device OTA
 #
 # Agent / human phrases that mean this script:
 #   "push" · "run the push script" · "push script" · "ship push" · "ship:push"
@@ -11,16 +12,22 @@
 #   npm run ship:push -- --ota-only -m "Reship current main"
 #   npm run ship:push -- -m "…" --skip-ota
 #
+# Every non--ota-only push:
+#   - bumps expo.version patch (.x.y → .x.(y+1)) in app.json (+ package.json)
+#   - prepends Release Notes + Changelog in src/features/account/release-notes.ts
+#   - pins runtimeVersion when still on appVersion policy so OTA keeps working
+#
 # Flags:
-#   -m, --message   Commit / PR / OTA message (required unless --ota-only on clean main)
+#   -m, --message   Commit / PR / OTA / release-notes message (required unless --ota-only)
 #   --branch        Feature branch name (default: ship/<slug>-<yyyymmdd>)
-#   --ota-only      Skip git/PR; publish OTA from current HEAD (alias: --ota-apk-only)
+#   --ota-only      Skip version bump + git/PR; publish OTA from current HEAD
+#                   (alias: --ota-apk-only)
 #   --skip-ota      Skip EAS Update publish
 #   --dry-run       Print steps only
 #
 # Android JS/assets ship via the `device` channel (same as update:device).
-# Rebuild/sideload APK only for native changes: npm run android:release-to-drive
-# (or eas build --profile device). Not part of this script.
+# Rebuild/sideload APK only for native / runtimeVersion changes:
+#   npm run android:release-to-drive (or eas build --profile device).
 
 set -euo pipefail
 
@@ -105,25 +112,22 @@ CURRENT_BRANCH="$(git branch --show-current)"
 
 PR_URL=""
 MERGE_SHA=""
-
-if [[ "$OTA_ONLY" -eq 0 ]]; then
-  if [[ "$DIRTY" -eq 0 ]]; then
-    # Clean tree: if already ahead of origin/main on a feature branch, still PR/merge;
-    # if on main with nothing to ship via git, fall through to OTA only.
-    AHEAD=0
-    if [[ "$CURRENT_BRANCH" != "main" ]]; then
-      git fetch origin main --quiet 2>/dev/null || true
-      AHEAD="$(git rev-list --count "origin/main..HEAD" 2>/dev/null || echo 0)"
-    fi
-    if [[ "$CURRENT_BRANCH" == "main" || "$AHEAD" -eq 0 ]]; then
-      echo "==> Working tree clean on $CURRENT_BRANCH — git/PR steps skipped (OTA only)"
-      OTA_ONLY=1
-    fi
-  fi
-fi
+SHIPPED_VERSION=""
 
 if [[ "$OTA_ONLY" -eq 0 ]]; then
   [[ -n "$MESSAGE" ]] || die "pass -m \"commit/PR/OTA message\""
+
+  # Always patch-bump + notes before commit so every push ships a new .xx version.
+  echo "==> Bumping patch version + release notes / changelog"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    run node "$ROOT/scripts/ship-bump-version.mjs" --message "$MESSAGE" --dry-run
+  else
+    run node "$ROOT/scripts/ship-bump-version.mjs" --message "$MESSAGE"
+  fi
+  SHIPPED_VERSION="$(
+    node -e "const a=require('${ROOT}/app.json'); process.stdout.write(String(a?.expo?.version||''))"
+  )"
+  DIRTY=1
 
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
     if [[ -z "$BRANCH" ]]; then
@@ -141,17 +145,13 @@ if [[ "$OTA_ONLY" -eq 0 ]]; then
     echo "==> Using current branch $BRANCH"
   fi
 
-  if [[ "$DIRTY" -eq 1 ]]; then
-    echo "==> Committing working tree"
-    run git add -A
-    # HEREDOC keeps multi-line messages intact without interactive editors.
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-      echo "[dry-run] git commit -m $(printf %q "$MESSAGE")"
-    else
-      git commit -m "$MESSAGE"
-    fi
+  echo "==> Committing working tree (includes version bump)"
+  run git add -A
+  # HEREDOC keeps multi-line messages intact without interactive editors.
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[dry-run] git commit -m $(printf %q "$MESSAGE")"
   else
-    echo "==> No local changes to commit (branch already has commits ahead of main)"
+    git commit -m "$MESSAGE"
   fi
 
   echo "==> Pushing $BRANCH"
@@ -232,6 +232,7 @@ echo
 echo "======== ship:push complete ========"
 [[ -n "$PR_URL" ]] && echo "pr=$PR_URL"
 echo "main=$(git rev-parse --short HEAD)"
+[[ -n "$SHIPPED_VERSION" ]] && echo "version=$SHIPPED_VERSION"
 echo "message=$OTA_MSG"
 [[ "$SKIP_OTA" -eq 0 ]] && echo "ota=testflight + device (see EAS Dashboard links above)"
 echo "===================================="

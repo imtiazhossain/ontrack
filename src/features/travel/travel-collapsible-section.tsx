@@ -259,6 +259,7 @@ export function TravelCollapsibleSection({
     return (
       <TravelHomeGlass
         clear
+        wash
         style={{
           borderRadius: cardRadius,
           borderCurve: 'continuous',

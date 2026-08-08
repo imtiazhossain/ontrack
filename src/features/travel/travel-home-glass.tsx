@@ -22,21 +22,35 @@ type TravelHomeGlassProps = ViewProps & {
    */
   inverted?: boolean;
   /**
-   * Clear cool-tinted glass for flat sky washes (itinerary).
+   * Solid paper plate for flat sky washes (itinerary chips / cards).
    * Skips BlurView — expo-blur’s light material reads as solid milk on paper.
+   * Light mode is opaque white; dark keeps a soft translucent wash.
    */
   clear?: boolean;
+  /**
+   * With `clear`: cool blue section wash instead of solid white paper
+   * (Trip Tools / Transport parent shells). Buttons stay `clear` alone.
+   */
+  wash?: boolean;
+  /**
+   * Soft atmosphere frost for circular FABs floating on sky / photos.
+   * More see-through than default chip glass so night washes stay visible.
+   */
+  airy?: boolean;
 };
 
 /**
  * Shared glass plate for Travel chrome (search, CTA chips, itinerary).
  *
- * Trip-card hero scoops use `TravelHomeTripFrostScoop` (BlurView over the
- * live photo) — not this plate. Pre-blurred duplicate heroes look muddy.
+ * Trip-card hero scoops use `TravelHomeTripFrostScoop` (iOS BlurView softener
+ * + shared LinearGradient milk-out) — not this plate. Android duplicate blur
+ * plates read as a fog shelf.
  *
  * - Default (iOS): frosted BlurView (atmosphere-backed surfaces).
  * - Default (Android): translucent material wash.
- * - `clear`: translucent cool tint + sheen (itinerary on flat wash).
+ * - `clear`: solid white paper in light; soft wash in dark.
+ * - `clear` + `wash`: cool blue section shell in light (parent cards).
+ * - `airy`: lighter frost for circular controls over sky / photos.
  *
  * Blur is a sibling underlay (no React children inside BlurView). Nesting
  * remounting chrome inside BlurView — or conditionally mounting/unmounting
@@ -50,6 +64,8 @@ export function TravelHomeGlass({
   intensity,
   inverted = false,
   clear = false,
+  wash = false,
+  airy = false,
   ...rest
 }: TravelHomeGlassProps) {
   const theme = useTheme();
@@ -59,14 +75,14 @@ export function TravelHomeGlass({
     : theme.name === 'dark';
   /** Inverted CTAs (View Itinerary) need charcoal; theme dark frost stays softer. */
   const invertedDark = inverted && darkPlate;
-
   if (clear) {
+    const lightClear = wash ? styles.clearWashLight : styles.clearLight;
     return (
       <View
         {...rest}
         style={[
           styles.glass,
-          darkPlate ? styles.clearDark : styles.clearLight,
+          darkPlate ? styles.clearDark : lightClear,
           style,
         ]}>
         {children}
@@ -75,6 +91,15 @@ export function TravelHomeGlass({
   }
 
   if (Platform.OS === 'android') {
+    const androidTint = invertedDark
+      ? styles.androidTintInverted
+      : darkPlate
+        ? airy
+          ? styles.androidTintDarkAiry
+          : styles.androidTintDark
+        : airy
+          ? styles.androidTintLightAiry
+          : styles.androidTintLight;
     return (
       <View
         {...rest}
@@ -83,23 +108,17 @@ export function TravelHomeGlass({
           styles.glass,
           {
             borderColor: darkPlate
-              ? 'rgba(255,255,255,0.18)'
-              : 'rgba(255,255,255,0.7)',
+              ? 'rgba(255,255,255,0.22)'
+              : airy
+                ? 'rgba(255,255,255,0.55)'
+                : 'rgba(255,255,255,0.7)',
             backgroundColor: 'transparent',
           },
           style,
         ]}>
         <View
           pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { zIndex: 0 },
-            invertedDark
-              ? styles.androidTintInverted
-              : darkPlate
-                ? styles.androidTintDark
-                : styles.androidTintLight,
-          ]}
+          style={[StyleSheet.absoluteFill, { zIndex: 0 }, androidTint]}
         />
         {children}
       </View>
@@ -110,9 +129,20 @@ export function TravelHomeGlass({
     ? allowsBlur
       ? 'rgba(0, 0, 0, 0.58)'
       : 'rgba(0, 0, 0, 0.68)'
+    : airy
+      ? allowsBlur
+        ? 'rgba(0, 0, 0, 0.22)'
+        : 'rgba(0, 0, 0, 0.4)'
+      : allowsBlur
+        ? 'rgba(0, 0, 0, 0.32)'
+        : 'rgba(0, 0, 0, 0.55)';
+  const lightFill = airy
+    ? allowsBlur
+      ? 'rgba(255, 255, 255, 0.28)'
+      : 'rgba(255, 255, 255, 0.58)'
     : allowsBlur
-      ? 'rgba(0, 0, 0, 0.32)'
-      : 'rgba(0, 0, 0, 0.55)';
+      ? 'rgba(255, 255, 255, 0.32)'
+      : 'rgba(255, 255, 255, 0.78)';
 
   return (
     <View
@@ -122,13 +152,11 @@ export function TravelHomeGlass({
         styles.glass,
         {
           borderColor: darkPlate
-            ? 'rgba(255,255,255,0.16)'
-            : 'rgba(255,255,255,0.65)',
-          backgroundColor: darkPlate
-            ? darkFill
-            : allowsBlur
-              ? 'rgba(255, 255, 255, 0.32)'
-              : 'rgba(255, 255, 255, 0.78)',
+            ? 'rgba(255,255,255,0.2)'
+            : airy
+              ? 'rgba(255,255,255,0.5)'
+              : 'rgba(255,255,255,0.65)',
+          backgroundColor: darkPlate ? darkFill : lightFill,
         },
         style,
       ]}>
@@ -139,7 +167,9 @@ export function TravelHomeGlass({
       */}
       <BlurView
         intensity={
-          allowsBlur ? (intensity ?? (darkPlate ? 40 : 52)) : 0
+          allowsBlur
+            ? (intensity ?? (darkPlate ? (airy ? 36 : 40) : airy ? 44 : 52))
+            : 0
         }
         tint={darkPlate ? 'dark' : 'light'}
         pointerEvents="none"
@@ -161,11 +191,22 @@ const styles = StyleSheet.create({
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.42) 45%, rgba(255,255,255,0.62) 100%)',
   },
+  /** Circular FAB over sky — light frost so ink reads; sky still peeks through. */
+  androidTintLightAiry: {
+    backgroundColor: 'rgba(255, 255, 255, 0.48)',
+    experimental_backgroundImage:
+      'linear-gradient(160deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.34) 45%, rgba(255,255,255,0.5) 100%)',
+  },
   /** Theme dark frost (search / chips) — soft grey glass. */
   androidTintDark: {
     backgroundColor: 'rgba(12, 16, 24, 0.32)',
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(36,42,54,0.38) 0%, rgba(12,16,24,0.28) 50%, rgba(8,12,18,0.36) 100%)',
+  },
+  androidTintDarkAiry: {
+    backgroundColor: 'rgba(12, 16, 24, 0.22)',
+    experimental_backgroundImage:
+      'linear-gradient(160deg, rgba(36,42,54,0.28) 0%, rgba(12,16,24,0.16) 50%, rgba(8,12,18,0.24) 100%)',
   },
   /**
    * Inverted CTA (View Itinerary) + count badge on light paper.
@@ -177,6 +218,12 @@ const styles = StyleSheet.create({
       'linear-gradient(160deg, rgba(36,42,54,0.64) 0%, rgba(12,16,24,0.54) 50%, rgba(8,12,18,0.62) 100%)',
   },
   clearLight: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(17, 74, 110, 0.10)',
+    backgroundColor: '#FFFFFF',
+  },
+  /** Section parent shell — same cool blue as pre-paper itinerary chrome. */
+  clearWashLight: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.55)',
     backgroundColor: 'rgba(36, 116, 168, 0.10)',

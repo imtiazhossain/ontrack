@@ -20,10 +20,11 @@ export interface DestinationImageProvider {
 Never hardcode a vendor into `TripCard`. Use the application's network/service layer and environment-based API configuration.
 
 ## Search strategy
-1. Exact city + country + `travel landscape`
-2. Destination + landmark/context keywords from trip metadata if available
-3. Country/region + `travel landscape` fallback
-4. Local `destination-placeholder.svg`
+1. Curated iconic draws for known destinations (aurora, famous peaks, lagoons, ruins…)
+2. City/country + `iconic` / `famous attraction` / `scenic landscape`
+3. Bare city / full destination / country (Wikipedia page summaries)
+4. Commons/Openverse/Unsplash keep the place token first
+5. Local `destination-placeholder.svg`
 
 ## Result filtering
 Prefer:
@@ -33,9 +34,10 @@ Prefer:
 - No watermarks
 - No text-heavy promotional graphics
 - Safe general-audience imagery
+- **No people-forward stock** (tourists, portraits, crowds, selfies) — filter title/alt/tags/filename; search with `-people -portrait` bias
 
 ## Caching
-Cache normalized image metadata and URLs keyed by destination identity. Respect provider licensing and cache rules. Store only what the provider permits. Avoid repeat searches on every render.
+Cache a destination landmark **pool** (up to ~12 URLs) keyed by destination identity. Each Travel focus rotates a fresh trio from that pool (skip recently shown URIs). Respect provider licensing and cache rules. Store only what the provider permits. Avoid repeat network searches on every render.
 
 ## Prefetching
 - Prefetch first image for visible trip cards.

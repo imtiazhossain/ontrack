@@ -57,7 +57,7 @@ export const travelHomeFixture: TravelHomeFixture = {
         { id: 'm1', name: 'Alex Rivera' },
         { id: 'm2', name: 'Jordan Lee' },
       ],
-      imageQuery: 'Reykjavik Iceland city mountains travel landscape',
+      imageQuery: 'Iceland northern lights aurora Gullfoss Blue Lagoon',
     },
     {
       id: TRAVEL_HOME_ANTIGUA_TRIP_ID,
@@ -72,7 +72,7 @@ export const travelHomeFixture: TravelHomeFixture = {
         { id: 'm4', name: 'Sam Quinn' },
         { id: 'm5', name: 'Riley Chen' },
       ],
-      imageQuery: 'Antigua Guatemala Santa Catalina arch volcano travel landscape',
+      imageQuery: 'Antigua Guatemala Santa Catalina Arch Volcan de Agua',
     },
   ],
 };

@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -62,7 +63,7 @@ export function TravelHomeHeroCarousel({
    * Bump when cover display pipeline changes (e.g. Wikimedia proxy) so Fast
    * Refresh / warm screens refetch instead of keeping failed remote URIs.
    */
-  const destinationKey = `cover-v6:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
+  const destinationKey = `cover-v10:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
   const fixtureSource =
     __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
   const fallbackSource = travelHomeAtmosphereSource(theme.name);
@@ -74,33 +75,41 @@ export function TravelHomeHeroCarousel({
   const visibleUris = uris.filter((uri) => !failedUris[uri]);
   const pageWidth = heroWidth;
 
+  // Clear only when the trip/cover identity changes — keep the prior trio
+  // painted while focus re-picks a rotated set from the landmark pool.
   useEffect(() => {
-    let active = true;
     setIndex(0);
     setUris([]);
     setFailedUris({});
     scrollRef.current?.scrollTo({ x: 0, animated: false });
-    // Fixture plate is the scenic underlay while remotes load (and if they miss).
-    // Still fetch heroes so multi-page glass steppers work on travel-home seeds.
-    // Do NOT report pageCount 0 here — that collapsed the glass ticks until swipe
-    // whenever a load flicker won the race against the real multi-URI result.
-    void fetchDestinationHeroUris(plan).then((next) => {
-      if (!active) return;
-      setFailedUris({});
-      setUris(next);
-      setIndex(0);
-      scrollProgress.value = 0;
-      // Publish settled count immediately (incl. 1) so parent frost stays in sync.
-      onActiveImageChange?.(next[0], 0, Math.max(0, next.length));
-      if (next[1]) {
-        void Image.prefetch(next[1]).catch(() => undefined);
-      }
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields
   }, [destinationKey, fixtureSource]);
+
+  // Rotate a fresh landmark trio each time Travel focuses (pool is cached).
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      // Fixture plate is the scenic underlay while remotes load (and if they miss).
+      // Still fetch heroes so multi-page glass steppers work on travel-home seeds.
+      void fetchDestinationHeroUris(plan, undefined, { salt: Date.now() }).then(
+        (next) => {
+          if (!active || next.length === 0) return;
+          setFailedUris({});
+          setUris(next);
+          setIndex(0);
+          scrollProgress.value = 0;
+          // Publish settled count immediately (incl. 1) so parent frost stays in sync.
+          onActiveImageChange?.(next[0], 0, Math.max(0, next.length));
+          if (next[1]) {
+            void Image.prefetch(next[1]).catch(() => undefined);
+          }
+        },
+      );
+      return () => {
+        active = false;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields
+    }, [destinationKey, fixtureSource]),
+  );
 
   useEffect(() => {
     // Empty uris = still loading / cleared for a refetch. Leave the parent's

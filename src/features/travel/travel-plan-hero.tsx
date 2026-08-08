@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,6 +25,7 @@ import {
   resolveAtmosphereHeaderInk,
 } from '@/features/travel/travel-home-atmosphere-ink';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
+import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import {
   headerSkyChromeColor,
@@ -44,21 +45,21 @@ import { haptics } from '@/utils/haptics';
 function TravelHeroGlassIconButton({
   icon,
   size,
-  color,
   accessibilityLabel,
   testID,
   onPress,
 }: {
   icon: 'back' | 'add';
   size: number;
-  /** Sky-aware ink so glyphs stay readable over night / day washes. */
-  color: string;
   accessibilityLabel: string;
   testID?: string;
   onPress: () => void;
 }) {
   const theme = useTheme();
   const dark = theme.name === 'dark';
+  // Same frost + ink as Travel Home FABs — never solid `clear` (opaque discs)
+  // and never sky-matched white glyphs on white milk.
+  const glyph = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
   const handlePress = () => {
     haptics.tap();
     onPress();
@@ -79,21 +80,24 @@ function TravelHeroGlassIconButton({
             height: size,
             borderRadius: size / 2,
             opacity: pressed ? 0.72 : 1,
-            boxShadow: dark
-              ? '0 3px 10px rgba(0,0,0,0.35)'
-              : '0 3px 10px rgba(17, 74, 110, 0.14)',
           },
         ]}>
         <TravelHomeGlass
-          clear
+          airy
+          intensity={dark ? 40 : 48}
           style={{
             width: size,
             height: size,
             borderRadius: size / 2,
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: dark
+              ? undefined
+              : travelHomeTokens.colors.circleFabShadow,
           }}>
-          <Symbol name={icon} size="md" color={color} />
+          <View style={{ zIndex: 1 }}>
+            <Symbol name={icon} size="md" color={glyph} />
+          </View>
         </TravelHomeGlass>
       </Pressable>
     </AgentTestId>
@@ -154,11 +158,15 @@ export function TravelPlanHero({
     look: skyCondition.look,
     destination: skyDestination,
   });
+  // Static-tier destination still may report a richer average than solid chrome.
+  const [plateAverageColor, setPlateAverageColor] = useState<
+    string | undefined
+  >();
   // Same luminance ink as Travel Home — white over night/aurora, black over bright day.
   const { ink: skyInk, muted: skyInkMuted } = atmosphereHeaderInkColors(
     resolveAtmosphereHeaderInk({
       themeDark,
-      averageColor: skyChrome,
+      averageColor: plateAverageColor ?? skyChrome,
     }),
   );
   // Theme paper — sky horizon dissolves into this just below the dates card.
@@ -177,6 +185,7 @@ export function TravelPlanHero({
           timezone={atmosphere.timezone}
           statusBandRatio={statusBandRatio}
           fadeTo={pageBase}
+          onPlateAverageColor={setPlateAverageColor}
         />
       ) : undefined,
     [
@@ -209,7 +218,6 @@ export function TravelPlanHero({
           <TravelHeroGlassIconButton
             icon="back"
             size={Math.max(32, s(32))}
-            color={skyInk}
             accessibilityLabel="Go Back"
             testID={AgentUiIds.chrome.back}
             // Always land on Travel home — never pop to a prior trip in the stack.
@@ -272,7 +280,6 @@ export function TravelPlanHero({
             <TravelHeroGlassIconButton
               icon="add"
               size={Math.max(32, s(32))}
-              color={skyInk}
               accessibilityLabel="Add to Timeline"
               testID={AgentUiIds.travel.planDetail.addToTimeline}
               onPress={onAddPress}

@@ -103,29 +103,6 @@ export function TravelHomeRouteIcon({ size = 26, color }: TravelHomeIconProps) {
   );
 }
 
-/** Spec `calendar.svg` — trip dates leading mark. */
-export function TravelHomeCalendarIcon({ size = 16, color }: TravelHomeIconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect
-        x="3"
-        y="5"
-        width="18"
-        height="16"
-        rx="3"
-        stroke={color}
-        strokeWidth="1.8"
-      />
-      <Path
-        d="M7 3V7M17 3V7M3 10H21"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
 /** Plane / flourish viewBox height (kit `travel-route.svg`). */
 export const TRAVEL_HOME_PLANE_VB = 40;
 /** Plane pivot in the flourish viewBox — matches kit `translate(20 16)`. */

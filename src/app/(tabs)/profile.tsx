@@ -24,6 +24,7 @@ import { CloudAccountCard } from '@/features/account/cloud-account-card';
 import { useCanUseDeveloperTools } from '@/features/account/dev-access';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { ProfileAvatarEditorSheet } from '@/features/account/profile-avatar-editor-sheet';
+import { formatAppVersionLabel } from '@/features/account/release-notes';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
@@ -359,7 +360,7 @@ export default function ProfileSettingsScreen() {
       <AgentTestId
         testID={AgentUiIds.profile.section.disclaimers}
         label="Disclaimers"
-        style={{ gap: rs.sm, paddingBottom: rs.xl }}>
+        style={{ gap: rs.sm }}>
         <SectionHeader title="Disclaimers" flush />
         <SettingsGroup>
           <Pressable
@@ -388,6 +389,19 @@ export default function ProfileSettingsScreen() {
             </AppText>
           </Pressable>
         </SettingsGroup>
+      </AgentTestId>
+
+      <AgentTestId
+        testID={AgentUiIds.profile.version}
+        label="App version"
+        style={{
+          alignItems: 'center',
+          paddingTop: rs.sm,
+          paddingBottom: rs.xl,
+        }}>
+        <AppText variant="caption" color="tertiary" fit>
+          {formatAppVersionLabel()}
+        </AppText>
       </AgentTestId>
 
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />

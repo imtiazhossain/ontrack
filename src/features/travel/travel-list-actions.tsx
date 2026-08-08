@@ -12,7 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
-/** Compact trip action — clear glass tile matching itinerary chrome. */
+/** Compact trip action — white paper tile matching itinerary chrome. */
 export function TravelSheetAction({
   label,
   icon,
