@@ -23,6 +23,8 @@ export interface ScreenHeaderProps {
   onClose?: () => void;
   closeAccessibilityLabel?: string;
   closeTestID?: string;
+  /** Frosted close by default; pass `solid` for opaque sunken plates. */
+  closeAppearance?: 'solid' | 'glass';
   style?: StyleProp<ViewStyle>;
 }
 
@@ -38,10 +40,14 @@ export function ScreenHeader({
   onClose,
   closeAccessibilityLabel = 'Close',
   closeTestID,
+  closeAppearance = 'glass',
   style,
 }: ScreenHeaderProps) {
   const theme = useTheme();
-  const { spacing } = useResponsive();
+  const { spacing, s, layout } = useResponsive();
+  // Compact visual; hitSlop on IconButton keeps the ≥44pt target.
+  const closeSize = Math.max(36, Math.round(Math.min(layout.minTapTarget, s(40))));
+  const glassClose = closeAppearance === 'glass';
 
   const closeControl = onClose ? (
     <IconButton
@@ -49,8 +55,11 @@ export function ScreenHeader({
       onPress={onClose}
       accessibilityLabel={closeAccessibilityLabel}
       testID={closeTestID}
-      background={theme.backgroundSunken}
-      borderColor={theme.separator}
+      size={closeSize}
+      iconSize="sm"
+      appearance={closeAppearance}
+      background={glassClose ? undefined : theme.backgroundSunken}
+      borderColor={glassClose ? undefined : theme.separator}
     />
   ) : null;
 
@@ -89,12 +98,12 @@ export function ScreenHeader({
     titleBlock
   );
 
-  // Compact back stays on the eyebrow band; title + subtitle share the page left edge.
-  if (leading && eyebrow) {
+  // Eyebrow band hosts leading/close so title + subtitle use the full sheet width.
+  if (eyebrow) {
     return (
       <View style={[styles.stack, { gap: spacing.xs }, style]}>
         <View style={[styles.eyebrowRow, { gap: spacing.xs }]}>
-          <View style={styles.action}>{leading}</View>
+          {leading ? <View style={styles.action}>{leading}</View> : null}
           <AppText variant="overline" color="accent" fit style={styles.eyebrow}>
             {eyebrow}
           </AppText>
@@ -106,31 +115,27 @@ export function ScreenHeader({
     );
   }
 
+  // No eyebrow: close sits with the title; subtitle still spans full width below.
   return (
-    <View style={[styles.root, { gap: spacing.sm }, style]}>
-      {leading ? <View style={styles.action}>{leading}</View> : null}
-      <View style={[styles.copy, { gap: spacing.xs }]}>
-        {eyebrow ? (
-          <AppText variant="overline" color="accent" fit>
-            {eyebrow}
-          </AppText>
-        ) : null}
-        {decoratedTitle}
-        {subtitleBlock}
+    <View style={[styles.stack, { gap: spacing.sm }, style]}>
+      <View style={[styles.titleRow, { gap: spacing.sm }]}>
+        {leading ? <View style={styles.action}>{leading}</View> : null}
+        <View style={styles.copy}>{decoratedTitle}</View>
+        {trailingSlot}
       </View>
-      {trailingSlot}
+      {subtitleBlock}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  stack: {
+    width: '100%',
+  },
+  titleRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  stack: {
-    width: '100%',
   },
   eyebrowRow: {
     width: '100%',
@@ -165,6 +170,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   subtitleRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
   },

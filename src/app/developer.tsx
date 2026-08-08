@@ -1,10 +1,6 @@
-import { DevAccessGate } from '@/features/account/dev-access-gate';
-import { DeveloperHub } from '@/features/account/developer-hub';
+import { Redirect } from 'expo-router';
 
-export default function DeveloperRoute() {
-  return (
-    <DevAccessGate>
-      <DeveloperHub />
-    </DevAccessGate>
-  );
+/** Legacy `/developer` → profile stack (keeps bottom nav). */
+export default function DeveloperLegacyRedirect() {
+  return <Redirect href="/(tabs)/profile/developer" />;
 }

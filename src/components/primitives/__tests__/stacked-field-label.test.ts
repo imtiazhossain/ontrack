@@ -30,5 +30,15 @@ describe('fieldTitleCase', () => {
     expect(fieldTitleCase('Starts in 34 days')).toBe('Starts in 34 Days');
     expect(fieldTitleCase('Day 3 of 4')).toBe('Day 3 of 4');
     expect(fieldTitleCase('What for?')).toBe('What for?');
+    expect(fieldTitleCase('Start a New Trip')).toBe('Start a New Trip');
+    expect(fieldTitleCase('Start A New Trip')).toBe('Start a New Trip');
+    expect(fieldTitleCase('A New Trip')).toBe('A New Trip');
+  });
+
+  it('title-cases button labels', () => {
+    expect(fieldTitleCase('Open day')).toBe('Open Day');
+    expect(fieldTitleCase('Save check-in')).toBe('Save Check-in');
+    expect(fieldTitleCase('Create playbook')).toBe('Create Playbook');
+    expect(fieldTitleCase('Jump to today')).toBe('Jump to Today');
   });
 });

@@ -232,7 +232,8 @@ export function TravelItemNotesSheet({
         closeAccessibilityLabel="Close Notes"
         closeTestID={AgentUiIds.travel.notes.close}
         onClose={onClose}
-        footer={footer}>
+        footer={footer}
+        surface="glass">
         {notes.length === 0 ? (
           <EmptyState
             icon="note"

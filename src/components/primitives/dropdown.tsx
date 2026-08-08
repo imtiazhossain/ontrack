@@ -36,6 +36,7 @@ import {
   type DropdownAnchor,
 } from './dropdown-layout';
 import { fieldTitleCase } from './field-title-case';
+import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
 const ITEM_HEIGHT = 44;
@@ -233,7 +234,78 @@ export function Dropdown<T extends string = string>({
     onPress: toggle,
   });
 
-  const defaultTrigger = (
+  const fieldBorderColor = isOpen
+    ? theme.accentSoft
+    : icon
+      ? 'transparent'
+      : theme.separator;
+  const useGlassField = !fieldBackground;
+
+  const defaultTrigger = useGlassField ? (
+    <GlassPlate
+      style={[
+        styles.field,
+        {
+          borderColor: fieldBorderColor,
+        },
+        fieldStyle,
+      ]}>
+      <Pressable
+        ref={(node) => {
+          fieldRef.current = node;
+          triggerAgent.ref(node);
+        }}
+        onLayout={triggerAgent.onLayout}
+        testID={triggerAgent.testID}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ expanded: isOpen }}
+        onPress={toggle}
+        style={({ pressed }) => [
+          fieldLeadingIconRowStyle({
+            minHeight: icon ? Math.max(56, s(60)) : Math.max(48, s(52)),
+            paddingHorizontal: icon ? rs.md : spacing.md,
+            paddingVertical: icon ? rs.sm : spacing.sm,
+            backgroundColor: 'transparent',
+            borderColor: 'transparent',
+            opacity: pressed ? 0.86 : 1,
+          }),
+          styles.fieldInner,
+        ]}>
+        {icon ? (
+          <FieldLeadingIcon
+            name={icon}
+            backgroundColor={iconBackground}
+            color={iconColor}
+          />
+        ) : null}
+        <View style={styles.fieldCopy}>
+          <AppText
+            variant={icon ? 'caption' : 'overline'}
+            color={icon ? undefined : 'tertiary'}
+            fit
+            numberOfLines={1}
+            style={
+              icon
+                ? { color: labelColor, fontWeight: '600' }
+                : { fontSize: s(9), lineHeight: s(11), letterSpacing: 0.9 }
+            }>
+              {fieldLabel}
+            </AppText>
+            <AppText variant={icon ? 'body' : 'callout'} fit numberOfLines={1}>
+              {selectedLabel}
+            </AppText>
+        </View>
+        <DisclosureChevron
+          expanded={isOpen}
+          variant="down-up"
+          size="sm"
+          color={theme.textTertiary}
+        />
+      </Pressable>
+    </GlassPlate>
+  ) : (
     <Pressable
       ref={(node) => {
         fieldRef.current = node;
@@ -252,12 +324,8 @@ export function Dropdown<T extends string = string>({
           minHeight: icon ? Math.max(56, s(60)) : Math.max(48, s(52)),
           paddingHorizontal: icon ? rs.md : spacing.md,
           paddingVertical: icon ? rs.sm : spacing.sm,
-          backgroundColor: fieldBackground ?? theme.backgroundElevated,
-          borderColor: isOpen
-            ? theme.accentSoft
-            : icon
-              ? 'transparent'
-              : theme.separator,
+          backgroundColor: fieldBackground,
+          borderColor: fieldBorderColor,
           opacity: pressed ? 0.86 : 1,
         }),
         fieldStyle,
@@ -339,16 +407,19 @@ export function Dropdown<T extends string = string>({
                   left: placement.left,
                   width: placement.width,
                   maxHeight: placement.maxHeight,
-                  backgroundColor: theme.backgroundElevated,
                   borderColor: theme.separator,
                 },
               ]}>
+              <GlassPlate style={StyleSheet.absoluteFill} />
               <ScrollView
                 bounces={contentHeight > menuMaxHeight}
                 keyboardShouldPersistTaps="handled"
                 nestedScrollEnabled
                 showsVerticalScrollIndicator={contentHeight > menuMaxHeight}
-                style={{ maxHeight: placement.maxHeight - MENU_PADDING * 2 }}>
+                style={{
+                  zIndex: 1,
+                  maxHeight: placement.maxHeight - MENU_PADDING * 2,
+                }}>
                 {options.map((option) => (
                   <DropdownOptionRow
                     key={`${listId}-${option.value}`}
@@ -375,6 +446,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderCurve: 'continuous',
     gap: spacing.sm,
+    overflow: 'hidden',
+  },
+  fieldInner: {
+    zIndex: 1,
   },
   fieldCopy: {
     flex: 1,

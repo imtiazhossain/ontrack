@@ -3,7 +3,7 @@
  * Cold starts leave this null so the app still opens on Today.
  */
 
-const TODAY_PATHS = new Set(['/', '/(tabs)', '/(tabs)/', '/index']);
+const TODAY_PATHS = new Set(['/', '/(tabs)', '/(tabs)/', '/index', '/(today)']);
 
 /** Auth / boot shells — never remember or restore these. */
 const TRANSIENT_PREFIXES = [

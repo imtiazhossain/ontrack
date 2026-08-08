@@ -1,5 +1,5 @@
 /**
- * Title-case a stacked field label for consistent form chrome.
+ * Title-case chrome labels (fields, headers, buttons, chips).
  * Preserves punctuation, required markers, and hyphen/paren boundaries.
  * Keeps short all-caps acronyms (UI, FX, API) intact.
  * Leaves common short words lowercase unless they start the title.
@@ -33,11 +33,11 @@ export function fieldTitleCase(label: string): string {
   const firstOffset = matches[0]?.index ?? 0;
 
   return label.replace(WORD_RE, (word, offset: number) => {
+    const lower = word.toLowerCase();
+    // Small words stay lowercase mid-title — including single-letter "a".
+    if (offset !== firstOffset && TITLE_SMALL_WORDS.has(lower)) return lower;
     if (word.length <= 1) return word.toUpperCase();
     if (word.length <= 3 && word === word.toUpperCase()) return word;
-
-    const lower = word.toLowerCase();
-    if (offset !== firstOffset && TITLE_SMALL_WORDS.has(lower)) return lower;
 
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
   });

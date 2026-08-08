@@ -1,18 +1,11 @@
 /**
- * VISUAL DIRECTION — decided after exploring three options for the Today screen:
+ * VISUAL DIRECTION
  *
- * 1. Sophisticated editorial — serif display type, warm paper surfaces, generous
- *    whitespace, magazine-like hierarchy. High impact, excellent readability,
- *    scales cleanly to many activity types, easy to maintain (type + color only).
- * 2. Futuristic spatial — layered translucency, glows, dimensional cards. Striking
- *    but risks low contrast, heavy blur cost, and fights iOS conventions.
- * 3. Calm luxury — muted jewel tones, soft depth, restrained motion. Beautiful and
- *    calm but can read as generic "wellness app" without a stronger identity.
- *
- * Chosen: EDITORIAL foundation (1) blended with the calm-luxury palette (3):
- * warm paper/ink surfaces, serif headlines, one burnished-copper accent, and
- * muted jewel category tints. Distinctive in a screenshot, calm in daily use,
- * and fully workable in light and dark mode.
+ * Editorial foundation (serif headlines, warm paper/ink, burnished-copper accent,
+ * muted jewel category tints) with layered glass atmosphere for surfaces:
+ * frosted chrome/cards/sheets over soft page washes. Feature scenic washes
+ * (Travel sky, Today time-of-day) still win via SafeAreaChrome priority.
+ * Restraint over glow soup — blur is performance-gated; Android prefers washes.
  */
 
 import { categoryPalette, palette, type CategoryColorKey } from './colors';

@@ -1,10 +1,6 @@
-import { ApiUsageScreen } from '@/features/account/api-usage-screen';
-import { DevAccessGate } from '@/features/account/dev-access-gate';
+import { Redirect } from 'expo-router';
 
-export default function IntegrationsRoute() {
-  return (
-    <DevAccessGate>
-      <ApiUsageScreen />
-    </DevAccessGate>
-  );
+/** Legacy `/integrations` → profile stack (keeps bottom nav). */
+export default function IntegrationsLegacyRedirect() {
+  return <Redirect href="/(tabs)/profile/integrations" />;
 }

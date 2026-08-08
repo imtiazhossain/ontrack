@@ -1,60 +1,47 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
+import { glassMaterials, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 
 export function EmptyChecklists() {
   const theme = useTheme();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
 
   return (
-    <View
-      style={[
-        styles.emptyState,
-        {
-          backgroundColor: theme.backgroundSecondary,
-          borderColor: theme.separator,
-        },
-      ]}>
+    <GlassPlate style={styles.emptyState}>
       <View
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.emptyIllustration}>
-        <View
+        <GlassPlate
+          airy
           style={[
             styles.emptyPaperBack,
             styles.emptyPaperBackLeft,
-            {
-              backgroundColor: theme.accentFaint,
-              borderColor: theme.separator,
-            },
+            { borderColor: plateBorder },
           ]}
         />
-        <View
+        <GlassPlate
+          airy
           style={[
             styles.emptyPaperBack,
             styles.emptyPaperBackRight,
-            {
-              backgroundColor: theme.backgroundSunken,
-              borderColor: theme.separator,
-            },
+            { borderColor: plateBorder },
           ]}
         />
-        <View
-          style={[
-            styles.emptyPaper,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: theme.separator,
-            },
-          ]}>
-          <View
+        <GlassPlate style={[styles.emptyPaper, { borderColor: plateBorder }]}>
+          <GlassPlate
+            airy
             style={[
               styles.emptyPaperBadge,
-              { backgroundColor: theme.accentFaint },
+              { borderColor: `${theme.accentPrimary}55` },
             ]}>
             <Symbol name="tasks" size={24} color={theme.accentPrimary} />
-          </View>
+          </GlassPlate>
           {[0.72, 0.9, 0.58].map((width, index) => (
             <View key={width} style={styles.emptyPaperRow}>
               <View
@@ -64,7 +51,7 @@ export function EmptyChecklists() {
                     borderColor:
                       index === 0 ? theme.accentPrimary : theme.separator,
                     backgroundColor:
-                      index === 0 ? theme.accentFaint : 'transparent',
+                      index === 0 ? `${theme.accentPrimary}22` : 'transparent',
                   },
                 ]}>
                 {index === 0 ? (
@@ -77,13 +64,15 @@ export function EmptyChecklists() {
                   {
                     width: `${width * 100}%`,
                     backgroundColor:
-                      index === 0 ? theme.accentSoft : theme.separator,
+                      index === 0
+                        ? `${theme.accentPrimary}55`
+                        : theme.separator,
                   },
                 ]}
               />
             </View>
           ))}
-        </View>
+        </GlassPlate>
       </View>
 
       <View style={styles.emptyCopy}>
@@ -100,33 +89,26 @@ export function EmptyChecklists() {
         </AppText>
       </View>
 
-      <View
-        style={[
-          styles.emptyHint,
-          {
-            backgroundColor: theme.accentFaint,
-          },
-        ]}>
+      <GlassPlate airy style={styles.emptyHint}>
         <Symbol name="arrow-up" size={15} color={theme.accentPrimary} />
         <AppText variant="caption" color="accent">
           Start with the field above
         </AppText>
-      </View>
-    </View>
+      </GlassPlate>
+    </GlassPlate>
   );
 }
 
 const styles = StyleSheet.create({
   emptyState: {
+    width: '100%',
     alignItems: 'center',
     gap: spacing.xl,
     marginTop: spacing.sm,
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.xl,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   emptyIllustration: {
     width: 176,
@@ -138,7 +120,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 122,
     height: 116,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
@@ -153,10 +134,10 @@ const styles = StyleSheet.create({
     minHeight: 126,
     gap: spacing.md,
     padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
     boxShadow: '0 10px 24px rgba(27, 24, 21, 0.10)',
+    zIndex: 1,
   },
   emptyPaperBadge: {
     width: 42,
@@ -165,11 +146,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     borderRadius: radii.pill,
+    zIndex: 1,
   },
   emptyPaperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    zIndex: 1,
   },
   emptyPaperCheck: {
     width: 17,
@@ -188,6 +171,7 @@ const styles = StyleSheet.create({
   emptyCopy: {
     alignItems: 'center',
     gap: spacing.sm,
+    zIndex: 1,
   },
   emptyMessage: {
     maxWidth: 360,
@@ -199,5 +183,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
+    zIndex: 1,
   },
 });

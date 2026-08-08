@@ -2,30 +2,32 @@ import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import {
-  ActionChipRow,
-  AppText,
-  Button,
-  Card,
-  CollapsibleSection,
-  DangerZone,
-  DestructiveSection,
-  Dropdown,
-  EmptyState,
-  ErrorMessage,
-  IconButton,
-  LoadingBlock,
-  MetaList,
-  PanelTitle,
-  ProgressRing,
-  SectionHeader,
-  StatusBadge,
-  ToolbarRow,
+    ActionChipRow,
+    AppText,
+    Button,
+    Card,
+    CollapsibleSection,
+    DangerZone,
+    DestructiveSection,
+    Dropdown,
+    EmptyState,
+    ErrorMessage,
+    GlassPlate,
+    GlassPrimaryAction,
+    IconButton,
+    LoadingBlock,
+    MetaList,
+    PanelTitle,
+    ProgressRing,
+    SectionHeader,
+    StatusBadge,
+    ToolbarRow,
 } from '@/components/primitives';
 import {
-  ActivityCard,
-  CategoryBadge,
-  ChipRow,
-  MetricDisplay,
+    ActivityCard,
+    CategoryBadge,
+    ChipRow,
+    MetricDisplay,
 } from '@/components/shared';
 import { useResponsive } from '@/hooks/use-responsive';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
@@ -35,9 +37,9 @@ import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 import { todayKey } from '@/utils/date';
 
 import {
-  DESIGN_CATALOG,
-  DESIGN_FEATURE_LABELS,
-  type DesignCatalogElement,
+    DESIGN_CATALOG,
+    DESIGN_FEATURE_LABELS,
+    type DesignCatalogElement,
 } from './design-system-catalog';
 
 const DEMO_CATEGORIES: ActivityCategory[] = [
@@ -147,6 +149,21 @@ export function DesignSystemComponentsPanel({
             ]}
           />
         </CollapsibleSection>
+      </DemoCard>
+      <DemoCard title="Glass plate" catalogId="glassPlate">
+        <GlassPlate
+          style={{
+            padding: spacing.md,
+            borderRadius: 16,
+            gap: spacing.sm,
+          }}>
+          <AppText variant="callout">Frosted glass plate</AppText>
+          <GlassPrimaryAction
+            label="Primary glass CTA"
+            onPress={() => undefined}
+            testID={AgentUiIds.designSystem.demo('glassPrimary')}
+          />
+        </GlassPlate>
       </DemoCard>
       <DemoCard title="Sheet scaffold" catalogId="sheetScaffold">
         <Button

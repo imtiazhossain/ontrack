@@ -15,6 +15,19 @@ export function fieldLeadingIconRowStyle(
   };
 }
 
+/** Square plate size for `FieldLeadingIcon` (with or without tint background). */
+export function fieldLeadingIconPlateSize({
+  iconSize,
+  s,
+  withPlate,
+}: {
+  iconSize: number;
+  s: (n: number) => number;
+  withPlate: boolean;
+}): number {
+  return withPlate ? Math.max(iconSize + 10, s(32)) : iconSize;
+}
+
 /** Minimum height for a stacked label + value at the active Dynamic Type scale. */
 export function stackedFieldMinHeight({
   baseMinHeight,

@@ -15,7 +15,7 @@ describe('bottom nav bar background invariant', () => {
     expect(tabsLayout).toMatch(/tabBarBackground:\s*\(\)\s*=>\s*null/);
   });
 
-  it('paints the bar from the focused page surface with a transparent capsule', () => {
+  it('frosts the dock over page atmosphere with a transparent capsule', () => {
     const source = readFileSync(
       join(process.cwd(), 'src/components/navigation/bottom-nav-bar.tsx'),
       'utf8',
@@ -23,10 +23,11 @@ describe('bottom nav bar background invariant', () => {
 
     expect(source).toContain('usePageSurfaceBackgroundColor');
     expect(source).toContain('barBackground');
+    expect(source).toContain('glassMaterials.nav');
+    expect(source).toContain('<BlurView');
     expect(source).toContain("backgroundColor: 'transparent'");
     expect(source).toMatch(/capsule:\s*\{[^}]*justifyContent:\s*'center'/);
     expect(source).toMatch(/railEdge:\s*\{[^}]*position:\s*'absolute'/);
-    // Clip the carousel track only — never a bar glass underlay.
     expect(source).toMatch(/capsuleClip[\s\S]*overflow:\s*'hidden'/);
     expect(source).not.toMatch(
       /capsule:\s*\{[^}]*overflow:\s*'hidden'/,
@@ -44,5 +45,35 @@ describe('bottom nav bar background invariant', () => {
     expect(source).toMatch(
       /<Screen[\s\S]*?bottomInset=\{false\}[\s\S]*?contentStyle=\{styles\.screenContent\}/,
     );
+  });
+
+  it('nests full-page feature stacks under tabs so the dock persists', () => {
+    const rootLayout = readFileSync(
+      join(process.cwd(), 'src/app/_layout.tsx'),
+      'utf8',
+    );
+    const travelLayout = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel/_layout.tsx'),
+      'utf8',
+    );
+    const todayLayout = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/(today)/_layout.tsx'),
+      'utf8',
+    );
+    const profileLayout = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/profile/_layout.tsx'),
+      'utf8',
+    );
+
+    expect(travelLayout).toContain("anchor: 'index'");
+    expect(todayLayout).toContain("anchor: 'index'");
+    expect(profileLayout).toContain("anchor: 'index'");
+    // Full pages live under (tabs); root keeps sheets/modals + legacy redirects.
+    expect(rootLayout).not.toMatch(/name="travel"/);
+    expect(rootLayout).not.toContain('name="plants/');
+    expect(rootLayout).not.toContain('name="vehicles/');
+    expect(rootLayout).not.toContain('name="detail/food/');
+    expect(rootLayout).toContain("presentation: 'modal'");
+    expect(rootLayout).toContain('detail/gym-active/[id]');
   });
 });

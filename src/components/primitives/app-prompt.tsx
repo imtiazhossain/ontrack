@@ -1,30 +1,32 @@
 import { BlurView } from 'expo-blur';
 import { useCallback, useEffect, useId } from 'react';
 import {
-  BackHandler,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    BackHandler,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { create } from 'zustand';
 
 import {
-  appTextStyle,
-  borders,
-  layout,
-  motion,
-  radii,
-  spacing,
-  springs,
-  type Theme,
+    appTextStyle,
+    borders,
+    layout,
+    motion,
+    radii,
+    spacing,
+    springs,
+    type Theme,
 } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { AppText } from './app-text';
+import { fieldTitleCase } from './field-title-case';
+import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
 type PromptActionStyle = 'default' | 'cancel' | 'destructive' | 'primary' | 'secondary';
@@ -243,16 +245,22 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
           .stiffness(springs.gentle.stiffness)
           .reduceMotion(ReduceMotion.System)}
         style={[
-          styles.card,
+          styles.cardShell,
           {
-            backgroundColor: theme.backgroundElevated,
-            borderColor: theme.separator,
             boxShadow:
               theme.name === 'dark'
                 ? '0 18px 50px rgba(0, 0, 0, 0.48)'
                 : '0 18px 50px rgba(54, 43, 33, 0.22)',
+          },
+        ]}>
+        <GlassPlate
+          style={[
+            styles.card,
+            {
+              borderColor: theme.separator,
             },
           ]}>
+          <View style={styles.cardContent}>
         {request.cancelable ? (
           <Pressable
             ref={closeAgent.ref}
@@ -265,12 +273,13 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
             style={({ pressed }) => [
               styles.closeButton,
               {
-                backgroundColor: theme.backgroundSunken,
                 opacity: pressed ? 0.58 : 1,
                 transform: [{ scale: pressed ? 0.94 : 1 }],
               },
             ]}>
-            <Symbol name="close" size={16} color={theme.textSecondary} />
+            <GlassPlate airy style={styles.closeButtonPlate}>
+              <Symbol name="close" size={16} color={theme.textSecondary} />
+            </GlassPlate>
           </Pressable>
         ) : null}
         <View
@@ -317,6 +326,7 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
                   ? theme.backgroundElevated
                   : theme.backgroundSunken;
             const borderColor = primary ? 'transparent' : theme.separator;
+            const useGlass = !primary && !destructive;
 
             return (
               <PromptActionButton
@@ -325,6 +335,8 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
                 background={background}
                 borderColor={borderColor}
                 foreground={foreground}
+                glass={useGlass}
+                glassSunken={!secondary}
                 icon={destructive ? 'delete' : undefined}
                 onPress={() => close(action)}
                 testID={action.testID ?? AgentUiIds.prompt.action(index)}
@@ -332,6 +344,8 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
             );
           })}
         </ScrollView>
+          </View>
+        </GlassPlate>
       </Animated.View>
     </Animated.View>
   );
@@ -356,6 +370,8 @@ function PromptActionButton({
   background,
   borderColor,
   foreground,
+  glass = false,
+  glassSunken = false,
   icon,
   onPress,
   testID,
@@ -364,19 +380,22 @@ function PromptActionButton({
   background: string;
   borderColor: string;
   foreground: string;
+  glass?: boolean;
+  glassSunken?: boolean;
   icon?: 'delete';
   onPress: () => void;
   testID: string;
 }) {
+  const title = fieldTitleCase(action.text);
   const agent = useAgentUiTarget(testID, {
-    label: action.text,
+    label: title,
     onPress,
   });
 
-  return (
+  const button = (
     <Pressable
       ref={agent.ref}
-      accessibilityLabel={action.text}
+      accessibilityLabel={title}
       accessibilityRole="button"
       accessibilityState={{ disabled: action.disabled }}
       disabled={action.disabled}
@@ -386,10 +405,11 @@ function PromptActionButton({
       style={({ pressed }) => [
         styles.action,
         {
-          backgroundColor: background,
+          backgroundColor: glass ? 'transparent' : background,
           borderColor,
           opacity: action.disabled ? 0.38 : pressed ? 0.88 : 1,
           transform: [{ scale: pressed ? 0.992 : 1 }],
+          zIndex: 1,
         },
       ]}>
       {icon && !action.hideIcon ? (
@@ -400,9 +420,20 @@ function PromptActionButton({
         allowFontScaling={false}
         numberOfLines={2}
         style={[styles.actionLabel, { color: foreground }]}>
-        {action.text}
+        {title}
       </AppText>
     </Pressable>
+  );
+
+  if (!glass) return button;
+
+  return (
+    <GlassPlate
+      clear={glassSunken}
+      wash={glassSunken}
+      style={[styles.actionShell, { borderColor }]}>
+      {button}
+    </GlassPlate>
   );
 }
 
@@ -422,22 +453,32 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 4,
   },
-  card: {
-    position: 'relative',
+  cardShell: {
     width: '100%',
     maxWidth: 430,
     maxHeight: '88%',
-    gap: spacing.lg,
-    padding: spacing.xl,
+  },
+  card: {
+    width: '100%',
+    maxHeight: '100%',
     borderWidth: borders.hairline,
     borderRadius: 28,
     borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  cardContent: {
+    position: 'relative',
+    gap: spacing.lg,
+    padding: spacing.xl,
+    zIndex: 1,
   },
   closeButton: {
     position: 'absolute',
-    zIndex: 1,
+    zIndex: 2,
     top: spacing.md,
     right: spacing.md,
+  },
+  closeButtonPlate: {
     width: 36,
     height: 36,
     alignItems: 'center',
@@ -486,5 +527,10 @@ const styles = StyleSheet.create({
     ...appTextStyle('callout'),
     flex: 0,
     textAlign: 'center',
+  },
+  actionShell: {
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
   },
 });

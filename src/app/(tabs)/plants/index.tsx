@@ -4,11 +4,18 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, EmptyState, Screen } from '@/components/primitives';
+import {
+    AppText,
+    Button,
+    Card,
+    EmptyState,
+    GlassPlate,
+    Screen,
+} from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { ensurePlantSample, plantImageSource } from '@/features/plants/sample';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { usePlants } from '@/store/plants';
 import type { Plant } from '@/types/models';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -129,11 +136,11 @@ function PlantsScreenContent() {
         }
         ListFooterComponent={
           sortedPlants.length ? (
-            <View style={[styles.note, { backgroundColor: theme.backgroundSunken }]}>
+            <GlassPlate style={styles.note}>
               <AppText variant="caption" color="secondary">
                 Watering amounts are starting ranges. Always check the soil and drainage before watering.
               </AppText>
-            </View>
+            </GlassPlate>
           ) : null
         }
         renderItem={({ item }) => (
@@ -161,5 +168,10 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: 'row', gap: spacing.md },
   photo: { width: 112, minHeight: 138, borderTopLeftRadius: radii.lg, borderBottomLeftRadius: radii.lg },
   cardBody: { flex: 1, justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.lg, paddingRight: spacing.lg },
-  note: { padding: spacing.md, borderRadius: radii.md, marginTop: spacing.md },
+  note: {
+    width: '100%',
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+  },
 });

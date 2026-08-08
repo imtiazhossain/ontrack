@@ -35,6 +35,15 @@ describe('travel home kit contract', () => {
     );
   });
 
+  it('biases trip-card heroes below center so sky-heavy plates are not empty', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-hero-carousel.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('travelHomeHeroContentPosition');
+    expect(source).toContain('peekUnsplashCoverColor');
+  });
+
   it('keeps the trip-card stepper shell always mounted (Fabric crash guard)', () => {
     // Conditionally returning null from the stepper SIGABRTs when remounting
     // near hero / frost BlurView siblings — collapse via height/opacity instead.
@@ -70,10 +79,15 @@ describe('travel home kit contract', () => {
     // Soft grey duration pill — not inverted glass / brand-blue soft.
     expect(dateBlock).not.toContain('TravelHomeGlass');
     expect(dateBlock).not.toContain('brandBlueSoft');
-    // Outlined location chip; no hairline divider under the chip.
-    expect(card).toContain('locationChip');
-    expect(card).toContain('locationChipBorder');
+    // Plain pin + destination (no glass pill); frosted meta body; no hairline.
+    expect(card).toContain('styles.locationRow');
+    expect(card).not.toContain('styles.locationChip');
     expect(card).not.toContain('styles.divider');
+    expect(card).toContain('styles.metaBody');
+    expect(card).toMatch(/<TravelHomeGlass[\s\S]*?styles\.metaBody/);
+    // Pin matches View Itinerary sage (not brand blue).
+    expect(card).toContain('itineraryGlassGreen');
+    expect(card).not.toContain('brandBlue');
     // View Itinerary = frosted sage glass (both themes); not solid ink/brand.
     expect(card).toContain('TravelHomeGlass');
     expect(card).toContain('accent="green"');
@@ -147,7 +161,7 @@ describe('travel home kit contract', () => {
     expect(card).toContain('styles.heroMedia');
     expect(card).toContain('blurKey=');
     expect(card).toContain('frostBlurKey');
-    expect(card).toContain('titleBandHeight');
+    expect(card).toContain('frostBandHeight');
     expect(card).toContain('numberOfLines={1}');
     expect(card).toContain('ellipsizeMode="tail"');
     expect(card).not.toContain('heroFrostSource');
@@ -157,10 +171,13 @@ describe('travel home kit contract', () => {
     expect(glass).not.toContain('frost?:');
     expect(glass).not.toContain('TravelHomeGlassFrost');
     expect(tokens).toMatch(/bodyOverlap:\s*66/);
-    expect(card).toContain('locationChip');
+    expect(card).toContain('styles.locationRow');
     expect(card).toContain('titleCluster');
-    // Title + destination sit on paper milk / paper (black/ink).
+    // Location in frost scoop; title (+ travelers) on paper when destination set.
+    expect(card).toContain('locationRow ?? titleBlock');
     expect(card).toContain('styles.metaBody');
+    // Serif title ink room — tight 1.1× lineHeight clips glyph bottoms in metaBody.
+    expect(card).toContain('titleSize * 1.22');
     // Ticks mount inside the hero carousel (visibleUris) with a dark plate so
     // they read on pale sky without waiting for a swipe.
     expect(stepper).toContain('wrapCollapsed');
@@ -202,7 +219,7 @@ describe('travel home kit contract', () => {
       'utf8',
     );
     const screen = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
       'utf8',
     );
     expect(card).toContain('soloAtmosphereShadow');
@@ -237,6 +254,15 @@ describe('travel home kit contract', () => {
     expect(band).toBe(Math.round(windowHeight * 0.34) + topInset);
     expect(band).toBeLessThan(windowHeight);
     expect(band / windowHeight).toBeLessThan(0.5);
+    const travelTab = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
+      'utf8',
+    );
+    // 1.0.9 chrome plate + fade/paper underlay (not an in-flow photo band).
+    expect(travelTab).toContain('TravelHomeBackground');
+    expect(travelTab).toContain('backgroundImage: atmosphereImage.source');
+    expect(travelTab).toContain('priority: 1');
+    expect(travelTab).toContain("style={styles.transparentScreen}");
   });
 
   it('keeps layout tokens aligned with design/travel', () => {

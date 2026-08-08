@@ -4,6 +4,7 @@ import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import { radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
+  itinerarySheetFieldProps,
   travelInputFieldBackground,
   type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
@@ -161,15 +162,9 @@ export function ItinerarySheetSubmitButton({
 export function useSheetFieldChrome(tone: SheetIconTone) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
-  const icon = chrome.icons[tone];
   return {
     chrome,
-    iconBackground: icon.bg,
-    iconColor: icon.fg,
-    fieldBackground: icon.field,
-    stackedLabelColor: chrome.label,
-    placeholderColor: chrome.placeholder,
-    placeholderTextColor: chrome.placeholder,
+    ...itinerarySheetFieldProps(chrome, tone),
   };
 }
 

@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { AppText, DragHandle, Symbol } from '@/components/primitives';
-import { layout, radii } from '@/design-system';
+import { AppText, DragHandle, GlassPlate, Symbol } from '@/components/primitives';
+import { glassMaterials, layout, radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { todoListIcon } from '@/features/todos/list-icon';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -69,20 +69,21 @@ export function TodoListCard({
   const collaboratorLabel = collaboratorNames?.join(', ');
   const leaving = list.mode === 'shared' && list.role !== 'owner';
   const canRename = editMode && list.role === 'owner';
+  const dark = theme.name === 'dark';
   const cardContents = (
     <>
-      <View
+      <GlassPlate
+        airy
         style={[
           styles.cardIcon,
           {
             width: iconBox,
             height: iconBox,
             borderRadius: radii.md,
-            backgroundColor: theme.backgroundSunken,
           },
         ]}>
         <Symbol name={icon} size={22} color={theme.textSecondary} />
-      </View>
+      </GlassPlate>
       <View style={[styles.cardCopy, { gap: spacing.xs, minWidth: 0, flexShrink: 1 }]}>
         {canRename ? (
           <View style={styles.nameEditor}>
@@ -136,7 +137,9 @@ export function TodoListCard({
                       // Slight ring so stacked chips separate on the card surface.
                       borderRadius: collaboratorChip / 2,
                       borderWidth: collaboratorRing,
-                      borderColor: theme.backgroundElevated,
+                      borderColor: dark
+                        ? glassMaterials.border.dark
+                        : glassMaterials.border.light,
                     },
                   ]}>
                   <ProfileAvatar
@@ -172,12 +175,16 @@ export function TodoListCard({
   );
 
   return (
-    <View
+    <GlassPlate
       style={[
         styles.card,
         {
-          backgroundColor: theme.backgroundElevated,
-          borderColor: isActive ? theme.accentPrimary : theme.separator,
+          borderColor: isActive
+            ? theme.accentPrimary
+            : dark
+              ? glassMaterials.border.dark
+              : glassMaterials.border.light,
+          borderWidth: isActive ? 1 : StyleSheet.hairlineWidth,
         },
         isActive && styles.activeCard,
       ]}>
@@ -249,7 +256,7 @@ export function TodoListCard({
           </Pressable>
         </View>
       ) : null}
-    </View>
+    </GlassPlate>
   );
 }
 
@@ -261,10 +268,8 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingLeft: 16,
     paddingRight: 8,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   cardMain: {
     minHeight: 86,
@@ -274,6 +279,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 16,
     minWidth: 0,
+    zIndex: 1,
   },
   activeCard: {
     shadowColor: '#000',
@@ -286,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    overflow: 'hidden',
+    zIndex: 1,
   },
   cardCopy: { flex: 1 },
   nameEditor: {
@@ -319,6 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    zIndex: 1,
   },
   cardActionButton: {
     width: layout.minTapTarget,

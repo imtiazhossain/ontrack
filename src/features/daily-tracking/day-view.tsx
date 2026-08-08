@@ -6,14 +6,16 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { isActivityEnabled } from '@/addons/registry';
 import {
-  AppText,
-  EmptyState,
-  IconButton,
-  usePageSurfaceBackground,
+    AppText,
+    EmptyState,
+    IconButton,
+    ScreenAtmosphere,
+    screenAtmosphereBottomColor,
+    usePageSurfaceBackground,
 } from '@/components/primitives';
 import { ActivityCard } from '@/components/shared';
 import { findCategory } from '@/constants/categories';
-import { layout, shadows, spacing } from '@/design-system';
+import { layout, spacing } from '@/design-system';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { aiProvider } from '@/services/ai';
@@ -24,9 +26,9 @@ import { useSchedule } from '@/store/schedule';
 import { useUI } from '@/store/ui';
 import type { Activity } from '@/types/models';
 import { confirmDeleteActivity, showActivityActions, type ActivityAction } from '@/utils/activity-actions';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { addDays, isToday, nowMinutes, todayKey } from '@/utils/date';
 import { listReferenceEquality } from '@/utils/list-equality';
-import { AgentUiIds } from '@/utils/agent-ui';
 
 interface DayViewProps {
   date: string;
@@ -56,8 +58,8 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  // Today doesn't use Screen — publish fill so the tab dock matches the page.
-  usePageSurfaceBackground(theme.backgroundPrimary);
+  // Today doesn't use Screen — publish atmosphere fill for the frosted dock.
+  usePageSurfaceBackground(screenAtmosphereBottomColor(theme.name));
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
   const tabBarHeight =
     measuredTabBarHeight ||
@@ -196,7 +198,8 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
     <SafeAreaView
       edges={['left', 'right']}
       onTouchStart={notifyPageInteraction}
-      style={[styles.fill, { backgroundColor: theme.backgroundPrimary }]}>
+      style={[styles.fill, { backgroundColor: 'transparent' }]}>
+      <ScreenAtmosphere />
       <FlashList
         data={activities}
         keyExtractor={(item) => item.id}
@@ -246,20 +249,16 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
         )}
       />
 
-      <View
-        style={[
-          styles.fab,
-          shadows.raised,
-          { bottom: tabBarHeight + spacing.lg },
-        ]}>
+      <View style={[styles.fab, { bottom: tabBarHeight + spacing.lg }]}>
         <IconButton
           icon="add"
           size={48}
-          background={theme.accentPrimary}
-          color={theme.textOnAccent}
+          color={theme.accentPrimary}
           accessibilityLabel="Add Activity"
           testID={AgentUiIds.today.addActivity}
-          onPress={() => router.push({ pathname: '/activity-form', params: { date } })}
+          onPress={() =>
+            router.push({ pathname: '/activity-form', params: { date } })
+          }
         />
       </View>
     </SafeAreaView>

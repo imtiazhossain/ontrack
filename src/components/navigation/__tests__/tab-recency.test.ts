@@ -1,14 +1,14 @@
 import {
-  compareTabsByRecency,
-  DEFAULT_TAB_ORDER,
-  fanOutAroundMostRecent,
-  orderRoutesByRecency,
+    compareTabsByRecency,
+    DEFAULT_TAB_ORDER,
+    fanOutAroundMostRecent,
+    orderRoutesByRecency,
 } from '../tab-recency';
 
 describe('tab-recency', () => {
   it('keeps DEFAULT_TAB_ORDER aligned with the tabs layout cold-start sequence', () => {
     expect([...DEFAULT_TAB_ORDER]).toEqual([
-      'index',
+      '(today)',
       'calendar',
       'to-do',
       'social',
@@ -27,7 +27,7 @@ describe('tab-recency', () => {
   it('fans never-focused tabs around Today so Health is not beside center', () => {
     const routes = DEFAULT_TAB_ORDER.map((name) => ({ name }));
     const ordered = orderRoutesByRecency(routes, {}).map((r) => r.name);
-    expect(ordered[0]).toBe('index');
+    expect(ordered[0]).toBe('(today)');
     // Left of center = [n-1], right = [1]
     expect(ordered[ordered.length - 1]).toBe('calendar');
     expect(ordered[1]).toBe('to-do');
@@ -64,7 +64,7 @@ describe('tab-recency', () => {
   it('places never-focused tabs after focused ones, still in default relative order', () => {
     const lastFocusedAt = { travel: 100 };
     expect(
-      compareTabsByRecency('travel', 'index', lastFocusedAt),
+      compareTabsByRecency('travel', '(today)', lastFocusedAt),
     ).toBeLessThan(0);
     expect(
       compareTabsByRecency('calendar', 'to-do', lastFocusedAt),

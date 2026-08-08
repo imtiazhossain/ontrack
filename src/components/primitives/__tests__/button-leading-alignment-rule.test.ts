@@ -16,7 +16,8 @@ describe('button leading/label alignment invariant', () => {
     expect(button).not.toContain('leadingHeight');
     expect(button).not.toContain('translateY');
     expect(button).not.toContain('usesBuiltInLeadingSlot');
-    expect(button).toContain("children !== ''");
+    expect(button).toContain("labelText !== ''");
+    expect(button).toContain('fieldTitleCase');
   });
 
   it('keeps Travel action icon+label on one centered row without optical nudges', () => {
@@ -26,10 +27,13 @@ describe('button leading/label alignment invariant', () => {
     expect(actions).toMatch(/actionContent:\s*\{[^}]*flexDirection:\s*['"]row['"]/s);
     expect(actions).toMatch(/actionIcon:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
     expect(actions).toMatch(/actionIcon:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
-    expect(actions).toMatch(/action:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s);
-    expect(actions).toMatch(/actionWide:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
+    // Grid tiles left-align via actionGlass; wide CTAs center at the Pressable glass layer.
+    expect(actions).toMatch(/actionGlass:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s);
+    expect(actions).toMatch(
+      /justifyContent:\s*wide\s*\?\s*['"]center['"]\s*:\s*['"]flex-start['"]/,
+    );
     expect(actions).toContain('styles.actionContent');
-    expect(actions).toContain('{null}');
+    expect(actions).toContain('fieldTitleCase');
     expect(actions).not.toContain('translateY');
   });
 });

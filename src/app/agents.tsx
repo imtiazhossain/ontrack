@@ -1,5 +1,6 @@
-import { AgentManager } from '@/features/agents/agent-manager';
+import { Redirect } from 'expo-router';
 
-export default function AgentsScreen() {
-  return <AgentManager />;
+/** Legacy `/agents` → profile stack (keeps bottom nav). */
+export default function AgentsLegacyRedirect() {
+  return <Redirect href="/(tabs)/profile/agents" />;
 }

@@ -7,7 +7,7 @@ export const TAB_META: Record<
   string,
   { label: string; icon: AppIconName; href: Href }
 > = {
-  index: { label: 'Today', icon: 'today', href: '/(tabs)' },
+  '(today)': { label: 'Today', icon: 'today', href: '/' },
   calendar: {
     label: 'Calendar',
     icon: 'calendar',

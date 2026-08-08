@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
 import {
-  AppText,
-  HeaderBackButton,
-  IconButton,
-  Screen,
-  ScreenHeader,
-  SegmentedControl,
-  SheetScaffold,
+    AppText,
+    HeaderBackButton,
+    IconButton,
+    Screen,
+    ScreenHeader,
+    SegmentedControl,
+    SheetScaffold,
 } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,7 +58,7 @@ export function DesignSystemGallery() {
             <HeaderBackButton
               compact
               accessibilityLabel="Back to developer tools"
-              fallback="/developer"
+              fallback="/(tabs)/profile/developer"
               testID={AgentUiIds.designSystem.back}
             />
           }

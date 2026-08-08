@@ -40,7 +40,8 @@ export function TravelImportResultModal({
       subtitle={imported ? 'Your itinerary has been updated.' : 'Everything is up to date.'}
       onClose={onClose}
       closeAccessibilityLabel="Go to itinerary"
-      closeTestID={AgentUiIds.travel.importResult.close}>
+      closeTestID={AgentUiIds.travel.importResult.close}
+      surface="glass">
       <View style={{ gap: spacing.lg }}>
         <AppText color="secondary" align="center">
           {message}

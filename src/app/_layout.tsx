@@ -172,7 +172,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           options={{
             animation: 'fade',
             headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
       </Stack.Protected>
@@ -183,7 +183,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
             animation: 'fade',
             headerShown: false,
             gestureEnabled: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
       </Stack.Protected>
@@ -206,28 +206,14 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           options={{
             animation: 'fade',
             headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
         <Stack.Screen
           name="account"
           options={{
             headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
-          }}
-        />
-        <Stack.Screen
-          name="vision-board/[id]"
-          options={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
-          }}
-        />
-        <Stack.Screen
-          name="vision-board/all"
-          options={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
         <Stack.Screen
@@ -238,31 +224,20 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           name="vision-board/item-editor"
           options={{ presentation: 'modal' }}
         />
-        <Stack.Screen name="agents" />
+        {/* Legacy path redirects → nested tab stacks (bottom nav persists). */}
+        <Stack.Screen name="agents" options={{ headerShown: false }} />
         <Stack.Screen name="design-system" options={{ headerShown: false }} />
         <Stack.Screen name="api-usage" options={{ headerShown: false }} />
         <Stack.Screen name="integrations" options={{ headerShown: false }} />
         <Stack.Screen name="developer" options={{ headerShown: false }} />
+        <Stack.Screen name="nutrition-profile" options={{ headerShown: false }} />
         <Stack.Screen name="todos/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="todos/[id]/settings" />
-        <Stack.Screen name="todos/[id]/recipe-import" />
+        <Stack.Screen name="todos/[id]/settings" options={{ headerShown: false }} />
+        <Stack.Screen name="todos/[id]/recipe-import" options={{ headerShown: false }} />
         <Stack.Screen name="todo-collaborators" />
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
-        <Stack.Screen
-          name="travel"
-          options={{
-            headerShown: false,
-            // Transparent like "(tabs)" so the itinerary header sky painted on
-            // AppSafeArea chrome shows through below the status bar. Travel
-            // screens still fill via the nested stack's travelStyle content.
-            contentStyle: { backgroundColor: 'transparent', paddingTop: 0 },
-          }}
-        />
-        <Stack.Screen name="nutrition-profile" />
         <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="detail/food/[id]" />
-        <Stack.Screen name="detail/gym/[id]" />
         <Stack.Screen
           name="detail/gym-active/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
@@ -272,21 +247,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           options={{
             headerShown: false,
             animation: 'slide_from_bottom',
-            contentStyle: { backgroundColor: theme.backgroundPrimary },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
-        <Stack.Screen name="detail/work/[id]" />
-        <Stack.Screen name="detail/movie/[id]" />
-        <Stack.Screen name="detail/sleep/[id]" />
-        <Stack.Screen name="detail/generic/[id]" />
-        <Stack.Screen name="plants/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="plants/[id]" />
-        <Stack.Screen name="plants/[id]/edit" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="plants/[id]/check-in" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="vehicles/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="vehicles/[id]" />
-        <Stack.Screen name="vehicles/[id]/settings" />
-        <Stack.Screen name="health" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={appAccess && hasOnboarded}>
         <Stack.Screen
@@ -303,7 +266,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         options={{
           animation: 'fade',
           headerShown: false,
-          contentStyle: { backgroundColor: theme.backgroundPrimary },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
       <Stack.Screen name="i/[code]" />
@@ -320,7 +283,7 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           headerShown: false,
           animation: 'none',
           gestureEnabled: false,
-          contentStyle: { backgroundColor: theme.backgroundPrimary },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
     </Stack>

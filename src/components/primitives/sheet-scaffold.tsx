@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -20,7 +21,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { motion, radii, springs, type AppIconName } from '@/design-system';
+import { glassMaterials, motion, radii, springs, type AppIconName } from '@/design-system';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -36,6 +38,7 @@ export interface SheetHeaderProps {
   onClose: () => void;
   closeAccessibilityLabel?: string;
   closeTestID?: string;
+  closeAppearance?: 'solid' | 'glass';
   style?: StyleProp<ViewStyle>;
 }
 
@@ -48,6 +51,7 @@ export function SheetHeader({
   onClose,
   closeAccessibilityLabel = 'Close',
   closeTestID,
+  closeAppearance = 'glass',
   style,
 }: SheetHeaderProps) {
   const { spacing } = useResponsive();
@@ -65,6 +69,7 @@ export function SheetHeader({
       onClose={close}
       closeAccessibilityLabel={closeAccessibilityLabel}
       closeTestID={closeTestID}
+      closeAppearance={closeAppearance}
       style={[{ paddingTop: spacing.md, paddingBottom: spacing.xl }, style]}
     />
   );
@@ -89,6 +94,11 @@ export interface SheetScaffoldProps extends PropsWithChildren {
   /** Backdrop dismissal is opt-in; the canonical dismiss action is the header X. */
   dismissOnBackdropPress?: boolean;
   backdropTestID?: string;
+  /**
+   * `glass` = frosted translucent plate (app default).
+   * Pass `solid` for dense editors that need opaque elevated paper.
+   */
+  surface?: 'solid' | 'glass';
 }
 
 /** Canonical modal sheet: safe areas, neutral X, scroll body, and fixed footer. */
@@ -110,9 +120,11 @@ export function SheetScaffold({
   scrollKey,
   dismissOnBackdropPress = false,
   backdropTestID,
+  surface = 'glass',
   children,
 }: SheetScaffoldProps) {
   const theme = useTheme();
+  const { allowsBlur } = usePerformanceTier();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { spacing, layout } = useResponsive();
@@ -123,6 +135,8 @@ export function SheetScaffold({
     maxHeight == null ? Math.round(availableHeight * 0.98) : Math.min(maxHeight, availableHeight);
   const sheetMinHeight =
     minHeight == null ? undefined : Math.min(Math.max(0, minHeight), sheetMaxHeight);
+  const glass = surface === 'glass';
+  const dark = theme.name === 'dark';
 
   useEffect(() => {
     if (!visible) {
@@ -193,8 +207,16 @@ export function SheetScaffold({
             pointerEvents="auto"
             style={[
               styles.sheet,
+              glass ? styles.sheetGlass : null,
               {
-                backgroundColor: theme.backgroundElevated,
+                backgroundColor: glass
+                  ? 'transparent'
+                  : theme.backgroundElevated,
+                borderColor: glass
+                  ? dark
+                    ? glassMaterials.border.darkStrong
+                    : glassMaterials.border.lightStrong
+                  : 'transparent',
                 maxHeight: sheetMaxHeight,
                 minHeight: sheetMinHeight,
                 height: lockHeight ? lockedHeight : undefined,
@@ -202,6 +224,48 @@ export function SheetScaffold({
                 paddingHorizontal: layout.screenPadding,
               },
             ]}>
+            {/*
+              Glass underlay is a Fabric sibling of header/body — never wrap
+              remounting chrome inside BlurView (unmountChildComponentView).
+              Always mount BlurView when glass (intensity 0 when blur gated).
+            */}
+            {glass ? (
+              Platform.OS === 'android' ? (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    dark
+                      ? styles.androidGlassDark
+                      : styles.androidGlassLight,
+                  ]}
+                />
+              ) : (
+                <>
+                  <BlurView
+                    intensity={allowsBlur ? 56 : 0}
+                    tint={dark ? 'dark' : 'light'}
+                    pointerEvents="none"
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      StyleSheet.absoluteFill,
+                      {
+                        backgroundColor: dark
+                          ? allowsBlur
+                            ? glassMaterials.sheet.darkFillBlur
+                            : glassMaterials.sheet.darkFillSolid
+                          : allowsBlur
+                            ? glassMaterials.sheet.lightFillBlur
+                            : glassMaterials.sheet.lightFillSolid,
+                      },
+                    ]}
+                  />
+                </>
+              )
+            ) : null}
             <View
               onStartShouldSetResponder={() => {
                 Keyboard.dismiss();
@@ -216,6 +280,7 @@ export function SheetScaffold({
                 onClose={close}
                 closeAccessibilityLabel={closeAccessibilityLabel}
                 closeTestID={closeTestID}
+                closeAppearance={glass ? 'glass' : 'solid'}
               />
             </View>
             <ScrollView
@@ -254,6 +319,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl,
     borderCurve: 'continuous',
     overflow: 'hidden',
+  },
+  sheetGlass: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  /** Dense frosted plate — readable form chrome over the dim scrim. */
+  androidGlassLight: {
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+    experimental_backgroundImage:
+      'linear-gradient(165deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.64) 48%, rgba(255,255,255,0.8) 100%)',
+  },
+  androidGlassDark: {
+    backgroundColor: 'rgba(12, 16, 24, 0.72)',
+    experimental_backgroundImage:
+      'linear-gradient(165deg, rgba(36,42,54,0.78) 0%, rgba(12,16,24,0.62) 50%, rgba(8,12,18,0.76) 100%)',
   },
   scroll: { flexShrink: 1 },
   content: { flexGrow: 1 },

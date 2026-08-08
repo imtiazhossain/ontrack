@@ -3,17 +3,17 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radii, shadows } from '@/design-system';
+import { glassFieldBackground, radii, shadows } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import {
-  formatDateKey,
-  formatDatePickerTitle,
-  fromDateKey,
-  isDateKey,
-  toDateKey,
+    formatDateKey,
+    formatDatePickerTitle,
+    fromDateKey,
+    isDateKey,
+    toDateKey,
 } from '@/utils/date';
 
 import { AppText } from './app-text';
@@ -21,7 +21,7 @@ import { IconButton } from './button';
 import { DateFieldCalendar } from './date-field-calendar';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
-import { StackedFieldLabel } from './stacked-field-label';
+import { StackedIconField } from './stacked-icon-field';
 
 interface DateFieldProps {
   label?: string;
@@ -37,6 +37,8 @@ interface DateFieldProps {
   iconBackground?: string;
   iconColor?: string;
   fieldBackground?: string;
+  fieldBorderColor?: string;
+  fieldBorderRadius?: number;
   stackedLabelColor?: string;
   placeholderColor?: string;
   accessibilityLabel?: string;
@@ -74,6 +76,8 @@ export function DateField({
   iconBackground,
   iconColor,
   fieldBackground,
+  fieldBorderColor,
+  fieldBorderRadius,
   stackedLabelColor,
   placeholderColor,
   accessibilityLabel,
@@ -146,27 +150,20 @@ export function DateField({
         accessibilityValue={{ text: displayValue || resolvedPlaceholder }}
         disabled={disabled}
         onPress={openPicker}
-        style={({ pressed }) => [
-          fieldLeadingIconRowStyle({
-            minHeight: stacked ? stackedMinHeight : Math.max(44, s(48)),
-            borderRadius: stacked ? radii.lg : radii.md,
-            paddingHorizontal: spacing.md,
-            paddingVertical: stacked ? spacing.sm : 0,
-            gap: spacing.sm,
-            backgroundColor: fieldBackground ?? theme.backgroundSunken,
-            opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
-          }),
-        ]}>
-        <FieldLeadingIcon
-          name="calendar"
-          backgroundColor={iconBackground}
-          color={iconColor}
-        />
+        style={({ pressed }) => ({
+          opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
+        })}>
         {stacked ? (
-          <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' }}>
-            <StackedFieldLabel color={stackedLabelColor ?? theme.textPrimary}>
-              {stackedLabel!}
-            </StackedFieldLabel>
+          <StackedIconField
+            icon="calendar"
+            stackedLabel={stackedLabel!}
+            stackedLabelColor={stackedLabelColor ?? theme.textPrimary}
+            iconBackground={iconBackground}
+            iconColor={iconColor}
+            fieldBackground={fieldBackground ?? glassFieldBackground(theme.name)}
+            fieldBorderColor={fieldBorderColor}
+            borderRadius={fieldBorderRadius ?? radii.lg}
+            minHeight={stackedMinHeight}>
             <AppText
               variant="body"
               fit
@@ -180,15 +177,30 @@ export function DateField({
               }}>
               {hasValue ? displayValue : resolvedPlaceholder}
             </AppText>
-          </View>
+          </StackedIconField>
         ) : (
-          <AppText
-            variant="body"
-            fit
-            color={hasValue ? 'primary' : 'tertiary'}
-            style={{ flex: 1, minWidth: 0 }}>
-            {hasValue ? displayValue : resolvedPlaceholder}
-          </AppText>
+          <View
+            style={fieldLeadingIconRowStyle({
+              minHeight: Math.max(44, s(48)),
+              borderRadius: radii.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: 0,
+              gap: spacing.sm,
+              backgroundColor: fieldBackground ?? glassFieldBackground(theme.name),
+            })}>
+            <FieldLeadingIcon
+              name="calendar"
+              backgroundColor={iconBackground}
+              color={iconColor}
+            />
+            <AppText
+              variant="body"
+              fit
+              color={hasValue ? 'primary' : 'tertiary'}
+              style={{ flex: 1, minWidth: 0 }}>
+              {hasValue ? displayValue : resolvedPlaceholder}
+            </AppText>
+          </View>
         )}
       </Pressable>
 

@@ -5,11 +5,12 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   AppText,
   ErrorMessage,
+  GlassPlate,
   IconButton,
   ProgressRing,
   Symbol,
 } from '@/components/primitives';
-import { fontFamilies, radii, spacing, typography } from '@/design-system';
+import { fontFamilies, glassMaterials, radii, spacing, typography } from '@/design-system';
 import { ChecklistPopoverMenu } from '@/features/todos/checklist-popover-menu';
 import { copyTodoListText, shareTodoListText } from '@/features/todos/share';
 import type { TodoFilter, TodoSort } from '@/features/todos/todo-sort';
@@ -114,12 +115,14 @@ export function TodoListHeader({
                   </View>
                 </View>
 
-                <View
+                <GlassPlate
                   style={[
                     styles.hero,
                     {
-                      backgroundColor: theme.backgroundElevated,
-                      borderColor: theme.separator,
+                      borderColor:
+                        theme.name === 'dark'
+                          ? glassMaterials.border.dark
+                          : glassMaterials.border.light,
                       boxShadow:
                         theme.name === 'light'
                           ? '0 10px 30px rgba(61, 50, 32, 0.09)'
@@ -151,24 +154,32 @@ export function TodoListHeader({
                         : `${completedCount} of ${tasks.length} complete`}
                     </AppText>
                   </View>
-                  <ProgressRing
-                    progress={progress}
-                    size={48}
-                    strokeWidth={4}
-                    label={`${Math.round(progress * 100)}%`}
-                    sublabel="done"
-                    trackColor={theme.backgroundSunken}
-                  />
-                </View>
+                  <View style={{ zIndex: 1 }}>
+                    <ProgressRing
+                      progress={progress}
+                      size={48}
+                      strokeWidth={4}
+                      label={`${Math.round(progress * 100)}%`}
+                      sublabel="done"
+                      trackColor={
+                        theme.name === 'dark'
+                          ? glassMaterials.field.dark
+                          : glassMaterials.field.light
+                      }
+                    />
+                  </View>
+                </GlassPlate>
 
-                {canEdit ? <View
+                {canEdit ? <GlassPlate
                   style={[
                     styles.composer,
                     {
-                      backgroundColor: theme.backgroundSunken,
                       borderColor: draft.trim()
                         ? theme.accentPrimary
-                        : theme.separator,
+                        : theme.name === 'dark'
+                          ? glassMaterials.border.dark
+                          : glassMaterials.border.light,
+                      borderWidth: draft.trim() ? 1 : StyleSheet.hairlineWidth,
                     },
                   ]}
                 >
@@ -219,16 +230,12 @@ export function TodoListHeader({
                       color={theme.textOnAccent}
                     />
                   </Pressable>
-                </View> : (
-                  <View
-                    style={[
-                      styles.memberNotice,
-                      { backgroundColor: theme.backgroundSunken },
-                    ]}>
+                </GlassPlate> : (
+                  <GlassPlate airy style={styles.memberNotice}>
                     <AppText variant="caption" color="secondary">
                       You can complete items assigned to you or Anyone.
                     </AppText>
-                  </View>
+                  </GlassPlate>
                 )}
 
                 {syncError ? (
@@ -251,52 +258,47 @@ export function TodoListHeader({
                     accessibilityHint="Toggles between open and closed tasks"
                     hitSlop={4}
                     onPress={onFilterToggle}
-                    style={({ pressed }) => [
-                      styles.taskStatus,
-                      {
-                        backgroundColor: theme.backgroundSunken,
-                        borderColor: theme.separator,
-                        opacity: pressed ? 0.72 : 1,
-                      },
-                    ]}>
-                    <View
-                      style={[
-                        styles.taskStatusDot,
-                        {
-                          backgroundColor:
-                            filter === 'open'
-                              ? theme.accentPrimary
-                              : theme.success,
-                        },
-                      ]}
-                    />
-                    <AppText
-                      variant="overline"
-                      color="secondary"
-                      style={styles.taskStatusLabel}>
-                      {filter === 'open' ? 'Open' : 'Closed'}
-                    </AppText>
-                    <View
-                      style={[
-                        styles.taskStatusDivider,
-                        { backgroundColor: theme.separator },
-                      ]}
-                    />
-                    <AppText
-                      variant="subheading"
-                      style={[
-                        styles.taskStatusCount,
-                        {
-                          fontSize: s(17),
-                          lineHeight: s(18),
-                          color:
-                            filter === 'open'
-                              ? theme.accentPrimary
-                              : theme.success,
-                        },
-                      ]}>
-                      {filter === 'open' ? openTasksCount : completedCount}
-                    </AppText>
+                    style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}>
+                    <GlassPlate airy style={styles.taskStatus}>
+                      <View
+                        style={[
+                          styles.taskStatusDot,
+                          {
+                            backgroundColor:
+                              filter === 'open'
+                                ? theme.accentPrimary
+                                : theme.success,
+                          },
+                        ]}
+                      />
+                      <AppText
+                        variant="overline"
+                        color="secondary"
+                        style={styles.taskStatusLabel}>
+                        {filter === 'open' ? 'Open' : 'Closed'}
+                      </AppText>
+                      <View
+                        style={[
+                          styles.taskStatusDivider,
+                          { backgroundColor: theme.separator },
+                        ]}
+                      />
+                      <AppText
+                        variant="subheading"
+                        style={[
+                          styles.taskStatusCount,
+                          {
+                            fontSize: s(17),
+                            lineHeight: s(18),
+                            color:
+                              filter === 'open'
+                                ? theme.accentPrimary
+                                : theme.success,
+                          },
+                        ]}>
+                        {filter === 'open' ? openTasksCount : completedCount}
+                      </AppText>
+                    </GlassPlate>
                   </Pressable>
                   <View style={styles.toolbarMenus}>
                     {canEdit && tasks.length > 0 ? (
@@ -310,22 +312,26 @@ export function TodoListHeader({
                         onLayout={editModeAgent.onLayout}
                         onPress={onToggleEditMode}
                         style={({ pressed }) => [
-                          styles.editModeButton,
-                          {
-                            backgroundColor: editMode
-                              ? theme.accentPrimary
-                              : theme.backgroundSunken,
-                            borderColor: editMode
-                              ? theme.accentPrimary
-                              : theme.separator,
-                            opacity: pressed ? 0.72 : 1,
-                          },
+                          { opacity: pressed ? 0.72 : 1 },
                         ]}>
-                        <AppText
-                          variant="caption"
-                          color={editMode ? 'onAccent' : 'accent'}>
-                          {editMode ? 'Done' : 'Edit'}
-                        </AppText>
+                        <GlassPlate
+                          inverted={editMode}
+                          style={[
+                            styles.editModeButton,
+                            editMode
+                              ? {
+                                  borderColor: theme.accentPrimary,
+                                  backgroundColor: `${theme.accentPrimary}B8`,
+                                }
+                              : null,
+                          ]}>
+                          <AppText
+                            variant="caption"
+                            color={editMode ? 'onAccent' : 'accent'}
+                            style={editMode ? { color: '#FFFFFF' } : undefined}>
+                            {editMode ? 'Done' : 'Edit'}
+                          </AppText>
+                        </GlassPlate>
                       </Pressable>
                     ) : null}
                     <ChecklistPopoverMenu
@@ -459,9 +465,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
-    borderWidth: 1,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    zIndex: 1,
   },
   composerInput: {
     ...typography.body,
@@ -486,8 +492,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
+    zIndex: 1,
   },
   heading: {
     flexDirection: 'row',
@@ -505,9 +511,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
   },
-  heroCopy: { flex: 1, gap: spacing.xs },
+  heroCopy: { flex: 1, gap: spacing.xs, zIndex: 1 },
   heroOverline: {
     letterSpacing: 1.1,
   },
@@ -524,8 +529,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
+    zIndex: 1,
   },
   taskStatusCount: {
     includeFontPadding: false,

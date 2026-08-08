@@ -1,21 +1,21 @@
-import {
-  clearSharedPayloads,
-  getSharedPayloads,
-  type SharePayload,
-} from 'expo-sharing';
 import { useNavigation, useRouter } from 'expo-router';
 import type { NavigationAction } from 'expo-router/react-navigation';
+import {
+    clearSharedPayloads,
+    getSharedPayloads,
+    type SharePayload,
+} from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  Input,
-  Screen,
-  Symbol,
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    Input,
+    Screen,
+    Symbol,
 } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -106,7 +106,7 @@ export default function ShareImportScreen() {
   const openRecipe = (listId: string) => {
     allowLeave.current = true;
     router.push({
-      pathname: '/todos/[id]/recipe-import',
+      pathname: '/(tabs)/to-do/[id]/recipe-import',
       params: { id: listId, source: 'share' },
     } as never);
   };

@@ -7,18 +7,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ADDONS } from '@/addons/registry';
 import type { AddonId } from '@/addons/types';
 import {
-  AppText,
-  appPrompt,
-  Card,
-  CollapsibleSection,
-  DangerZone,
-  DestructiveSection,
-  Screen,
-  SectionHeader,
-  SegmentedControl,
-  SettingsActionRow,
-  SettingsGroup,
-  SettingsToggleRow,
+    appPrompt,
+    AppText,
+    Card,
+    CollapsibleSection,
+    DangerZone,
+    DestructiveSection,
+    Screen,
+    SectionHeader,
+    SegmentedControl,
+    SettingsActionRow,
+    SettingsGroup,
+    SettingsToggleRow,
 } from '@/components/primitives';
 import { CloudAccountCard } from '@/features/account/cloud-account-card';
 import { useCanUseDeveloperTools } from '@/features/account/dev-access';
@@ -217,7 +217,7 @@ export default function ProfileSettingsScreen() {
               detail="Insights, seeds, overlay, sync, storage"
               icon="smart"
               testID={AgentUiIds.profile.developer}
-              onPress={() => router.push('/developer' as never)}
+              onPress={() => router.push('/(tabs)/profile/developer' as never)}
               accessibilityLabel="Open developer tools"
             />
           </SettingsGroup>
@@ -278,7 +278,7 @@ export default function ProfileSettingsScreen() {
             }
             icon="agents"
             testID={AgentUiIds.profile.agents}
-            onPress={() => router.push('/agents' as never)}
+            onPress={() => router.push('/(tabs)/profile/agents' as never)}
             accessibilityLabel="Manage Agents"
           />
           <SettingsActionRow
@@ -286,7 +286,7 @@ export default function ProfileSettingsScreen() {
             detail="Profiles, dependents & targets"
             icon="nutrition-profiles"
             testID={AgentUiIds.profile.nutrition}
-            onPress={() => router.push('/nutrition-profile' as never)}
+            onPress={() => router.push('/(tabs)/profile/nutrition-profile' as never)}
             accessibilityLabel="Open nutrition profiles"
           />
         </SettingsGroup>

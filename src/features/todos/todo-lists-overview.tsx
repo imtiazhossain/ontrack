@@ -16,12 +16,13 @@ import {
   appPrompt,
   AppText,
   Button,
+  GlassPlate,
   IconButton,
   Screen,
   SegmentedControl,
   Symbol,
 } from '@/components/primitives';
-import { fontFamilies, layout, radii, spacing, typography } from '@/design-system';
+import { fontFamilies, glassMaterials, layout, radii, spacing, typography } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { EmptyChecklists } from '@/features/todos/empty-checklists';
 import { TodoListCard } from '@/features/todos/todo-list-card';
@@ -391,14 +392,16 @@ export function TodoListsOverview() {
                     ]}
                     onChange={setDraftKind}
                   />
-                  <View
+                  <GlassPlate
                     style={[
                       styles.composer,
                       {
-                        backgroundColor: theme.backgroundSunken,
                         borderColor: draft.trim()
                           ? theme.accentPrimary
-                          : theme.separator,
+                          : theme.name === 'dark'
+                            ? glassMaterials.border.dark
+                            : glassMaterials.border.light,
+                        borderWidth: draft.trim() ? 1 : StyleSheet.hairlineWidth,
                       },
                     ]}>
                     <Symbol name="add" size={21} color={theme.accentPrimary} />
@@ -431,7 +434,10 @@ export function TodoListsOverview() {
                       accessibilityLabel="Create list"
                       icon="arrow-up"
                       iconSize={18}
-                      color={theme.textOnAccent}
+                      appearance={draft.trim() ? 'solid' : 'glass'}
+                      color={
+                        draft.trim() ? theme.textOnAccent : theme.textSecondary
+                      }
                       background={
                         draft.trim()
                           ? theme.accentPrimary
@@ -440,7 +446,7 @@ export function TodoListsOverview() {
                       disabled={!draft.trim()}
                       onPress={add}
                     />
-                  </View>
+                  </GlassPlate>
                 </View>
               ) : null}
 
@@ -499,9 +505,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
-    borderWidth: 1,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
+    zIndex: 1,
   },
   newListBlock: { gap: spacing.sm },
   input: {

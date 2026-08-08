@@ -6,10 +6,11 @@ import {
     View,
     type StyleProp,
     type TextInputProps,
+    type TextStyle,
     type ViewStyle,
 } from 'react-native';
 
-import { radii, type AppIconName } from '@/design-system';
+import { glassFieldBackground, radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -18,6 +19,16 @@ import { AppText } from './app-text';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
 import { StackedFieldLabel } from './stacked-field-label';
+import {
+    StackedIconField,
+    stackedIconFieldShouldExpand,
+} from './stacked-icon-field';
+
+function readStyleMinHeight(style: StyleProp<TextStyle>): number | undefined {
+  const flat = StyleSheet.flatten(style);
+  const value = flat?.minHeight;
+  return typeof value === 'number' ? value : undefined;
+}
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -30,6 +41,8 @@ interface InputProps extends TextInputProps {
   iconBackground?: string;
   iconColor?: string;
   fieldBackground?: string;
+  fieldBorderColor?: string;
+  fieldBorderRadius?: number;
   stackedLabelColor?: string;
   /** Optional supporting copy shown below a stacked field value. */
   helperText?: string;
@@ -80,6 +93,8 @@ export function Input({
   iconBackground,
   iconColor,
   fieldBackground,
+  fieldBorderColor,
+  fieldBorderRadius,
   stackedLabelColor,
   helperText,
   trailing,
@@ -112,11 +127,18 @@ export function Input({
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const numericValue = sanitizeNumericValue(value, keyboardType);
+  const body = typography.body;
+  const oneLineHeight = Math.ceil(body.lineHeight * Math.min(fontScale, 1.3));
+  const expandStacked = stackedIconFieldShouldExpand({
+    multiline,
+    value: numericValue,
+    styleMinHeight: readStyleMinHeight(style),
+    oneLineHeight,
+  });
   const hasValue = String(numericValue ?? '').length > 0;
   const showChromePlaceholder =
     hasIcon && !stacked && !hasValue && !focused && Boolean(placeholder);
-  const body = typography.body;
-  const fill = fieldBackground ?? theme.backgroundSunken;
+  const fill = fieldBackground ?? glassFieldBackground(theme.name);
   const handleChangeText = numericChangeForKeyboard(keyboardType, onChangeText);
   const agent = useAgentUiTarget(testID, {
     label: accessibilityLabel ?? stackedLabel ?? label,
@@ -146,34 +168,77 @@ export function Input({
             {label}
           </AppText>
         ) : null}
-        <View
-          style={[
-            styles.iconField,
-            fieldLeadingIconRowStyle({
-              minHeight: stacked ? stackedMinHeight : minHeight,
-              // Multiline inputs can be taller even while empty. Let the row
-              // grow so the persistent label remains visible and the complete
-              // label/value block stays vertically centered beside the icon.
-              height: multiline
-                ? undefined
-                : stacked
-                  ? undefined
-                  : minHeight,
-              borderRadius: radii.lg,
-              paddingHorizontal: spacing.md,
-              paddingVertical: stacked ? spacing.sm : 0,
-              gap: spacing.sm,
-              backgroundColor: fill,
-            }),
-          ]}>
-          {icon ? (
-            <FieldLeadingIcon
-              name={icon}
-              backgroundColor={iconBackground}
-              color={iconColor}
+        {stacked && icon ? (
+          <StackedIconField
+            icon={icon}
+            stackedLabel={stackedLabel!}
+            stackedLabelColor={stackedLabelColor ?? theme.textPrimary}
+            stackedAlign={stackedAlign}
+            iconBackground={iconBackground}
+            iconColor={iconColor}
+            fieldBackground={fill}
+            fieldBorderColor={fieldBorderColor}
+            borderRadius={fieldBorderRadius ?? radii.lg}
+            expand={expandStacked}
+            minHeight={stackedMinHeight}
+            trailing={trailing}>
+            <TextInput
+              ref={inputRef}
+              testID={testID}
+              accessibilityLabel={accessibilityLabel}
+              value={numericValue}
+              placeholder={placeholder}
+              placeholderTextColor={placeholderTextColor ?? theme.textTertiary}
+              allowFontScaling
+              maxFontSizeMultiplier={1.3}
+              multiline={multiline}
+              keyboardType={keyboardType}
+              onChangeText={handleChangeText}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              style={[
+                styles.input,
+                styles.iconInput,
+                {
+                  fontFamily: body.fontFamily,
+                  fontSize: body.fontSize,
+                  fontWeight: body.fontWeight,
+                  lineHeight: body.lineHeight,
+                  color: theme.textPrimary,
+                  padding: 0,
+                  margin: 0,
+                  includeFontPadding: false,
+                  textAlignVertical: expandStacked ? 'top' : 'center',
+                  textAlign: stackedCentered ? 'center' : 'left',
+                },
+                expandStacked ? styles.stackedMultilineInput : null,
+                trailing ? { paddingRight: s(40) } : null,
+                style,
+                // Pin wins over caller minHeight so empty Notes matches peers.
+                expandStacked ? null : { minHeight: oneLineHeight },
+              ]}
+              {...rest}
+              underlineColorAndroid="transparent"
             />
-          ) : null}
-          {stacked ? (
+            {helperText ? (
+              <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                {helperText}
+              </AppText>
+            ) : null}
+          </StackedIconField>
+        ) : stacked ? (
+          <View
+            style={[
+              styles.iconField,
+              fieldLeadingIconRowStyle({
+                minHeight: stackedMinHeight,
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                gap: spacing.sm,
+                backgroundColor: fill,
+              }),
+            ]}>
             <View
               style={[
                 styles.stackedCopy,
@@ -216,8 +281,9 @@ export function Input({
                         ),
                     padding: 0,
                     margin: 0,
+                    includeFontPadding: false,
                     textAlignVertical: multiline ? 'top' : 'center',
-                    textAlign: stackedCentered ? 'center' : undefined,
+                    textAlign: stackedCentered ? 'center' : 'left',
                   },
                   multiline ? styles.stackedMultilineInput : null,
                   trailing ? { paddingRight: s(40) } : null,
@@ -232,69 +298,96 @@ export function Input({
                 </AppText>
               ) : null}
             </View>
-          ) : showChromePlaceholder ? (
-            <AppText
-              variant="body"
-              color="tertiary"
-              numberOfLines={1}
-              style={styles.chromeLabel}>
-              {placeholder}
-            </AppText>
-          ) : (
-            <TextInput
-              ref={inputRef}
-              testID={testID}
-              accessibilityLabel={accessibilityLabel}
-              value={numericValue}
-              placeholder={undefined}
-              allowFontScaling
-              maxFontSizeMultiplier={1.3}
-              multiline={multiline}
-              keyboardType={keyboardType}
-              onChangeText={handleChangeText}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              style={[
-                styles.input,
-                styles.iconInput,
-                {
-                  fontFamily: body.fontFamily,
-                  fontSize: body.fontSize,
-                  fontWeight: body.fontWeight,
-                  ...(multiline ? { lineHeight: body.lineHeight } : null),
-                  color: theme.textPrimary,
-                  minHeight: multiline ? undefined : Math.max(0, minHeight - 4),
-                  textAlignVertical: 'center',
-                },
-                trailing ? { paddingRight: s(40) } : null,
-                style,
-              ]}
-              {...rest}
-              underlineColorAndroid="transparent"
-            />
-          )}
-          {showChromePlaceholder ? (
-            <TextInput
-              ref={inputRef}
-              testID={testID}
-              accessibilityLabel={accessibilityLabel}
-              value={numericValue}
-              caretHidden
-              allowFontScaling
-              maxFontSizeMultiplier={1.3}
-              keyboardType={keyboardType}
-              onChangeText={handleChangeText}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              style={styles.hitInput}
-              {...rest}
-              underlineColorAndroid="transparent"
-            />
-          ) : null}
-          {trailing ? (
-            <View style={[styles.trailing, { right: spacing.xs }]}>{trailing}</View>
-          ) : null}
-        </View>
+            {trailing ? (
+              <View style={[styles.trailing, { right: spacing.xs }]}>{trailing}</View>
+            ) : null}
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.iconField,
+              fieldLeadingIconRowStyle({
+                minHeight,
+                height: multiline ? undefined : minHeight,
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 0,
+                gap: spacing.sm,
+                backgroundColor: fill,
+              }),
+            ]}>
+            {icon ? (
+              <FieldLeadingIcon
+                name={icon}
+                backgroundColor={iconBackground}
+                color={iconColor}
+              />
+            ) : null}
+            {showChromePlaceholder ? (
+              <AppText
+                variant="body"
+                color="tertiary"
+                numberOfLines={1}
+                style={styles.chromeLabel}>
+                {placeholder}
+              </AppText>
+            ) : (
+              <TextInput
+                ref={inputRef}
+                testID={testID}
+                accessibilityLabel={accessibilityLabel}
+                value={numericValue}
+                placeholder={undefined}
+                allowFontScaling
+                maxFontSizeMultiplier={1.3}
+                multiline={multiline}
+                keyboardType={keyboardType}
+                onChangeText={handleChangeText}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                style={[
+                  styles.input,
+                  styles.iconInput,
+                  {
+                    fontFamily: body.fontFamily,
+                    fontSize: body.fontSize,
+                    fontWeight: body.fontWeight,
+                    ...(multiline ? { lineHeight: body.lineHeight } : null),
+                    color: theme.textPrimary,
+                    minHeight: multiline ? undefined : Math.max(0, minHeight - 4),
+                    includeFontPadding: false,
+                    textAlignVertical: 'center',
+                  },
+                  trailing ? { paddingRight: s(40) } : null,
+                  style,
+                ]}
+                {...rest}
+                underlineColorAndroid="transparent"
+              />
+            )}
+            {showChromePlaceholder ? (
+              <TextInput
+                ref={inputRef}
+                testID={testID}
+                accessibilityLabel={accessibilityLabel}
+                value={numericValue}
+                caretHidden
+                allowFontScaling
+                maxFontSizeMultiplier={1.3}
+                keyboardType={keyboardType}
+                onChangeText={handleChangeText}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                style={styles.hitInput}
+                {...rest}
+                underlineColorAndroid="transparent"
+              />
+            ) : null}
+            {trailing ? (
+              <View style={[styles.trailing, { right: spacing.xs }]}>{trailing}</View>
+            ) : null}
+          </View>
+        )}
       </View>
     );
   }

@@ -1,20 +1,13 @@
 export { categoryPalette, palette, type CategoryColorKey } from './colors';
 export {
-  UI_FONT_PRESETS,
-  MONO_FONT_PRESETS,
-  DEFAULT_UI_FONT_PRESET_ID,
-  DEFAULT_MONO_FONT_PRESET_ID,
-  FONT_ROLE_LABELS,
-  emptyFontOverrides,
-  findFontPreset,
-  defaultFontPreset,
-  resolveFontPreset,
-  resolveActiveFontFamilies,
-  sanitizeFontOverrides,
-  type FontRole,
-  type FontPreset,
-  type FontOverrides,
+    DEFAULT_MONO_FONT_PRESET_ID, DEFAULT_UI_FONT_PRESET_ID, defaultFontPreset, emptyFontOverrides,
+    findFontPreset, FONT_ROLE_LABELS, MONO_FONT_PRESETS, resolveActiveFontFamilies, resolveFontPreset, sanitizeFontOverrides, UI_FONT_PRESETS, type FontOverrides, type FontPreset, type FontRole
 } from './font-presets';
+export {
+    glassFieldBackground,
+    glassFieldBorder,
+    glassMaterials
+} from './glass';
 export {
     appIcons,
     appIconSections,

@@ -87,12 +87,23 @@ describe('destinationCoverCandidates', () => {
   });
 
   it('falls back to iconic draw suffixes when destination is unknown', () => {
-    expect(destinationCoverCandidates(plan({ title: 'Lisbon', destination: '' }))).toEqual([
-      'Lisbon iconic',
-      'Lisbon famous attraction',
-      'Lisbon scenic landscape',
-      'Lisbon',
+    expect(
+      destinationCoverCandidates(plan({ title: 'Nowhereville', destination: '' })),
+    ).toEqual([
+      'Nowhereville iconic',
+      'Nowhereville famous attraction',
+      'Nowhereville scenic landscape',
+      'Nowhereville',
     ]);
+  });
+
+  it('leads Lisbon with bridge / Belém landmark queries', () => {
+    const candidates = destinationCoverCandidates(
+      plan({ title: 'Lisbon trip', destination: 'Lisbon, Portugal' }),
+    );
+    expect(candidates[0]).toMatch(/Ponte 25 de Abril|Belém|Jerónimos/i);
+    expect(candidates).toContain('Lisbon');
+    expect(candidates).toContain('Portugal');
   });
 
   it('keeps curated Paris icons ahead of bare city Wiki titles', () => {
@@ -145,7 +156,18 @@ describe('destinationPhotoSuggestsPeople', () => {
       ),
     ).toBe(true);
     expect(
+      destinationPhotoSuggestsPeople(
+        'two friends lifestyle street style in Lisbon',
+      ),
+    ).toBe(true);
+    expect(destinationPhotoSuggestsPeople('guys together in Alfama')).toBe(
+      true,
+    );
+    expect(
       destinationPhotoSuggestsPeople('Aurora Borealis over Kirkjufell'),
+    ).toBe(false);
+    expect(
+      destinationPhotoSuggestsPeople('Ponte 25 de Abril Lisbon bridge skyline'),
     ).toBe(false);
   });
 });

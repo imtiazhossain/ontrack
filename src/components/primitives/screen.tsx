@@ -1,13 +1,13 @@
 import type { PropsWithChildren, RefObject } from 'react';
 import { useRef } from 'react';
 import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  type ViewStyle,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,9 +18,10 @@ import { useUI } from '@/store/ui';
 import { useAgentUiScrollContainer } from '@/utils/agent-ui/use-agent-ui-scroll-container';
 
 import {
-  usePageSurfaceBackground,
-  useSafeAreaChrome,
+    usePageSurfaceBackground,
+    useSafeAreaChrome,
 } from './safe-area-chrome';
+import { useScreenAtmosphereChrome } from './screen-atmosphere';
 
 interface ScreenProps extends PropsWithChildren {
   /** Scrollable content (default) or a fixed layout */
@@ -42,6 +43,11 @@ interface ScreenProps extends PropsWithChildren {
   scrollRef?: RefObject<ScrollView | null>;
   /** Forwarded after agent-ui scroll bookkeeping. */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /**
+   * Soft gradient underlay for glass plates (default). Disable when a
+   * feature paints its own full-bleed atmosphere (Travel / Today washes).
+   */
+  atmosphere?: boolean;
 }
 
 export function Screen({
@@ -56,6 +62,7 @@ export function Screen({
   onRefresh,
   scrollRef,
   onScroll,
+  atmosphere = true,
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -70,17 +77,23 @@ export function Screen({
   };
 
   const flattened = StyleSheet.flatten(style) as ViewStyle | undefined;
-  const backgroundColor =
-    flattened?.backgroundColor !== undefined
-      ? flattened.backgroundColor
+  const styleBackground = flattened?.backgroundColor;
+  const usesCustomBackground = styleBackground !== undefined;
+  const useAtmosphere = atmosphere && !usesCustomBackground;
+  const backgroundColor = useAtmosphere
+    ? 'transparent'
+    : styleBackground !== undefined
+      ? styleBackground
       : theme.backgroundPrimary;
   const surfaceColor =
-    typeof backgroundColor === 'string' ? backgroundColor : undefined;
-  // Paint page fill into the non-scrolling status-bar shell. Priority -1 so
-  // Today / Travel / auth washes (default 0+) still win when they register.
+    !useAtmosphere && typeof backgroundColor === 'string'
+      ? backgroundColor
+      : undefined;
+  // Default glass wash paints on AppSafeArea (window y=0) so status bar +
+  // page share one continuous atmosphere — no hard safe-area seam.
+  useScreenAtmosphereChrome(useAtmosphere);
+  // Solid / custom fills still publish status-bar + dock colors.
   useSafeAreaChrome(surfaceColor, { priority: -1 });
-  // Tab dock matches this page fill (skipped when transparent — Travel paper
-  // and other scenic underlays register their own solid surface).
   usePageSurfaceBackground(surfaceColor);
 
   const paddingStyle: ViewStyle = {
@@ -100,12 +113,32 @@ export function Screen({
       : null),
   };
 
+  const shell = scroll ? (
+    <ScrollView
+      ref={agentScroll.scrollRef}
+      style={styles.scrollView}
+      automaticallyAdjustKeyboardInsets
+      scrollEnabled={scrollEnabled}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={[styles.scrollContent, paddingStyle, contentStyle]}
+      showsVerticalScrollIndicator={false}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      keyboardShouldPersistTaps="handled"
+      onScroll={handleScroll}
+      scrollEventThrottle={agentScroll.scrollEventThrottle}
+      refreshControl={refresh ? pull.refreshControl : undefined}>
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.fill, paddingStyle, contentStyle]}>{children}</View>
+  );
+
   if (!scroll) {
     return (
       <View
         onTouchStart={notifyPageInteraction}
         style={[styles.fill, { backgroundColor }, style]}>
-        <View style={[styles.fill, paddingStyle, contentStyle]}>{children}</View>
+        {shell}
       </View>
     );
   }
@@ -116,21 +149,7 @@ export function Screen({
       onTouchStart={notifyPageInteraction}
       collapsable={false}
       style={[styles.fill, { backgroundColor }, style]}>
-      <ScrollView
-        ref={agentScroll.scrollRef}
-        style={styles.scrollView}
-        automaticallyAdjustKeyboardInsets
-        scrollEnabled={scrollEnabled}
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[styles.scrollContent, paddingStyle, contentStyle]}
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        keyboardShouldPersistTaps="handled"
-        onScroll={handleScroll}
-        scrollEventThrottle={agentScroll.scrollEventThrottle}
-        refreshControl={refresh ? pull.refreshControl : undefined}>
-        {children}
-      </ScrollView>
+      {shell}
     </View>
   );
 }

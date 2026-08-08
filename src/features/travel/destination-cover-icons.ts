@@ -38,6 +38,17 @@ export const DESTINATION_ICONIC_COVER_QUERIES: readonly DestinationIconicCoverEn
       ],
     },
     {
+      // City only — bare “Portugal” would steal Porto / Algarve covers.
+      phrases: ['lisbon', 'lisboa'],
+      queries: [
+        'Ponte 25 de Abril Lisbon bridge',
+        'Torre de Belém Lisbon landmark',
+        'Mosteiro dos Jerónimos Lisbon architecture',
+        'Lisbon Tagus River skyline',
+        'Castelo de São Jorge Lisbon',
+      ],
+    },
+    {
       phrases: ['paris', 'france'],
       queries: [
         'Eiffel Tower Paris',

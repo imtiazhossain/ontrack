@@ -6,7 +6,10 @@ describe('Button smoke', () => {
   it('fires onPress when enabled', () => {
     const onPress = jest.fn();
     render(
-      <Button onPress={onPress} testID="ontrack.test.button">
+      <Button
+        appearance="solid"
+        onPress={onPress}
+        testID="ontrack.test.button">
         Continue
       </Button>,
     );

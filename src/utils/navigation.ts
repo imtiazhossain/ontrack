@@ -7,7 +7,7 @@ import type { Href, ImperativeRouter } from 'expo-router';
  * and empty stacks (agent-ui replace, deep link) otherwise hit Expo Router’s
  * dev-only LogBox: "The action 'GO_BACK' was not handled by any navigator."
  */
-export function goBackOrReplace(router: ImperativeRouter, fallback: Href = '/(tabs)') {
+export function goBackOrReplace(router: ImperativeRouter, fallback: Href = '/') {
   if (router.canDismiss()) {
     router.dismiss(1);
     return;

@@ -4,19 +4,19 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives/app-text';
 import {
-  FieldLeadingIcon,
-  fieldLeadingIconRowStyle,
+    FieldLeadingIcon,
+    fieldLeadingIconRowStyle,
 } from '@/components/primitives/field-leading-icon';
 import { stackedFieldMinHeight } from '@/components/primitives/field-leading-icon-style';
-import { StackedFieldLabel } from '@/components/primitives/stacked-field-label';
+import { StackedIconField } from '@/components/primitives/stacked-icon-field';
 import { Symbol } from '@/components/primitives/symbol';
 import {
-  clampMinutesFromMidnight,
-  dateToMinutes,
-  minutesToDate,
-  type TimeFieldProps,
+    clampMinutesFromMidnight,
+    dateToMinutes,
+    minutesToDate,
+    type TimeFieldProps,
 } from '@/components/primitives/time-field.types';
-import { radii, spacing } from '@/design-system';
+import { glassFieldBackground, radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -36,6 +36,8 @@ export function MaterialTimeField({
   iconBackground,
   iconColor,
   fieldBackground,
+  fieldBorderColor,
+  fieldBorderRadius,
   stackedLabelColor,
   placeholderColor,
   showChevron = false,
@@ -85,26 +87,29 @@ export function MaterialTimeField({
         disabled={disabled}
         onPress={openPicker}
         testID={testID}
-        style={({ pressed }) => [
-          styles.field,
-          fieldLeadingIconRowStyle({
-            minHeight: stacked ? stackedMinHeight : 48,
-            borderRadius: stacked ? radii.lg : radii.md,
-            paddingVertical: stacked ? spacing.sm : 0,
-            backgroundColor: fieldBackground ?? theme.backgroundSunken,
-            opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
-          }),
-        ]}>
-        <FieldLeadingIcon
-          name="clock"
-          backgroundColor={iconBackground}
-          color={iconColor}
-        />
+        style={({ pressed }) => ({
+          opacity: disabled ? 0.5 : pressed ? 0.72 : 1,
+        })}>
         {stacked ? (
-          <View style={styles.stackedCopy}>
-            <StackedFieldLabel color={stackedLabelColor ?? theme.textPrimary}>
-              {stackedLabel!}
-            </StackedFieldLabel>
+          <StackedIconField
+            icon="clock"
+            stackedLabel={stackedLabel!}
+            stackedLabelColor={stackedLabelColor ?? theme.textPrimary}
+            iconBackground={iconBackground}
+            iconColor={iconColor}
+            fieldBackground={fieldBackground ?? glassFieldBackground(theme.name)}
+            fieldBorderColor={fieldBorderColor}
+            borderRadius={fieldBorderRadius ?? radii.lg}
+            minHeight={stackedMinHeight}
+            trailing={
+              showChevron ? (
+                <Symbol
+                  name="chevron-down"
+                  size="sm"
+                  color={placeholderColor ?? theme.textTertiary}
+                />
+              ) : null
+            }>
             <AppText
               variant="body"
               fit
@@ -118,22 +123,38 @@ export function MaterialTimeField({
               }}>
               {displayValue}
             </AppText>
-          </View>
+          </StackedIconField>
         ) : (
-          <AppText
-            variant="body"
-            color={hasValue ? 'primary' : 'tertiary'}
-            style={styles.timeText}>
-            {displayValue}
-          </AppText>
+          <View
+            style={[
+              styles.field,
+              fieldLeadingIconRowStyle({
+                minHeight: 48,
+                borderRadius: radii.md,
+                paddingVertical: 0,
+                backgroundColor: fieldBackground ?? glassFieldBackground(theme.name),
+              }),
+            ]}>
+            <FieldLeadingIcon
+              name="clock"
+              backgroundColor={iconBackground}
+              color={iconColor}
+            />
+            <AppText
+              variant="body"
+              color={hasValue ? 'primary' : 'tertiary'}
+              style={styles.timeText}>
+              {displayValue}
+            </AppText>
+            {showChevron ? (
+              <Symbol
+                name="chevron-down"
+                size="sm"
+                color={placeholderColor ?? theme.textTertiary}
+              />
+            ) : null}
+          </View>
         )}
-        {showChevron ? (
-          <Symbol
-            name="chevron-down"
-            size="sm"
-            color={placeholderColor ?? theme.textTertiary}
-          />
-        ) : null}
       </Pressable>
 
       {showPicker ? (
@@ -169,13 +190,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  stackedCopy: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 2,
-    justifyContent: 'center',
   },
   timeText: {
     flex: 1,

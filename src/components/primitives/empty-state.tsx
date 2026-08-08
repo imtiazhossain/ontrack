@@ -1,10 +1,19 @@
-import { StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
+import {
+    Pressable,
+    StyleSheet,
+    View,
+    type StyleProp,
+    type TextStyle,
+} from 'react-native';
 
-import { type AppIconName } from '@/design-system';
+import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { useAgentUiTarget } from '@/utils/agent-ui';
+import { haptics } from '@/utils/haptics';
+
 import { AppText } from './app-text';
-import { Button } from './button';
+import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
 interface EmptyStateProps {
@@ -29,7 +38,17 @@ export function EmptyState({
   messageStyle,
 }: EmptyStateProps) {
   const theme = useTheme();
-  const { spacing } = useResponsive();
+  const { spacing, layout } = useResponsive();
+  const handleAction = () => {
+    if (!onAction) return;
+    haptics.tap();
+    onAction();
+  };
+  const agent = useAgentUiTarget(actionTestID, {
+    label: actionLabel,
+    onPress: actionLabel && onAction ? handleAction : undefined,
+  });
+
   return (
     <View
       style={[
@@ -58,14 +77,33 @@ export function EmptyState({
         {message}
       </AppText>
       {actionLabel && onAction ? (
-        <Button
-          variant="secondary"
-          onPress={onAction}
+        <Pressable
+          ref={agent.ref}
           testID={actionTestID}
+          onLayout={agent.onLayout}
+          accessibilityRole="button"
           accessibilityLabel={actionLabel}
-          style={{ marginTop: spacing.sm }}>
-          {actionLabel}
-        </Button>
+          onPress={handleAction}
+          style={({ pressed }) => [
+            styles.actionHit,
+            { marginTop: spacing.sm, opacity: pressed ? 0.88 : 1 },
+          ]}>
+          <GlassPlate
+            style={[
+              styles.actionGlass,
+              {
+                minHeight: layout.minTapTarget,
+                paddingHorizontal: spacing.xl,
+                paddingVertical: spacing.md,
+                borderRadius: radii.pill,
+                gap: spacing.sm,
+              },
+            ]}>
+            <AppText variant="callout" fit numberOfLines={1}>
+              {actionLabel}
+            </AppText>
+          </GlassPlate>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -74,5 +112,13 @@ export function EmptyState({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+  },
+  actionHit: {
+    alignSelf: 'center',
+  },
+  actionGlass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

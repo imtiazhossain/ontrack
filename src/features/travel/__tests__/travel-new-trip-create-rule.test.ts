@@ -4,11 +4,11 @@ import { join } from 'node:path';
 describe('new trip creation feedback', () => {
   it('keeps the form open and renders an inline error when storage rejects a trip', () => {
     const travelTab = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
       'utf8',
     );
-    const newTripCard = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-new-trip-card.tsx'),
+    const newTripSheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-new-trip-sheet.tsx'),
       'utf8',
     );
 
@@ -17,14 +17,14 @@ describe('new trip creation feedback', () => {
     expect(travelTab).toMatch(
       /if \(!saved\) \{\s*creatingPlanRef\.current = false;\s*setError\([\s\S]*?\);\s*return;\s*\}/,
     );
-    expect(newTripCard).toContain(
+    expect(newTripSheet).toContain(
       '{error ? <ErrorMessage message={error} /> : null}',
     );
   });
 
   it('disables pull-to-refresh while the form is open and targets the saved card', () => {
     const travelTab = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
       'utf8',
     );
 
@@ -35,7 +35,7 @@ describe('new trip creation feedback', () => {
 
   it('starts each new trip with empty departure and return dates', () => {
     const travelTab = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
       'utf8',
     );
 
@@ -49,9 +49,44 @@ describe('new trip creation feedback', () => {
     );
   });
 
+  it('opens Start a New Trip as a canonical travel bottom sheet', () => {
+    const travelTab = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
+      'utf8',
+    );
+    const newTripSheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-new-trip-sheet.tsx'),
+      'utf8',
+    );
+    const chrome = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-itinerary-sheet-chrome.ts'),
+      'utf8',
+    );
+
+    expect(travelTab).toContain('<TravelNewTripSheet');
+    expect(travelTab).toContain('visible={showForm}');
+    expect(newTripSheet).toContain('<TravelSheetModal');
+    expect(newTripSheet).toContain('title="Start a New Trip"');
+    expect(newTripSheet).not.toContain('eyebrow=');
+    expect(newTripSheet).not.toContain('TravelPlanModePicker');
+    expect(newTripSheet).not.toContain('Import Flight Itinerary');
+    expect(newTripSheet).not.toContain('importItinerary');
+    expect(newTripSheet).not.toContain('Starting Point');
+    expect(newTripSheet).not.toContain('newTrip.origin');
+    expect(newTripSheet).toContain('testID={AgentUiIds.travel.newTrip.dates}');
+    expect(newTripSheet).toContain(
+      'calendarTestID={AgentUiIds.travel.newTrip.calendar}',
+    );
+    // Fields sit on the glass sheet as frosted pills, not solid white cards.
+    expect(newTripSheet).toContain('itinerarySheetFieldProps');
+    expect(chrome).toContain('SHEET_FIELD_GLASS_LIGHT');
+    expect(chrome).toContain('fieldBorderRadius: radii.pill');
+    expect(chrome).not.toMatch(/field:\s*'#FFFFFF'/);
+  });
+
   it('opens a Dates field into a multiselect range calendar modal', () => {
-    const newTripCard = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-new-trip-card.tsx'),
+    const newTripSheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-new-trip-sheet.tsx'),
       'utf8',
     );
     const dateRangeEditor = readFileSync(
@@ -59,11 +94,16 @@ describe('new trip creation feedback', () => {
       'utf8',
     );
 
-    expect(newTripCard).toContain('testID={AgentUiIds.travel.newTrip.dates}');
-    expect(newTripCard).toContain('calendarTestID={AgentUiIds.travel.newTrip.calendar}');
+    expect(newTripSheet).toContain('testID={AgentUiIds.travel.newTrip.dates}');
+    expect(newTripSheet).toContain(
+      'calendarTestID={AgentUiIds.travel.newTrip.calendar}',
+    );
     expect(dateRangeEditor).toContain('Dates');
     expect(dateRangeEditor).toContain('<TravelSheetModal');
     expect(dateRangeEditor).toContain('<DateFieldCalendar');
+    expect(dateRangeEditor).toContain('controlAppearance="glass"');
+    expect(dateRangeEditor).toContain('<TravelSheetPrimaryAction');
+    expect(dateRangeEditor).not.toMatch(/<Button\b/);
     expect(dateRangeEditor).toContain(
       'rangeStart={draftHasStart ? fromDateKey(draftStart) : undefined}',
     );

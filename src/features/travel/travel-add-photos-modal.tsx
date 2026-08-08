@@ -51,7 +51,8 @@ export function TravelAddPhotosModal({
       subtitle={subtitle}
       onClose={onClose}
       closeAccessibilityLabel="Close photo actions"
-      closeTestID={AgentUiIds.travel.addPhotos.close}>
+      closeTestID={AgentUiIds.travel.addPhotos.close}
+      surface="glass">
       <View style={{ gap: spacing.md }}>
         <Button
           variant="primary"

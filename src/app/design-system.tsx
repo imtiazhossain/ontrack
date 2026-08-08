@@ -1,10 +1,6 @@
-import { DevAccessGate } from '@/features/account/dev-access-gate';
-import { DesignSystemGallery } from '@/features/design-system/design-system-gallery';
+import { Redirect } from 'expo-router';
 
-export default function DesignSystemRoute() {
-  return (
-    <DevAccessGate>
-      <DesignSystemGallery />
-    </DevAccessGate>
-  );
+/** Legacy `/design-system` → profile stack (keeps bottom nav). */
+export default function DesignSystemLegacyRedirect() {
+  return <Redirect href="/(tabs)/profile/design-system" />;
 }

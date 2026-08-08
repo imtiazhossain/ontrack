@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText, IconButton, LoadingBlock, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, IconButton, LoadingBlock, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { socialActionTones, socialChrome, socialShadow } from '@/features/social/social-chrome';
@@ -123,12 +123,10 @@ export function SocialFriendsCard({
   const avatarSize = Math.max(54, s(58));
 
   return (
-    <View
+    <GlassPlate
       style={[
         styles.friendsCard,
         {
-          backgroundColor: chrome.surface,
-          borderColor: chrome.border,
           paddingVertical: spacing.lg,
           ...socialShadow(chrome.shadow, 'overlay'),
         },
@@ -242,7 +240,7 @@ export function SocialFriendsCard({
           ) : null}
         </ScrollView>
       )}
-    </View>
+    </GlassPlate>
   );
 }
 
@@ -291,18 +289,22 @@ export function SocialQuickActions({
               accessibilityLabel={a11yLabel}
               onPress={() => onAction(action.id)}
               style={[
-                styles.quickTile,
+                styles.quickTileWrap,
                 {
                   width: tileWidth,
                   minHeight: Math.max(88, s(96)),
-                  backgroundColor: chrome.surface,
-                  borderColor: chrome.border,
-                  paddingHorizontal: labelPadX,
-                  paddingVertical: spacing.sm,
-                  gap: spacing.xs,
-                  ...socialShadow(chrome.shadow),
                 },
               ]}>
+              <GlassPlate
+                style={[
+                  styles.quickTile,
+                  {
+                    paddingHorizontal: labelPadX,
+                    paddingVertical: spacing.sm,
+                    gap: spacing.xs,
+                    ...socialShadow(chrome.shadow),
+                  },
+                ]}>
               <View
                 style={[
                   styles.quickIcon,
@@ -332,6 +334,7 @@ export function SocialQuickActions({
                   {action.label}
                 </AppText>
               </View>
+              </GlassPlate>
             </SocialPressable>
           );
         })}
@@ -382,16 +385,16 @@ export function SocialUpcomingTogether({
           testID={AgentUiIds.social.upcoming.empty}
           accessibilityLabel="Create a shared trip"
           onPress={onSeeAll}
-          style={[
-            styles.upcomingEmpty,
-            {
-              minHeight: Math.max(132, s(140)),
-              backgroundColor: chrome.surface,
-              borderColor: chrome.border,
-              padding: spacing.lg,
-              gap: spacing.md,
-            },
-          ]}>
+          style={styles.upcomingEmptyWrap}>
+          <GlassPlate
+            style={[
+              styles.upcomingEmpty,
+              {
+                minHeight: Math.max(132, s(140)),
+                padding: spacing.lg,
+                gap: spacing.md,
+              },
+            ]}>
           <View style={[styles.emptyIcon, { backgroundColor: chrome.mint }]}>
             <Symbol name="flight" size="md" color={chrome.primary} />
           </View>
@@ -404,6 +407,7 @@ export function SocialUpcomingTogether({
             </AppText>
           </View>
           <Symbol name="chevron-right" size="sm" color={chrome.primary} />
+          </GlassPlate>
         </SocialPressable>
       ) : (
         <ScrollView
@@ -464,15 +468,14 @@ function UpcomingCard({
       testID={AgentUiIds.social.upcoming.trip(plan.id)}
       accessibilityLabel={`Open ${plan.title}, ${formatDateLong(plan.startDate)} to ${formatDateLong(plan.endDate)}`}
       onPress={onPress}
-      style={[
-        styles.upcomingCard,
-        {
-          width,
-          backgroundColor: chrome.surface,
-          borderColor: chrome.border,
-          ...socialShadow(chrome.shadow, 'raised'),
-        },
-      ]}>
+      style={{ width }}>
+      <GlassPlate
+        style={[
+          styles.upcomingCard,
+          {
+            ...socialShadow(chrome.shadow, 'raised'),
+          },
+        ]}>
       <View style={[styles.coverWrap, { height: Math.max(108, s(116)) }]}>
         <TravelTripCover plan={plan} width="100%" height="100%" borderRadius={0} expandable={false} />
         <View style={[styles.avatarStack, { left: spacing.md, bottom: spacing.sm }]}>
@@ -541,6 +544,7 @@ function UpcomingCard({
           </AppText>
         </View>
       </View>
+      </GlassPlate>
     </SocialPressable>
   );
 }
@@ -584,7 +588,6 @@ const styles = StyleSheet.create({
     minHeight: 132,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     overflow: 'hidden',
   },
@@ -636,10 +639,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  quickTileWrap: {
+    flexGrow: 0,
+  },
   quickTile: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
@@ -663,8 +669,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  upcomingEmptyWrap: {
+    alignSelf: 'stretch',
+  },
   upcomingEmpty: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
     flexDirection: 'row',
@@ -684,10 +692,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   upcomingCard: {
-    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
     borderRadius: radii.xl,
     borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   coverWrap: {
     overflow: 'hidden',

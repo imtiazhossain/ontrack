@@ -21,7 +21,7 @@ describe('account deletion and legal release gates', () => {
     join(process.cwd(), 'src/features/account/cloud-account-card.tsx'),
     'utf8',
   );
-  const profile = readFileSync(join(process.cwd(), 'src/app/(tabs)/profile.tsx'), 'utf8');
+  const profile = readFileSync(join(process.cwd(), 'src/app/(tabs)/profile/index.tsx'), 'utf8');
 
   it('exposes a security-definer RPC that deletes storage and auth.users for the caller', () => {
     expect(migration).toContain('create or replace function public.delete_own_account()');

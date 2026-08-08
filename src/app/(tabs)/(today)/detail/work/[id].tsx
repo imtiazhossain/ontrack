@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { AppText, Button, Screen, SectionHeader } from '@/components/primitives';
+import { AppText, Button, GlassPlate, Screen, SectionHeader } from '@/components/primitives';
 import { findCategory } from '@/constants/categories';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -62,27 +62,29 @@ export default function WorkDetailScreen() {
 
       <SectionHeader title="Tasks" />
       {tasks.map((task) => (
-        <Pressable
+        <GlassPlate
+          clear
+          wash
           key={task.id}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: task.done }}
-          accessibilityLabel={task.title}
-          onPress={() => toggleTask(task.id)}
           style={[
             styles.taskRow,
-            {
-              backgroundColor: theme.backgroundSunken,
-              borderColor: task.done ? theme.success : theme.separator,
-            },
+            { borderColor: task.done ? theme.success : theme.separator },
           ]}>
-          <AppText variant="callout" color={task.done ? 'secondary' : 'primary'}>
-            {task.done ? '✓ ' : ''}
-            {task.title}
-          </AppText>
-          <AppText variant="caption" color="tertiary">
-            {task.priority}
-          </AppText>
-        </Pressable>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: task.done }}
+            accessibilityLabel={task.title}
+            onPress={() => toggleTask(task.id)}
+            style={styles.taskRowInner}>
+            <AppText variant="callout" color={task.done ? 'secondary' : 'primary'}>
+              {task.done ? '✓ ' : ''}
+              {task.title}
+            </AppText>
+            <AppText variant="caption" color="tertiary">
+              {task.priority}
+            </AppText>
+          </Pressable>
+        </GlassPlate>
       ))}
 
       <Button variant="ghost" onPress={() => router.back()} accessibilityLabel="Close">
@@ -94,10 +96,14 @@ export default function WorkDetailScreen() {
 
 const styles = StyleSheet.create({
   taskRow: {
-    padding: spacing.lg,
     borderRadius: radii.md,
     borderWidth: 1,
     marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  taskRowInner: {
+    padding: spacing.lg,
     gap: spacing.xxs,
+    zIndex: 1,
   },
 });

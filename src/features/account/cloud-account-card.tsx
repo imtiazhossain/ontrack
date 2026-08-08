@@ -6,19 +6,17 @@ import {
   AppText,
   appPrompt,
   Button,
+  Card,
   ErrorMessage,
   StatusBadge,
 } from '@/components/primitives';
-import { radii } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { useCloudSyncStatus } from '@/services/cloud/sync';
-import { AgentUiIds } from '@/utils/agent-ui';;
+import { AgentUiIds } from '@/utils/agent-ui';
 
 export function CloudAccountCard() {
   const router = useRouter();
-  const theme = useTheme();
   const { spacing } = useResponsive();
   const sync = useCloudSyncStatus();
   const { isGuest, user, signOutCurrentDevice } = useAuthSession();
@@ -66,16 +64,7 @@ export function CloudAccountCard() {
   };
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          gap: spacing.sm,
-          padding: spacing.sm,
-          backgroundColor: theme.backgroundElevated,
-          borderColor: theme.separator,
-        },
-      ]}>
+    <Card variant="elevated" style={{ gap: spacing.sm, padding: spacing.sm }}>
       {isGuest ? (
         <>
           <View style={[styles.heading, { gap: spacing.sm }]}>
@@ -124,16 +113,11 @@ export function CloudAccountCard() {
         </>
       )}
       {message ? <ErrorMessage message={message} variant="caption" /> : null}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
-    borderCurve: 'continuous',
-  },
   heading: {
     flexDirection: 'row',
     alignItems: 'center',

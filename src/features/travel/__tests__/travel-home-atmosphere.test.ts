@@ -1,31 +1,31 @@
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 
 import {
-  filterCuratedAtmosphere,
-  matchCuratedAtmosphereForPlace,
-  TRAVEL_HOME_CURATED_ATMOSPHERE,
+    filterCuratedAtmosphere,
+    matchCuratedAtmosphereForPlace,
+    TRAVEL_HOME_CURATED_ATMOSPHERE,
 } from '../travel-home-atmosphere-catalog';
 import {
-  atmosphereDestinationKey,
-  mergeAtmospherePlaces,
-  normalizeTripAtmosphereDestinations,
-  pickAtmosphereDestination,
-  pickRotatingIndex,
-  rememberRecentKeys,
-  travelHomeAtmosphereSearchQueries,
-} from '../travel-home-atmosphere-queries';
-import {
-  atmosphereHeaderInkColors,
-  headerInkFromLuminance,
-  parseHexRgb,
-  relativeLuminanceFromHex,
-  resolveAtmosphereHeaderInk,
-  travelHomeAtmosphereHeaderScrimColors,
-  travelHomeSoloTripCardShadow,
+    atmosphereHeaderInkColors,
+    headerInkFromLuminance,
+    parseHexRgb,
+    relativeLuminanceFromHex,
+    resolveAtmosphereHeaderInk,
+    travelHomeAtmosphereHeaderScrimColors,
+    travelHomeSoloTripCardShadow,
 } from '../travel-home-atmosphere-ink';
 import {
-  pickCuratedTravelHomeAtmosphere,
-  resolveTravelHomeAtmosphereImage,
+    atmosphereDestinationKey,
+    mergeAtmospherePlaces,
+    normalizeTripAtmosphereDestinations,
+    pickAtmosphereDestination,
+    pickRotatingIndex,
+    rememberRecentKeys,
+    travelHomeAtmosphereSearchQueries,
+} from '../travel-home-atmosphere-queries';
+import {
+    pickCuratedTravelHomeAtmosphere,
+    resolveTravelHomeAtmosphereImage,
 } from '../travel-home-atmosphere-resolve';
 import { travelHomeAtmosphereScrimHeight } from '../travel-home-atmosphere-scrim';
 
@@ -156,7 +156,7 @@ describe('Travel home atmosphere resolve', () => {
   it('falls back to curated when the remote pool is empty', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
-      destination: 'Lisbon',
+      destination: 'Austin, TX',
       timeOfDay: 'dusk',
       weatherCode: 3,
       salt: 2,
@@ -180,6 +180,21 @@ describe('Travel home atmosphere resolve', () => {
     expect(
       matchCuratedAtmosphereForPlace('Reykjavik, Iceland').length,
     ).toBeGreaterThan(0);
+  });
+
+  it('prefers curated Lisbon plate over remote people stock', async () => {
+    const resolved = await resolveTravelHomeAtmosphereImage({
+      mode: 'trip',
+      destination: 'Lisbon, Portugal',
+      timeOfDay: 'day',
+      weatherCode: 0,
+      salt: 1,
+      fetchPool: async () => ['https://images.unsplash.com/photo-demo-lisbon-people'],
+    });
+    expect(resolved.origin).toBe('curated');
+    expect(resolved.key).toBe('curated:lisbon-bridge');
+    expect(resolved.label).toMatch(/Lisbon/i);
+    expect(matchCuratedAtmosphereForPlace('Lisbon').length).toBeGreaterThan(0);
   });
 
   it('uses curated Antigua plate before remote stock', async () => {
@@ -238,13 +253,14 @@ describe('Travel home atmosphere resolve', () => {
       dark: false,
     });
     expect(iceland).toContain('rgba(');
-    expect(iceland).toMatch(/^0 18px 40px/);
+    expect(iceland).toMatch(/^0 36px 70px/);
+    expect(iceland).toContain('0 16px 34px');
     expect(
       travelHomeSoloTripCardShadow({ dark: false }),
     ).toContain('rgba(17,74,110,');
     expect(
       travelHomeSoloTripCardShadow({ averageColor: '#021734', dark: true }),
-    ).toContain('rgba(0,0,0,');
+    ).toMatch(/^0 36px 72px/);
   });
 
   it('defaults header ink to white unless the plate is clearly bright', () => {
@@ -337,10 +353,18 @@ describe('Travel home atmosphere resolve', () => {
       '#E8EEF5',
     );
     expect(brightBlackInk?.[0]).toMatch(/^rgba\(255,255,255,/);
+
+    // Midtone day plates with black ink still get a white top veil.
+    const midBlackInk = travelHomeAtmosphereHeaderScrimColors(
+      'dark',
+      '#7A9AB0',
+    );
+    expect(midBlackInk?.[0]).toMatch(/^rgba\(255,255,255,/);
+    expect(midBlackInk?.[3]).toBe('rgba(255,255,255,0)');
   });
 
   it('sizes the chrome scrim to cover the status-bar band plus header copy', () => {
-    expect(travelHomeAtmosphereScrimHeight(59)).toBe(59 + 194);
+    expect(travelHomeAtmosphereScrimHeight(59)).toBe(59 + 268);
   });
 });
 

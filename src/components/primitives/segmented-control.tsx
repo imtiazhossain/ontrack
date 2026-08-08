@@ -1,13 +1,14 @@
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import type { AppIconName } from '@/design-system';
-import { radii } from '@/design-system';
+import { glassMaterials, radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
+import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
 export interface SegmentedControlOption<T extends string> {
@@ -48,6 +49,7 @@ function Segment<T extends string>({
     label: option.label,
     onPress: option.disabled ? undefined : handlePress,
   });
+  const dark = theme.name === 'dark';
 
   return (
     <Pressable
@@ -60,40 +62,51 @@ function Segment<T extends string>({
       disabled={option.disabled}
       onPress={handlePress}
       style={({ pressed }) => [
-        styles.segment,
         wrap ? styles.segmentWrapped : styles.segmentRow,
         {
-          minHeight: layout.minTapTarget,
-          minWidth: wrap ? s(104) : 0,
-          gap: spacing.xs,
-          paddingHorizontal: wrap ? spacing.lg : spacing.md,
-          paddingVertical: wrap ? spacing.md : spacing.sm,
-          backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
-          borderColor: selected ? theme.accentPrimary : theme.separator,
           opacity: option.disabled ? 0.4 : pressed ? 0.72 : 1,
         },
       ]}>
-      {option.icon ? (
-        <Symbol
-          name={option.icon}
-          size="sm"
-          color={selected ? theme.accentPrimary : theme.textSecondary}
-        />
-      ) : null}
-      {wrap ? (
-        <AppText
-          variant="body"
-          color={selected ? 'accent' : 'primary'}
-          bold={selected}
-          numberOfLines={1}
-          style={{ flexShrink: 1, minWidth: 0 }}>
-          {option.label}
-        </AppText>
-      ) : (
-        <AppText variant="callout" color={selected ? 'accent' : 'secondary'} fit>
-          {option.label}
-        </AppText>
-      )}
+      <GlassPlate
+        airy={!selected}
+        style={[
+          styles.segment,
+          {
+            minHeight: layout.minTapTarget,
+            minWidth: wrap ? s(104) : 0,
+            gap: spacing.xs,
+            paddingHorizontal: wrap ? spacing.lg : spacing.md,
+            paddingVertical: wrap ? spacing.md : spacing.sm,
+            borderColor: selected
+              ? theme.accentPrimary
+              : dark
+                ? glassMaterials.border.dark
+                : glassMaterials.border.light,
+            borderWidth: selected ? 1 : StyleSheet.hairlineWidth,
+          },
+        ]}>
+        {option.icon ? (
+          <Symbol
+            name={option.icon}
+            size="sm"
+            color={selected ? theme.accentPrimary : theme.textSecondary}
+          />
+        ) : null}
+        {wrap ? (
+          <AppText
+            variant="body"
+            color={selected ? 'accent' : 'primary'}
+            bold={selected}
+            numberOfLines={1}
+            style={{ flexShrink: 1, minWidth: 0 }}>
+            {option.label}
+          </AppText>
+        ) : (
+          <AppText variant="callout" color={selected ? 'accent' : 'secondary'} fit>
+            {option.label}
+          </AppText>
+        )}
+      </GlassPlate>
     </Pressable>
   );
 }
@@ -136,12 +149,13 @@ const styles = StyleSheet.create({
   root: { width: '100%' },
   row: { flexDirection: 'row', width: '100%' },
   segment: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
     borderCurve: 'continuous',
+    zIndex: 1,
   },
   /** Single-row mode: share width and allow shrink-to-fit labels. */
   segmentRow: {

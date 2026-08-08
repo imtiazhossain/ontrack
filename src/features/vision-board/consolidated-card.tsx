@@ -2,8 +2,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, ProgressRing, Symbol } from '@/components/primitives';
-import { fontFamilies, radii, spacing, type AppIconName } from '@/design-system';
+import { AppText, ProgressRing, GlassPlate, Symbol } from '@/components/primitives';
+import { fontFamilies, glassMaterials, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
@@ -85,14 +85,8 @@ export function BoardCard({
   const tint =
     theme.name === 'light' ? accentPreset.tintLight : accentPreset.tintDark;
   const height = heightOverride ?? Math.round(width * SIZE_RATIO[card.size]);
-  const cardStyle = [
-    styles.boardCard,
-    {
-      width,
-      height,
-      backgroundColor: theme.backgroundElevated,
-    },
-  ];
+  const cardSize = { width, height };
+  const pressedOpacity = (pressed: boolean) => ({ opacity: pressed ? 0.86 : 1 });
 
   if (card.kind === 'image') {
     return (
@@ -101,8 +95,9 @@ export function BoardCard({
         accessibilityLabel={`Open ${category.name} vision board`}
         onPress={onPress}
         style={({ pressed }) => [
-          cardStyle,
-          { opacity: pressed ? 0.86 : 1 },
+          styles.boardCard,
+          cardSize,
+          pressedOpacity(pressed),
         ]}>
         <Image
           source={card.source}
@@ -122,81 +117,106 @@ export function BoardCard({
 
   if (card.kind === 'quote') {
     const dark = card.dark === true;
+    if (dark) {
+      return (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${category.name} vision board`}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.boardCard,
+            styles.textCard,
+            styles.compactTextCard,
+            cardSize,
+            { backgroundColor: '#303636' },
+            pressedOpacity(pressed),
+          ]}>
+          <AppText
+            style={[styles.quoteMark, styles.compactQuoteMark, { color: '#FFFFFF' }]}>
+            “
+          </AppText>
+          <AppText
+            style={[
+              styles.quoteText,
+              styles.compactQuoteText,
+              {
+                color: '#FFFFFF',
+                fontSize: Math.min(17, Math.max(11.5, width * 0.057)),
+                lineHeight: Math.min(22, Math.max(15, width * 0.072)),
+              },
+            ]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.78}
+            align="center">
+            {card.text}
+          </AppText>
+          {card.attribution ? (
+            <AppText
+              style={[styles.quoteAttribution, { color: 'rgba(255,255,255,0.72)' }]}
+              align="center">
+              — {card.attribution}
+            </AppText>
+          ) : null}
+        </Pressable>
+      );
+    }
+
     return (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Open ${category.name} vision board`}
         onPress={onPress}
-        style={({ pressed }) => [
-          cardStyle,
-          styles.textCard,
-          dark && styles.compactTextCard,
-          {
-            backgroundColor: dark ? '#303636' : theme.backgroundElevated,
-            opacity: pressed ? 0.86 : 1,
-          },
-        ]}>
-        <AppText
-          style={[
-            styles.quoteMark,
-            dark && styles.compactQuoteMark,
-            { color: dark ? '#FFFFFF' : theme.textPrimary },
-          ]}>
-          “
-        </AppText>
-        <AppText
-          style={[
-            styles.quoteText,
-            {
-              color: dark ? '#FFFFFF' : theme.textPrimary,
-              fontSize: dark
-                ? Math.min(17, Math.max(11.5, width * 0.057))
-                : Math.min(18, Math.max(11.5, width * 0.105)),
-              lineHeight: dark
-                ? Math.min(22, Math.max(15, width * 0.072))
-                : Math.min(23, Math.max(14.5, width * 0.135)),
-            },
-            dark && styles.compactQuoteText,
-          ]}
-          numberOfLines={dark ? 2 : 6}
-          adjustsFontSizeToFit
-          minimumFontScale={0.78}
-          align="center">
-          {card.text}
-        </AppText>
-        {card.attribution ? (
+        style={({ pressed }) => [cardSize, pressedOpacity(pressed)]}>
+        <GlassPlate
+          style={[styles.boardCard, cardSize, styles.textCard]}>
+          <AppText
+            style={[styles.quoteMark, { color: theme.textPrimary }]}>
+            “
+          </AppText>
           <AppText
             style={[
-              styles.quoteAttribution,
-              { color: dark ? 'rgba(255,255,255,0.72)' : theme.textSecondary },
+              styles.quoteText,
+              {
+                color: theme.textPrimary,
+                fontSize: Math.min(18, Math.max(11.5, width * 0.105)),
+                lineHeight: Math.min(23, Math.max(14.5, width * 0.135)),
+              },
             ]}
+            numberOfLines={6}
+            adjustsFontSizeToFit
+            minimumFontScale={0.78}
             align="center">
-            — {card.attribution}
+            {card.text}
           </AppText>
-        ) : null}
-        {!dark ? (
-          <Symbol
-            name="favorite"
-            size={16}
-            color={theme.textTertiary}
-          />
-        ) : null}
+          {card.attribution ? (
+            <AppText
+              style={[styles.quoteAttribution, { color: theme.textSecondary }]}
+              align="center">
+              — {card.attribution}
+            </AppText>
+          ) : null}
+          <Symbol name="favorite" size={16} color={theme.textTertiary} />
+        </GlassPlate>
       </Pressable>
     );
   }
+
+  const glassEnd =
+    theme.name === 'dark'
+      ? glassMaterials.fill.darkSolid
+      : glassMaterials.fill.lightSolid;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Open ${category.name} vision board`}
       onPress={onPress}
-      style={({ pressed }) => [
-        cardStyle,
-        { opacity: pressed ? 0.86 : 1 },
-      ]}>
-      <LinearGradient
-        colors={[tint, theme.backgroundElevated]}
-        style={styles.goalCard}>
+      style={({ pressed }) => [cardSize, pressedOpacity(pressed)]}>
+      <GlassPlate style={[styles.boardCard, cardSize]}>
+        <LinearGradient
+          colors={[tint, glassEnd]}
+          style={styles.goalCard}>
         <View style={styles.goalEyebrow}>
           <Symbol name={category.icon} size={14} color={accent} />
           <AppText
@@ -276,6 +296,7 @@ export function BoardCard({
           <Symbol name="favorite" size={16} color={theme.textTertiary} />
         ) : null}
       </LinearGradient>
+      </GlassPlate>
     </Pressable>
   );
 }

@@ -1,6 +1,6 @@
 import { Pressable, View } from 'react-native';
 
-import { AppText, Button, Card, Input, SectionHeader } from '@/components/primitives';
+import { AppText, Button, Card, GlassPlate, Input, SectionHeader } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/types';
@@ -109,17 +109,20 @@ export function VehicleOverviewPanel({
         onLayout={settingsTip.onLayout}
         onPress={onOpenSettings}
         accessibilityRole="button"
-        accessibilityLabel="Open vehicle settings"
-        style={{
-          minHeight: Math.max(44, s(48)),
-          borderRadius: s(14),
-          paddingHorizontal: gap.lg,
-          justifyContent: 'center',
-          backgroundColor: theme.backgroundSunken,
-        }}>
-        <AppText variant="caption" color="secondary">
-          Tip: open Settings to share this vehicle with household collaborators.
-        </AppText>
+        accessibilityLabel="Open vehicle settings">
+        <GlassPlate
+          airy
+          style={{
+            minHeight: Math.max(44, s(48)),
+            borderRadius: s(14),
+            paddingHorizontal: gap.lg,
+            justifyContent: 'center',
+            zIndex: 1,
+          }}>
+          <AppText variant="caption" color="secondary">
+            Tip: open Settings to share this vehicle with household collaborators.
+          </AppText>
+        </GlassPlate>
       </Pressable>
     </View>
   );

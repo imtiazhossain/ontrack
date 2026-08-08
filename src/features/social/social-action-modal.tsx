@@ -1,7 +1,7 @@
 import { Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
+import { AppText, Button, GlassPlate, IconButton, Symbol, useScreenAtmosphereChrome } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { socialChrome, socialShadow } from '@/features/social/social-chrome';
 import type { SocialPlaceholder } from '@/features/social/social-types';
@@ -22,6 +22,7 @@ export function SocialActionModal({
   const chrome = socialChrome(theme);
   const insets = useSafeAreaInsets();
   const { spacing, s } = useResponsive();
+  useScreenAtmosphereChrome(Boolean(content));
 
   return (
     <Modal
@@ -33,7 +34,6 @@ export function SocialActionModal({
         style={[
           styles.root,
           {
-            backgroundColor: chrome.background,
             paddingTop: insets.top + spacing.sm,
             paddingBottom: insets.bottom + spacing.lg,
             paddingHorizontal: spacing.lg,
@@ -77,12 +77,10 @@ export function SocialActionModal({
                 {content.message}
               </AppText>
             </View>
-            <View
+            <GlassPlate
               style={[
                 styles.statusCard,
                 {
-                  backgroundColor: chrome.surface,
-                  borderColor: chrome.border,
                   padding: spacing.lg,
                   ...socialShadow(chrome.shadow, 'raised'),
                 },
@@ -97,7 +95,7 @@ export function SocialActionModal({
                     'When your circle starts sharing, the latest update will be ready here.'}
                 </AppText>
               </View>
-            </View>
+            </GlassPlate>
           </View>
         ) : null}
 
@@ -145,7 +143,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     minHeight: 76,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
     flexDirection: 'row',

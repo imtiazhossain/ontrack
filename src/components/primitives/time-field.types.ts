@@ -11,6 +11,8 @@ export interface TimeFieldProps {
   iconBackground?: string;
   iconColor?: string;
   fieldBackground?: string;
+  fieldBorderColor?: string;
+  fieldBorderRadius?: number;
   stackedLabelColor?: string;
   placeholderColor?: string;
   showChevron?: boolean;

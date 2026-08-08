@@ -3,18 +3,17 @@ import { Pressable, View } from 'react-native';
 
 import {
   AppText,
-  Button,
   DateFieldCalendar,
   ErrorMessage,
 } from '@/components/primitives';
-import { FieldLeadingIcon, fieldLeadingIconRowStyle } from '@/components/primitives/field-leading-icon';
 import { stackedFieldMinHeight } from '@/components/primitives/field-leading-icon-style';
-import { radii } from '@/design-system';
+import { StackedIconField } from '@/components/primitives/stacked-icon-field';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import {
   itinerarySheetChrome,
   itinerarySheetFieldProps,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -174,34 +173,17 @@ export function TravelDateRangeEditor({
         accessibilityHint="Opens a calendar to choose the trip date range"
         accessibilityValue={{ text: displayValue || 'Select dates' }}
         onPress={openModal}
-        style={({ pressed }) => [
-          fieldLeadingIconRowStyle({
-            minHeight: stackedMinHeight,
-            borderRadius: radii.lg,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            gap: spacing.sm,
-            backgroundColor: field.fieldBackground,
-            opacity: pressed ? 0.72 : 1,
-          }),
-        ]}>
-        <FieldLeadingIcon
-          name="calendar"
-          backgroundColor={field.iconBackground}
-          color={field.iconColor}
-        />
-        <View style={{ flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' }}>
-          <AppText
-            variant="caption"
-            fit
-            numberOfLines={1}
-            style={{
-              flexShrink: 1,
-              minWidth: 0,
-              color: field.stackedLabelColor,
-            }}>
-            Dates
-          </AppText>
+        style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}>
+        <StackedIconField
+          icon="calendar"
+          stackedLabel="Dates"
+          stackedLabelColor={field.stackedLabelColor}
+          iconBackground={field.iconBackground}
+          iconColor={field.iconColor}
+          fieldBackground={field.fieldBackground}
+          fieldBorderColor={field.fieldBorderColor}
+          borderRadius={field.fieldBorderRadius}
+          minHeight={stackedMinHeight}>
           <AppText
             variant="body"
             fit
@@ -213,7 +195,7 @@ export function TravelDateRangeEditor({
             }}>
             {hasRange ? displayValue : 'Select dates'}
           </AppText>
-        </View>
+        </StackedIconField>
       </Pressable>
 
       <TravelSheetModal
@@ -226,15 +208,12 @@ export function TravelDateRangeEditor({
         closeTestID={closeTestID}
         scrollKey={`${phase}:${cursor.toISOString()}`}
         footer={
-          <Button
-            variant="primary"
-            shape="rounded"
+          <TravelSheetPrimaryAction
+            label="Save Dates"
             icon="check"
             onPress={save}
-            accessibilityLabel="Save trip dates"
-            testID={saveTestID}>
-            Save Dates
-          </Button>
+            testID={saveTestID}
+          />
         }>
         <View style={{ gap: spacing.md }}>
           <AppText variant="callout" align="center" fit>
@@ -254,6 +233,7 @@ export function TravelDateRangeEditor({
             rangeEnd={draftHasEnd ? fromDateKey(draftEnd) : undefined}
             onCursorChange={setCursor}
             onValueChange={chooseDate}
+            controlAppearance="glass"
             testID={calendarTestID}
           />
           {error ? <ErrorMessage message={error} selectable /> : null}

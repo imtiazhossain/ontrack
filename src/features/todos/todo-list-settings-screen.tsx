@@ -8,12 +8,13 @@ import {
   Button,
   Card,
   ErrorMessage,
+  GlassPlate,
   Input,
   Screen,
   SectionHeader,
   Symbol,
 } from '@/components/primitives';
-import { radii } from '@/design-system';
+import { glassMaterials, radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { PeoplePicker } from '@/features/social/people-picker';
@@ -45,6 +46,10 @@ import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 export function TodoListSettingsScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
   const { spacing, s } = useResponsive();
   const { user } = useAuthSession();
   const list = useTodos((state) => state.lists.find((item) => item.id === listId));
@@ -268,51 +273,68 @@ export function TodoListSettingsScreen({ listId }: { listId: string }) {
               accessibilityState={{ checked: list.kind === 'checklist' }}
               disabled={list.kind === 'grocery' && recipeCount > 0}
               onPress={() => setListKind(list.id, 'checklist')}
-              style={[
-                styles.kindChoice,
+              style={({ pressed }) => [
+                styles.kindChoiceWrap,
                 {
-                  minHeight: Math.max(44, s(48)),
-                  gap: spacing.sm,
-                  borderColor:
-                    list.kind === 'checklist'
-                      ? theme.accentPrimary
-                      : theme.separator,
-                  backgroundColor:
-                    list.kind === 'checklist'
-                      ? theme.accentFaint
-                      : theme.backgroundSunken,
                   opacity:
-                    list.kind === 'grocery' && recipeCount > 0 ? 0.45 : 1,
+                    list.kind === 'grocery' && recipeCount > 0
+                      ? 0.45
+                      : pressed
+                        ? 0.72
+                        : 1,
                 },
               ]}>
-              <Symbol name="tasks" size={18} color={theme.textSecondary} />
-              <AppText variant="caption" fit>
-                Checklist
-              </AppText>
+              <GlassPlate
+                airy={list.kind !== 'checklist'}
+                style={[
+                  styles.kindChoice,
+                  {
+                    minHeight: Math.max(44, s(48)),
+                    gap: spacing.sm,
+                    borderColor:
+                      list.kind === 'checklist'
+                        ? theme.accentPrimary
+                        : plateBorder,
+                    borderWidth:
+                      list.kind === 'checklist'
+                        ? 1
+                        : StyleSheet.hairlineWidth,
+                  },
+                ]}>
+                <Symbol name="tasks" size={18} color={theme.textSecondary} />
+                <AppText variant="caption" fit>
+                  Checklist
+                </AppText>
+              </GlassPlate>
             </Pressable>
             <Pressable
               accessibilityRole="radio"
               accessibilityState={{ checked: list.kind === 'grocery' }}
               onPress={() => setListKind(list.id, 'grocery')}
-              style={[
-                styles.kindChoice,
-                {
-                  minHeight: Math.max(44, s(48)),
-                  gap: spacing.sm,
-                  borderColor:
-                    list.kind === 'grocery'
-                      ? theme.accentPrimary
-                      : theme.separator,
-                  backgroundColor:
-                    list.kind === 'grocery'
-                      ? theme.accentFaint
-                      : theme.backgroundSunken,
-                },
+              style={({ pressed }) => [
+                styles.kindChoiceWrap,
+                { opacity: pressed ? 0.72 : 1 },
               ]}>
-              <Symbol name="groceries" size={18} color={theme.textSecondary} />
-              <AppText variant="caption" fit>
-                Grocery
-              </AppText>
+              <GlassPlate
+                airy={list.kind !== 'grocery'}
+                style={[
+                  styles.kindChoice,
+                  {
+                    minHeight: Math.max(44, s(48)),
+                    gap: spacing.sm,
+                    borderColor:
+                      list.kind === 'grocery'
+                        ? theme.accentPrimary
+                        : plateBorder,
+                    borderWidth:
+                      list.kind === 'grocery' ? 1 : StyleSheet.hairlineWidth,
+                  },
+                ]}>
+                <Symbol name="groceries" size={18} color={theme.textSecondary} />
+                <AppText variant="caption" fit>
+                  Grocery
+                </AppText>
+              </GlassPlate>
             </Pressable>
           </View>
           {list.kind === 'grocery' && recipeCount > 0 ? (
@@ -629,13 +651,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  kindChoiceWrap: {
+    flex: 1,
+    borderRadius: radii.md,
+  },
   kindChoice: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
+    zIndex: 1,
   },
   memberRow: {
     flexDirection: 'row',

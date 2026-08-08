@@ -107,6 +107,8 @@ export const AgentUiIds = {
     prevDay: 'ontrack.today.prevDay',
     nextDay: 'ontrack.today.nextDay',
     weather: 'ontrack.today.weather',
+    /** Layout anchor — only mounted when day completion > 0. */
+    progress: 'ontrack.today.progress',
     addActivity: 'ontrack.today.addActivity',
     emptyAddActivity: 'ontrack.today.emptyAddActivity',
     activity: (activityId: string) => `ontrack.today.activity.${activityId}`,
@@ -499,12 +501,8 @@ export const AgentUiIds = {
     newTrip: {
       open: 'ontrack.travel.newTrip.open',
       cancel: 'ontrack.travel.newTrip.cancel',
-      importItinerary: 'ontrack.travel.newTrip.importItinerary',
-      importScreenshots: 'ontrack.travel.newTrip.importScreenshots',
-      importFile: 'ontrack.travel.newTrip.importFile',
       title: 'ontrack.travel.newTrip.title',
       destination: 'ontrack.travel.newTrip.destination',
-      origin: 'ontrack.travel.newTrip.origin',
       dates: 'ontrack.travel.newTrip.dates',
       datesClose: 'ontrack.travel.newTrip.datesClose',
       datesSave: 'ontrack.travel.newTrip.datesSave',
@@ -512,6 +510,11 @@ export const AgentUiIds = {
       notes: 'ontrack.travel.newTrip.notes',
       create: 'ontrack.travel.newTrip.create',
     },
+    /** Backdrop that closes AddressAutofindField suggestions (tap outside). */
+    addressSuggestionsDismiss: (fieldTestID: string) =>
+      `${fieldTestID}.suggestionsDismiss`,
+    addressSuggestion: (fieldTestID: string, index: number) =>
+      `${fieldTestID}.suggestion.${index}`,
     list: {
       cover: (tripId: string) => `ontrack.travel.list.cover.${tripId}`,
       collapse: (tripId: string) => `ontrack.travel.list.collapse.${tripId}`,
@@ -839,6 +842,7 @@ export const AgentUiIds = {
 export function tabTestIdForRoute(routeName: string): string | undefined {
   switch (routeName) {
     case 'index':
+    case '(today)':
       return AgentUiIds.tabs.today;
     case 'calendar':
       return AgentUiIds.tabs.calendar;

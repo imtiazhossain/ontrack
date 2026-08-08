@@ -47,15 +47,15 @@ describe('dev-access', () => {
     expect(access).not.toContain('EXPO_PUBLIC_DEV_ACCESS_EMAILS');
     expect(access).toContain('account_flags');
 
-    const profile = readFileSync(join(process.cwd(), 'src/app/(tabs)/profile.tsx'), 'utf8');
+    const profile = readFileSync(join(process.cwd(), 'src/app/(tabs)/profile/index.tsx'), 'utf8');
     expect(profile).toContain('useCanUseDeveloperTools');
     expect(profile).not.toMatch(/\{__DEV__\s*\?/);
 
     for (const route of [
-      'src/app/developer.tsx',
-      'src/app/integrations.tsx',
-      'src/app/design-system.tsx',
-      'src/app/api-usage.tsx',
+      'src/app/(tabs)/profile/developer.tsx',
+      'src/app/(tabs)/profile/integrations.tsx',
+      'src/app/(tabs)/profile/design-system.tsx',
+      'src/app/(tabs)/profile/api-usage.tsx',
     ]) {
       const source = readFileSync(join(process.cwd(), route), 'utf8');
       expect(source).toContain('DevAccessGate');

@@ -1,12 +1,17 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 
-import { AppText, appPrompt, Button, DateField, ErrorMessage, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import { AppText, appPrompt, Button, DateField, ErrorMessage, GlassPlate, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { isCategoryEnabled } from '@/addons/registry';
-import { radii, spacing } from '@/design-system';
+import { glassMaterials, radii, spacing } from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { analyzeMealPhoto, NutritionServiceError, persistMealPhoto } from '@/services/nutrition';
@@ -389,14 +394,18 @@ export default function ActivityFormScreen() {
       </View>
 
       {!isEditing ? (
-        <View style={[styles.assistantCard, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
-          <View style={styles.assistantHeading}>
+        <GlassPlate style={styles.assistantCard}>
+          <View style={[styles.assistantHeading, { zIndex: 1 }]}>
             <View style={[styles.assistantDot, { backgroundColor: theme.accentPrimary }]} />
             <AppText variant="overline" color="accent">onTrack assistant</AppText>
           </View>
-          <AppText variant="title">What are we getting into?</AppText>
-          <AppText variant="body" color="secondary">Pick a vibe and I’ll help with the rest.</AppText>
-          <View style={styles.wrap}>
+          <AppText variant="title" style={{ zIndex: 1 }}>
+            What are we getting into?
+          </AppText>
+          <AppText variant="body" color="secondary" style={{ zIndex: 1 }}>
+            Pick a vibe and I’ll help with the rest.
+          </AppText>
+          <View style={[styles.wrap, { zIndex: 1 }]}>
             {availableCategories.map((item) => {
               const selectCategory = () => {
                 setCategoryId(item.id);
@@ -404,6 +413,7 @@ export default function ActivityFormScreen() {
                 setMovie(undefined);
                 setError(undefined);
               };
+              const selected = item.id === categoryId;
               return (
                 <AgentTestId
                   key={item.id}
@@ -412,17 +422,30 @@ export default function ActivityFormScreen() {
                   onPress={selectCategory}>
                   <Pressable
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: item.id === categoryId }}
-                    onPress={selectCategory}
-                    style={[styles.chip, { borderColor: item.id === categoryId ? theme.accentPrimary : theme.separator, backgroundColor: item.id === categoryId ? theme.accentFaint : theme.backgroundSunken }]}>
-                    <CategoryBadge category={item} />
+                    accessibilityState={{ checked: selected }}
+                    onPress={selectCategory}>
+                    <GlassPlate
+                      airy={!selected}
+                      style={[
+                        styles.chip,
+                        {
+                          borderColor: selected
+                            ? theme.accentPrimary
+                            : theme.name === 'dark'
+                              ? glassMaterials.border.dark
+                              : glassMaterials.border.light,
+                          borderWidth: selected ? 1 : StyleSheet.hairlineWidth,
+                        },
+                      ]}>
+                      <CategoryBadge category={item} />
+                    </GlassPlate>
                   </Pressable>
                 </AgentTestId>
               );
             })}
           </View>
           {category ? (
-            <View style={[styles.followUp, { borderTopColor: theme.separator }]}>
+            <View style={[styles.followUp, { borderTopColor: theme.separator, zIndex: 1 }]}>
               <AppText variant="bodyMedium">
                 {category.detailKind === 'movie'
                   ? 'Ooh, screen time. What are we watching? 🍿'
@@ -452,7 +475,7 @@ export default function ActivityFormScreen() {
               )}
             </View>
           ) : null}
-        </View>
+        </GlassPlate>
       ) : null}
 
       {isEditing && category ? (
@@ -667,14 +690,19 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  chip: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    zIndex: 1,
+  },
   twoColumns: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   photo: { width: '100%', height: 220, borderRadius: radii.lg },
   analysisReady: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
   loader: { padding: spacing.md },
   actions: { gap: spacing.sm, paddingTop: spacing.md },
-  assistantCard: { gap: spacing.md, padding: spacing.lg, borderRadius: radii.lg, borderWidth: 1 },
+  assistantCard: { gap: spacing.md, padding: spacing.lg, borderRadius: radii.lg },
   assistantHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   assistantDot: { width: 8, height: 8, borderRadius: radii.pill },
   followUp: { gap: spacing.md, borderTopWidth: 1, paddingTop: spacing.lg, marginTop: spacing.xs },

@@ -74,42 +74,38 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const titleInk = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
   /** Destination stays black/ink on the paper join — not on the scrim. */
   const locationInk = dark ? theme.textSecondary : travelHomeTokens.colors.ink;
-  const brand = dark ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
+  /** Same sage as View Itinerary glass — solid ink for the pin glyph. */
+  const locationPin = travelHomeTokens.colors.itineraryGlassGreen;
   const titleSize = Math.max(24, s(travelHomeTokens.sizes.tripTitle));
+  /**
+   * Serif trip titles need a taller line box than 1.1× — tight heights +
+   * `metaBody` overflow:hidden flatten the rounds on a/o/e/s (and clip the
+   * leading stem when letterSpacing is negative).
+   */
+  const titleLineHeight = Math.ceil(titleSize * 1.22);
   const compact = layoutWidth < 360;
   const radius = travelHomeTokens.radius.tripCard;
   const heroHeight = travelHomeImageHeight(cardWidth);
   const minBodyOverlap: number = travelHomeTokens.spacing.bodyOverlap;
   /**
-   * Frost title band — sized to the single-line title (+ travelers).
-   * Floor stays at `bodyOverlap` so avatars keep their photo bite.
-   * Longer names ellipsize — they must not wrap into the open photo.
+   * Frost band — location chip when set, else the trip title (+ travelers).
+   * Floor stays at `bodyOverlap` so avatars keep their photo bite when the
+   * title sits in the scoop. Longer names ellipsize — no wrap into photo.
    */
-  const [titleBandHeight, setTitleBandHeight] = useState<number>(minBodyOverlap);
-  const titlePadTop = travelHomeTokens.spacing.bodyTop;
-  const titlePadBottom = Math.max(6, s(6));
+  const [frostBandHeight, setFrostBandHeight] = useState<number>(minBodyOverlap);
+  const frostPadTop = travelHomeTokens.spacing.bodyTop;
+  const frostPadBottom = Math.max(6, s(6));
   /**
-   * Visual milk under the title into paper. Keep short — paper paints above
-   * this bleed (zIndex) so footer never gets clipped by the scoop.
+   * Visual milk under the frost content into paper. Keep short — paper paints
+   * above this bleed (zIndex) so footer never gets clipped by the scoop.
    */
   const frostFadeBleed = Math.max(22, s(24));
-  const titleToLocation = Math.max(6, travelHomeTokens.spacing.titleToLocation);
-  const locationToFooter = Math.max(
+  const locationToTitle = Math.max(6, travelHomeTokens.spacing.titleToLocation);
+  const titleToFooter = Math.max(
     10,
     travelHomeTokens.spacing.locationToFooter,
   );
   const footerPadV = Math.max(10, travelHomeTokens.spacing.cardBottom);
-  const locationChipPadV = Math.max(
-    8,
-    s(travelHomeTokens.spacing.locationChipPadV),
-  );
-  const locationChipPadH = Math.max(
-    10,
-    s(travelHomeTokens.spacing.locationChipPadH),
-  );
-  const locationChipBorder = dark
-    ? travelHomeTokens.colors.locationChipBorderDark
-    : travelHomeTokens.colors.locationChipBorder;
   const paper = dark ? theme.backgroundSunken : '#FFFFFF';
   /** Remount iOS BlurView when the live hero URI arrives / changes. */
   const [frostBlurKey, setFrostBlurKey] = useState(
@@ -122,8 +118,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     );
   }, [plan.id, plan.coverUri]);
   useEffect(() => {
-    setTitleBandHeight(minBodyOverlap);
-  }, [plan.id, plan.title, minBodyOverlap]);
+    setFrostBandHeight(minBodyOverlap);
+  }, [plan.id, plan.title, plan.destination, minBodyOverlap]);
   const cardShadow = soloAtmosphereShadow
     ? travelHomeSoloTripCardShadow({
         averageColor: atmosphereAverageColor,
@@ -189,19 +185,28 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       </Text>
     </>
   );
+  const avatarSize = Math.max(34, s(travelHomeTokens.sizes.avatar));
+  /** Title sits in frost only when there is no destination above it. */
+  const titleInFrost = !destination;
+  const syncFrostBandHeight = (contentHeight: number) => {
+    const rowH = Math.max(
+      contentHeight,
+      // Avatars only bite the photo when the title (+ stack) is in the scoop.
+      titleInFrost && !compact && travelers.length > 0 ? avatarSize : 0,
+    );
+    const next = Math.max(
+      minBodyOverlap,
+      Math.ceil(rowH + frostPadTop + frostPadBottom),
+    );
+    setFrostBandHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev));
+  };
   const locationRow = destination ? (
     <View
-      style={[
-        styles.locationChip,
-        {
-          gap: 8,
-          paddingVertical: locationChipPadV,
-          paddingHorizontal: locationChipPadH,
-          borderRadius: travelHomeTokens.radius.locationChip,
-          borderColor: locationChipBorder,
-        },
-      ]}>
-      <TravelHomeLocationPin size={Math.max(14, s(15))} color={brand} />
+      onLayout={(event) => {
+        syncFrostBandHeight(event.nativeEvent.layout.height);
+      }}
+      style={[styles.locationRow, { gap: Math.max(6, s(6)) }]}>
+      <TravelHomeLocationPin size={Math.max(14, s(15))} color={locationPin} />
       <AppText
         variant="callout"
         numberOfLines={1}
@@ -217,37 +222,34 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     </View>
   ) : null;
 
-  const avatarSize = Math.max(34, s(travelHomeTokens.sizes.avatar));
-  const syncTitleBandHeight = (titleContentHeight: number) => {
-    const rowH = Math.max(
-      titleContentHeight,
-      compact || travelers.length === 0 ? 0 : avatarSize,
-    );
-    const next = Math.max(
-      minBodyOverlap,
-      Math.ceil(rowH + titlePadTop + titlePadBottom),
-    );
-    setTitleBandHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev));
-  };
   const titleBlock = (
     <View style={styles.titleCluster}>
       <View style={[styles.titleRow, { gap: rs.sm }]}>
-        <View style={styles.titleCopy}>
+        <View
+          style={[
+            styles.titleCopy,
+            // Body title sits under overflow:hidden paper — pad ink room.
+            !titleInFrost ? { paddingBottom: Math.max(2, s(2)) } : null,
+          ]}>
           <Text
             allowFontScaling
             maxFontSizeMultiplier={1.15}
             numberOfLines={1}
             ellipsizeMode="tail"
             onLayout={(event) => {
-              syncTitleBandHeight(event.nativeEvent.layout.height);
+              if (titleInFrost) {
+                syncFrostBandHeight(event.nativeEvent.layout.height);
+              }
             }}
             style={{
               color: titleInk,
               fontFamily: travelHomeFontFamily,
               fontSize: titleSize,
-              lineHeight: titleSize * 1.1,
+              lineHeight: titleLineHeight,
               fontWeight: '400',
               letterSpacing: -0.4,
+              // Negative tracking can clip the first stem under overflow:hidden.
+              paddingLeft: 1,
             }}>
             {plan.title}
           </Text>
@@ -319,12 +321,12 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           style={[
             styles.frostBand,
             {
-              height: titleBandHeight + frostFadeBleed,
-              marginTop: -titleBandHeight,
+              height: frostBandHeight + frostFadeBleed,
+              marginTop: -frostBandHeight,
             },
           ]}>
           <TravelHomeTripFrostScoop
-            height={titleBandHeight}
+            height={frostBandHeight}
             fadeBleed={frostFadeBleed}
             paperColor={paper}
             blurKey={frostBlurKey}
@@ -351,31 +353,33 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   styles.frostTitle,
                   {
                     paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                    paddingTop: titlePadTop,
-                    paddingBottom: titlePadBottom,
+                    paddingTop: frostPadTop,
+                    paddingBottom: frostPadBottom,
                     opacity: pressed ? 0.92 : 1,
                   },
                 ]}>
-                {titleBlock}
+                {locationRow ?? titleBlock}
               </Pressable>
             </AgentTestId>
           </TravelHomeTripFrostScoop>
         </View>
 
-        {/* Solid paper body — destination + footer on paper (black ink). */}
-        <View
+        {/* Frosted glass body — title (when location is above) + footer. */}
+        <TravelHomeGlass
+          intensity={48}
           style={[
             styles.metaBody,
             {
-              backgroundColor: paper,
               borderBottomLeftRadius: radius,
               borderBottomRightRadius: radius,
+              // Frost scoop owns the photo→body join — no top glass rim.
+              borderTopWidth: 0,
               marginTop: -frostFadeBleed,
-              // Above frost bleed so destination/dates never sit on the scrim.
-              paddingTop: Math.max(4, titleToLocation),
+              // Above frost bleed so title/dates never sit on the scrim.
+              paddingTop: Math.max(4, locationToTitle),
             },
           ]}>
-          {locationRow ? (
+          {destination ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
@@ -388,11 +392,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingBottom: locationToFooter,
+                  paddingBottom: titleToFooter,
                   opacity: pressed ? 0.92 : 1,
                 },
               ]}>
-              {locationRow}
+              {titleBlock}
             </Pressable>
           ) : null}
           {compact ? (
@@ -404,7 +408,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingBottom: locationToFooter,
+                  paddingBottom: titleToFooter,
                   opacity: pressed ? 0.92 : 1,
                 },
               ]}>
@@ -422,7 +426,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               styles.footer,
               {
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                paddingTop: locationRow || compact ? 0 : Math.max(8, footerPadV - 2),
+                paddingTop: destination || compact ? 0 : Math.max(8, footerPadV - 2),
                 paddingBottom: footerPadV,
                 // Invisible 50/50 split — gap is the only seam (no hairline).
                 // Center (not stretch): date block is taller than the CTA once
@@ -474,7 +478,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               </TravelHomeGlass>
             </Pressable>
           </View>
-        </View>
+        </TravelHomeGlass>
       </View>
     </Animated.View>
   );
@@ -528,13 +532,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
-  locationChip: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     minWidth: 0,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderCurve: 'continuous',
   },
   footer: {
     width: '100%',

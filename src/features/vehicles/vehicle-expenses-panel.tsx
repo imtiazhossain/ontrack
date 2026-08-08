@@ -8,6 +8,7 @@ import {
   DateField,
   EmptyState,
   ErrorMessage,
+  GlassPlate,
   IconButton,
   Input,
   SectionHeader,
@@ -166,33 +167,34 @@ export function VehicleExpensesPanel({
             </AppText>
           </View>
         </View>
-        <View
-          style={[
-            styles.summaryMetrics,
-            {
-              gap: gap.md,
-              padding: gap.md,
-              backgroundColor: theme.backgroundSunken,
-            },
-          ]}>
-          <View style={styles.summaryMetric}>
-            <AppText variant="caption" color="tertiary" fit>
-              Expenses
-            </AppText>
-            <AppText variant="callout" fit style={styles.tabularNumber}>
-              {vehicle.expenses.length} recorded
-            </AppText>
+        <GlassPlate clear wash style={styles.summaryMetrics}>
+          <View
+            style={[
+              styles.summaryMetricsInner,
+              {
+                gap: gap.md,
+                padding: gap.md,
+              },
+            ]}>
+            <View style={styles.summaryMetric}>
+              <AppText variant="caption" color="tertiary" fit>
+                Expenses
+              </AppText>
+              <AppText variant="callout" fit style={styles.tabularNumber}>
+                {vehicle.expenses.length} recorded
+              </AppText>
+            </View>
+            <View style={[styles.metricDivider, { backgroundColor: theme.separator }]} />
+            <View style={styles.summaryMetric}>
+              <AppText variant="caption" color="tertiary" fit>
+                Average
+              </AppText>
+              <AppText variant="callout" fit selectable style={styles.tabularNumber}>
+                {formatMoney(average, vehicle.baseCurrency)}
+              </AppText>
+            </View>
           </View>
-          <View style={[styles.metricDivider, { backgroundColor: theme.separator }]} />
-          <View style={styles.summaryMetric}>
-            <AppText variant="caption" color="tertiary" fit>
-              Average
-            </AppText>
-            <AppText variant="callout" fit selectable style={styles.tabularNumber}>
-              {formatMoney(average, vehicle.baseCurrency)}
-            </AppText>
-          </View>
-        </View>
+        </GlassPlate>
       </Card>
 
       <View style={{ gap: gap.md }}>
@@ -250,7 +252,6 @@ export function VehicleExpensesPanel({
                 <IconButton
                   icon="delete"
                   color={theme.danger}
-                  background={theme.backgroundSunken}
                   accessibilityLabel={`Delete ${expense.title}`}
                   testID={AgentUiIds.vehicles.expenses.delete(expense.id)}
                   onPress={() => removeExpense(expense)}
@@ -358,9 +359,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   summaryMetrics: {
-    flexDirection: 'row',
     borderRadius: radii.md,
     borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  summaryMetricsInner: {
+    flexDirection: 'row',
+    zIndex: 1,
   },
   summaryMetric: {
     flex: 1,

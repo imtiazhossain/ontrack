@@ -3,12 +3,12 @@ import { View } from 'react-native';
 
 import {
   AppText,
-  Button,
   DateFieldCalendar,
   ErrorMessage,
   SegmentedControl,
 } from '@/components/primitives';
 import { validateTravelDateRange } from '@/features/travel/date-range';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import { TravelSheetModal } from '@/features/travel/travel-sheet';
 import type { TravelItineraryItem } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -121,16 +121,13 @@ export function TravelTripDatesSheet({
       closeTestID={AgentUiIds.travel.dates.close}
       scrollKey={`${activeEndpoint}:${cursor.toISOString()}`}
       footer={
-        <Button
-          variant="primary"
-          shape="rounded"
+        <TravelSheetPrimaryAction
+          label="Save Dates"
           icon="check"
           onPress={save}
           disabled={!hasDateChanges}
-          accessibilityLabel="Save trip dates"
-          testID={AgentUiIds.travel.dates.save}>
-          Save Dates
-        </Button>
+          testID={AgentUiIds.travel.dates.save}
+        />
       }>
       <View style={{ gap: spacing.md }}>
         <SegmentedControl
@@ -152,6 +149,7 @@ export function TravelTripDatesSheet({
           minimumDate={activeEndpoint === 'end' ? fromDateKey(draftStart) : undefined}
           onCursorChange={setCursor}
           onValueChange={chooseDate}
+          controlAppearance="glass"
           testID={AgentUiIds.travel.dates.calendar}
         />
         {error ? <ErrorMessage message={error} selectable /> : null}

@@ -50,10 +50,10 @@ describe('collapsible motion contract', () => {
   it('keeps stack page transitions on a shared settle duration', () => {
     for (const relative of [
       'src/app/_layout.tsx',
-      'src/app/travel/_layout.tsx',
-      'src/app/plants/_layout.tsx',
-      'src/app/vehicles/_layout.tsx',
-      'src/app/health/_layout.tsx',
+      'src/app/(tabs)/travel/_layout.tsx',
+      'src/app/(tabs)/plants/_layout.tsx',
+      'src/app/(tabs)/vehicles/_layout.tsx',
+      'src/app/(tabs)/health/_layout.tsx',
       'src/app/(tabs)/to-do/_layout.tsx',
       'src/app/(tabs)/vision-board/_layout.tsx',
     ]) {

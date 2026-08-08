@@ -43,7 +43,8 @@ export function TravelRemoveConfirmModal({
       onClose={onCancel}
       closeAccessibilityLabel="Cancel destructive action"
       closeTestID={AgentUiIds.travel.removeConfirm.close}
-      contentContainerStyle={{ paddingTop: spacing.sm }}>
+      contentContainerStyle={{ paddingTop: spacing.sm }}
+      surface="glass">
       <Button
         variant="danger"
         icon="delete"

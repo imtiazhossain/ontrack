@@ -7,6 +7,8 @@
  */
 import { Platform } from 'react-native';
 
+import { glassMaterials } from '@/design-system/glass';
+
 export const TRAVEL_HOME_REFERENCE_WIDTH = 853;
 
 /** Travel Home display face — iOS Times New Roman; Android platform serif. */
@@ -51,18 +53,21 @@ export const travelHomeTokens = {
     circleFabShadow: '0 8px 20px rgba(0,0,0,0.16)',
     circleFabBorder: 'rgba(0,0,0,0.08)',
     /** Soft lift for glass View Itinerary CTA (light paper). */
-    itineraryButtonShadow: '0 6px 16px rgba(78,122,84,0.22)',
+    itineraryButtonShadow: glassMaterials.accentGreen.shadow,
     /** Soft lift for glass View Itinerary CTA (dark meta). */
-    itineraryButtonShadowDark: '0 6px 18px rgba(78,122,84,0.42)',
-    itineraryButtonBorder: 'rgba(255,255,255,0.65)',
+    itineraryButtonShadowDark: glassMaterials.accentGreen.shadowDark,
+    itineraryButtonBorder: glassMaterials.border.light,
+    /** Solid sage for glyphs that match View Itinerary glass (rgb of fills). */
+    itineraryGlassGreen: glassMaterials.accentGreen.solid,
     /** View Itinerary — frosted sage glass (dark meta). */
-    itineraryGlassGreenFill: 'rgba(78, 122, 84, 0.48)',
-    itineraryGlassGreenFillFallback: 'rgba(78, 122, 84, 0.62)',
-    itineraryGlassGreenBorder: 'rgba(180, 220, 185, 0.38)',
+    itineraryGlassGreenFill: glassMaterials.accentGreen.fill,
+    itineraryGlassGreenFillFallback: glassMaterials.accentGreen.fillFallback,
+    itineraryGlassGreenBorder: glassMaterials.accentGreen.border,
     /** View Itinerary — denser sage on light paper so white ink stays crisp. */
-    itineraryGlassGreenFillLight: 'rgba(78, 122, 84, 0.72)',
-    itineraryGlassGreenFillLightFallback: 'rgba(78, 122, 84, 0.82)',
-    itineraryGlassGreenBorderLight: 'rgba(78, 122, 84, 0.28)',
+    itineraryGlassGreenFillLight: glassMaterials.accentGreen.fillLight,
+    itineraryGlassGreenFillLightFallback:
+      glassMaterials.accentGreen.fillLightFallback,
+    itineraryGlassGreenBorderLight: glassMaterials.accentGreen.borderLight,
     itineraryGlassGreenHighlight: 'rgba(160, 210, 170, 0.22)',
     avatarCountText: '#000000',
     avatarCountSurface: '#EBEBEB',

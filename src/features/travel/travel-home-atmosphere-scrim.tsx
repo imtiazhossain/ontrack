@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet } from 'react-native';
 
 import {
   travelHomeAtmosphereHeaderScrimColors,
@@ -16,6 +17,9 @@ type TravelHomeAtmosphereScrimProps = {
  * Soft contrast veil for Travel home atmosphere copy.
  * Painted on app-shell chrome (window y=0) so it continues behind the
  * status bar / Dynamic Island — in-screen layers are clipped by SafeAreaView.
+ *
+ * Uses LinearGradient (not CSS backgroundImage) so the dark wash reliably
+ * falls from the top — the paper join below is a separate bottom milk.
  */
 export function TravelHomeAtmosphereScrim({
   headerInk,
@@ -26,15 +30,14 @@ export function TravelHomeAtmosphereScrim({
 
   const [top, mid, low, bottom] = colors;
   return (
-    <View
+    <LinearGradient
       pointerEvents="none"
-      style={[
-        styles.fill,
-        {
-          // Hold opacity through title + tagline, then soft-fade into the photo.
-          experimental_backgroundImage: `linear-gradient(to bottom, ${top} 0%, ${mid} 42%, ${low} 72%, ${bottom} 100%)`,
-        },
-      ]}
+      colors={[top, mid, low, bottom]}
+      // Hold through title/tagline/location, then clear before Your Trips.
+      locations={[0, 0.4, 0.72, 1]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={styles.fill}
     />
   );
 }
@@ -44,8 +47,8 @@ export function TravelHomeAtmosphereScrim({
  * covers clock/island through the tagline and soft-fades before Your Trips.
  */
 export function travelHomeAtmosphereScrimHeight(topInset: number): number {
-  // Title + tagline/location (up to 2 lines) + air under the caption.
-  return topInset + 194;
+  // Title + tagline/location + air under the caption toward Your Trips.
+  return topInset + 268;
 }
 
 const styles = StyleSheet.create({
