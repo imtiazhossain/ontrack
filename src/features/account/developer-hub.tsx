@@ -36,6 +36,7 @@ import {
     subscribeAgentUiOverlay,
 } from '@/utils/agent-ui/overlay';
 import { agentUiNavigate, resolveAgentUiDestination } from '@/utils/agent-ui/route';
+import { deferUntilIdle } from '@/utils/defer-until-idle';
 
 import { setDevModeEnabled } from './dev-mode-controller';
 import { DeveloperInsightsPanel } from './developer-insights-panel';
@@ -101,20 +102,23 @@ export function DeveloperHub() {
   };
 
   const toggleDevMode = async (enabled: boolean) => {
+    // Sandbox flip is sync now — await still keeps ordering for exit restore.
     await setDevModeEnabled(enabled);
     if (!enabled) {
       setSeedMessage(undefined);
       return;
     }
-    // Turning Dev Mode on should immediately show travel demos — not require
-    // hunting for a collapsed Tools chip.
-    const result = seedAgentUiFixture('travel-home');
-    if (!result) {
-      setSeedMessage('Dev Mode on — tap a Demo seed below to load fixtures.');
-      return;
-    }
-    // Stay on Developer Tools so Demo seeds appear under the toggle.
-    setSeedMessage(`Seeded ${result.fixture} — open Travel to browse.`);
+    // Yield so the Switch + Demo seeds chrome paint before fixture work.
+    deferUntilIdle(() => {
+      if (!useDevMode.getState().enabled) return;
+      const result = seedAgentUiFixture('travel-home');
+      if (!result) {
+        setSeedMessage('Dev Mode on — tap a Demo seed below to load fixtures.');
+        return;
+      }
+      // Stay on Developer Tools so Demo seeds appear under the toggle.
+      setSeedMessage(`Seeded ${result.fixture} — open Travel to browse.`);
+    });
   };
 
   const resetRateLimits = async () => {

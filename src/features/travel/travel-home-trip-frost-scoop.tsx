@@ -15,7 +15,7 @@ type TravelHomeTripFrostScoopProps = ViewProps & {
   children?: React.ReactNode;
   /**
    * Title band height — usually measured content (≥ `bodyOverlap`) so the
-   * swoop grows with wrapped trip titles.
+   * swoop matches the single-line title + traveler row.
    */
   height: number;
   /**
@@ -39,7 +39,7 @@ type TravelHomeTripFrostScoopProps = ViewProps & {
  * Separate ramps (never black→white in one gradient — muddy shelf):
  * 1. Soft photo soften (iOS blur) under the title band
  * 2. Short full-width paper join into solid paper
- * 3. Wedge title veil — stays high behind black title ink, tapers out right
+ * 3. Wedge title veil — dense milk under left title ink, tapers out right
  *
  * Destination lives on paper below. iOS BlurView softener over the title band
  * only; Android stays gradient-only.
@@ -90,17 +90,18 @@ export function TravelHomeTripFrostScoop({
     ? (hexToRgba(paperColor, 1) ?? paperColor)
     : '#FFFFFF';
   /**
-   * Wedge in viewBox units (x 0–100). Left stays near the top of the scoop;
-   * right drops to just above the short join so avatars keep open photo.
+   * Wedge in viewBox units (x 0–100). Left hugs the top so serif ascenders
+   * sit on milk (not busy photo); right still drops so avatars keep open photo.
    */
-  const leftTop = Math.max(1, Math.round(milkHeight * 0.02));
+  const leftTop = 0;
   const rightTop = Math.max(
     Math.round(milkHeight - joinHeight * 0.55),
     Math.round(milkHeight * 0.52),
   );
   const veilPath = [
     `M 0 ${leftTop}`,
-    `C 28 ${leftTop} 56 ${rightTop * 0.7} 100 ${rightTop}`,
+    // Hold high through the title column (~45%), then ease down for avatars.
+    `C 32 ${leftTop} 48 ${leftTop + (rightTop - leftTop) * 0.22} 100 ${rightTop}`,
     `L 100 ${milkHeight}`,
     `L 0 ${milkHeight}`,
     'Z',
@@ -109,7 +110,7 @@ export function TravelHomeTripFrostScoop({
    * Extra left-side milk under the title — bright glacier/fog washes need a
    * denser plate on the ink side; right stays open for avatars.
    */
-  const sideBoost = dark ? 0.58 : 0.52;
+  const sideBoost = dark ? 0.68 : 0.64;
 
   return (
     <View
@@ -129,7 +130,7 @@ export function TravelHomeTripFrostScoop({
       {Platform.OS === 'ios' ? (
         <BlurView
           key={`ios-frost-${blurKey}`}
-          intensity={allowsBlur ? 12 : 0}
+          intensity={allowsBlur ? 16 : 0}
           tint="light"
           pointerEvents="none"
           style={[
@@ -141,7 +142,7 @@ export function TravelHomeTripFrostScoop({
               right: 0,
               top: 0,
               height,
-              opacity: 0.22,
+              opacity: 0.28,
               zIndex: 0,
             },
           ]}
@@ -192,19 +193,20 @@ export function TravelHomeTripFrostScoop({
         style={styles.titleVeil}>
         <Defs>
           <SvgLinearGradient id="titleMilk" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={milkFill} stopOpacity={0} />
-            <Stop offset="0.22" stopColor={milkFill} stopOpacity={0.58} />
-            <Stop offset="0.55" stopColor={milkFill} stopOpacity={0.92} />
+            {/* Early milk so title glyphs never straddle clear photo → solid paper. */}
+            <Stop offset="0" stopColor={milkFill} stopOpacity={0.42} />
+            <Stop offset="0.18" stopColor={milkFill} stopOpacity={0.78} />
+            <Stop offset="0.45" stopColor={milkFill} stopOpacity={0.96} />
             <Stop offset="1" stopColor={milkFill} stopOpacity={1} />
           </SvgLinearGradient>
           <SvgLinearGradient id="titleSide" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor={milkFill} stopOpacity={sideBoost} />
             <Stop
-              offset="0.38"
+              offset="0.42"
               stopColor={milkFill}
-              stopOpacity={sideBoost * 0.55}
+              stopOpacity={sideBoost * 0.62}
             />
-            <Stop offset="0.7" stopColor={milkFill} stopOpacity={0} />
+            <Stop offset="0.72" stopColor={milkFill} stopOpacity={0} />
           </SvgLinearGradient>
         </Defs>
         <Path d={veilPath} fill="url(#titleMilk)" />

@@ -116,12 +116,15 @@ export const travelHomeTokens = {
     headerBottom: 8,
     /**
      * Minimum frosted title scoop height over the hero (1-line title +
-     * travelers). Trip cards grow the scoop when the title wraps — keep this
-     * floor in sync with `travelHomeImageHeight`.
+     * travelers). Titles ellipsize on one line — keep this floor in sync with
+     * `travelHomeImageHeight`.
      */
     bodyOverlap: 56,
-    /** Title band top inset inside the frost scoop. */
-    bodyTop: 12,
+    /**
+     * Title band top inset inside the frost scoop — keep enough milk above
+     * the baseline so serifs don’t ride the photo→paper seam.
+     */
+    bodyTop: 16,
     /** Location chip vertical padding. */
     locationChipPadV: 10,
     locationChipPadH: 12,

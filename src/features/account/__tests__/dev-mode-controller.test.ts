@@ -6,6 +6,7 @@ import {
     settleDevModeAfterRehydrate,
 } from '@/features/account/dev-mode-controller';
 import {
+    flushCloudSyncPayloads,
     isCloudSyncPushPaused,
     setCloudSyncPushPaused,
 } from '@/services/cloud/sync';
@@ -21,20 +22,45 @@ jest.mock('@/services/cloud/sync', () => {
   return {
     ...actual,
     flushCloudSync: jest.fn(async () => undefined),
+    flushCloudSyncPayloads: jest.fn(async () => undefined),
   };
 });
+
+const mockedFlushPayloads = flushCloudSyncPayloads as jest.MockedFunction<
+  typeof flushCloudSyncPayloads
+>;
 
 describe('dev-mode-controller', () => {
   beforeEach(() => {
     useDevMode.setState({ enabled: false, source: null, liveSnapshot: null });
     setCloudSyncPushPaused(false);
     useTravel.getState().reset();
+    mockedFlushPayloads.mockReset();
+    mockedFlushPayloads.mockImplementation(async () => undefined);
   });
 
   afterEach(() => {
     useDevMode.setState({ enabled: false, source: null, liveSnapshot: null });
     setCloudSyncPushPaused(false);
     useTravel.getState().reset();
+  });
+
+  it('enables the sandbox immediately without awaiting cloud backup', async () => {
+    let resolveFlush: (() => void) | undefined;
+    mockedFlushPayloads.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFlush = resolve;
+        }),
+    );
+
+    const pending = enterDevMode('user');
+    expect(useDevMode.getState().enabled).toBe(true);
+    expect(isCloudSyncPushPaused()).toBe(true);
+    expect(mockedFlushPayloads).toHaveBeenCalledTimes(1);
+
+    resolveFlush?.();
+    await pending;
   });
 
   it('pauses cloud push and restores travel plans after exit', async () => {

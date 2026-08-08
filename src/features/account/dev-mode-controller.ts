@@ -1,6 +1,6 @@
 import type { TravelPlan } from '@/features/travel/types';
 import {
-    flushCloudSync,
+    flushCloudSyncPayloads,
     restoreSyncedDomains,
     setCloudSyncPushPaused,
     snapshotSyncedDomains,
@@ -122,10 +122,10 @@ export function mergeSandboxTravelPlansIntoLive(sandboxPlans: unknown): void {
   useTravel.getState().replacePlans([...byId.values()]);
 }
 
-const ENTER_DEV_MODE_FLUSH_MS = 3_000;
-
 /**
- * Enter Dev Mode: flush real account to cloud, snapshot local domains, pause pushes.
+ * Enter Dev Mode: snapshot local domains, pause pushes, flip the toggle immediately.
+ * Best-effort cloud backup of the snapshot runs in the background (not live state),
+ * so demo seeds cannot race into a flush and the Switch never waits on the network.
  * Demo seeds stay on-device until exit restores the snapshot (then purges reserved ids).
  * Real trips created or edited while Dev Mode is on are kept on exit.
  */
@@ -137,14 +137,10 @@ export async function enterDevMode(source: DevModeSource = 'user'): Promise<void
     return;
   }
 
-  // Best-effort flush — never block sandbox entry if push stalls (hang ≠ reject).
-  await Promise.race([
-    flushCloudSync().catch(() => undefined),
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, ENTER_DEV_MODE_FLUSH_MS);
-    }),
-  ]);
-  activateSandbox(captureLiveSnapshot(), source);
+  const snapshot = captureLiveSnapshot();
+  activateSandbox(snapshot, source);
+  // Backup the pre-sandbox account without blocking the toggle paint.
+  void flushCloudSyncPayloads(snapshot.domains).catch(() => undefined);
 }
 
 /** Leave Dev Mode: restore the pre-sandbox snapshot and resume cloud sync. */

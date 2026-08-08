@@ -140,7 +140,8 @@ describe('travel home kit contract', () => {
     expect(card).toContain('blurKey=');
     expect(card).toContain('frostBlurKey');
     expect(card).toContain('titleBandHeight');
-    expect(card).toContain('numberOfLines={2}');
+    expect(card).toContain('numberOfLines={1}');
+    expect(card).toContain('ellipsizeMode="tail"');
     expect(card).not.toContain('heroFrostSource');
     expect(card).not.toContain('styles.clip');
     expect(card).not.toContain('frost=');
