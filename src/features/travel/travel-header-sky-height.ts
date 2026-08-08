@@ -13,8 +13,18 @@ export const TRAVEL_HEADER_SKY_CONTENT_BAND = 152;
  */
 export const TRAVEL_HEADER_SKY_FADE_TAIL = 40;
 
-/** Pull the dates glass up into the lower sky so the hero reads as one. */
-export const TRAVEL_HEADER_DATES_SKY_OVERLAP = 24;
+/**
+ * Pull the dates glass up into the lower sky so the hero reads as one.
+ * 0 = dates sit just below the title band (notes / tools follow).
+ */
+export const TRAVEL_HEADER_DATES_SKY_OVERLAP = 0;
+
+/**
+ * Hero flex gap between the sky title band and the dates card.
+ * Page wash must start here (not at the band) so the artwork floor
+ * meets the date card instead of leaving a peach strip.
+ */
+export const TRAVEL_HEADER_DATES_TOP_GAP = 12;
 
 /**
  * Page paper under the sky band. Sky chrome eases into theme base by `fadeTail`
@@ -25,11 +35,14 @@ export function travelPlanSkyPageWashStyle(options: {
   washTop: string;
   paper: string;
   fadeTail?: number;
+  /** Extra offset below the content band (dates gap − overlap). */
+  washOffset?: number;
 }): ViewStyle {
   const fadeTail = options.fadeTail ?? TRAVEL_HEADER_SKY_FADE_TAIL;
+  const washOffset = Math.max(0, options.washOffset ?? 0);
   return {
     ...StyleSheet.absoluteFill,
-    top: options.skyContentBand,
+    top: options.skyContentBand + washOffset,
     backgroundColor: options.paper,
     experimental_backgroundImage: `linear-gradient(to bottom, ${options.washTop} 0%, ${options.paper} ${fadeTail}px, ${options.paper} 100%)`,
   };

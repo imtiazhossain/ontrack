@@ -134,7 +134,8 @@ export function TravelHeaderSkyDecor({
             <LinearGradient
               pointerEvents="none"
               colors={['transparent', 'transparent', horizon]}
-              locations={[0.72, 0.88, 1]}
+              // Keep the ground floor solid until the date-card seam.
+              locations={[0.88, 0.96, 1]}
               style={styles.bottomFade}
             />
           </>
@@ -156,6 +157,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '26%',
+    height: '14%',
   },
 });

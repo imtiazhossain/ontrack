@@ -321,6 +321,24 @@ describe('dev-mode-controller', () => {
     expect(isCloudSyncPushPaused()).toBe(true);
   });
 
+  it('settleDevModeAfterRehydrate re-seeds travel-home when fixtures are missing', async () => {
+    await enterDevMode('user');
+    useTravel.getState().replacePlans([]);
+    expect(useTravel.getState().plans).toHaveLength(0);
+
+    await settleDevModeAfterRehydrate();
+    expect(useDevMode.getState().enabled).toBe(true);
+    expect(
+      useTravel.getState().plans.some((plan) => plan.id === 'trip-travel-home-iceland'),
+    ).toBe(true);
+  });
+
+  it('isCloudSyncPushPaused stays true when Dev Mode is on even if the flag was cleared', async () => {
+    await enterDevMode('user');
+    setCloudSyncPushPaused(false);
+    expect(isCloudSyncPushPaused()).toBe(true);
+  });
+
   it('settleDevModeAfterRehydrate exits pre-migration enabled state without source', async () => {
     useDevMode.setState({
       enabled: true,

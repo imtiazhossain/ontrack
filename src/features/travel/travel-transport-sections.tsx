@@ -6,6 +6,7 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
@@ -374,6 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyMessage: {
+    ...travelEditorialTextStyle,
     flexShrink: 1,
     minWidth: 0,
     width: '100%',

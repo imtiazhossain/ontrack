@@ -24,8 +24,9 @@ A device / bridge / boot / wait **timeout is not “try again”** — treat it 
    - `waiting for agent device slot` → pool full (usually wait, not a bug — only fix if slots are stuck leased)
 2. **Health snapshot** (cheap, once): Metro `:8081/status`, daemon `:8191/health`, sticky pins (`AGENT_UI_PLATFORM`, `AGENT_UI_SLOT`, `ONTRACK_*`), `route` width vs pin, iOS system sheet, Android `adb reverse`.
 3. **Recover only enough to continue** (unwedge / reboot that slot / clear sheet / ensure packager) — then **find why it timed out**.
-4. **Ship a lasting fix** so the same class does not recur: tighten host timeouts/recovery, pre-approve schemes, bind the right pool device, fix a flaky wait/flow, clear sticky pins, or document the escape. Re-prove the original assert after the fix.
-5. Do **not** burn the turn on blind verify retries, headed Simulator windows, or `--force-reconnect` loops without a diagnosed cause.
+4. **Host/device quiet ≥ `AGENT_UI_DEVICE_RESPOND_SECS` (default 10)** → assume the sim/emu went down; `agent_ui_ensure_app_up` restarts it once (`agent_ui_restart_device`). Escape: `AGENT_UI_SKIP_DEVICE_RESTART=1`.
+5. **Ship a lasting fix** so the same class does not recur: tighten host timeouts/recovery, pre-approve schemes, bind the right pool device, fix a flaky wait/flow, clear sticky pins, or document the escape. Re-prove the original assert after the fix.
+6. Do **not** burn the turn on blind verify retries, headed Simulator windows, or `--force-reconnect` loops without a diagnosed cause.
 
 ## Agent-ui triage
 

@@ -24,7 +24,7 @@ STATUS_NAME = os.environ.get("STATUS_NAME", "agent-ui-status.json")
 COMMAND_NAME = os.environ.get("COMMAND_NAME", "agent-ui-command.json")
 POLL_SLEEP = float(os.environ.get("POLL_SLEEP", "0.016"))
 # Hard cap for simctl RPCs — wedged CoreSimulator otherwise hangs forever.
-SIMCTL_TIMEOUT_SECS = float(os.environ.get("ONTRACK_SIMCTL_TIMEOUT_SECS", "8"))
+SIMCTL_TIMEOUT_SECS = float(os.environ.get("ONTRACK_SIMCTL_TIMEOUT_SECS", "10"))
 CACHE_REL = Path(".cursor") / "agent-ui-data-dir"
 ANDROID_DUMP_REL = Path(".cursor") / "agent-ui-android-dump.json"
 TRANSPORT = os.environ.get("AGENT_UI_TRANSPORT", "auto")  # auto|daemon|file

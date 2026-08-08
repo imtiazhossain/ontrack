@@ -13,14 +13,20 @@ import {
     type ExpenseFormState,
 } from '@/features/travel/expenses/expense-form';
 import {
-    TravelImportResult,
-} from '@/features/travel/travel-import-result-modal';
+    stampOwnedItineraryDefaults,
+    touchItineraryItemShare, visibleItineraryForViewer
+} from '@/features/travel/itinerary-visibility';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import {
+    TRAVEL_HEADER_DATES_SKY_OVERLAP,
+    TRAVEL_HEADER_DATES_TOP_GAP,
     TRAVEL_HEADER_SKY_CONTENT_BAND,
     TRAVEL_HEADER_SKY_FADE_TAIL,
     travelPlanSkyPageWashStyle,
 } from '@/features/travel/travel-header-sky-height';
+import {
+    TravelImportResult,
+} from '@/features/travel/travel-import-result-modal';
 import { TravelPlanDetailBody } from '@/features/travel/travel-plan-detail-body';
 import {
     useTravelPlanDetailExpenseImport,
@@ -39,11 +45,10 @@ import {
     resolveCollapsedTimelineDates,
     timelineDaysFromItems,
 } from '@/features/travel/travel-timeline-progress';
-import { visibleItineraryForViewer } from '@/features/travel/itinerary-visibility';
 import type {
-  TravelItemKind,
-  TravelItineraryItem,
-  TravelPlan,
+    TravelItemKind,
+    TravelItineraryItem,
+    TravelPlan,
 } from '@/features/travel/types';
 import { useRecoverReservedTravelPlan } from '@/features/travel/use-recover-reserved-travel-plan';
 import { useTravelPlanConfirmationImports } from '@/features/travel/use-travel-plan-confirmation-imports';
@@ -56,12 +61,8 @@ import { useTravelPlanItemMedia } from '@/features/travel/use-travel-plan-item-m
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  stampOwnedItineraryDefaults,
-  touchItineraryItemShare,
-} from '@/features/travel/itinerary-visibility';
-import {
-  publishTravelTripItinerary,
-  shouldSyncTravelItinerary,
+    publishTravelTripItinerary,
+    shouldSyncTravelItinerary,
 } from '@/services/travel/itinerary-collaboration';
 import { usePreferences } from '@/store/preferences';
 import { useSchedule } from '@/store/schedule';
@@ -140,6 +141,8 @@ function TravelPlanDetailEntrance({ plan }: { plan: TravelPlan }) {
   const { s, spacing: rs } = useResponsive();
   const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
   const skyFadeTail = Math.max(TRAVEL_HEADER_SKY_FADE_TAIL, s(40));
+  const datesTopGap = Math.max(rs.sm, s(TRAVEL_HEADER_DATES_TOP_GAP));
+  const datesSkyOverlap = Math.max(0, s(TRAVEL_HEADER_DATES_SKY_OVERLAP));
   const skyDestination =
     plan.destination.trim() || atmosphere.destination || '';
   const washTop = resolveHeaderSkyWashTop({
@@ -167,11 +170,12 @@ function TravelPlanDetailEntrance({ plan }: { plan: TravelPlan }) {
             washTop,
             paper,
             fadeTail: skyFadeTail,
+            washOffset: Math.max(0, datesTopGap - datesSkyOverlap),
           })}
         />
         <Screen
           style={styles.transparentScreen}
-          contentStyle={{ gap: Math.max(rs.md, s(20)), paddingTop: rs.sm }}
+          contentStyle={{ gap: Math.max(rs.md, s(20)), paddingTop: 0 }}
           refresh={false}>
           <TravelPlanHero
             plan={plan}

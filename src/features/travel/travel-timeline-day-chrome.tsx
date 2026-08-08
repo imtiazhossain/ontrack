@@ -2,7 +2,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
+import {
+  travelEditorialTextStyle,
+  travelOverlineStyle,
+} from '@/features/travel/travel-chrome';
 import type { TimelineDayPhase } from '@/features/travel/travel-timeline-progress';
 import { useResponsive } from '@/hooks/use-responsive';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
@@ -195,10 +198,12 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   dayNumber: {
+    ...travelEditorialTextStyle,
     flexShrink: 1,
     minWidth: 0,
   },
   dayMeta: {
+    ...travelEditorialTextStyle,
     flexShrink: 1,
     minWidth: 0,
     textTransform: 'none',

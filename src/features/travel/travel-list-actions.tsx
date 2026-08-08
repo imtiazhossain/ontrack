@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
   itinerarySheetChrome,
@@ -221,6 +222,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   actionLabel: {
+    ...travelEditorialTextStyle,
     flexShrink: 1,
     minWidth: 0,
   },

@@ -7,6 +7,7 @@ import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
 import type { RentalDetailsDraft } from '@/features/travel/rental-details';
 import type { StayDetailsDraft } from '@/features/travel/stay-details';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import {
@@ -221,8 +222,10 @@ export function TravelItineraryTimeline({
           ]}>
           <Symbol name="flight" size="lg" color={TRAVEL_EDITORIAL_ACCENT} />
         </View>
-        <AppText variant="subheading">Your Journey Starts Here</AppText>
-        <AppText variant="body" color="secondary">
+        <AppText variant="subheading" style={travelEditorialTextStyle}>
+          Your Journey Starts Here
+        </AppText>
+        <AppText variant="body" color="secondary" style={travelEditorialTextStyle}>
           Add flights, stays, activities, or moments with photos and notes —
           they show up here day by day. Tap + above to begin.
         </AppText>

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, IconButton, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelItemNotesButton } from '@/features/travel/travel-item-notes-sheet';
 import type { TravelItineraryItem } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -47,6 +48,7 @@ export function TimelineItemTitle({
         fit
         align={align}
         style={[
+          styles.editorial,
           compact && !emphasize ? styles.compactTitle : undefined,
           align === 'center' ? styles.fullWidthCopy : undefined,
         ]}>
@@ -67,6 +69,7 @@ export function TimelineItemTitle({
         fit
         align={align}
         style={[
+          styles.editorial,
           compact ? styles.compactTitle : undefined,
           align === 'center' ? styles.fullWidthCopy : undefined,
         ]}>
@@ -77,7 +80,10 @@ export function TimelineItemTitle({
         color={compact ? 'secondary' : 'primary'}
         fit
         align={align}
-        style={align === 'center' ? styles.fullWidthCopy : undefined}>
+        style={[
+          styles.editorial,
+          align === 'center' ? styles.fullWidthCopy : undefined,
+        ]}>
         {tail}
       </AppText>
     </View>
@@ -304,6 +310,7 @@ const styles = StyleSheet.create({
   titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1, width: '100%' },
   centeredStack: { alignItems: 'center', alignSelf: 'stretch' },
   fullWidthCopy: { width: '100%', alignSelf: 'stretch' },
+  editorial: { ...travelEditorialTextStyle },
   toolbarWrap: { width: '100%', alignItems: 'center' },
   toolbarWrapLeft: { alignItems: 'flex-start' },
   toolbar: {

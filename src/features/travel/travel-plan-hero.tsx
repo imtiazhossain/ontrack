@@ -4,34 +4,36 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AppText,
-  Symbol,
-  useSafeAreaChrome,
-  useSafeAreaChromeOverlay,
+    AppText,
+    Symbol,
+    useSafeAreaChrome,
+    useSafeAreaChromeOverlay,
 } from '@/components/primitives';
-import { fontFamilies } from '@/design-system';
 import { tripDayCount } from '@/features/travel/date-range';
-import { travelOverlineStyle } from '@/features/travel/travel-chrome';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
+import {
+  travelEditorialTextStyle,
+  travelOverlineStyle,
+} from '@/features/travel/travel-chrome';
 import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
 import {
   TRAVEL_HEADER_DATES_SKY_OVERLAP,
+  TRAVEL_HEADER_DATES_TOP_GAP,
   TRAVEL_HEADER_SKY_CONTENT_BAND,
   TRAVEL_HEADER_SKY_FADE_TAIL,
 } from '@/features/travel/travel-header-sky-height';
 import {
-  atmosphereHeaderInkColors,
-  resolveAtmosphereHeaderInk,
+    atmosphereHeaderInkColors,
+    resolveAtmosphereHeaderInk,
 } from '@/features/travel/travel-home-atmosphere-ink';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 import { TravelPlanTitle } from '@/features/travel/travel-plan-title';
 import {
-  headerSkyChromeColor,
-  resolveHeaderSkyCondition,
+    headerSkyChromeColor,
+    resolveHeaderSkyCondition,
 } from '@/features/travel/travel-sky-condition';
-import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import { travelPageBg } from '@/features/travel/travel-surface';
 import { TravelTripDatesRow } from '@/features/travel/travel-trip-dates-row';
 import { TravelTripNotesCard } from '@/features/travel/travel-trip-notes-card';
@@ -140,7 +142,8 @@ export function TravelPlanHero({
   // Fade tail extends the overlay behind the dates card so sky dissolves into paper.
   const skyContentBand = Math.max(TRAVEL_HEADER_SKY_CONTENT_BAND, s(152));
   const skyFadeTail = Math.max(TRAVEL_HEADER_SKY_FADE_TAIL, s(40));
-  const datesSkyOverlap = Math.max(TRAVEL_HEADER_DATES_SKY_OVERLAP, s(24));
+  const datesSkyOverlap = Math.max(0, s(TRAVEL_HEADER_DATES_SKY_OVERLAP));
+  const datesTopGap = Math.max(rs.sm, s(TRAVEL_HEADER_DATES_TOP_GAP));
   const skyChromeHeight = insets.top + skyContentBand + skyFadeTail;
   const statusBandRatio =
     skyChromeHeight > 0 ? insets.top / skyChromeHeight : 0;
@@ -204,17 +207,9 @@ export function TravelPlanHero({
   useSafeAreaChromeOverlay(skyOverlay, skyChromeHeight, { priority: 1 });
 
   return (
-    <View style={[styles.hero, { gap: Math.max(rs.sm, s(12)) }]}>
+    <View style={[styles.hero, { gap: datesTopGap }]}>
       <View style={[styles.headerBlock, { minHeight: skyContentBand }]}>
-        <View
-          style={[
-            styles.titleRow,
-            {
-              gap: rs.md,
-              // Breathing room under the status-bar band of the chrome sky.
-              paddingTop: Math.max(rs.lg, s(24)),
-            },
-          ]}>
+        <View style={[styles.titleRow, { gap: rs.md }]}>
           <TravelHeroGlassIconButton
             icon="back"
             size={Math.max(32, s(32))}
@@ -332,15 +327,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     overflow: 'visible',
+    paddingTop: 0,
   },
   headerCopy: {
     flex: 1,
-    justifyContent: 'center',
-    paddingTop: 2,
     zIndex: 1,
   },
   serif: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
   },
   pinRow: {

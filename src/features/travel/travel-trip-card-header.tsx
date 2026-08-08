@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/primitives";
+import { travelEditorialTextStyle } from "@/features/travel/travel-chrome";
 import { itinerarySheetChrome } from "@/features/travel/travel-itinerary-sheet-chrome";
 import { TravelSheetIconControl } from "@/features/travel/travel-list-actions";
 import { TravelPlanTitle } from "@/features/travel/travel-plan-title";
@@ -72,6 +73,7 @@ export function TravelTripCardHeader({
               <AppText
                 variant="caption"
                 style={{
+                  ...travelEditorialTextStyle,
                   color: chrome.subtitle,
                   fontSize: s(14),
                   lineHeight: s(18),
