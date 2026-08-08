@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 import {
   AppText,
   Button,
   ErrorMessage,
-  IconButton,
   Input,
-  useScreenAtmosphereChrome,
+  SheetScaffold,
 } from '@/components/primitives';
 import { getDestinationCurrentWeather } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -36,12 +27,10 @@ export function HomeLocationSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const { spacing, s } = useResponsive();
   const homeLocation = usePreferences((state) => state.homeLocation);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const setHomeLocation = usePreferences((state) => state.setHomeLocation);
-  useScreenAtmosphereChrome(visible);
 
   const [draft, setDraft] = useState(homeLocation);
   const [saving, setSaving] = useState(false);
@@ -126,74 +115,17 @@ export function HomeLocationSheet({
   const busy = saving || detecting;
 
   return (
-    <Modal
+    <SheetScaffold
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View
-          style={[
-            styles.headerPad,
-            {
-              paddingTop: insets.top + spacing.sm,
-              paddingHorizontal: spacing.lg,
-            },
-          ]}>
-          <View style={[styles.header, { marginBottom: spacing.md }]}>
-            <View style={styles.headerCopy}>
-              <AppText variant="heading" fit>
-                Home location
-              </AppText>
-              <AppText variant="callout" color="secondary" numberOfLines={2}>
-                Used for weather on Today. Use your phone location or enter a city.
-              </AppText>
-            </View>
-            <IconButton
-              icon="close"
-              accessibilityLabel="Close"
-              testID={AgentUiIds.today.location.close}
-              onPress={onClose}
-            />
-          </View>
-        </View>
-
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
-            paddingBottom: insets.bottom + spacing.xl,
-            gap: spacing.md,
-          }}>
-          <Button
-            icon="location"
-            onPress={() => void handleUseCurrentLocation()}
-            loading={detecting}
-            disabled={saving}
-            testID={AgentUiIds.today.location.useCurrent}
-            accessibilityLabel="Use current location">
-            Use current location
-          </Button>
-
-          <AppText variant="caption" color="tertiary" fit>
-            Or enter a different city
-          </AppText>
-
-          <Input
-            label="City or place"
-            value={draft}
-            onChangeText={setDraft}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={() => void save()}
-            placeholder="e.g. Austin, TX"
-            testID={AgentUiIds.today.location.place}
-            accessibilityLabel="Home location city or place"
-          />
-          {error ? <ErrorMessage message={error} /> : null}
+      title="Home location"
+      subtitle="Used for weather on Today. Use your phone location or enter a city."
+      onClose={onClose}
+      closeAccessibilityLabel="Close"
+      closeTestID={AgentUiIds.today.location.close}
+      surface="glass"
+      contentContainerStyle={{ gap: spacing.md }}
+      footer={
+        <View style={{ gap: spacing.sm }}>
           <Button
             variant="secondary"
             onPress={() => void save()}
@@ -213,26 +145,38 @@ export function HomeLocationSheet({
               Clear location
             </Button>
           ) : null}
-          <AppText variant="caption" color="tertiary" style={{ marginTop: s(4) }}>
-            Weather uses Open-Meteo with your saved place. You can change it anytime.
-          </AppText>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
+        </View>
+      }>
+      <Button
+        icon="location"
+        onPress={() => void handleUseCurrentLocation()}
+        loading={detecting}
+        disabled={busy}
+        testID={AgentUiIds.today.location.useCurrent}
+        accessibilityLabel="Use current location">
+        {detecting ? 'Finding location…' : 'Use current location'}
+      </Button>
+
+      <AppText variant="caption" color="tertiary" fit>
+        Or enter a different city
+      </AppText>
+
+      <Input
+        label="City or place"
+        value={draft}
+        onChangeText={setDraft}
+        autoCapitalize="words"
+        autoCorrect={false}
+        returnKeyType="done"
+        onSubmitEditing={() => void save()}
+        placeholder="e.g. Austin, TX"
+        testID={AgentUiIds.today.location.place}
+        accessibilityLabel="Home location city or place"
+      />
+      {error ? <ErrorMessage message={error} /> : null}
+      <AppText variant="caption" color="tertiary" style={{ marginTop: s(4) }}>
+        Weather uses Open-Meteo with your saved place. You can change it anytime.
+      </AppText>
+    </SheetScaffold>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: 'transparent' },
-  headerPad: {},
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  headerCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 6,
-  },
-});

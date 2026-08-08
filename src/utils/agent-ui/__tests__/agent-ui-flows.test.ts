@@ -338,6 +338,7 @@ describe('agent-ui flows', () => {
     expect(listAgentUiFlowNames()).toContain('travel-demo');
     expect(listAgentUiFlowNames()).toContain('open-new-trip');
     expect(listAgentUiFlowNames()).toContain('open-new-checklist');
+    expect(listAgentUiFlowNames()).toContain('open-home-location');
     expect(listAgentUiFlowNames()).toContain('checklist-demo');
     expect(listAgentUiFlowNames()).toContain('grocery-demo');
     expect(listAgentUiFlowNames()).toContain('health-demo');

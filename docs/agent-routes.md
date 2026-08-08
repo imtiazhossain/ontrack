@@ -127,6 +127,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo-share-flight` | Seed → expand demo flight → open share sheet |
 | `open-new-trip` | Travel list → New Trip sheet |
 | `open-new-checklist` | Checklists → new-list name field ready |
+| `open-home-location` | Today → Home location weather sheet |
 | `checklist-demo` | Seed demo checklist → open list detail (task ready) |
 | `checklist-demo-list` | Seed → checklists overview with demo list card |
 | `checklist-demo-settings` | Seed → checklist settings (add editors) |

@@ -255,6 +255,18 @@ export const AGENT_UI_FLOWS = {
     { op: 'goto', to: 'today' },
     { op: 'wait', prefix: 'ontrack.today.', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
   ],
+  'open-home-location': [
+    { op: 'dismiss', prefix: 'ontrack.today.location.' },
+    { op: 'goto', to: 'today' },
+    { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'tap', id: 'ontrack.today.weather' },
+    {
+      op: 'wait',
+      id: 'ontrack.today.location.close',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'wait', ms: 250 },
+  ],
   'activity-demo': [
     { op: 'seed', to: 'activity-demo' },
     { op: 'goto', to: 'today' },
