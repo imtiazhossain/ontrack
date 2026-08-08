@@ -76,7 +76,7 @@ export function CollapsibleSection({
   });
 
   return (
-    <View style={[styles.root, { gap: spacing.sm }]}>
+    <View style={[styles.root, expanded ? { gap: spacing.sm } : null]}>
       <View style={[styles.header, { gap: spacing.md }]}>
         <Pressable
           ref={toggleAgent.ref}

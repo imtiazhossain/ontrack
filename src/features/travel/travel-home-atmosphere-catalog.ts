@@ -43,12 +43,13 @@ export const TRAVEL_HOME_CURATED_ATMOSPHERE: readonly TravelHomeCuratedAtmospher
   },
   {
     id: 'iceland-coast',
+    // People-free aurora plate (same family as aurora-night) — never city crowds.
     source: require('../../../assets/images/travel/fixtures/iceland-hero.jpg'),
-    timeOfDay: ['dawn', 'day', 'dusk', 'night'],
-    weatherMood: ['clear', 'cloudy', 'fog', 'rain', 'snow', 'storm', 'mixed'],
+    timeOfDay: ['dusk', 'night'],
+    weatherMood: ['clear', 'cloudy', 'snow', 'mixed', 'storm'],
     label: 'Reykjavík, Iceland',
-    headerTone: 'dark',
-    averageColor: '#B7C4D4',
+    headerTone: 'light',
+    averageColor: '#021734',
   },
   {
     id: 'antigua-volcano',
@@ -57,7 +58,7 @@ export const TRAVEL_HOME_CURATED_ATMOSPHERE: readonly TravelHomeCuratedAtmospher
     weatherMood: ['clear', 'cloudy', 'mixed', 'rain', 'storm'],
     label: 'Antigua, Guatemala',
     headerTone: 'dark',
-    averageColor: '#8FA9C4',
+    averageColor: '#7FA3C4',
   },
   {
     id: 'third-wander',
@@ -65,7 +66,7 @@ export const TRAVEL_HOME_CURATED_ATMOSPHERE: readonly TravelHomeCuratedAtmospher
     timeOfDay: ['dawn', 'day', 'dusk', 'night'],
     weatherMood: ['clear', 'cloudy', 'fog', 'rain', 'snow', 'mixed'],
     headerTone: 'dark',
-    averageColor: '#A8B7C8',
+    averageColor: '#5A7A8C',
   },
 ] as const;
 
@@ -83,4 +84,48 @@ export function filterCuratedAtmosphere(
 
 export function curatedAtmosphereKey(item: TravelHomeCuratedAtmosphere): string {
   return `curated:${item.id}`;
+}
+
+/** Significant place tokens (≥4 chars, non-numeric) for curated label matching. */
+function placeMatchTokens(value: string): string[] {
+  return value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .split(/[,/\s]+/)
+    .filter((part) => part.length >= 4 && !/^\d+$/.test(part));
+}
+
+function placeTokensOverlap(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return left.some((token) =>
+    right.some(
+      (other) =>
+        other === token || other.includes(token) || token.includes(other),
+    ),
+  );
+}
+
+/**
+ * Curated plates whose place label matches a trip/home destination.
+ * Prefer these over remote stock (often tourist-in-frame).
+ */
+export function matchCuratedAtmosphereForPlace(
+  place: string,
+  catalog: readonly TravelHomeCuratedAtmosphere[] = TRAVEL_HOME_CURATED_ATMOSPHERE,
+): TravelHomeCuratedAtmosphere[] {
+  const needle = place.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (needle.length < 2) return [];
+  const tokens = placeMatchTokens(needle);
+  return catalog.filter((item) => {
+    const label = item.label?.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!label) return false;
+    if (needle.includes(label) || label.includes(needle)) return true;
+    return (
+      tokens.some((token) => label.includes(token)) ||
+      placeTokensOverlap(tokens, placeMatchTokens(label))
+    );
+  });
 }

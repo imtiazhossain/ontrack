@@ -13,7 +13,7 @@ Keep this file short on purpose. Load detail only when the task needs it.
 |------|------|
 | App UI / simulator / screenshot bug | `.cursor/skills/agent-ui/SKILL.md` **before** verify |
 | Design / polish / “make it cool” | `~/.cursor/skills/think-cool/SKILL.md` |
-| Cleanup / “optimize the code” | `~/.cursor/skills/optimize-code/SKILL.md` |
+| Cleanup / “optimize” | `~/.cursor/skills/optimize-code/SKILL.md` |
 | Domain feature work | `.cursor/skills/<domain>/` (travel, todos, workouts, …) + `AGENTS.md` feature table |
 | Form field icons / numeric inputs / migrations | matching `.cursor/rules/*` via globs |
 
@@ -32,5 +32,5 @@ Keep this file short on purpose. Load detail only when the task needs it.
 - **Responsive chrome** → `useResponsive()` + `AppText fit` (see `responsive-layout.mdc`).
 - **Think cool** → UI should feel crafted/delightful (presence, one idea, restraint); for design/polish read `~/.cursor/skills/think-cool/SKILL.md`.
 - **Smooth transitions** → continuous / eased motion over abrupt snaps; never break functionality or fluidity (Development `.cursor/rules/smooth-transitions.mdc`).
-- **Optimize the code** → cleanup/rename/reuse/token-slim/temp removal; read `~/.cursor/skills/optimize-code/SKILL.md`.
+- **Optimize** → cleanup/rename/reuse/token-slim/temp removal; read `~/.cursor/skills/optimize-code/SKILL.md`.
 - **`push`** → always `npm run ship:push -- -m "<concise why>"` (`scripts/ship-push.sh`). Same for “push script” / “ship push”. Flow: patch-bump `.xx` + release notes/changelog → commit → branch → PR → merge main → delete branch → TestFlight + device OTA (no APK). Do **not** treat bare `push` as plain git push. Use `--ota-only` to reship current main (no bump); `--skip-ota` to skip EAS Update. Native / `runtimeVersion` binary → `android:release-to-drive` / `build:device:android` separately.

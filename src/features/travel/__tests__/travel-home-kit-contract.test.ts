@@ -80,7 +80,7 @@ describe('travel home kit contract', () => {
   });
 
   it('frosts trip-card scoops with BlurView over the live hero', () => {
-    // Photo→paper: iOS BlurView + dark title scrim + separate paper milk.
+    // Photo→paper: iOS BlurView + paper title veil + separate paper milk.
     // No single black→white ramp (muddy shelf); no Android blur Image plate.
     const scoop = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-trip-frost-scoop.tsx'),
@@ -114,11 +114,13 @@ describe('travel home kit contract', () => {
     expect(scoop).toContain('fadeHeight = totalHeight');
     expect(scoop).toContain('milkHeight');
     expect(scoop).toContain('borderWidth: 0');
-    // Join milk + SVG wedge title veil (high left → taper right); no dark scrim.
+    // Join milk + SVG wedge title veil (high left → taper right) + left boost.
     expect(scoop.match(/<LinearGradient/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(scoop).not.toContain('rgba(0,0,0,');
     expect(scoop).toContain('joinHeight');
     expect(scoop).toContain('titleMilk');
+    expect(scoop).toContain('titleSide');
+    expect(scoop).toContain('sideBoost');
     expect(scoop).toContain('veilPath');
     expect(scoop).toContain('preserveAspectRatio="none"');
     expect(scoop).toContain("from 'react-native-svg'");
@@ -137,6 +139,8 @@ describe('travel home kit contract', () => {
     expect(card).toContain('styles.heroMedia');
     expect(card).toContain('blurKey=');
     expect(card).toContain('frostBlurKey');
+    expect(card).toContain('titleBandHeight');
+    expect(card).toContain('numberOfLines={2}');
     expect(card).not.toContain('heroFrostSource');
     expect(card).not.toContain('styles.clip');
     expect(card).not.toContain('frost=');
@@ -163,17 +167,29 @@ describe('travel home kit contract', () => {
     expect(header).toContain('flexDirection: \'row\'');
     expect(header).toContain('styles.search');
     expect(header).toContain('styles.badge');
+    // Compact title chip until tap; width + crossfade expand/collapse.
+    expect(header).toContain('withTiming');
+    expect(header).toContain('shellStyle');
+    expect(header).toContain('onTextLayout');
+    expect(header).toContain('setSearchOpen(true)');
+    expect(header).toContain('collapseSearch');
+    expect(header).toContain('searchMinimize');
+    expect(header).toContain('{title}');
     // Theme-native plate/scoop; count badge stays inverted for contrast.
     expect(header).toMatch(/<TravelHomeGlass[\s\S]*?\binverted\b/);
     expect(header).not.toContain('plateDark');
     expect(header).not.toContain('scoopLight');
     // Count sits at the far right inside the search scoop.
-    expect(header).toMatch(/\{countBadge\}\s*<\/TravelHomeGlass>/);
+    expect(header).toMatch(/\{renderCountBadge\(\)\}/);
   });
 
   it('grounds a solo trip with an atmosphere-tinted bottom shadow', () => {
     const card = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
+      'utf8',
+    );
+    const yourTrips = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-your-trips.tsx'),
       'utf8',
     );
     const screen = readFileSync(
@@ -182,8 +198,10 @@ describe('travel home kit contract', () => {
     );
     expect(card).toContain('soloAtmosphereShadow');
     expect(card).toContain('travelHomeSoloTripCardShadow');
-    expect(screen).toContain('soloAtmosphereShadow={visibleLauncherPlans.length === 1}');
-    expect(screen).toContain('atmosphereAverageColor={atmosphereImage.averageColor}');
+    expect(yourTrips).toContain('soloAtmosphereShadow={plans.length === 1}');
+    expect(screen).toContain(
+      'atmosphereAverageColor={atmosphereImage.averageColor}',
+    );
   });
 
   it('keeps atmosphere as a top hero band (not full-page)', () => {

@@ -423,7 +423,7 @@ export async function fetchPlaceCoverUris(
   );
   if (!places.length) return [];
 
-  const key = `place-pool-v4|${capped}|${places.join('|').toLowerCase()}`;
+  const key = `place-pool-v5|${capped}|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
   if (cached?.kind === 'hit') {
     return orderHeroUrisForClient(cached.uris).map(toClientDisplayCoverUri);
@@ -485,7 +485,7 @@ export async function fetchDestinationCoverUri(
 async function resolveDestinationHeroPool(
   places: string[],
 ): Promise<string[]> {
-  const key = `hero-pool-v10|${places.join('|').toLowerCase()}`;
+  const key = `hero-pool-v11|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
   if (cached?.kind === 'hit') return cached.uris;
   if (cached?.kind === 'miss') {

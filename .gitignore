@@ -69,8 +69,9 @@ docs/token-usage-audit.md
 __pycache__/
 *.py[cod]
 
-# Simulator verification scratch screenshots
+# Simulator verification / agent scratch
 .tmp/
+.tmp-*/
 .tmp-*.png
 
 # Local one-off SQL scratch (ops / verify queries)

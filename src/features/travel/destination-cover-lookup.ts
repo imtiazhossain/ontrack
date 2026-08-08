@@ -77,8 +77,121 @@ function rememberUnsplashCoverColor(uri: string | undefined, color: unknown) {
  * Metadata / filename signals that the photo is stock of people (tourists,
  * portraits, crowds) rather than the destination itself.
  */
-const DESTINATION_PEOPLE_PHOTO_RE =
-  /\b(people|persons?|tourists?|travellers?|travelers?|selfie|selfies|portrait|portraits|crowd|crowds|couple|couples|family|families|wedding|bride|groom|model|models|hiker|hikers|backpacker|backpackers|swimmer|swimmers|bather|bathers|surfer|surfers|skier|skiers|man|men|woman|women|boy|girl|child|children|kid|kids|human|humans|face|faces|smiling|pose|posing)\b/i;
+const DESTINATION_PEOPLE_PHOTO_TERMS = [
+  'people',
+  'persons?',
+  'tourists?',
+  'travellers?',
+  'travelers?',
+  'selfie',
+  'selfies',
+  'portrait',
+  'portraits',
+  'crowd',
+  'crowds',
+  'couple',
+  'couples',
+  'family',
+  'families',
+  'wedding',
+  'bride',
+  'groom',
+  'model',
+  'models',
+  'hiker',
+  'hikers',
+  'backpacker',
+  'backpackers',
+  'swimmer',
+  'swimmers',
+  'bather',
+  'bathers',
+  'surfer',
+  'surfers',
+  'skier',
+  'skiers',
+  'man',
+  'men',
+  'woman',
+  'women',
+  'boy',
+  'girl',
+  'child',
+  'children',
+  'kid',
+  'kids',
+  'human',
+  'humans',
+  'face',
+  'faces',
+  'smiling',
+  'pose',
+  'posing',
+  'adults?',
+  'someone',
+  'somebody',
+  'figure',
+  'figures',
+  'standing',
+  'watching',
+  'wearing',
+  'beanie',
+  'jacket',
+  'coat',
+  'hoodie',
+  'flashlight',
+  'photographer',
+  'photographing',
+  'from behind',
+  'rear view',
+  'back view',
+] as const;
+
+const DESTINATION_PEOPLE_PHOTO_RE = new RegExp(
+  `\\b(${DESTINATION_PEOPLE_PHOTO_TERMS.join('|')})\\b`,
+  'i',
+);
+
+/** Query operators that bias Unsplash / Openverse / Commons away from people stock. */
+const PHOTO_SEARCH_PEOPLE_EXCLUDES = [
+  'people',
+  'person',
+  'man',
+  'woman',
+  'human',
+  'tourist',
+  'portrait',
+  'selfie',
+  'hiker',
+  'standing',
+  'wearing',
+] as const;
+
+const COMMONS_PEOPLE_INTITLE_EXCLUDES = [
+  'people',
+  'person',
+  'tourist',
+  'portrait',
+  'selfie',
+  'photographing',
+  'photographer',
+  'man',
+  'woman',
+  'hiker',
+] as const;
+
+const OPENVERSE_PEOPLE_EXCLUDED_KEYWORDS = [
+  'people',
+  'person',
+  'man',
+  'woman',
+  'tourist',
+  'portrait',
+  'selfie',
+  'hiker',
+  'crowd',
+  'couple',
+].join(',');
 
 /** True when title/alt/URL text suggests a people-forward stock photo. */
 export function destinationPhotoSuggestsPeople(
@@ -172,7 +285,10 @@ function photoSearchQuery(place: string): string {
   const base = hasDestinationLandmarkIntent(trimmed)
     ? trimmed
     : `${trimmed} iconic`;
-  return `${base} landscape -people -person -tourist -portrait -selfie`;
+  const excludes = PHOTO_SEARCH_PEOPLE_EXCLUDES.map((term) => `-${term}`).join(
+    ' ',
+  );
+  return `${base} landscape ${excludes}`;
 }
 
 function normalizeLimit(limit?: number): number {
@@ -236,7 +352,10 @@ function commonsLandmarkSearch(place: string): string {
     ? trimmed
     : `${trimmed} iconic`;
   // CirrusSearch: prefer landscape files, drop obvious people titles.
-  return `${base} -intitle:people -intitle:tourist -intitle:portrait -intitle:selfie`;
+  const excludes = COMMONS_PEOPLE_INTITLE_EXCLUDES.map(
+    (term) => `-intitle:${term}`,
+  ).join(' ');
+  return `${base} ${excludes}`;
 }
 
 async function fetchCommonsSearchCovers(
@@ -307,6 +426,7 @@ async function fetchOpenverseCovers(
     page_size: String(Math.max(8, limit * 3)),
     category: 'photograph',
     extension: 'jpg,png',
+    excluded_keywords: OPENVERSE_PEOPLE_EXCLUDED_KEYWORDS,
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
     | {
