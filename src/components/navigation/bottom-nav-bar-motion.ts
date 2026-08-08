@@ -48,3 +48,19 @@ export function rebasePosition(
   const circles = Math.round((short - canonical) / routeCount);
   return short - circles * routeCount;
 }
+
+/**
+ * Which route index the rail should keep centered after a recency reshuffle.
+ * Prefer the optimistic pending tap over `selected` — chasing the still-focused
+ * prior tab into its new side slot scrolls (+1/−1) then snaps back to 0.
+ */
+export function centerIndexForRail(
+  routes: readonly { name: string }[],
+  pendingRouteName: string | null | undefined,
+  selectedRouteName: string | null | undefined,
+): number {
+  const name = pendingRouteName ?? selectedRouteName;
+  if (!name) return 0;
+  const index = routes.findIndex((route) => route.name === name);
+  return index < 0 ? 0 : index;
+}

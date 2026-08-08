@@ -15,22 +15,31 @@ import Animated, {
 
 import type { TravelTimeOfDay } from '@/features/travel/travel-atmosphere-model';
 import { resolveTravelHomeAtmosphereImage } from '@/features/travel/travel-home-atmosphere-resolve';
-import type { HeaderSkyLook } from '@/features/travel/travel-sky-condition';
+import type { HeaderSkyCondition } from '@/features/travel/travel-sky-condition';
+import { TravelSkyDay } from '@/features/travel/travel-sky-day';
 import { TravelSkyGround } from '@/features/travel/travel-sky-ground';
 import { resolveTravelSkyGroundKind } from '@/features/travel/travel-sky-ground-kind';
+import { TravelSkyNight } from '@/features/travel/travel-sky-night';
+import { planTravelSkyFx } from '@/features/travel/travel-sky-quality';
 import { TravelSkyStaticWash } from '@/features/travel/travel-sky-static-wash';
 import { useTiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
 
 /** Slow Ken Burns — presence without the live SVG sky budget. */
 const KEN_BURNS_MS = 24_000;
 
+/** Still plate while the destination photo loads — stars/moon/sun + ground. */
+const STATIC_FALLBACK_FX = planTravelSkyFx('minimal');
+
 type TravelSkyStaticDestinationProps = {
   destination?: string;
+  dateKey?: string;
   latitude?: number;
+  longitude?: number;
+  statusBand?: number;
+  condition: HeaderSkyCondition;
   timeOfDay?: TravelTimeOfDay;
   weatherCode?: number;
   chrome: string;
-  look: HeaderSkyLook;
   night: boolean;
   fadeTo: string;
   /** Plate average for header ink once the still resolves. */
@@ -40,16 +49,23 @@ type TravelSkyStaticDestinationProps = {
 /**
  * Static-tier itinerary sky — destination landscape still (sky + ground)
  * with a gentle Ken Burns drift. Fills the status-bar chrome and dissolves
- * into page paper at the horizon. Gradient wash holds the seat until the
- * photo arrives (and remains the last-resort underlay).
+ * into page paper at the horizon.
+ *
+ * Until the photo arrives (and if it never does), paint the same minimal SVG
+ * celestial plate + ground as the `minimal` tier — never a bare wash. Ground
+ * alone sits behind the dates card, so wash-only reads as a flat header on
+ * constrained Android devices.
  */
 export function TravelSkyStaticDestination({
   destination = '',
+  dateKey = '',
   latitude,
+  longitude,
+  statusBand = 0,
+  condition,
   timeOfDay = 'day',
   weatherCode,
   chrome,
-  look,
   night,
   fadeTo,
   onAverageColor,
@@ -123,7 +139,7 @@ export function TravelSkyStaticDestination({
     <View style={styles.fill} pointerEvents="none">
       <TravelSkyStaticWash
         chrome={chrome}
-        look={look}
+        look={condition.look}
         night={night}
         fadeTo={fadeTo}
       />
@@ -146,9 +162,34 @@ export function TravelSkyStaticDestination({
           />
         </Animated.View>
       ) : (
-        // No photo yet / offline miss before curated — keep a ground silhouette
-        // so the plate still reads as sky + place, not a flat wash.
-        <TravelSkyGround kind={groundKind} night={night} motion={idleMotion} />
+        // No photo yet / offline miss — same presence as minimal tier so the
+        // status-bar band never reads as a flat navy rectangle.
+        <>
+          {night ? (
+            <TravelSkyNight
+              condition={condition}
+              destination={destination}
+              dateKey={dateKey}
+              latitude={latitude}
+              longitude={longitude}
+              statusBand={statusBand}
+              motion={idleMotion}
+              fx={STATIC_FALLBACK_FX}
+            />
+          ) : (
+            <TravelSkyDay
+              condition={condition}
+              statusBand={statusBand}
+              motion={idleMotion}
+              fx={STATIC_FALLBACK_FX}
+            />
+          )}
+          <TravelSkyGround
+            kind={groundKind}
+            night={night}
+            motion={idleMotion}
+          />
+        </>
       )}
 
       {/* Soft status-bar continuity — clock sits on sky, not a hard photo edge. */}

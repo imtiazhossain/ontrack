@@ -5,7 +5,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
     Pressable,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
@@ -22,12 +21,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
-  AppText,
   Symbol,
   usePageSurfaceBackgroundColor,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
-import { radii } from '@/design-system';
+import { motion, radii } from '@/design-system';
 import { palette } from '@/design-system/colors';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { usePerformanceTier } from '@/hooks/use-performance-tier';
@@ -45,14 +43,15 @@ import {
   tabTestIdForRoute,
   unregisterAgentUiTarget,
 } from '@/utils/agent-ui';
-import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
+import { deferAfterPageLoad } from '@/utils/defer-after-page-load';
 
 import {
   canonicalPositionForRoute,
+  centerIndexForRail,
   rebasePosition,
   routeIndexForPosition,
-  shortestTargetPosition,
 } from './bottom-nav-bar-motion';
+import { BottomNavTabItem } from './bottom-nav-tab-item';
 import { TAB_META } from './bottom-nav-tab-meta';
 import { orderRoutesByRecency } from './tab-recency';
 
@@ -132,44 +131,64 @@ export function BottomNavBar({
   }, []);
 
   const focusedRouteName = state.routes[state.index]?.name;
-  // Wait until optimistic tab selection settles, then record on the next frame
-  // so highlight handoff (pending → focused) isn’t fighting a ring reshuffle.
+  // Rail chrome after the destination tab has loaded — never during navigate.
+  // Recency reshuffle remounts the infinite track; neighbor preload mounts
+  // other screens. Both must wait for page settle + InteractionManager idle.
   useEffect(() => {
     if (pendingRouteName) return;
     if (!focusedRouteName || !(focusedRouteName in TAB_META)) return;
     const routeName = focusedRouteName;
-    const frame = requestAnimationFrame(() => {
+    return deferAfterPageLoad(() => {
       if (useUI.getState().carouselPendingRouteName) return;
+      if (useUI.getState().carouselSwipeClaimed) return;
       recordTabFocus(routeName);
     });
-    return () => cancelAnimationFrame(frame);
   }, [focusedRouteName, pendingRouteName, recordTabFocus]);
 
+  // Agent-ui tab targets — register only after the page is idle so dump/tap
+  // bookkeeping never contends with the destination tab’s first paint.
+  const agentTabIdsRef = useRef<string[]>([]);
   useEffect(() => {
     if (!isAgentUiEnabled()) return;
-    const registered: string[] = [];
-    for (const route of visibleRoutes) {
-      const testID = tabTestIdForRoute(route.name);
-      const meta = TAB_META[route.name];
-      if (!testID || !meta) continue;
-      registerAgentUiTarget(testID, {
-        label:
-          route.name === 'vision-board' ? 'Vision Board' : meta.label,
-        press: () => router.navigate(meta.href),
-      });
-      registered.push(testID);
-    }
+    if (pendingRouteName) return;
+    const routes = visibleRoutes;
+    let cancelled = false;
+    const cancel = deferAfterPageLoad(() => {
+      if (cancelled) return;
+      if (useUI.getState().carouselPendingRouteName) return;
+      for (const testID of agentTabIdsRef.current) {
+        unregisterAgentUiTarget(testID);
+      }
+      const registered: string[] = [];
+      for (const route of routes) {
+        const testID = tabTestIdForRoute(route.name);
+        const meta = TAB_META[route.name];
+        if (!testID || !meta) continue;
+        registerAgentUiTarget(testID, {
+          label:
+            route.name === 'vision-board' ? 'Vision Board' : meta.label,
+          press: () => router.navigate(meta.href),
+        });
+        registered.push(testID);
+      }
+      agentTabIdsRef.current = registered;
+    });
     return () => {
-      for (const testID of registered) unregisterAgentUiTarget(testID);
+      cancelled = true;
+      cancel();
+      for (const testID of agentTabIdsRef.current) {
+        unregisterAgentUiTarget(testID);
+      }
+      agentTabIdsRef.current = [];
     };
-  }, [router, visibleRoutes]);
+  }, [pendingRouteName, router, visibleRoutes]);
 
   const selectedRoute = state.routes[state.index];
   const selectedVisibleIndex = visibleRoutes.findIndex(
     (route) => route.key === selectedRoute?.key,
   );
 
-  // Preload left/right rail neighbors so the first hop off a cold tab isn't a hitch.
+  // Preload left/right rail neighbors only after the focused tab has loaded.
   const neighborRouteKey = useMemo(() => {
     if (selectedVisibleIndex < 0) return '';
     return [selectedVisibleIndex - 1, selectedVisibleIndex + 1]
@@ -178,12 +197,18 @@ export function BottomNavBar({
   }, [selectedVisibleIndex, visibleRoutes]);
 
   useEffect(() => {
+    if (pendingRouteName) return;
     if (!neighborRouteKey) return;
     const names = neighborRouteKey.split('|').filter(Boolean);
     if (names.length === 0) return;
-    return deferAfterPageTransition(() => {
+    const routes = visibleRoutes;
+    // Extra delay past recency reshuffle so preload doesn’t mount neighbors
+    // in the same idle window as the rail remount.
+    return deferAfterPageLoad(() => {
+      if (useUI.getState().carouselPendingRouteName) return;
+      if (useUI.getState().carouselSwipeClaimed) return;
       for (const name of names) {
-        const route = visibleRoutes.find((item) => item.name === name);
+        const route = routes.find((item) => item.name === name);
         if (!route) continue;
         try {
           navigation.preload(route.name, route.params);
@@ -191,8 +216,8 @@ export function BottomNavBar({
           // Older navigators / incomplete preload — ignore.
         }
       }
-    });
-  }, [navigation, neighborRouteKey, visibleRoutes]);
+    }, motion.page + motion.layout);
+  }, [navigation, neighborRouteKey, pendingRouteName, visibleRoutes]);
   const carouselWidth = Math.min(
     width - layout.screenPadding * 2,
     MAX_CAROUSEL_WIDTH,
@@ -253,33 +278,19 @@ export function BottomNavBar({
     });
   };
   // Clear optimistic selection only after navigation has focused the tab.
-  // Layout so pending→focused highlight handoff doesn’t paint a stale accent.
+  // Stay at canonical 0 — do not chase the tapped route’s pre-reshuffle side
+  // index (that scrolls Profile→Today). Fan-out runs after the page settles.
   useLayoutEffect(() => {
     if (!pendingRouteName) return;
     if (selectedRoute?.name !== pendingRouteName) return;
     if (routeCount <= 0) return;
-    const routeIndex = visibleRoutes.findIndex(
-      (item) => item.name === pendingRouteName,
-    );
-    const index = routeIndex < 0 ? selectedIndex : routeIndex;
-    positionItems.value = rebasePosition(
-      positionItems.value,
-      index,
-      routeCount,
-    );
+    positionItems.value = canonicalPositionForRoute(0, routeCount);
     useUI.setState({
       carouselBrowse: null,
       carouselPendingRouteName: null,
       carouselSwipeClaimed: false,
     });
-  }, [
-    pendingRouteName,
-    positionItems,
-    routeCount,
-    selectedIndex,
-    selectedRoute?.name,
-    visibleRoutes,
-  ]);
+  }, [pendingRouteName, positionItems, routeCount, selectedRoute?.name]);
   const finishBrowseAtPosition = (targetItems: number, epoch: number) => {
     if (motionEpoch.value !== epoch) return;
     if (routeCount <= 0) return;
@@ -369,50 +380,41 @@ export function BottomNavBar({
 
   const routeOrderKey = routeNames.join('|');
   const prevRouteOrderKeyRef = useRef(routeOrderKey);
-  // Recency reorder changes which route sits at `selectedIndex`. Sync the
-  // shared carousel offset during render so Reanimated doesn’t paint one frame
-  // of the old index (accent appearing to jump old↔new).
-  if (
-    prevRouteOrderKeyRef.current !== routeOrderKey &&
-    !pendingRouteName &&
-    routeCount > 0
-  ) {
+  // Recency reorder remaps slots. Keep the pending/selected route centered —
+  // never `selectedIndex` alone (mid-handoff the prior tab still “selected”
+  // but now sits left/right; chasing it scrolls then snaps).
+  if (prevRouteOrderKeyRef.current !== routeOrderKey && routeCount > 0) {
     prevRouteOrderKeyRef.current = routeOrderKey;
     motionEpoch.value += 1;
     pendingNudgeTarget.current = null;
-    positionItems.value = rebasePosition(
-      positionItems.value,
-      selectedIndex,
-      routeCount,
+    const centerIndex = centerIndexForRail(
+      visibleRoutes,
+      pendingRouteName,
+      selectedRoute?.name,
     );
-  } else if (prevRouteOrderKeyRef.current !== routeOrderKey) {
-    prevRouteOrderKeyRef.current = routeOrderKey;
+    positionItems.value = canonicalPositionForRoute(centerIndex, routeCount);
   }
 
   useLayoutEffect(() => {
     if (pendingRouteName) return;
     if (carouselBrowse?.anchorRouteName === selectedRoute.name) return;
     if (routeCount <= 0) return;
-    const current = positionItems.value;
-    const target = shortestTargetPosition(
-      current,
-      selectedIndex,
-      routeCount,
-    );
-    if (Math.round(current) === Math.round(target)) {
-      positionItems.value = rebasePosition(current, selectedIndex, routeCount);
+    // Focused tab is index 0 after fan-out. Before that records, stay at 0 —
+    // chasing the pre-reshuffle side index slides the rail again.
+    const target = canonicalPositionForRoute(0, routeCount);
+    if (Math.round(positionItems.value) === Math.round(target)) {
+      positionItems.value = target;
       return;
     }
     motionEpoch.value += 1;
     pendingNudgeTarget.current = null;
-    positionItems.value = rebasePosition(target, selectedIndex, routeCount);
+    positionItems.value = target;
   }, [
     carouselBrowse,
     pendingRouteName,
     positionItems,
     motionEpoch,
-    selectedIndex,
-    selectedRoute.name,
+    selectedRoute?.name,
     routeCount,
     routeOrderKey,
   ]);
@@ -555,9 +557,6 @@ export function BottomNavBar({
           const visuallySelected = pendingRouteName
             ? pendingRouteName === route.name
             : focused;
-          const color = visuallySelected
-            ? theme.accentPrimary
-            : theme.textSecondary;
           const badge = route.name === 'to-do' ? openTaskCount : 0;
 
           const tabIcon: AppIconName =
@@ -584,24 +583,18 @@ export function BottomNavBar({
             });
 
             if (!event.defaultPrevented) {
-              const routeIndex = visibleRoutes.findIndex(
-                (item) => item.name === route.name,
-              );
-              // Cancel any in-flight spring so it can't overwrite this jump.
+              // Cancel any in-flight browse spring so it can't overwrite this.
               motionEpoch.value += 1;
               pendingNudgeTarget.current = null;
-              // Rail first (shared value), then navigate — feels instant.
-              const targetItems = shortestTargetPosition(
-                positionItems.value,
-                routeIndex < 0 ? selectedIndex : routeIndex,
-                routeCount,
-              );
-              positionItems.value = targetItems;
+              // Navigate first; defer recency reshuffle until after the page
+              // settles (see effect). Reshuffling here remounted the whole
+              // repeat track and stalled tab loads.
               useUI.setState({
                 carouselPendingRouteName: route.name,
                 carouselSwipeClaimed: false,
                 carouselBrowse: null,
               });
+              positionItems.value = canonicalPositionForRoute(0, routeCount);
               // Direct tab jump when switching; href navigate when re-selecting
               // so nested stacks pop to root. Pending selection stays until
               // `selectedRoute` matches (see effect above) so the accent never
@@ -638,58 +631,34 @@ export function BottomNavBar({
                 },
                 pressed && styles.pressed,
               ]}>
-              <View style={styles.iconSlot}>
-                <Symbol name={tabIcon} size={s(20)} color={color} />
-                {badge > 0 ? (
-                  <View
-                    style={[
-                      styles.badge,
-                      {
-                        backgroundColor: theme.danger,
-                        minWidth: s(20),
-                        height: s(18),
-                        paddingHorizontal: s(4),
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.badgeText,
-                        { fontSize: s(10), lineHeight: s(13) },
-                      ]}>
-                      {badge > 99 ? '99+' : String(badge)}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <AppText
-                variant="caption"
-                fit
-                fitMinimumScale={0.68}
-                maxFontSizeMultiplier={1.1}
-                align="center"
-                style={[
-                  tabCaptionStyle,
-                  {
-                    color,
-                    fontWeight: visuallySelected ? '600' : '400',
-                  },
-                ]}>
-                {meta.label}
-              </AppText>
-              <View
-                style={[
-                  styles.indicator,
-                  {
-                    backgroundColor: visuallySelected
-                      ? theme.accentPrimary
-                      : 'transparent',
-                  },
-                ]}
+              <BottomNavTabItem
+                selected={visuallySelected}
+                icon={tabIcon}
+                label={meta.label}
+                activeColor={theme.accentPrimary}
+                inactiveColor={theme.textSecondary}
+                iconSize={s(20)}
+                captionStyle={tabCaptionStyle}
+                badge={badge}
+                badgeColor={theme.danger}
+                badgeMinWidth={s(20)}
+                badgeHeight={s(18)}
+                badgePadX={s(4)}
+                badgeFontSize={s(10)}
+                badgeLineHeight={s(13)}
               />
             </Pressable>
           );
               })}
             </Animated.View>
+            {/* Stationary center mark — icons slide under this; never per-tab. */}
+            <View
+              pointerEvents="none"
+              style={[
+                styles.centerIndicator,
+                { backgroundColor: theme.accentPrimary },
+              ]}
+            />
           </Animated.View>
         </GestureDetector>
         <View
@@ -726,6 +695,16 @@ const styles = StyleSheet.create({
   },
   capsuleClip: {
     overflow: 'hidden',
+  },
+  // Fixed under the middle of the 3-tab window — track slides; this does not.
+  centerIndicator: {
+    position: 'absolute',
+    bottom: 3,
+    left: '50%',
+    width: 4,
+    height: 4,
+    marginLeft: -2,
+    borderRadius: radii.pill,
   },
   // Pin chevrons to equal insets so the 3-tab window stays true-center
   // even if slot widths round unevenly.
@@ -770,34 +749,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     minWidth: 0,
   },
-  iconSlot: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   pressed: {
     opacity: 0.58,
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 3,
-    alignSelf: 'center',
-    width: 4,
-    height: 4,
-    borderRadius: radii.pill,
-  },
-  badge: {
-    position: 'absolute',
-    top: -6,
-    right: -12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontWeight: '400',
-    fontVariant: ['tabular-nums'],
   },
 });

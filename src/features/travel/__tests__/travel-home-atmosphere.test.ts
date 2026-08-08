@@ -263,6 +263,13 @@ describe('Travel home atmosphere resolve', () => {
         averageColor: '#E8EEF5',
       }),
     ).toBe('dark');
+    // Pale sky midtones (under old 0.68 threshold) still flip to black.
+    expect(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: '#B2C5DC',
+      }),
+    ).toBe('dark');
     // No sample → white (dark remote midtones are common).
     expect(
       resolveAtmosphereHeaderInk({
@@ -273,6 +280,36 @@ describe('Travel home atmosphere resolve', () => {
     expect(
       pickCuratedTravelHomeAtmosphere('night', 0, [], 0).curatedHeaderTone,
     ).toBe('light');
+  });
+
+  it('honors curated day-plate ink when whole-plate averages sit midtone', () => {
+    // Guatemala catalog tone is dark; mid sky average must not force white.
+    expect(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: '#7FA3C4',
+        curatedTone: 'dark',
+      }),
+    ).toBe('dark');
+    // Near-night sample still overrides a stale dark curated pin.
+    expect(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: '#1A2430',
+        curatedTone: 'dark',
+      }),
+    ).toBe('light');
+    const guatemala = TRAVEL_HOME_CURATED_ATMOSPHERE.find(
+      (item) => item.id === 'antigua-volcano',
+    );
+    expect(guatemala?.headerTone).toBe('dark');
+    expect(
+      resolveAtmosphereHeaderInk({
+        themeDark: false,
+        averageColor: guatemala?.averageColor,
+        curatedTone: guatemala?.headerTone,
+      }),
+    ).toBe('dark');
   });
 
   it('adds a soft opposing header scrim when the plate washes out ink', () => {

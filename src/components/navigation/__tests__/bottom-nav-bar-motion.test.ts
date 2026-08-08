@@ -1,5 +1,6 @@
 import {
   canonicalPositionForRoute,
+  centerIndexForRail,
   rebasePosition,
   routeIndexForPosition,
   shortestTargetPosition,
@@ -43,5 +44,18 @@ describe('bottom nav bar motion', () => {
       routeIndexForPosition(rebasePosition(13, 11, n), n),
     );
     expect(rebasePosition(-7, 7, n)).toBe(5);
+  });
+
+  it('prefers pending over still-focused prior tab after a reshuffle', () => {
+    // After tapping Travel: fan-out puts Travel at 0, Profile (still selected
+    // for a frame) at left (n-1). Centering Profile would scroll +1.
+    const routes = [
+      { name: 'travel' },
+      { name: 'today' },
+      { name: 'profile' },
+    ];
+    expect(centerIndexForRail(routes, 'travel', 'profile')).toBe(0);
+    expect(centerIndexForRail(routes, null, 'profile')).toBe(2);
+    expect(centerIndexForRail(routes, null, 'travel')).toBe(0);
   });
 });

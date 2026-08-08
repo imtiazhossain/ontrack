@@ -4,10 +4,16 @@ import type { ImperativeRouter } from 'expo-router';
 
 import { goBackOrReplace } from '@/utils/navigation';
 
-function routerWith(canGoBack: boolean) {
+function routerWith({
+  canDismiss,
+}: {
+  canDismiss: boolean;
+}) {
   return {
     router: {
-      canGoBack: jest.fn(() => canGoBack),
+      canDismiss: jest.fn(() => canDismiss),
+      dismiss: jest.fn(),
+      canGoBack: jest.fn(() => false),
       back: jest.fn(),
       replace: jest.fn(),
     } as unknown as ImperativeRouter,
@@ -15,20 +21,22 @@ function routerWith(canGoBack: boolean) {
 }
 
 describe('goBackOrReplace', () => {
-  it('goes back when navigation history exists', () => {
-    const { router } = routerWith(true);
+  it('dismisses the stack when a screen can be popped', () => {
+    const { router } = routerWith({ canDismiss: true });
 
     goBackOrReplace(router, '/(tabs)/calendar');
 
-    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.dismiss).toHaveBeenCalledWith(1);
+    expect(router.back).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it('replaces with the fallback when the screen is the root route', () => {
-    const { router } = routerWith(false);
+  it('replaces with the fallback when the stack cannot dismiss', () => {
+    const { router } = routerWith({ canDismiss: false });
 
     goBackOrReplace(router, '/(tabs)/calendar');
 
+    expect(router.dismiss).not.toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/(tabs)/calendar');
   });
@@ -88,5 +96,16 @@ describe('root stack back button', () => {
 
     expect(rootLayout).toContain("type: 'custom' as const");
     expect(rootLayout).toContain('hidesSharedBackground: true');
+  });
+
+  it('disables iOS edge-swipe GO_BACK on the tab root', () => {
+    const rootLayout = readFileSync(
+      join(process.cwd(), 'src/app', '_layout.tsx'),
+      'utf8',
+    );
+
+    expect(rootLayout).toMatch(
+      /name="\(tabs\)"[\s\S]*?gestureEnabled:\s*false/,
+    );
   });
 });

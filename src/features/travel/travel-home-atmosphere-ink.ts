@@ -72,18 +72,28 @@ export function travelHomeSoloTripCardShadow(options: {
 }
 
 /**
- * Only clearly bright washes keep black ink. Midtones / dark plates → white
- * (header sits on busy photo bands where black disappears).
+ * Bright day washes → black ink. Darker plates → white (black disappears on
+ * busy mid/dark photo bands). Threshold sits under pale sky averages so
+ * cloud-heavy headers flip before white-on-white washout.
  */
+export const ATMOSPHERE_HEADER_BRIGHT_LUMA = 0.55;
+/** Near-night / deep washes — always white ink. */
+export const ATMOSPHERE_HEADER_DARK_LUMA = 0.28;
+/**
+ * Remote midtones at/above this prefer black ink (sky bands under-report
+ * whole-plate averages; white glyphs disappear first).
+ */
+export const ATMOSPHERE_HEADER_MID_BRIGHT_LUMA = 0.42;
+
 export function headerInkFromLuminance(
   luminance: number,
 ): TravelAtmosphereHeaderInk {
-  return luminance > 0.68 ? 'dark' : 'light';
+  return luminance > ATMOSPHERE_HEADER_BRIGHT_LUMA ? 'dark' : 'light';
 }
 
 /**
  * Pick white vs black header ink from the live atmosphere plate.
- * Default is white — black only when a sampled color is clearly bright.
+ * Default is white — black when the sample (or curated day plate) is bright.
  */
 export function resolveAtmosphereHeaderInk({
   themeDark,
@@ -95,10 +105,18 @@ export function resolveAtmosphereHeaderInk({
   if (averageColor) {
     const luma = relativeLuminanceFromHex(averageColor);
     if (luma !== undefined) {
-      // Clear bright / dark plates; mid band may honor curated tone.
-      if (luma > 0.68 || luma < 0.5) return headerInkFromLuminance(luma);
+      // Strong bright / night signals win over curated pins.
+      if (
+        luma > ATMOSPHERE_HEADER_BRIGHT_LUMA ||
+        luma < ATMOSPHERE_HEADER_DARK_LUMA
+      ) {
+        return headerInkFromLuminance(luma);
+      }
+      // Ambiguous midtones: curated day plates (e.g. Guatemala) pin black ink
+      // even when whole-plate averages sit under the bright threshold.
       if (curatedTone) return curatedTone;
-      return 'light';
+      // Remote sky midtones — prefer black before white-on-cloud washout.
+      return luma >= ATMOSPHERE_HEADER_MID_BRIGHT_LUMA ? 'dark' : 'light';
     }
   }
 

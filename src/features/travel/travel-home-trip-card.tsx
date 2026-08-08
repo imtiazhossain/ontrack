@@ -6,6 +6,7 @@ import { AppText } from '@/components/primitives';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
 import { travelHomeSoloTripCardShadow } from '@/features/travel/travel-home-atmosphere-ink';
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
     TravelHomeLocationPin,
@@ -160,11 +161,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     ),
   );
   const labelSize = Math.max(13, s(travelHomeTokens.type.button));
-  // Light: solid black + white ink. Dark: brand blue + white.
+  // Both themes: frosted sage glass + white ink.
   const itineraryFg = '#FFFFFF';
-  const itineraryFill = dark
-    ? travelHomeTokens.colors.brandBlue
-    : travelHomeTokens.colors.ink;
   const itineraryPadH = Math.max(
     12,
     s(travelHomeTokens.sizes.itineraryHorizontalPadding),
@@ -457,7 +455,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   alignSelf: compact ? 'stretch' : 'center',
                 },
               ]}>
-              <View
+              <TravelHomeGlass
+                accent="green"
                 style={[
                   styles.itineraryButton,
                   {
@@ -465,14 +464,13 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                     height: buttonHeight,
                     paddingHorizontal: itineraryPadH,
                     borderRadius: travelHomeTokens.radius.itineraryButton,
-                    backgroundColor: itineraryFill,
                     boxShadow: dark
                       ? travelHomeTokens.colors.itineraryButtonShadowDark
                       : travelHomeTokens.colors.itineraryButtonShadow,
                   },
                 ]}>
                 {itineraryContent}
-              </View>
+              </TravelHomeGlass>
             </Pressable>
           </View>
         </View>

@@ -11,6 +11,7 @@ import { useRecoverReservedTravelPlan } from '@/features/travel/use-recover-rese
 import { useTheme } from '@/hooks/use-theme';
 import { useTravel } from '@/store/travel';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { goBackOrReplace } from '@/utils/navigation';
 
 type TravelTripHubScreenProps = {
   planId: string;
@@ -42,10 +43,7 @@ export function TravelTripHubScreen({ planId }: TravelTripHubScreenProps) {
         <TravelScreenHeader
           title="Trip"
           subtitle="Tools"
-          onClose={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/(tabs)/travel' as never);
-          }}
+          onClose={() => goBackOrReplace(router, '/(tabs)/travel')}
           closeAccessibilityLabel="Close trip tools"
           closeTestID={AgentUiIds.travel.hub.close}
         />
@@ -55,10 +53,7 @@ export function TravelTripHubScreen({ planId }: TravelTripHubScreenProps) {
           message="This trip is no longer available."
           actionLabel="Back to Travel"
           actionTestID={AgentUiIds.travel.hub.backToTravel}
-          onAction={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/(tabs)/travel' as never);
-          }}
+          onAction={() => goBackOrReplace(router, '/(tabs)/travel')}
         />
       </Screen>
     );
