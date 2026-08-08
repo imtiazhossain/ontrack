@@ -9,6 +9,7 @@ import {
     AppText,
     Card,
     EmptyState,
+    GlassIconWell,
     GlassPlate,
     IconButton,
     Screen,
@@ -209,13 +210,13 @@ export function VisionBoardDashboard() {
       </View>
 
       {isWeb ? (
-        <View style={[styles.webNotice, { backgroundColor: theme.backgroundSunken }]}>
+        <GlassPlate mist style={styles.webNotice}>
           <Symbol name="gallery" color={theme.textSecondary} />
           <AppText variant="callout" color="secondary" style={styles.flex}>
             Vision Board editing is available in the iOS and Android apps. Your synced boards
             remain viewable here.
           </AppText>
-        </View>
+        </GlassPlate>
       ) : null}
 
       <View style={styles.hero}>
@@ -400,9 +401,9 @@ export function VisionBoardDashboard() {
                 </View>
                 <View style={[styles.categoryBody, editing && styles.categoryBodyEditing]}>
                   <View style={styles.categoryTitleRow}>
-                    <View style={[styles.iconTile, { backgroundColor: tint }]}>
+                    <GlassIconWell size={36} borderRadius={radii.md}>
                       <Symbol name={category.icon} size={19} color={accent} />
-                    </View>
+                    </GlassIconWell>
                     <View style={[styles.flex, styles.categoryCopy]}>
                       <AppText
                         style={[styles.categoryName, { fontFamily: fontFamilies.serif }]}

@@ -27,11 +27,10 @@ describe('button leading/label alignment invariant', () => {
     expect(actions).toMatch(/actionContent:\s*\{[^}]*flexDirection:\s*['"]row['"]/s);
     expect(actions).toMatch(/actionIcon:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
     expect(actions).toMatch(/actionIcon:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
-    // Grid tiles left-align via actionGlass; wide CTAs center at the Pressable glass layer.
-    expect(actions).toMatch(/actionGlass:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s);
-    expect(actions).toMatch(
-      /justifyContent:\s*wide\s*\?\s*['"]center['"]\s*:\s*['"]flex-start['"]/,
-    );
+    // Grid tiles + wide CTAs center icon+label in the glass plate.
+    expect(actions).toMatch(/actionGlass:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
+    expect(actions).toMatch(/actionContent:\s*\{[^}]*justifyContent:\s*['"]center['"]/s);
+    expect(actions).toContain('align="center"');
     expect(actions).toContain('styles.actionContent');
     expect(actions).toContain('fieldTitleCase');
     expect(actions).not.toContain('translateY');

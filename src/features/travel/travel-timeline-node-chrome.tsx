@@ -15,6 +15,9 @@ export function validBookingUrl(value: string): boolean {
   return !value || isHttpsUrl(value);
 }
 
+const GLASS_INK = '#FFFFFF';
+const GLASS_INK_SECONDARY = 'rgba(255,255,255,0.72)';
+
 /** Split “Company · Location” titles so the location is readable on its own line. */
 export function TimelineItemTitle({
   title,
@@ -22,6 +25,7 @@ export function TimelineItemTitle({
   dense = false,
   emphasize = false,
   align = 'left',
+  onGlass = false,
 }: {
   title: string;
   compact?: boolean;
@@ -30,7 +34,10 @@ export function TimelineItemTitle({
   emphasize?: boolean;
   /** Center title copy in compact board cards. */
   align?: 'left' | 'center';
+  /** Light ink for mist/black-glass board cards. */
+  onGlass?: boolean;
 }) {
+  const { typography } = useResponsive();
   const primaryVariant = dense
     ? 'caption'
     : emphasize
@@ -38,6 +45,16 @@ export function TimelineItemTitle({
       : compact
         ? 'callout'
         : 'subheading';
+  const primaryInk = onGlass ? { color: GLASS_INK } : undefined;
+  const secondaryInk = onGlass ? { color: GLASS_INK_SECONDARY } : undefined;
+  // Dense mist rows: caption lineHeight leaves glyphs high in the box so the
+  // title+cue stack looks top-heavy next to the kind pill — keep leading tight.
+  const denseLine =
+    dense && typography.caption.fontSize
+      ? {
+          lineHeight: Math.round(typography.caption.fontSize + 1),
+        }
+      : undefined;
   const separator = ' · ';
   const breakAt = title.indexOf(separator);
   if (breakAt <= 0) {
@@ -51,6 +68,8 @@ export function TimelineItemTitle({
           styles.editorial,
           compact && !emphasize ? styles.compactTitle : undefined,
           align === 'center' ? styles.fullWidthCopy : undefined,
+          denseLine,
+          primaryInk,
         ]}>
         {title}
       </AppText>
@@ -63,6 +82,7 @@ export function TimelineItemTitle({
       style={[
         styles.titleStack,
         align === 'center' ? styles.centeredStack : undefined,
+        dense ? styles.denseTitleStack : undefined,
       ]}>
       <AppText
         variant={primaryVariant}
@@ -72,17 +92,21 @@ export function TimelineItemTitle({
           styles.editorial,
           compact ? styles.compactTitle : undefined,
           align === 'center' ? styles.fullWidthCopy : undefined,
+          denseLine,
+          primaryInk,
         ]}>
         {head}
       </AppText>
       <AppText
         variant={compact ? 'caption' : 'subheading'}
-        color={compact ? 'secondary' : 'primary'}
+        color={onGlass ? undefined : compact ? 'secondary' : 'primary'}
         fit
         align={align}
         style={[
           styles.editorial,
           align === 'center' ? styles.fullWidthCopy : undefined,
+          denseLine,
+          secondaryInk ?? primaryInk,
         ]}>
         {tail}
       </AppText>
@@ -96,19 +120,25 @@ export function TimelineFlightCaption({
   durationLabel,
   stopsLabel,
   align = 'left',
+  onGlass = false,
 }: {
   dateLabel: string;
   durationLabel: string;
   stopsLabel: string;
   align?: 'left' | 'center';
+  /** Light ink for mist/black-glass board cards. */
+  onGlass?: boolean;
 }) {
   return (
     <AppText
       variant="caption"
-      color="secondary"
+      color={onGlass ? undefined : 'secondary'}
       fit
       align={align}
-      style={align === 'center' ? styles.fullWidthCopy : undefined}>
+      style={[
+        align === 'center' ? styles.fullWidthCopy : undefined,
+        onGlass ? { color: GLASS_INK_SECONDARY } : undefined,
+      ]}>
       {[dateLabel, durationLabel, stopsLabel].join(' · ')}
     </AppText>
   );
@@ -123,6 +153,7 @@ export function TimelineItemToolbar({
   isMoment,
   canShare = false,
   align = 'center',
+  onGlass = false,
   onOpenNotes,
   onAddPhotos,
   onShare,
@@ -141,6 +172,8 @@ export function TimelineItemToolbar({
   canShare?: boolean;
   /** Dense timeline stacks actions under the title — left-align with that column. */
   align?: 'center' | 'left';
+  /** Mist / black-glass parents — frost wells + light glyphs. */
+  onGlass?: boolean;
   onOpenNotes: () => void;
   onAddPhotos: () => void;
   onShare?: () => void;
@@ -153,10 +186,11 @@ export function TimelineItemToolbar({
 }) {
   const theme = useTheme();
   const { spacing: rs } = useResponsive();
+  // IconButton defaults to glass — only override ink on dark mist boards.
   const shared = {
     size,
     iconSize: 'sm' as const,
-    background: theme.backgroundSunken,
+    color: onGlass ? GLASS_INK : undefined,
   };
   const canEdit = (kind: TravelItineraryItem['kind']) =>
     allowStructuredEditing && item.kind === kind;
@@ -177,6 +211,7 @@ export function TimelineItemToolbar({
           hasNotes={(item.notes?.length ?? 0) > 0}
           size={size}
           iconSize="sm"
+          onGlass={onGlass}
           testID={AgentUiIds.travel.notes.open(item.id)}
           onPress={onOpenNotes}
         />
@@ -308,6 +343,7 @@ export function PhotoStrip({
 
 const styles = StyleSheet.create({
   titleStack: { gap: spacing.xxs, minWidth: 0, flexShrink: 1, width: '100%' },
+  denseTitleStack: { gap: 0 },
   centeredStack: { alignItems: 'center', alignSelf: 'stretch' },
   fullWidthCopy: { width: '100%', alignSelf: 'stretch' },
   editorial: { ...travelEditorialTextStyle },

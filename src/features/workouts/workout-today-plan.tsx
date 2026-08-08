@@ -1,8 +1,16 @@
-import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, Button, Card, SectionHeader, Symbol } from '@/components/primitives';
+import {
+    AppText,
+    Button,
+    Card,
+    GlassIconWell,
+    GlassPlate,
+    SectionHeader,
+    Symbol,
+} from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { Activity, Workout } from '@/types/models';
@@ -28,9 +36,9 @@ export function WorkoutTodayPlan({
       <SectionHeader title="Today’s Plan" detail={`${todaysWorkouts.length} Scheduled`} />
       {todaysWorkouts.length === 0 ? (
         <Card variant="sunken" style={styles.emptyPlan}>
-          <View style={[styles.smallIcon, { backgroundColor: gymColors.tint }]}>
+          <GlassIconWell size={40} borderRadius={radii.md}>
             <Symbol name="calendar.badge.plus" size="md" color={gymColors.main} />
-          </View>
+          </GlassIconWell>
           <View style={styles.flex}>
             <AppText variant="subheading">Your training window is open</AppText>
             <AppText variant="caption" color="secondary">
@@ -50,9 +58,9 @@ export function WorkoutTodayPlan({
               }
               accessibilityLabel={`Open ${activity.title}`}>
               <View style={styles.planRow}>
-                <View style={[styles.smallIcon, { backgroundColor: gymColors.tint }]}>
+                <GlassIconWell size={40} borderRadius={radii.md}>
                   <Symbol name="dumbbell.fill" size="md" color={gymColors.main} />
-                </View>
+                </GlassIconWell>
                 <View style={styles.flex}>
                   <AppText variant="subheading" numberOfLines={1}>{activity.title}</AppText>
                   <AppText variant="caption" color="secondary">
@@ -67,13 +75,17 @@ export function WorkoutTodayPlan({
       )}
 
       {savedMessage ? (
-        <Animated.View
-          entering={FadeInDown.duration(220)}
-          accessible
-          accessibilityRole="alert"
-          style={[styles.savedMessage, { backgroundColor: theme.accentFaint }]}>
-          <Symbol name="checkmark.circle.fill" size="md" color={theme.success} />
-          <AppText variant="callout" color="success">{savedMessage}</AppText>
+        <Animated.View entering={FadeInDown.duration(220)}>
+          <GlassPlate
+            mist
+            accessible
+            accessibilityRole="alert"
+            style={styles.savedMessage}>
+            <Symbol name="checkmark.circle.fill" size="md" color={theme.success} />
+            <AppText variant="callout" color="success">
+              {savedMessage}
+            </AppText>
+          </GlassPlate>
         </Animated.View>
       ) : null}
 
@@ -112,13 +124,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  smallIcon: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
   },
   savedMessage: {
     flexDirection: 'row',

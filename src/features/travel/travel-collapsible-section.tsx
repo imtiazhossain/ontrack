@@ -2,30 +2,32 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  CollapsibleBody,
-  DisclosureChevron,
-  Symbol,
+    AppText,
+    CollapsibleBody,
+    DisclosureChevron,
+    GlassTonePill,
+    Symbol,
 } from '@/components/primitives';
 import type { AppIconName, TypeVariant } from '@/design-system';
 import { radii } from '@/design-system';
 import {
-  TRAVEL_TITLE_ICON_GAP,
-  travelEditorialTextStyle,
-  travelOverlineStyle,
+    TRAVEL_TITLE_ICON_GAP,
+    travelEditorialTextStyle,
+    travelOverlineStyle,
 } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
-  travelAccent,
-  travelCardBorder,
-  travelCardFill,
-  travelPanelTint,
+    travelAccent,
+    travelCardBorder,
+    travelItineraryInk,
+    travelItineraryShellProps,
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId } from '@/utils/agent-ui';
 
-const TRAVEL_HEADER_SHADOW = '0 2px 8px rgba(51, 39, 28, 0.08)';
+/** Soft lift for itinerary board panels. */
+const TRAVEL_HEADER_SHADOW = '0 4px 14px rgba(0, 0, 0, 0.22)';
 
 export function TravelCollapsibleSection({
   title,
@@ -71,8 +73,14 @@ export function TravelCollapsibleSection({
   const theme = useTheme();
   const { s, spacing } = useResponsive();
   const label = count === undefined ? title : `${title} (${count})`;
-  // Theme-aware sky blue — light `#2474A8` washes out on dark glass.
-  const accent = accentColor ?? travelAccent(theme);
+  // Card shells + nested kind rows sit on white paper (light) or dark glass
+  // (dark). Light mode can keep kind accents; dark forces light ink.
+  const accent =
+    card || nested
+      ? theme.name === 'dark'
+        ? travelItineraryInk(theme)
+        : (accentColor ?? travelAccent(theme))
+      : (accentColor ?? travelAccent(theme));
   const tap = compact
     ? nested
       ? Math.max(28, s(28))
@@ -95,11 +103,6 @@ export function TravelCollapsibleSection({
       ? Math.max(leadingIconSize, s(leadingIconSize))
       : Math.max(28, s(30));
   const cardRadius = compact ? Math.max(11, s(12)) : Math.max(16, s(18));
-  const headerBackground = nested || card
-    ? 'transparent'
-    : compact
-      ? travelCardFill(theme)
-      : travelPanelTint(theme);
 
   const header = (
     <View
@@ -112,7 +115,8 @@ export function TravelCollapsibleSection({
           paddingRight: nested ? 0 : spacing.md,
           paddingVertical: nested || compact ? 0 : spacing.xs,
           borderRadius: card || nested ? 0 : radii.lg,
-          backgroundColor: headerBackground,
+          // Card shells frost via TravelHomeGlass; standalone headers stay clear.
+          backgroundColor: 'transparent',
           borderWidth: card || nested ? 0 : StyleSheet.hairlineWidth,
           borderBottomWidth: card && expanded ? StyleSheet.hairlineWidth : 0,
           borderColor: nested
@@ -120,7 +124,7 @@ export function TravelCollapsibleSection({
             : card
               ? theme.name === 'dark'
                 ? 'rgba(255,255,255,0.12)'
-                : 'rgba(255,255,255,0.45)'
+                : 'rgba(17, 74, 110, 0.10)'
               : travelCardBorder(theme),
         },
       ]}>
@@ -174,19 +178,11 @@ export function TravelCollapsibleSection({
             {title}
           </AppText>
           {count !== undefined ? (
-            <View
-              style={[
-                styles.countBadge,
-                {
-                  backgroundColor: accent,
-                  minHeight: Math.max(22, s(22)),
-                  paddingHorizontal: spacing.xs,
-                },
-              ]}>
-              <AppText variant="caption" color="onAccent" fit>
-                {count}
-              </AppText>
-            </View>
+            <GlassTonePill
+              label={String(count)}
+              toneColor={accent}
+              showDot={false}
+            />
           ) : null}
           <View
             style={[
@@ -196,9 +192,7 @@ export function TravelCollapsibleSection({
                 minWidth: chevronBox,
                 width: chevronBox,
                 borderRadius: nested ? 0 : radii.pill,
-                backgroundColor: nested || compact || card
-                  ? 'transparent'
-                  : travelCardFill(theme),
+                backgroundColor: 'transparent',
               },
             ]}>
             <DisclosureChevron
@@ -225,9 +219,7 @@ export function TravelCollapsibleSection({
                 minHeight: tap,
                 minWidth: tap,
                 borderRadius: radii.pill,
-                backgroundColor: nested || card
-                  ? 'transparent'
-                  : travelCardFill(theme),
+                backgroundColor: 'transparent',
               },
             ]}>
             <Symbol name="add" size="sm" color={accent} />
@@ -259,8 +251,7 @@ export function TravelCollapsibleSection({
   if (card) {
     return (
       <TravelHomeGlass
-        clear
-        wash
+        {...travelItineraryShellProps(theme)}
         style={{
           borderRadius: cardRadius,
           borderCurve: 'continuous',
@@ -299,12 +290,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
-  },
-  countBadge: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   chevron: {
     alignItems: 'center',

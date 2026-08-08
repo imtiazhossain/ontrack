@@ -212,10 +212,11 @@ describe('travel header sky décor', () => {
     // Location ground band (trees / town / city) under celestial art.
     expect(sky).toContain('TravelSkyGround');
     expect(sky).toContain('resolveTravelSkyGroundKind');
-    // Static tier + curated places: destination still into status bar.
+    // Constrained tiers only: destination still; capable devices keep live SVG.
     expect(sky).toContain('TravelSkyStaticDestination');
     expect(sky).toContain('preferDestinationStill');
-    expect(sky).toContain('matchCuratedAtmosphereForPlace');
+    expect(sky).toContain("quality === 'static' || quality === 'minimal'");
+    expect(sky).not.toContain('matchCuratedAtmosphereForPlace');
     expect(hero).toContain('onPlateAverageColor');
     expect(hero).toContain('plateAverageColor');
     expect(hero).toContain('curatedTone');

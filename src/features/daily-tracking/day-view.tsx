@@ -212,9 +212,9 @@ export function DayView({ date, onChangeDate, renderHeader }: DayViewProps) {
             <View style={styles.timeline}>
               {activities.length === 0 ? (
                 <EmptyState
-                  icon="calendar-add"
-                  title="A blank page"
-                  message="Nothing planned for this day yet. Add your first activity to begin shaping it."
+                  icon="today"
+                  title="Today is wide open."
+                  message="Nothing on the books yet — add a workout, a meal, or whatever sounds good and the day starts to feel like yours."
                   actionLabel="Add Activity"
                   actionTestID={AgentUiIds.today.emptyAddActivity}
                   onAction={() => router.push({ pathname: '/activity-form', params: { date } })}

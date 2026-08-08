@@ -1,0 +1,51 @@
+---
+description: App chrome must be glass UI — no opaque paper fills
+globs: src/**/*.{tsx,ts}
+alwaysApply: true
+---
+
+# Glass UI (mandatory)
+
+**Every product chrome surface is glass.** Opaque “paper” fills are debt — migrate when you touch the file; do not ship new paper.
+
+## Prefer
+
+| Role | Use |
+|------|-----|
+| Cards / panels / rows | `GlassPlate` / `Card` (default `surface='glass'`; sunken → airy frost) |
+| Pills / badges | `GlassTonePill` / `StatusBadge` |
+| Icon wells / leading plates | `GlassIconWell` (mist) / `FieldLeadingIcon` |
+| Meta chips (duration, layover, day) | `GlassMetaChip` |
+| Fields on glass sheets | `glassFieldBackground` / `glassFieldBorder` / `travelInputFieldBackground` |
+| Sheets / modals | `SheetScaffold` `surface="glass"` (+ travel `travel-sheet`) |
+| Page wash under frost | `ScreenAtmosphere` / `glassMaterials.atmosphere` |
+
+## Forbidden as chrome fills
+
+Do **not** paint product chrome with:
+
+- `theme.backgroundElevated` / `theme.backgroundSunken` / `theme.accentFaint` as card/row/chip/well backgrounds
+- Solid `kindTint` / `tint` wells or duration chips
+- `Card` / `SettingsGroup` with `surface="solid"` for new UI
+- Opaque cream/sage mock palettes for converters, share rows, settle wells, etc.
+
+Selected state = **border / accent text**, not an opaque fill over glass.
+
+## Allowed exceptions
+
+- Page atmosphere washes (`ScreenAtmosphere`, sky, intentional `clear` / sheet-base page paper under itinerary boards)
+- Tiny selection cells (calendar day range / selected date)
+- Game playfields / anatomy demos that need an opaque stage
+- Design-system **color token swatches** only (palette chips that must show solid hex)
+
+`DangerZone` is glass with a danger rim — not opaque elevated paper. The Design System gallery chrome is glass like the rest of the app.
+
+## When editing UI
+
+1. If you see paper fills on chrome → replace with the Glass* primitive above in the **same change**.
+2. Keep `glass-plate-contract.test.ts` green; extend it when you retire a paper pattern.
+3. Nested mist chips on boards: `GlassPlate mist` / shared Glass* helpers — never clipped BlurView milk.
+4. Think cool: frost + atmosphere, not flat admin paper.
+
+Contract tests: `src/components/primitives/__tests__/glass-plate-contract.test.ts`.
+Materials: `src/design-system/glass.ts` + `GlassPlate`.

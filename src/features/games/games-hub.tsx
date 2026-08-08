@@ -3,13 +3,14 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  Screen,
-  SectionHeader,
-  Symbol,
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    GlassIconWell,
+    Screen,
+    SectionHeader,
+    Symbol,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { PeoplePicker } from '@/features/social/people-picker';
@@ -66,13 +67,9 @@ export function GamesHub() {
           }}
           style={styles.card}>
           <View style={styles.cardRow}>
-            <View
-              style={[
-                styles.iconWrap,
-                { backgroundColor: theme.accentFaint },
-              ]}>
+            <GlassIconWell size={48} borderRadius={radii.md}>
               <Symbol name="games" size={28} color={theme.accentPrimary} />
-            </View>
+            </GlassIconWell>
             <View style={styles.cardCopy}>
               <AppText variant="subheading">Balloon Pop</AppText>
               <AppText variant="callout" color="secondary">
@@ -120,13 +117,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   cardCopy: {
     flex: 1,

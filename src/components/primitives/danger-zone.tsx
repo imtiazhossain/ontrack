@@ -10,6 +10,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId } from '@/utils/agent-ui';
 
+import { GlassPlate } from './glass-plate';
 import { SectionHeader } from './section-header';
 
 type DangerZoneProps = PropsWithChildren<{
@@ -20,7 +21,7 @@ type DangerZoneProps = PropsWithChildren<{
 }>;
 
 /**
- * GitHub-style danger zone: overline title + red-bordered panel for irreversible actions.
+ * Danger zone: overline title + red-rimmed glass panel for irreversible actions.
  * Place `DestructiveSection flush` (or other danger CTAs) as children.
  */
 export function DangerZone({
@@ -39,13 +40,12 @@ export function DangerZone({
       label={title}
       style={[{ gap: spacing.sm, width: '100%' }, style]}>
       <SectionHeader title={title} flush titleColor="danger" />
-      <View
+      <GlassPlate
         style={[
           styles.panel,
           {
             borderColor: theme.danger,
-            // Opaque paper — high-contrast destructive escape hatch (not glass).
-            backgroundColor: theme.backgroundElevated,
+            borderWidth: StyleSheet.hairlineWidth * 2,
             padding: spacing.md,
             gap: spacing.md,
           },
@@ -60,7 +60,7 @@ export function DangerZone({
             {child}
           </View>
         ))}
-      </View>
+      </GlassPlate>
     </AgentTestId>
   );
 }
@@ -68,10 +68,8 @@ export function DangerZone({
 const styles = StyleSheet.create({
   panel: {
     width: '100%',
-    borderWidth: StyleSheet.hairlineWidth * 2,
     borderRadius: radii.md,
     borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   divider: {
     height: StyleSheet.hairlineWidth,

@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { AppText, Card, PanelTitle, Symbol } from '@/components/primitives';
+import { AppText, Card, GlassPlate, PanelTitle, Symbol } from '@/components/primitives';
 import { appIconSections, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -12,8 +12,7 @@ export function DesignSystemIconsPanel() {
   return (
     <View style={{ gap: spacing.lg }}>
       <AppText variant="callout" color="secondary">
-        Semantic `appIcons` keys used across the app. Prefer these names over raw SF / Material
-        symbol strings.
+        Named icons used in the app. Prefer these keys over raw SF Symbol / Material names.
       </AppText>
 
       {appIconSections.map((section) => (
@@ -49,7 +48,7 @@ function IconSection({
       testID={AgentUiIds.designSystem.iconSection(id)}
       label={title}
       style={{ gap: spacing.md }}>
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <View style={{ gap: spacing.xs }}>
           <PanelTitle>{title}</PanelTitle>
           <AppText variant="caption" color="secondary">
@@ -71,26 +70,26 @@ function IconSection({
               key={name}
               testID={AgentUiIds.designSystem.icon(name)}
               label={name}
-              style={{
-                width: cellMin,
-                minHeight: Math.max(layout.minTapTarget, s(72)),
-                borderRadius: s(14),
-                padding: spacing.sm,
-                gap: spacing.xs,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: theme.backgroundSunken,
-                borderWidth: 1,
-                borderColor: theme.separator,
-              }}>
-              <Symbol name={name} size="lg" color={theme.accentPrimary} />
-              <AppText
-                variant="caption"
-                color="secondary"
-                fit
-                style={{ width: '100%', textAlign: 'center' }}>
-                {name}
-              </AppText>
+              style={{ width: cellMin }}>
+              <GlassPlate
+                mist
+                style={{
+                  minHeight: Math.max(layout.minTapTarget, s(72)),
+                  borderRadius: s(14),
+                  padding: spacing.sm,
+                  gap: spacing.xs,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Symbol name={name} size="lg" color={theme.accentPrimary} />
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  fit
+                  style={{ width: '100%', textAlign: 'center' }}>
+                  {name}
+                </AppText>
+              </GlassPlate>
             </AgentTestId>
           ))}
         </View>

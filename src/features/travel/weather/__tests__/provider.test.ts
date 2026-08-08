@@ -1,4 +1,9 @@
-import { describeWeatherCode, forecastWindow, weatherIconForCode } from '../provider';
+import {
+  describeWeatherCode,
+  forecastWindow,
+  normalizeTravelWeatherDays,
+  weatherIconForCode,
+} from '../provider';
 
 describe('travel weather provider', () => {
   it('does not request forecasts before the 16-day window', () => {
@@ -24,6 +29,46 @@ describe('travel weather provider', () => {
       requestEnd: '2026-07-30',
       availableThrough: undefined,
     });
+  });
+
+  it('can request recent past days when pastDays is set (home weather)', () => {
+    expect(
+      forecastWindow('2026-05-08', '2026-08-23', '2026-08-08', { pastDays: 92 }),
+    ).toEqual({
+      availability: 'forecast',
+      requestStart: '2026-05-08',
+      requestEnd: '2026-08-23',
+      availableThrough: undefined,
+    });
+    expect(
+      forecastWindow('2026-01-01', '2026-08-08', '2026-08-08', { pastDays: 92 }),
+    ).toEqual({
+      availability: 'forecast',
+      requestStart: '2026-05-08',
+      requestEnd: '2026-08-08',
+      availableThrough: undefined,
+    });
+  });
+
+  it('skips null past-day placeholders instead of failing the forecast', () => {
+    const days = normalizeTravelWeatherDays({
+      daily: {
+        time: ['2026-05-08', '2026-08-09'],
+        weather_code: [null, 3],
+        temperature_2m_min: [null, 74],
+        temperature_2m_max: [null, 97],
+        precipitation_probability_max: [95, 3],
+      },
+    });
+    expect(days).toEqual([
+      expect.objectContaining({
+        date: '2026-08-09',
+        weatherCode: 3,
+        temperatureMax: 97,
+        temperatureMin: 74,
+        precipitationProbability: 3,
+      }),
+    ]);
   });
 
   it('maps WMO weather codes to readable conditions', () => {

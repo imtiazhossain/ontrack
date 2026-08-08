@@ -9,7 +9,7 @@ import {
 import { ConfirmationDocumentCue } from '@/features/travel/confirmation-document-cue';
 import { transportDirectionsUrl } from '@/features/travel/transport-details';
 import { TravelDetailsSummaryCard } from '@/features/travel/travel-details-summary-card';
-import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { transportModeIcon, transportModeLabel } from '@/features/travel/travel-mode';
 import type { TravelTransportDetails } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -34,7 +34,6 @@ export function TransportDetailsSummary({
   const theme = useTheme();
   const { spacing } = useResponsive();
   const accent = kindAccent('transport', theme);
-  const tint = kindTint('transport', theme);
   const directionsUrl = transportDirectionsUrl(details);
   const attachments = confirmationUrisForDisplay(details.confirmationUris, 'transport');
   const rows = [
@@ -83,7 +82,6 @@ export function TransportDetailsSummary({
       subtitle={`${details.origin} → ${details.destination}`}
       icon={transportModeIcon(details.mode)}
       accentColor={accent}
-      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={attachments.length ? () => void openConfirmationAttachments(attachments) : undefined}
       rows={rows}>

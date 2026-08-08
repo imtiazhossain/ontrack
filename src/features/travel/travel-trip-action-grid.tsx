@@ -5,7 +5,9 @@ import { AppText } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { promotesFlightSearch } from '@/features/travel/travel-mode';
+import { travelItineraryInk } from '@/features/travel/travel-surface';
 import type { TravelPlanMode } from '@/features/travel/types';
+import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 import { TravelSheetAction } from './travel-list-actions';
@@ -37,17 +39,20 @@ function ActionGroup({
   title: string;
   children: ReactNode;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.group}>
       <View style={styles.groupHeader}>
         <AppText
           variant="overline"
-          color="secondary"
           bold
           fit
           align="center"
           numberOfLines={1}
-          style={styles.groupTitle}>
+          style={[
+            styles.groupTitle,
+            { color: travelItineraryInk(theme, 'secondary') },
+          ]}>
           {title}
         </AppText>
       </View>
@@ -94,8 +99,7 @@ export function TravelTripActionGrid({
       <ActionGroup title="Book & Organize">
         <TravelSheetAction
           label="Calendar"
-          icon="calendar"
-          badgeIcon="repeat"
+          icon="sync"
           tone="calendar"
           testID={AgentUiIds.travel.list.calendar(tripId)}
           onPress={onOpenCalendar}

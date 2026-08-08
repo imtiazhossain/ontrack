@@ -18,13 +18,14 @@ import {
     SegmentedControl,
     SettingsActionRow,
     SettingsGroup,
+    SettingsRow,
     SettingsToggleRow,
 } from '@/components/primitives';
 import { CloudAccountCard } from '@/features/account/cloud-account-card';
 import { useCanUseDeveloperTools } from '@/features/account/dev-access';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { ProfileAvatarEditorSheet } from '@/features/account/profile-avatar-editor-sheet';
-import { formatAppVersionLabel } from '@/features/account/release-notes';
+import { getAppBuild, getAppVersion } from '@/features/account/release-notes';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
@@ -87,6 +88,14 @@ export default function ProfileSettingsScreen() {
   const [avatarOpen, setAvatarOpen] = useState(false);
 
   const displayName = resolveSelfDisplayName({ preferencesName: name, user });
+  const appVersion = getAppVersion();
+  const appBuild = getAppBuild();
+  const versionDetail =
+    !appVersion || appVersion === '—'
+      ? '—'
+      : appBuild
+        ? `${appVersion} (${appBuild})`
+        : appVersion;
   const avatarSize = Math.max(56, s(60));
   const openAvatar = () => {
     haptics.tap();
@@ -224,11 +233,10 @@ export default function ProfileSettingsScreen() {
         </AgentTestId>
       ) : null}
 
-      <AgentTestId
-        testID={AgentUiIds.profile.section.preferences}
-        label="Preferences"
-        style={{ gap: rs.sm }}>
-        <SectionHeader title="Preferences" flush />
+      <CollapsibleSection
+        title="Preferences"
+        defaultExpanded
+        testID={AgentUiIds.profile.section.preferences}>
         <SettingsGroup>
           <SettingsActionRow
             label="Home location"
@@ -261,13 +269,11 @@ export default function ProfileSettingsScreen() {
             onValueChange={setHapticsEnabled}
           />
         </SettingsGroup>
-      </AgentTestId>
+      </CollapsibleSection>
 
-      <AgentTestId
-        testID={AgentUiIds.profile.section.features}
-        label="Features"
-        style={{ gap: rs.sm }}>
-        <SectionHeader title="Features" flush />
+      <CollapsibleSection
+        title="Features"
+        testID={AgentUiIds.profile.section.features}>
         <SettingsGroup>
           <SettingsActionRow
             label="Manage Agents"
@@ -290,7 +296,7 @@ export default function ProfileSettingsScreen() {
             accessibilityLabel="Open nutrition profiles"
           />
         </SettingsGroup>
-      </AgentTestId>
+      </CollapsibleSection>
 
       <CollapsibleSection
         title="Add-ons"
@@ -392,16 +398,19 @@ export default function ProfileSettingsScreen() {
       </AgentTestId>
 
       <AgentTestId
-        testID={AgentUiIds.profile.version}
-        label="App version"
-        style={{
-          alignItems: 'center',
-          paddingTop: rs.sm,
-          paddingBottom: rs.xl,
-        }}>
-        <AppText variant="caption" color="tertiary" fit>
-          {formatAppVersionLabel()}
-        </AppText>
+        testID={AgentUiIds.profile.section.appInformation}
+        label="App Information"
+        style={{ gap: rs.sm, paddingBottom: rs.xl }}>
+        <SectionHeader title="App Information" flush />
+        <SettingsGroup>
+          <SettingsRow
+            label="Version"
+            detail={versionDetail}
+            icon="settings"
+            testID={AgentUiIds.profile.version}
+            accessibilityLabel="App version"
+          />
+        </SettingsGroup>
       </AgentTestId>
 
       <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />

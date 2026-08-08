@@ -26,6 +26,7 @@ import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 import { AppText } from './app-text';
 import { fieldTitleCase } from './field-title-case';
+import { GlassIconWell } from './glass-icon-well';
 import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
@@ -282,13 +283,9 @@ export function AppPromptHost({ embedded = false }: { embedded?: boolean }) {
             </GlassPlate>
           </Pressable>
         ) : null}
-        <View
-          style={[
-            styles.brandMark,
-            { backgroundColor: theme.accentFaint },
-          ]}>
+        <GlassIconWell size={46} borderRadius={radii.pill} style={styles.brandMark}>
           <Symbol name="smart" size={22} color={theme.accentPrimary} />
-        </View>
+        </GlassIconWell>
         <View style={styles.copy}>
           <AppText
             accessibilityRole="header"
@@ -429,8 +426,7 @@ function PromptActionButton({
 
   return (
     <GlassPlate
-      clear={glassSunken}
-      wash={glassSunken}
+      airy={glassSunken}
       style={[styles.actionShell, { borderColor }]}>
       {button}
     </GlassPlate>
@@ -486,12 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   brandMark: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
     alignSelf: 'center',
-    borderRadius: radii.pill,
   },
   copy: {
     alignItems: 'center',

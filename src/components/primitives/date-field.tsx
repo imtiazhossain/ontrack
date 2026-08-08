@@ -21,6 +21,7 @@ import { IconButton } from './button';
 import { DateFieldCalendar } from './date-field-calendar';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
+import { GlassPlate } from './glass-plate';
 import { StackedIconField } from './stacked-icon-field';
 
 interface DateFieldProps {
@@ -247,11 +248,10 @@ export function DateField({
               onPress={() => setShowPicker(false)}
               style={StyleSheet.absoluteFill}
             />
-            <View
+            <GlassPlate
               style={[
                 styles.calendarSheet,
                 {
-                  backgroundColor: theme.backgroundElevated,
                   maxWidth: Math.min(layout.maxContentWidth, s(420)),
                   padding: spacing.md,
                   gap: spacing.sm,
@@ -265,8 +265,6 @@ export function DateField({
                   icon="close"
                   accessibilityLabel="Close calendar"
                   testID={testID ? `${testID}.close` : undefined}
-                  background={theme.backgroundSunken}
-                  borderColor={theme.separator}
                   onPress={() => setShowPicker(false)}
                 />
               </View>
@@ -300,7 +298,7 @@ export function DateField({
                   Done
                 </AppText>
               </Pressable>
-            </View>
+            </GlassPlate>
           </View>
         </Modal>
       ) : null}

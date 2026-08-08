@@ -10,8 +10,15 @@ import type {
 } from './types';
 
 const FORECAST_DAYS = 16;
+/** Open-Meteo forecast `past_days` / start_date floor (docs: 0–92). */
+export const OPEN_METEO_PAST_DAYS_MAX = 92;
 const REQUEST_TIMEOUT_MS = 10_000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
+
+export type TravelWeatherFetchOptions = {
+  /** Include up to N calendar days before today (capped at OPEN_METEO_PAST_DAYS_MAX). */
+  pastDays?: number;
+};
 
 interface GeocodingResult {
   name?: unknown;
@@ -68,10 +75,6 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-function isNumberArray(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every(isFiniteNumber);
-}
-
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   try {
     const response = await fetchWithTimeout(url, { signal }, REQUEST_TIMEOUT_MS);
@@ -89,10 +92,17 @@ export function forecastWindow(
   startDate: string,
   endDate: string,
   today = todayKey(),
+  options?: TravelWeatherFetchOptions,
 ): ForecastWindow {
   const availableThrough = addDays(today, FORECAST_DAYS - 1);
+  const pastDays = Math.max(
+    0,
+    Math.min(options?.pastDays ?? 0, OPEN_METEO_PAST_DAYS_MAX),
+  );
+  const earliest = pastDays > 0 ? addDays(today, -pastDays) : today;
 
-  if (endDate < today) return { availability: 'past' };
+  // Fully before any requestable day (travel default: before today; home: before past floor).
+  if (endDate < earliest) return { availability: 'past' };
   if (startDate > availableThrough) {
     return {
       availability: 'too-early',
@@ -100,7 +110,7 @@ export function forecastWindow(
     };
   }
 
-  const requestStart = startDate < today ? today : startDate;
+  const requestStart = startDate < earliest ? earliest : startDate;
   const requestEnd = endDate > availableThrough ? availableThrough : endDate;
   return {
     availability: requestEnd < endDate ? 'partial' : 'forecast',
@@ -145,7 +155,12 @@ function locationLabel(result: GeocodingResult, fallback: string): string {
   return parts.join(', ') || fallback;
 }
 
-function normalizeDays(response: ForecastResponse): TravelWeatherDay[] {
+/**
+ * Map Open-Meteo daily arrays → trip/home days.
+ * Past windows often include null placeholders for code/temps — skip those days
+ * instead of rejecting the whole forecast (which hid working future days).
+ */
+export function normalizeTravelWeatherDays(response: ForecastResponse): TravelWeatherDay[] {
   const daily = response.daily;
   const dates = daily?.time;
   const codes = daily?.weather_code;
@@ -155,29 +170,38 @@ function normalizeDays(response: ForecastResponse): TravelWeatherDay[] {
 
   if (
     !isStringArray(dates) ||
-    !isNumberArray(codes) ||
-    !isNumberArray(minimums) ||
-    !isNumberArray(maximums) ||
-    !isNumberArray(precipitation)
+    !Array.isArray(codes) ||
+    !Array.isArray(minimums) ||
+    !Array.isArray(maximums)
   ) {
     throw new Error('Weather service returned incomplete forecast data.');
   }
 
-  const length = Math.min(
-    dates.length,
-    codes.length,
-    minimums.length,
-    maximums.length,
-    precipitation.length,
-  );
-  return dates.slice(0, length).map((date, index) => ({
-    date,
-    weatherCode: codes[index],
-    ...describeWeatherCode(codes[index]),
-    temperatureMin: Math.round(minimums[index]),
-    temperatureMax: Math.round(maximums[index]),
-    precipitationProbability: Math.round(precipitation[index]),
-  }));
+  const precipArr = Array.isArray(precipitation) ? precipitation : [];
+  const length = Math.min(dates.length, codes.length, minimums.length, maximums.length);
+  const days: TravelWeatherDay[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const weatherCode = codes[index];
+    const temperatureMin = minimums[index];
+    const temperatureMax = maximums[index];
+    if (
+      !isFiniteNumber(weatherCode) ||
+      !isFiniteNumber(temperatureMin) ||
+      !isFiniteNumber(temperatureMax)
+    ) {
+      continue;
+    }
+    const precipRaw = precipArr[index];
+    days.push({
+      date: dates[index],
+      weatherCode,
+      ...describeWeatherCode(weatherCode),
+      temperatureMin: Math.round(temperatureMin),
+      temperatureMax: Math.round(temperatureMax),
+      precipitationProbability: isFiniteNumber(precipRaw) ? Math.round(precipRaw) : 0,
+    });
+  }
+  return days;
 }
 
 async function requestTravelWeather(
@@ -185,9 +209,9 @@ async function requestTravelWeather(
   startDate: string,
   endDate: string,
   temperatureUnit: TemperatureUnit,
-  signal?: AbortSignal,
+  options?: TravelWeatherFetchOptions,
 ): Promise<TravelWeather> {
-  const window = forecastWindow(startDate, endDate);
+  const window = forecastWindow(startDate, endDate, todayKey(), options);
   if (!window.requestStart || !window.requestEnd) {
     return {
       availability: window.availability,
@@ -198,7 +222,7 @@ async function requestTravelWeather(
     };
   }
 
-  const location = await geocodeDestination(destination, signal);
+  const location = await geocodeDestination(destination);
 
   const forecastUrl = new URL('https://api.open-meteo.com/v1/forecast');
   forecastUrl.searchParams.set('latitude', String(location.latitude));
@@ -211,8 +235,8 @@ async function requestTravelWeather(
   forecastUrl.searchParams.set('timezone', 'auto');
   forecastUrl.searchParams.set('start_date', window.requestStart);
   forecastUrl.searchParams.set('end_date', window.requestEnd);
-  const forecast = await fetchJson<ForecastResponse>(forecastUrl.toString(), signal);
-  const days = normalizeDays(forecast);
+  const forecast = await fetchJson<ForecastResponse>(forecastUrl.toString());
+  const days = normalizeTravelWeatherDays(forecast);
   if (days.length === 0) throw new Error('No forecast is available for these trip dates yet.');
 
   return {
@@ -231,8 +255,16 @@ export function getTravelWeather(
   endDate: string,
   temperatureUnit: TemperatureUnit,
   signal?: AbortSignal,
+  options?: TravelWeatherFetchOptions,
 ): Promise<TravelWeather> {
-  const key = [destination.trim().toLocaleLowerCase(), startDate, endDate, temperatureUnit].join('|');
+  const pastDays = options?.pastDays ?? 0;
+  const key = [
+    destination.trim().toLocaleLowerCase(),
+    startDate,
+    endDate,
+    temperatureUnit,
+    pastDays,
+  ].join('|');
   const cached = cache.get(key);
   // Shared cache must not bind to a caller AbortSignal — one unmount would abort
   // every concurrent consumer of the same key.
@@ -245,6 +277,7 @@ export function getTravelWeather(
     startDate,
     endDate,
     temperatureUnit,
+    options,
   ).catch((error) => {
     cache.delete(key);
     throw error;

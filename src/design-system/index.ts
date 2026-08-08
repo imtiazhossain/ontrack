@@ -4,9 +4,12 @@ export {
     findFontPreset, FONT_ROLE_LABELS, MONO_FONT_PRESETS, resolveActiveFontFamilies, resolveFontPreset, sanitizeFontOverrides, UI_FONT_PRESETS, type FontOverrides, type FontPreset, type FontRole
 } from './font-presets';
 export {
+    colorWithAlpha,
     glassFieldBackground,
     glassFieldBorder,
-    glassMaterials
+    glassMaterials,
+    glassMistPillShellStyle,
+    glassMistWashStyle,
 } from './glass';
 export {
     appIcons,
@@ -46,7 +49,7 @@ export {
     type ThemeTokenOverrides
 } from './theme-overrides';
 export {
-    categoryColors, darkPlantTheme, darkTheme, darkTravelTheme, darkVehicleTheme, lightPlantTheme, lightTheme, lightTravelTheme, lightVehicleTheme, resolveBaseTheme, timeOfDayGradient,
+    categoryColors, darkPlantTheme, darkTheme, darkTravelTheme, darkVehicleTheme, hexWithAlpha, lightPlantTheme, lightTheme, lightTravelTheme, lightVehicleTheme, resolveBaseTheme, timeOfDayGradient,
     timeOfDaySafeAreaBackground, type CategoryColors, type Theme,
     type ThemeAppearance,
     type ThemeFeatureScope

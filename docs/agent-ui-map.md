@@ -219,7 +219,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | ----------------------------------- | ------------------------ |
 | `ontrack.today.prevDay`             | Previous day             |
 | `ontrack.today.nextDay`             | Next day                 |
-| `ontrack.today.weather`             | Home weather / location  |
+| `ontrack.today.weather`             | Home weather banner when data exists (H/L; tap → location sheet) |
 | `ontrack.today.progress`            | Day completion ring (hidden at 0%) |
 | `ontrack.today.addActivity`         | Add activity             |
 | `ontrack.today.emptyAddActivity`    | Empty-state add          |
@@ -414,24 +414,33 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | testID                                              | Control                             |
 | --------------------------------------------------- | ----------------------------------- |
 | `ontrack.profile.avatar`                            | Customize avatar                    |
+| `ontrack.profile.avatar.close`                      | Avatar editor close                 |
+| `ontrack.profile.avatar.save`                       | Avatar editor save                  |
+| `ontrack.profile.avatar.mode.<initials\|icon\|photo>` | Avatar editor mode segment        |
+| `ontrack.profile.avatar.takePhoto`                  | Avatar editor take photo            |
+| `ontrack.profile.avatar.chooseLibrary`              | Avatar editor choose from library   |
+| `ontrack.profile.avatar.searchIcons`                | Avatar editor icon search           |
 | `ontrack.profile.section.account`                   | Account section anchor              |
 | `ontrack.profile.section.appearance`                | Appearance section anchor           |
 | `ontrack.profile.section.developer`                 | Developer section anchor            |
-| `ontrack.profile.section.preferences`               | Preferences section anchor          |
-| `ontrack.profile.section.features`                  | Features section anchor             |
+| `ontrack.profile.section.preferences`               | Expand/collapse Preferences section |
+| `ontrack.profile.section.features`                  | Expand/collapse Features section    |
 | `ontrack.profile.section.addons`                    | Expand/collapse Add-ons section     |
 | `ontrack.profile.section.legal`                     | Legal section anchor                |
 | `ontrack.profile.section.dangerZone`                | Danger Zone (reset / delete)        |
 | `ontrack.profile.section.disclaimers`               | Disclaimers footer section anchor   |
-| `ontrack.profile.version`                           | App version footer label            |
+| `ontrack.profile.section.appInformation`            | App Information footer section      |
+| `ontrack.profile.version`                           | App version row in App Information  |
 | `ontrack.profile.theme.system` / `.light` / `.dark` | Theme segment                       |
 | `ontrack.profile.homeLocation`                      | Home location                       |
 | `ontrack.profile.agents`                            | Manage Agents                       |
 | `ontrack.profile.nutrition`                         | Nutrition profiles                  |
 | `ontrack.profile.privacy`                           | Privacy Policy                      |
 | `ontrack.profile.terms`                             | Terms of Use                        |
+| `ontrack.legal.document`                            | Privacy / Terms document body       |
 | `ontrack.profile.tmdb`                              | TMDB attribution link (footer)      |
 | `ontrack.profile.signOut`                           | Sign Out (signed-in)                |
+| `ontrack.profile.createOrSignIn`                    | Create or Sign In (guest)           |
 | `ontrack.profile.deleteAccount`                     | Delete Account (signed-in)          |
 | `ontrack.profile.resetData`                         | Reset All Data                      |
 
@@ -455,15 +464,15 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.onboarding.getStarted` | Get started       |
 | `ontrack.onboarding.skip`       | Skip for now      |
 
-## Travel list (`/(tabs)/travel`)
+## Travel Home (`/(tabs)/travel`, flow `travel-home`)
 
-Trip launcher home. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live at the **top of plan detail** (`/travel/<id>`). Legacy `/travel/<id>/hub` redirects there.
+Trip launcher home. Wire testIDs stay under historical `ontrack.travel.list.*` (not `travel.home.*`). Assert with `travel.list.section.yourTrips` or colloquial `travel.home.section.yourTrips` (host rewrites `home` → `list`). JS: prefer `AgentUiIds.travel.home.*`. Utility actions (calendar, flights/stays, weather, currency, expenses, chat) live at the **top of plan detail** (`/travel/<id>`). Legacy `/travel/<id>/hub` redirects there.
 
 | testID                                           | Control                                                   |
 | ------------------------------------------------ | --------------------------------------------------------- |
 | `ontrack.travel.chrome.flightPath`               | Layout anchor — flight-path flourish on itinerary hero only |
 | `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky + location ground (stars/moon, sun/clouds, town/trees) behind titles |
-| `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
+| `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section (`travel.home.section.yourTrips` alias) |
 | `ontrack.travel.list.section.atmosphereLocation` | Layout anchor — atmosphere photo place caption            |
 | `ontrack.travel.list.search`                     | Your Trips search — chip expands; field when open         |
 | `ontrack.travel.list.searchMinimize`             | Collapse expanded trip search (leading search icon)       |
@@ -607,22 +616,22 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | ID | Control |
 |----|---------|
 | `ontrack.developer.back` | Back to profile |
-| `ontrack.developer.section.appUpdates` | Expand/collapse App Updates (top of hub; collapsed by default) |
-| `ontrack.developer.section.navigate` | Expand/collapse Navigate |
-| `ontrack.developer.section.insights` | Expand/collapse Product insights |
-| `ontrack.developer.section.runtime` | Expand/collapse Runtime |
-| `ontrack.developer.section.diagnostics` | Expand/collapse Diagnostics |
-| `ontrack.developer.section.tools` | Expand/collapse Tools |
+| `ontrack.developer.section.appUpdates` | Expand/collapse App Updates (open by default) |
+| `ontrack.developer.section.navigate` | Expand/collapse Navigate (open by default) |
+| `ontrack.developer.section.insights` | Expand/collapse Product insights (closed by default) |
+| `ontrack.developer.section.runtime` | Expand/collapse Runtime (closed by default) |
+| `ontrack.developer.section.diagnostics` | Expand/collapse Diagnostics (closed by default) |
+| `ontrack.developer.section.tools` | Expand/collapse Tools (closed by default) |
 | `ontrack.developer.insights` | Product insights body |
 | `ontrack.developer.insights.local` | This-device usage card |
 | `ontrack.developer.insights.product` | All-users usage card |
 | `ontrack.developer.insights.refresh` | Refresh insights (header action) |
-| `ontrack.developer.releaseNotes` | App Updates body (Release Notes / Changelog) |
-| `ontrack.developer.releaseNotes.currentVersion` | Current Version: X.Y.Z label |
-| `ontrack.developer.releaseNotes.tabs` | Release Notes / Changelog segmented control |
+| `ontrack.developer.releaseNotes` | App Updates body (Release Notes / Changelogs) |
+| `ontrack.developer.releaseNotes.tabs` | Release Notes / Changelogs segmented control |
 | `ontrack.developer.releaseNotes.tab.releaseNotes` | Release Notes tab |
-| `ontrack.developer.releaseNotes.tab.changelog` | Changelog tab |
+| `ontrack.developer.releaseNotes.tab.changelog` | Changelogs tab |
 | `ontrack.developer.releaseNotes.date` | Current ship-day date (MM/DD/YYYY) between arrows |
+| `ontrack.developer.releaseNotes.currentVersion` | Current Version: X.Y.Z under the date |
 | `ontrack.developer.releaseNotes.prev` | Older ship day |
 | `ontrack.developer.releaseNotes.next` | Newer ship day |
 | `ontrack.developer.releaseNotes.list` | Versions for the selected day (latest on top) |
@@ -655,14 +664,11 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.apiUsage.sort.status-worst` / `.status-healthy` / `.name` / `.usage` | Sort dropdown options |
 | `ontrack.apiUsage.service.<id>` | Service row (e.g. `openai-nutrition`) |
 | `ontrack.designSystem.back`        | Leave the gallery (back to Developer)     |
-| `ontrack.designSystem.info`        | Open the canonical sheet example          |
-| `ontrack.designSystem.mode.<mode>` | Switch gallery tab (`catalog` / `components`→label UI / `forms` / `colors` / `fonts`→Type / `icons`) |
-| `ontrack.designSystem.catalogView.<view>` | Catalog index mode (`elements` / `features`) |
-| `ontrack.designSystem.catalogGroup.<group>` | Collapsible catalog group toggle (`layout` / `actions` / …) |
-| `ontrack.designSystem.catalogFeature.<id>` | Collapsible feature usage toggle (`travel` / `todos` / …) |
-| `ontrack.designSystem.catalogFeature.<id>.element.<name>` | Element row inside a feature section (opens demo) |
-| `ontrack.designSystem.catalogElement.<id>` | Catalog element row (opens demo tab) |
-| `ontrack.designSystem.demo.<name>` | Live demo control inside Components/Forms |
+| `ontrack.designSystem.info`        | How to use this gallery (sheet)           |
+| `ontrack.designSystem.mode.<mode>` | Gallery tab (`elements` / `demos` / `colors` / `fonts`→Type / `icons`) |
+| `ontrack.designSystem.catalogGroup.<group>` | Elements group toggle (`layout` / `actions` / …) |
+| `ontrack.designSystem.catalogElement.<id>` | Element row (opens Demos / foundation tab) |
+| `ontrack.designSystem.demo.<name>` | Live control inside Demos |
 | `ontrack.designSystem.primary`     | Primary action example                    |
 | `ontrack.designSystem.secondary`   | Secondary action example                  |
 | `ontrack.designSystem.ghost`       | Ghost action example                      |
@@ -729,12 +735,13 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 | ~~`ontrack.travel.planDetail.weather`~~        | **Unused** — use `list.tripWeather.<tripId>` on the travel list          |
 | ~~`ontrack.travel.planDetail.currency`~~       | **Unused** — use `list.currency.<tripId>` on the travel list             |
 | `ontrack.travel.planDetail.addToTimeline`      | Add to Timeline                                                          |
+| `ontrack.travel.planDetail.groupChat`          | Floating glass Group Chat FAB (icon only, bottom-right)                  |
 | `ontrack.travel.planDetail.section.tools`      | Expand/collapse Trip Tools (glass action grid)                           |
 | `ontrack.travel.planDetail.section.transport`  | Expand/collapse transport group                                          |
 | `ontrack.travel.planDetail.section.timeline`   | Expand/collapse timeline                                                 |
 | `ontrack.travel.planDetail.section.notes`      | Expand/collapse trip notes                                               |
 | `ontrack.travel.planDetail.editNotes`          | Open the trip notes editor from the notes card body                      |
-| `ontrack.travel.planDetail.section.ground`     | Expand/collapse ground and transit items                                 |
+| `ontrack.travel.planDetail.section.ground`     | Expand/collapse Transit items                                            |
 | `ontrack.travel.planDetail.addFlight`          | Empty-state CTA to add a flight                                          |
 | `ontrack.travel.planDetail.addTransport`       | Empty-state CTA to add ground/transit                                    |
 | `ontrack.travel.planDetail.addStay`            | Empty-state CTA to add a stay                                            |

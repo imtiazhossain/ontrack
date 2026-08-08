@@ -16,8 +16,10 @@ import {
   AppText,
   appPrompt,
   Button,
+  Card,
   DateField,
   ErrorMessage,
+  GlassPlate,
   Input,
   Screen,
   SectionHeader,
@@ -237,15 +239,11 @@ export default function ShareEventScreen() {
             title={`${drafts.length} ${drafts.length === 1 ? 'event' : 'events'} found`}
           />
           {drafts.map((draft, index) => (
-            <View
+            <Card
               key={draft.id}
-              style={[
-                styles.eventCard,
-                {
-                  backgroundColor: theme.backgroundElevated,
-                  borderColor: theme.separator,
-                },
-              ]}>
+              airy
+              padded={false}
+              style={[styles.eventCard, { borderColor: theme.separator }]}>
               <View style={styles.cardHeader}>
                 <AppText variant="subheading">Event {index + 1}</AppText>
                 <Button
@@ -309,13 +307,11 @@ export default function ShareEventScreen() {
                           draft.categoryId === category.id
                             ? theme.accentPrimary
                             : theme.separator,
-                        backgroundColor:
-                          draft.categoryId === category.id
-                            ? theme.accentFaint
-                            : theme.backgroundSunken,
                       },
                     ]}>
-                    <CategoryBadge category={category} />
+                    <GlassPlate airy style={styles.categoryChoicePlate}>
+                      <CategoryBadge category={category} />
+                    </GlassPlate>
                   </Pressable>
                 ))}
               </View>
@@ -339,7 +335,7 @@ export default function ShareEventScreen() {
                   Add a title before saving.
                 </AppText>
               ) : null}
-            </View>
+            </Card>
           ))}
 
           {drafts.length === 0 ? (
@@ -413,6 +409,12 @@ const styles = StyleSheet.create({
   categoryChoice: {
     borderWidth: 1,
     borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  categoryChoicePlate: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   notes: {
     minHeight: 96,

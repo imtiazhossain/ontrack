@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button } from '@/components/primitives';
+import { AppText } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import type { FlightDetailsDraft } from '@/features/travel/flight-details';
 import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
@@ -10,11 +10,16 @@ import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { kindAccent } from '@/features/travel/travel-kind-chrome';
+import { TravelSheetPrimaryAction } from '@/features/travel/travel-list-actions';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import { travelAccent } from '@/features/travel/travel-surface';
+import {
+  travelAccent,
+  travelItineraryInk,
+} from '@/features/travel/travel-surface';
 import { TravelTimelineNode } from '@/features/travel/travel-timeline-node';
 import type {
   TravelItemKind,
+  TravelItineraryItem,
   TravelPlan,
   TravelTransportDetails,
 } from '@/features/travel/types';
@@ -22,8 +27,6 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 import type { DateDisplayFormat } from '@/utils/date';
-
-type TravelItineraryItemModel = TravelPlan['itinerary'][number];
 
 type TransportHandlers = {
   plan: TravelPlan;
@@ -51,7 +54,7 @@ type TransportHandlers = {
   onCancelFlightEdit: () => void;
   onBeginFlightEdit: (
     itemId: string,
-    flight: TravelItineraryItemModel['flight'],
+    flight: TravelItineraryItem['flight'],
   ) => void;
   onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: (itemId: string) => void;
@@ -62,7 +65,7 @@ type TransportHandlers = {
   onCancelRentalEdit: () => void;
   onBeginRentalEdit: (
     itemId: string,
-    rental: TravelItineraryItemModel['rental'],
+    rental: TravelItineraryItem['rental'],
   ) => void;
   onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
   onImportStay: (itemId: string) => void;
@@ -73,7 +76,7 @@ type TransportHandlers = {
   onCancelStayEdit: () => void;
   onBeginStayEdit: (
     itemId: string,
-    stay: TravelItineraryItemModel['stay'],
+    stay: TravelItineraryItem['stay'],
   ) => void;
   onSaveTransportDetails: (
     itemId: string,
@@ -82,12 +85,12 @@ type TransportHandlers = {
   ) => void;
   onAddPhotos: (itemId: string) => void;
   onRemovePhoto: (itemId: string, uri: string) => void;
-  onRemove: (item: TravelItineraryItemModel) => void;
+  onRemove: (item: TravelItineraryItem) => void;
   onSaveNotes: (
     itemId: string,
-    notes: NonNullable<TravelItineraryItemModel['notes']>,
+    notes: NonNullable<TravelItineraryItem['notes']>,
   ) => void;
-  onShare?: (item: TravelItineraryItemModel) => void;
+  onShare?: (item: TravelItineraryItem) => void;
 };
 
 type EmptyAction = {
@@ -105,10 +108,11 @@ function TransportEmptyState({
   actionTestID,
   onAction,
 }: EmptyAction) {
+  const theme = useTheme();
   const { spacing: rs, s } = useResponsive();
   return (
     <TravelHomeGlass
-      clear
+      mist
       style={[
         styles.empty,
         {
@@ -120,21 +124,19 @@ function TransportEmptyState({
       ]}>
       <AppText
         variant="callout"
-        color="secondary"
         align="center"
-        style={styles.emptyMessage}>
+        style={[
+          styles.emptyMessage,
+          { color: travelItineraryInk(theme, 'secondary') },
+        ]}>
         {message}
       </AppText>
-      <Button
-        variant="secondary"
-        size="sm"
+      <TravelSheetPrimaryAction
+        label={actionLabel}
         icon={actionIcon}
         onPress={onAction}
         testID={actionTestID}
-        accessibilityLabel={actionLabel}
-        style={styles.emptyAction}>
-        {actionLabel}
-      </Button>
+      />
     </TravelHomeGlass>
   );
 }
@@ -144,7 +146,7 @@ function TransportItemList({
   empty,
   ...handlers
 }: TransportHandlers & {
-  items: TravelItineraryItemModel[];
+  items: TravelItineraryItem[];
   empty: EmptyAction;
 }) {
   const { spacing: rs } = useResponsive();
@@ -237,7 +239,7 @@ export function TravelTransportSections({
   onAddKind,
   ...handlers
 }: TransportHandlers & {
-  items: TravelItineraryItemModel[];
+  items: TravelItineraryItem[];
   transportExpanded: boolean;
   flightsExpanded: boolean;
   groundExpanded: boolean;
@@ -301,28 +303,6 @@ export function TravelTransportSections({
           />
         </TravelCollapsibleSection>
         <TravelCollapsibleSection
-          title="GROUND & TRANSIT"
-          icon="route"
-          accentColor={groundAccent}
-          compact
-          expanded={groundExpanded}
-          onToggle={onToggleGround}
-          toggleTestID={AgentUiIds.travel.planDetail.groundSection}
-          nested>
-          <TransportItemList
-            items={ground}
-            empty={{
-              message:
-                'Train, bus, ferry, taxi, or drive — keep ground travel with the trip.',
-              actionLabel: 'Add Transport',
-              actionIcon: 'route',
-              actionTestID: AgentUiIds.travel.planDetail.addTransport,
-              onAction: () => onAddKind('transport'),
-            }}
-            {...handlers}
-          />
-        </TravelCollapsibleSection>
-        <TravelCollapsibleSection
           title="STAYS"
           icon="lodging"
           accentColor={stayAccent}
@@ -364,6 +344,28 @@ export function TravelTransportSections({
             {...handlers}
           />
         </TravelCollapsibleSection>
+        <TravelCollapsibleSection
+          title="TRANSIT"
+          icon="route"
+          accentColor={groundAccent}
+          compact
+          expanded={groundExpanded}
+          onToggle={onToggleGround}
+          toggleTestID={AgentUiIds.travel.planDetail.groundSection}
+          nested>
+          <TransportItemList
+            items={ground}
+            empty={{
+              message:
+                'Train, bus, ferry, taxi, or drive — keep ground travel with the trip.',
+              actionLabel: 'Add Transport',
+              actionIcon: 'route',
+              actionTestID: AgentUiIds.travel.planDetail.addTransport,
+              onAction: () => onAddKind('transport'),
+            }}
+            {...handlers}
+          />
+        </TravelCollapsibleSection>
       </View>
     </TravelCollapsibleSection>
   );
@@ -380,8 +382,5 @@ const styles = StyleSheet.create({
     minWidth: 0,
     width: '100%',
     textAlign: 'center',
-  },
-  emptyAction: {
-    alignSelf: 'center',
   },
 });

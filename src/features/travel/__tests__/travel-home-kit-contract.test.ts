@@ -27,9 +27,12 @@ describe('travel home kit contract', () => {
     expect(source).toContain('collapsable={false}');
     expect(source).toContain('heroPageSlots');
     expect(source).toContain('scrollEnabled={scrollInteractive}');
-    // Page ticks bind to this carousel’s visibleUris (not a lagged parent count).
+    // Page ticks bind to this carousel’s visibleUris once remotes paint
+    // (not a lagged parent count; never advertise paging before swipe works).
     expect(source).toContain('TravelHomeCarouselStepper');
-    expect(source).toContain('count={visibleUris.length}');
+    expect(source).toContain(
+      'count={hasPaintedRemote ? visibleUris.length : 0}',
+    );
     expect(source).not.toMatch(
       /visibleUris\.length\s*>\s*0\s*\?\s*\(\s*<ScrollView/,
     );
@@ -41,12 +44,14 @@ describe('travel home kit contract', () => {
       'utf8',
     );
     expect(source).toContain('travelHomeHeroContentPosition');
+    expect(source).toContain('travelHomeHeroOverscanStyle');
     expect(source).toContain('peekUnsplashCoverColor');
   });
 
   it('keeps scenic underlay until a remote hero actually paints', () => {
     // URI presence alone hid the fixture on Android while proxies were loading
-    // → brandBlueSoft empty cards.
+    // → brandBlueSoft empty cards. Remotes must stay opaque underneath (iOS
+    // never fires onLoad inside opacity:0) with the scenic plate covering on top.
     const source = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-hero-carousel.tsx'),
       'utf8',
@@ -56,6 +61,8 @@ describe('travel home kit contract', () => {
     expect(source).toContain('onLoad');
     expect(source).toContain('scenicUnderlay');
     expect(source).toContain('opacity: hasPaintedRemote ? 0 : 1');
+    expect(source).toContain('zIndex: 1');
+    expect(source).not.toContain('{ opacity: hasPaintedRemote ? 1 : 0 }');
     expect(source).not.toContain('opacity: fixtureSource && !hasRemoteHeroes ? 1 : 0');
   });
 
@@ -106,8 +113,9 @@ describe('travel home kit contract', () => {
     // View Itinerary = frosted sage glass (both themes); not solid ink/brand.
     expect(card).toContain('TravelHomeGlass');
     expect(card).toContain('accent="green"');
-    // Android serif needs a wider CTA + no flex-shrink below the full label.
-    expect(card).toContain("Platform.OS === 'android' ? 1.35 : 1");
+    // Android: hug CTA (no flex grow) + never shrink below the full label.
+    expect(card).toContain('compact || Platform.OS === \'android\' ? undefined : 1');
+    expect(card).toContain("flexGrow: Platform.OS === 'android' && !compact ? 0");
     expect(card).toContain("flexShrink: Platform.OS === 'android' ? 0 : 1");
     expect(card).toContain('View Itinerary');
     expect(card).toMatch(/flexShrink:\s*0/);

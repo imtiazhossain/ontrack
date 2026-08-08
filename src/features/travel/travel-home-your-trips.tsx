@@ -6,8 +6,8 @@ import { EmptyState } from '@/components/primitives';
 import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import { TravelHomeSectionHeader } from '@/features/travel/travel-home-section-header';
 import {
-  travelHomeFontFamily,
-  travelHomeTokens,
+    travelHomeFontFamily,
+    travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
 import { TravelHomeTripCard } from '@/features/travel/travel-home-trip-card';
 import type { TravelPlan } from '@/features/travel/types';
@@ -100,7 +100,7 @@ export function TravelHomeYourTrips({
         ) : (
           <View style={{ height: peekHeight }} />
         )}
-        <AgentTestId testID={AgentUiIds.travel.list.sectionYourTrips}>
+        <AgentTestId testID={AgentUiIds.travel.home.sectionYourTrips}>
           <TravelHomeSectionHeader
             title="Your Trips"
             count={plans.length}

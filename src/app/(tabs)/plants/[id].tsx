@@ -3,15 +3,25 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { appPrompt, AppText, Button, Card, GlassPlate, Input, Screen, SectionHeader } from '@/components/primitives';
+import {
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    GlassMetaChip,
+    GlassPlate,
+    Input,
+    Screen,
+    SectionHeader,
+} from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { plantImageSource } from '@/features/plants/sample';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import {
-  addPruningActivity,
-  deletePlant,
-  logPlantWatering,
-  undoPlantWatering,
+    addPruningActivity,
+    deletePlant,
+    logPlantWatering,
+    undoPlantWatering,
 } from '@/services/plants/schedule';
 import { usePlants } from '@/store/plants';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -77,10 +87,10 @@ function PlantDetailContent() {
 
       <SectionHeader title="Watering schedule" detail={`Every ${plant.carePlan.watering.intervalDays} days`} />
       <Card style={styles.careCard}>
-        <View style={[styles.scheduleBadge, { backgroundColor: theme.accentFaint }]}>
+        <GlassPlate airy style={styles.scheduleBadge}>
           <AppText variant="heading" color="accent">{wateringCountdownLabel(dueKey)}</AppText>
           <AppText variant="caption" color="secondary">{due} · reminder at {formatMinutes(plant.reminderMinutes)}</AppText>
-        </View>
+        </GlassPlate>
         <AppText color="secondary">{plant.carePlan.watering.soilCheck}</AppText>
         <AppText variant="callout">
           Start with {Math.round(plant.carePlan.watering.minMl)}–{Math.round(plant.carePlan.watering.maxMl)} mL only when the soil check says it is needed.
@@ -149,7 +159,7 @@ function PlantDetailContent() {
       <SectionHeader title="Soil" detail={`pH ${soil.phMin.toFixed(1)}–${soil.phMax.toFixed(1)}`} />
       <Card style={styles.careCard}>
         <AppText variant="heading">{soil.soilType}</AppText>
-        <GlassPlate clear wash style={styles.soilMetrics}>
+        <GlassPlate airy style={styles.soilMetrics}>
           <View style={[styles.soilMetricsInner, styles.glassContent]}>
             <View style={styles.soilMetric}>
               <AppText variant="overline" color="tertiary">Target pH</AppText>
@@ -166,9 +176,11 @@ function PlantDetailContent() {
         {soil.amendments.length ? (
           <View style={styles.chipRow}>
             {soil.amendments.map((item) => (
-              <View key={item} style={[styles.chip, { backgroundColor: theme.accentFaint }]}>
-                <AppText variant="caption" color="accent">{item}</AppText>
-              </View>
+              <GlassMetaChip key={item}>
+                <AppText variant="caption" color="accent">
+                  {item}
+                </AppText>
+              </GlassMetaChip>
             ))}
           </View>
         ) : null}

@@ -10,6 +10,7 @@ import {
 import {
     AppText,
     Button,
+    GlassIconWell,
     Symbol,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
@@ -47,6 +48,7 @@ import {
     TravelSectionLabel,
     TravelSurfaceCard,
 } from '@/features/travel/travel-surface';
+import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
     TRAVEL_EXPENSE_SELF_ID,
     type TravelExpense,
@@ -56,7 +58,6 @@ import {
 } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
-import { isTravelMemberPlan } from '@/features/travel/trip-roster';
 import {
     publishTravelTripExpenses,
     pullTravelTripExpenses,
@@ -408,13 +409,9 @@ export function TravelExpensesSheet({
                     <TravelSectionLabel title="Settle Up" count={transfers.length} />
                     {transfers.map((transfer) => (
                       <TravelSurfaceCard key={`${transfer.fromId}-${transfer.toId}`} bodyStyle={styles.settleCard}>
-                        <View
-                          style={[
-                            styles.settleIcon,
-                            { backgroundColor: theme.accentFaint },
-                          ]}>
+                        <GlassIconWell size={40} borderRadius={radii.pill}>
                           <Symbol name="wallet" size="sm" color={theme.accentPrimary} />
-                        </View>
+                        </GlassIconWell>
                         <View style={styles.settleCopy}>
                           <AppText variant="callout" fit numberOfLines={1}>
                             {transfer.fromId === TRAVEL_EXPENSE_SELF_ID
@@ -447,7 +444,7 @@ export function TravelExpensesSheet({
                     const kind = expenseCategoryKind(expense.category);
                     const chrome = kind
                       ? kindChrome(kind, theme)
-                      : { accent: theme.accentPrimary, tint: theme.accentFaint };
+                      : { accent: theme.accentPrimary };
                     return (
                       <ExpenseRowButton
                         key={expense.id}
@@ -456,21 +453,13 @@ export function TravelExpensesSheet({
                         onPress={() => beginEdit(expense)}
                         style={styles.expensePress}>
                         <TravelSurfaceCard bodyStyle={styles.expenseCard} padding={rs.sm}>
-                          <View
-                            style={[
-                              styles.categoryBadge,
-                              {
-                                width: s(44),
-                                height: s(44),
-                                backgroundColor: chrome.tint,
-                              },
-                            ]}>
+                          <GlassIconWell size={s(44)} borderRadius={radii.pill}>
                             <Symbol
                               name={CATEGORY_ICONS[expense.category]}
                               size="sm"
                               color={chrome.accent}
                             />
-                          </View>
+                          </GlassIconWell>
                           <View style={styles.expenseCopy}>
                             <AppText variant="body" fit numberOfLines={1} ellipsizeMode="tail">
                               {title}
@@ -561,14 +550,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  settleIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
   settleCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
   emptyCard: {
     alignItems: 'center',
@@ -582,12 +563,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  categoryBadge: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   expenseCopy: { flex: 1, flexShrink: 1, minWidth: 0, gap: spacing.xxs },
   amountCol: { alignItems: 'flex-end', flexShrink: 0, gap: spacing.xxs },

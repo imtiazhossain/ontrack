@@ -1,15 +1,11 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassIconWell, GlassPlate, Symbol } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
 import { fontFamilies, radii } from '@/design-system';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
-import {
-  travelCardBorder,
-  travelCardFill,
-  travelCardShadow,
-} from '@/features/travel/travel-surface';
+import { travelCardShadow } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -28,12 +24,10 @@ export function TravelDetailsSummaryCard({
   icon,
   mark,
   accentColor,
-  tintColor,
   confirmationCode,
   onPressConfirmation,
   rows,
   children,
-  backgroundColor,
 }: {
   title: string;
   subtitle?: string;
@@ -41,25 +35,22 @@ export function TravelDetailsSummaryCard({
   /** Brand mark filling the header well instead of the glyph. */
   mark?: ReactNode;
   accentColor: string;
-  tintColor: string;
   confirmationCode?: string;
   onPressConfirmation?: () => void;
   rows: TravelDetailsSummaryRow[];
   children?: ReactNode;
-  /** Override elevated fill (e.g. white flight cards on the travel wash). */
-  backgroundColor?: string;
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const iconWellSize = Math.max(44, s(48));
+  const wellRadius = Math.max(radii.md, s(14));
 
   return (
-    <View
+    <GlassPlate
+      airy
       style={[
         styles.card,
         {
-          backgroundColor: backgroundColor ?? travelCardFill(theme),
-          borderColor: travelCardBorder(theme),
           borderRadius: Math.max(radii.lg, s(18)),
           boxShadow: travelCardShadow(theme),
           padding: rs.lg,
@@ -67,18 +58,9 @@ export function TravelDetailsSummaryCard({
         },
       ]}>
       <View style={[styles.header, { gap: rs.md }]}>
-        <View
-          style={[
-            styles.iconWell,
-            {
-              width: iconWellSize,
-              height: iconWellSize,
-              borderRadius: Math.max(radii.md, s(14)),
-              backgroundColor: tintColor,
-            },
-          ]}>
+        <GlassIconWell size={iconWellSize} borderRadius={wellRadius}>
           {mark ?? <Symbol name={icon} size="lg" color={accentColor} />}
-        </View>
+        </GlassIconWell>
         <View style={[styles.titleCopy, { gap: rs.xxs }]}>
           <AppText variant="heading" fit style={styles.editorialTitle}>
             {title}
@@ -136,16 +118,7 @@ export function TravelDetailsSummaryCard({
                 },
                 index > 0 && styles.rowDivider,
               ]}>
-              <View
-                style={[
-                  styles.rowIcon,
-                  {
-                    width: iconWellSize,
-                    height: iconWellSize,
-                    borderRadius: Math.max(radii.md, s(14)),
-                    backgroundColor: tintColor,
-                  },
-                ]}>
+              <GlassIconWell size={iconWellSize} borderRadius={wellRadius}>
                 {row.mark ?? (
                   <Symbol
                     name={row.icon ?? 'calendar'}
@@ -153,7 +126,7 @@ export function TravelDetailsSummaryCard({
                     color={accentColor}
                   />
                 )}
-              </View>
+              </GlassIconWell>
               <View style={[styles.rowCopy, { gap: rs.xxs }]}>
                 <AppText
                   variant="overline"
@@ -182,24 +155,16 @@ export function TravelDetailsSummaryCard({
       ) : null}
 
       {children}
-    </View>
+    </GlassPlate>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
   header: { flexDirection: 'row', alignItems: 'center' },
-  iconWell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
   titleCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
   editorialTitle: { fontFamily: fontFamilies.serif },
   confirmation: { maxWidth: '42%', alignItems: 'flex-end', flexShrink: 1 },
@@ -208,12 +173,5 @@ const styles = StyleSheet.create({
   rows: { borderTopWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth },
-  rowIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
   rowCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
 });

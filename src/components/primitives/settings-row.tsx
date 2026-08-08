@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { radii, type AppIconName } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -9,6 +9,8 @@ import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
 import { fieldTitleCase } from './field-title-case';
+import { GlassIconWell } from './glass-icon-well';
+import { GlassSwitch } from './glass-switch';
 import { Symbol } from './symbol';
 
 interface SettingsRowProps {
@@ -53,17 +55,9 @@ export function SettingsRow({
   const content = (
     <>
       {icon ? (
-        <View
-          style={[
-            styles.icon,
-            {
-              width: s(34),
-              height: s(34),
-              backgroundColor: theme.accentFaint,
-            },
-          ]}>
+        <GlassIconWell size={s(34)} borderRadius={radii.sm}>
           <Symbol name={icon} size="sm" color={theme.accentPrimary} />
-        </View>
+        </GlassIconWell>
       ) : null}
       <View style={[styles.text, { gap: spacing.xxs }]}>
         <AppText variant="callout" fit>
@@ -137,7 +131,6 @@ export function SettingsToggleRow({
   testID?: string;
   grouped?: boolean;
 }) {
-  const theme = useTheme();
   const accessibilityLabel = `${label}. ${detail}`;
   return (
     <SettingsRow
@@ -150,14 +143,12 @@ export function SettingsToggleRow({
       grouped={grouped}
       onPress={disabled ? undefined : () => onValueChange(!value)}
       trailing={
-        <Switch
+        <GlassSwitch
           accessibilityLabel={accessibilityLabel}
           disabled={disabled}
           value={value}
           // Row press owns the toggle so the whole control is one hit target.
-          pointerEvents="none"
-          trackColor={{ false: theme.separator, true: theme.accentSoft }}
-          ios_backgroundColor={theme.separator}
+          style={{ pointerEvents: 'none' }}
         />
       }
     />
@@ -193,12 +184,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderCurve: 'continuous',
-  },
-  icon: {
-    borderRadius: radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   text: {
     flex: 1,

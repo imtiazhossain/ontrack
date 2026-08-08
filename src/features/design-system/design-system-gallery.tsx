@@ -10,41 +10,55 @@ import {
     SheetScaffold,
 } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 import { DesignSystemCatalogPanel } from './design-system-catalog-panel';
+import type { DesignCatalogElement } from './design-system-catalog';
 import { DesignSystemColorsPanel } from './design-system-colors-panel';
-import { DesignSystemComponentsPanel } from './design-system-components-panel';
+import { DesignSystemDemosPanel } from './design-system-demos-panel';
 import { DesignSystemFontsPanel } from './design-system-fonts-panel';
-import { DesignSystemFormsPanel } from './design-system-forms-panel';
 import { DesignSystemIconsPanel } from './design-system-icons-panel';
 
-export type GalleryMode =
-  | 'catalog'
-  | 'components'
-  | 'forms'
-  | 'colors'
-  | 'fonts'
-  | 'icons';
+export type GalleryMode = 'elements' | 'demos' | 'colors' | 'fonts' | 'icons';
 
 const MODES = [
-  { value: 'catalog', label: 'Catalog', testID: AgentUiIds.designSystem.mode('catalog') },
   {
-    value: 'components',
-    label: 'UI',
-    testID: AgentUiIds.designSystem.mode('components'),
+    value: 'elements' as const,
+    label: 'Elements',
+    testID: AgentUiIds.designSystem.mode('elements'),
   },
-  { value: 'forms', label: 'Forms', testID: AgentUiIds.designSystem.mode('forms') },
-  { value: 'colors', label: 'Colors', testID: AgentUiIds.designSystem.mode('colors') },
-  { value: 'fonts', label: 'Type', testID: AgentUiIds.designSystem.mode('fonts') },
-  { value: 'icons', label: 'Icons', testID: AgentUiIds.designSystem.mode('icons') },
+  {
+    value: 'demos' as const,
+    label: 'Demos',
+    testID: AgentUiIds.designSystem.mode('demos'),
+  },
+  {
+    value: 'colors' as const,
+    label: 'Colors',
+    testID: AgentUiIds.designSystem.mode('colors'),
+  },
+  {
+    value: 'fonts' as const,
+    label: 'Type',
+    testID: AgentUiIds.designSystem.mode('fonts'),
+  },
+  {
+    value: 'icons' as const,
+    label: 'Icons',
+    testID: AgentUiIds.designSystem.mode('icons'),
+  },
 ] as const;
 
+function demoTabFor(demo: DesignCatalogElement['demo']): GalleryMode {
+  if (demo === 'colors') return 'colors';
+  if (demo === 'fonts') return 'fonts';
+  if (demo === 'icons') return 'icons';
+  return 'demos';
+}
+
 export function DesignSystemGallery() {
-  const theme = useTheme();
   const { spacing } = useResponsive();
-  const [mode, setMode] = useState<GalleryMode>('catalog');
+  const [mode, setMode] = useState<GalleryMode>('elements');
   const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
@@ -53,7 +67,7 @@ export function DesignSystemGallery() {
         <ScreenHeader
           eyebrow="Development only"
           title="Design System"
-          subtitle="Catalog, components, forms, accents, type, and icons"
+          subtitle="Shared building blocks — browse, try, then tune foundations"
           leading={
             <HeaderBackButton
               compact
@@ -66,23 +80,22 @@ export function DesignSystemGallery() {
             <IconButton
               icon="smart"
               testID={AgentUiIds.designSystem.info}
-              accessibilityLabel="Design-system guidance"
+              accessibilityLabel="How to use this gallery"
               onPress={() => setSheetOpen(true)}
-              background={theme.backgroundSunken}
-              borderColor={theme.separator}
             />
           }
         />
 
         <SegmentedControl value={mode} options={[...MODES]} onChange={setMode} wrap />
 
-        {mode === 'catalog' ? (
-          <DesignSystemCatalogPanel onOpenDemo={setMode} />
+        {mode === 'elements' ? (
+          <DesignSystemCatalogPanel
+            onOpenDemo={(demo) => setMode(demoTabFor(demo))}
+          />
         ) : null}
-        {mode === 'components' ? (
-          <DesignSystemComponentsPanel onOpenSheet={() => setSheetOpen(true)} />
+        {mode === 'demos' ? (
+          <DesignSystemDemosPanel onOpenSheet={() => setSheetOpen(true)} />
         ) : null}
-        {mode === 'forms' ? <DesignSystemFormsPanel /> : null}
         {mode === 'colors' ? <DesignSystemColorsPanel /> : null}
         {mode === 'fonts' ? <DesignSystemFontsPanel /> : null}
         {mode === 'icons' ? <DesignSystemIconsPanel /> : null}
@@ -90,15 +103,21 @@ export function DesignSystemGallery() {
 
       <SheetScaffold
         visible={sheetOpen}
-        eyebrow="Canonical sheet"
-        title="Shared Sheet Scaffold"
-        subtitle="The neutral X is the only dismiss action."
+        eyebrow="How to use"
+        title="Design System Gallery"
+        subtitle="One place to learn the shared UI."
         onClose={() => setSheetOpen(false)}
         closeTestID={AgentUiIds.designSystem.sheetClose}
         closeAccessibilityLabel="Close design-system sheet">
+        <AppText color="secondary" style={{ marginBottom: spacing.md }}>
+          Elements — the full list of shared components, grouped by what they’re for. Tap a row to
+          jump to a live demo.
+        </AppText>
+        <AppText color="secondary" style={{ marginBottom: spacing.md }}>
+          Demos — press the real controls (buttons, forms, glass, settings).
+        </AppText>
         <AppText color="secondary">
-          Feature content can vary, but safe areas, header hierarchy, dismissal, scrolling, and
-          footer actions stay consistent. Use Catalog to see which features use each element.
+          Colors, Type, and Icons — foundations you can preview and tweak for the whole app.
         </AppText>
       </SheetScaffold>
     </>

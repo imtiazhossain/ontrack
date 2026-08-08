@@ -113,6 +113,8 @@ export const travelHomeTokens = {
     titleToLocation: 8,
     /** Location chip → footer (dates + View Itinerary). */
     locationToFooter: 14,
+    /** Dates meta ↔ View Itinerary in the trip-card footer. */
+    datesToItinerary: 16,
     locationToDivider: 6,
     dividerToMeta: 6,
     avatarOverlap: 12,

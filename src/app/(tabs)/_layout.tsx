@@ -1,4 +1,6 @@
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { BackHandler, Platform } from 'react-native';
 
 import { BottomNavBar } from '@/components/navigation/bottom-nav-bar';
 import { usePreferences } from '@/store/preferences';
@@ -8,6 +10,19 @@ import { todayKey } from '@/utils/date';
 export default function TabsLayout() {
   const hasOnboarded = usePreferences((s) => s.hasOnboarded);
   const setSelectedDate = useUI((state) => state.setSelectedDate);
+  const router = useRouter();
+
+  // Android hardware back on a tab root otherwise dispatches empty-stack POP
+  // → Expo Router LogBox ("not handled by any navigator"). Consume when there
+  // is nothing to dismiss/go back to; nested stacks still get default behavior.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (router.canDismiss() || router.canGoBack()) return false;
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   if (!hasOnboarded) {
     return <Redirect href="/onboarding" />;

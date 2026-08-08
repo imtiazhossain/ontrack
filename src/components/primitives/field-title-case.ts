@@ -25,7 +25,8 @@ const TITLE_SMALL_WORDS = new Set([
   'with',
 ]);
 
-const WORD_RE = /[A-Za-z][A-Za-z']*/g;
+// ASCII + typographic apostrophes so possessives (“Imtiaz’s”) stay one word.
+const WORD_RE = /[A-Za-z][A-Za-z'’]*/g;
 
 export function fieldTitleCase(label: string): string {
   const matches = [...label.matchAll(WORD_RE)];

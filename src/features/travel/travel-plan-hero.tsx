@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,16 +12,16 @@ import {
 import { tripDayCount } from '@/features/travel/date-range';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import {
-  travelEditorialTextStyle,
-  travelOverlineStyle,
+    travelEditorialTextStyle,
+    travelOverlineStyle,
 } from '@/features/travel/travel-chrome';
 import { TravelHeaderFlourish } from '@/features/travel/travel-flight-path-arc';
 import { TravelHeaderSkyDecor } from '@/features/travel/travel-header-sky-decor';
 import {
-  TRAVEL_HEADER_DATES_SKY_OVERLAP,
-  TRAVEL_HEADER_DATES_TOP_GAP,
-  TRAVEL_HEADER_SKY_CONTENT_BAND,
-  TRAVEL_HEADER_SKY_FADE_TAIL,
+    TRAVEL_HEADER_DATES_SKY_OVERLAP,
+    TRAVEL_HEADER_DATES_TOP_GAP,
+    TRAVEL_HEADER_SKY_CONTENT_BAND,
+    TRAVEL_HEADER_SKY_FADE_TAIL,
 } from '@/features/travel/travel-header-sky-height';
 import { matchCuratedAtmosphereForPlace } from '@/features/travel/travel-home-atmosphere-catalog';
 import {
@@ -166,6 +166,9 @@ export function TravelPlanHero({
   const [plateAverageColor, setPlateAverageColor] = useState<
     string | undefined
   >();
+  const onPlateAverageColor = useCallback((hex: string | undefined) => {
+    setPlateAverageColor(hex);
+  }, []);
   // Same luminance ink as Travel Home — white over night/aurora, black over bright day.
   // Curated midtones (e.g. Guatemala header-band sample) pin dark ink when set.
   const curatedTone = matchCuratedAtmosphereForPlace(skyDestination)[0]
@@ -193,7 +196,7 @@ export function TravelPlanHero({
           timezone={atmosphere.timezone}
           statusBandRatio={statusBandRatio}
           fadeTo={pageBase}
-          onPlateAverageColor={setPlateAverageColor}
+          onPlateAverageColor={onPlateAverageColor}
         />
       ) : undefined,
     [
@@ -203,6 +206,7 @@ export function TravelPlanHero({
       atmosphere.timezone,
       atmosphere.weatherCode,
       enableSkyDecor,
+      onPlateAverageColor,
       pageBase,
       plan.startDate,
       skyDestination,
@@ -221,7 +225,14 @@ export function TravelPlanHero({
             accessibilityLabel="Go Back"
             testID={AgentUiIds.chrome.back}
             // Always land on Travel home — never pop to a prior trip in the stack.
-            onPress={() => router.dismissTo('/(tabs)/travel' as Href)}
+            // Guard dismiss: empty-stack POP → dev-only LogBox on Android.
+            onPress={() => {
+              if (router.canDismiss()) {
+                router.dismissTo('/(tabs)/travel' as Href);
+                return;
+              }
+              router.replace('/(tabs)/travel' as Href);
+            }}
           />
           <TravelHeaderFlourish style={styles.headerCopy}>
             <AppText

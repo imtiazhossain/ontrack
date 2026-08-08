@@ -12,6 +12,7 @@ import {
 import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import {
     itinerarySheetChrome,
+    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
     TravelRemoveConfirmModal,
@@ -98,7 +99,7 @@ export function TravelPlanDetailsEditor({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: theme.backgroundSunken,
+      fieldBackground: travelInputFieldBackground(theme),
       stackedLabelColor: chrome.label,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,

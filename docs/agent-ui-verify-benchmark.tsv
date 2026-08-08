@@ -1,0 +1,8 @@
+date_iso	elapsed_s	ios_exit	android_exit	slot	path	label	notes
+2026-08-08T18:26:32Z	53	0	0	1	warm	travel-demo-hub-tools	first warm-path ok; trailing mid-edit fi noise (pre finish_verify_both)
+2026-08-08T18:29:00Z	66	0	0	2	warm	notes-transport-glass	clean ios/android; no syntax error after finish_verify_both
+2026-08-08T18:33:00Z	74	0	0	2	warm	agent-pool-today-open	SKIP_HEADED_HANDOFF=1; stable today.addActivity+nextDay
+2026-08-08T18:37:47Z	118	0	0	1	cold	agent-pool-today-open	exit=0; heartbeats during cold ensure; SKIP_HEADED_HANDOFF=1
+2026-08-08T18:38:03Z	11	0	0	1	warm	runner-self-record	exit=0; SKIP_HEADED_HANDOFF=1
+2026-08-08T19:39:12Z	10	0	0	1	warm	baseline-after-slow-complaint	exit=0; SKIP_HEADED_HANDOFF=1
+2026-08-08T19:40:04Z	9	0	0	1	warm	parallel-verify-both	exit=0; SKIP_HEADED_HANDOFF=1

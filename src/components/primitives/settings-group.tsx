@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
     borderCurve: 'continuous',
-    overflow: 'hidden',
+    // No overflow:hidden — nested BlurView frost milks under clipped parents.
   },
   divider: {
     height: StyleSheet.hairlineWidth,

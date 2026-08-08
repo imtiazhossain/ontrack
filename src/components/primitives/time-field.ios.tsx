@@ -13,6 +13,7 @@ import { AppText } from './app-text';
 import { IconButton } from './button';
 import { FieldLeadingIcon, fieldLeadingIconRowStyle } from './field-leading-icon';
 import { stackedFieldMinHeight } from './field-leading-icon-style';
+import { GlassPlate } from './glass-plate';
 import { StackedIconField } from './stacked-icon-field';
 import { Symbol } from './symbol';
 import {
@@ -189,11 +190,10 @@ export function TimeField({
             onPress={() => setShowPicker(false)}
             style={StyleSheet.absoluteFill}
           />
-          <View
+          <GlassPlate
             style={[
               styles.pickerSheet,
               {
-                backgroundColor: theme.backgroundElevated,
                 maxWidth: Math.min(layout.maxContentWidth, s(420)),
                 padding: rs.md,
                 gap: rs.sm,
@@ -207,8 +207,6 @@ export function TimeField({
                 icon="close"
                 accessibilityLabel="Close time picker"
                 testID={testID ? `${testID}.close` : undefined}
-                background={theme.backgroundSunken}
-                borderColor={theme.separator}
                 onPress={() => setShowPicker(false)}
               />
             </View>
@@ -246,7 +244,7 @@ export function TimeField({
                 Done
               </AppText>
             </Pressable>
-          </View>
+          </GlassPlate>
         </View>
       </Modal>
     </View>

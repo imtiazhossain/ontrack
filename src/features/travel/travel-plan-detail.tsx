@@ -158,7 +158,7 @@ function TravelPlanDetailEntrance({ plan }: { plan: TravelPlan }) {
       ? travelStyle.backgroundColor
       : theme.backgroundPrimary;
   const planUi = useTravelPlanUi((state) => state.byPlanId[plan.id]);
-  const notesExpanded = planUi?.notesExpanded ?? true;
+  const notesExpanded = planUi?.notesExpanded ?? false;
 
   return (
     <View style={styles.root}>
@@ -470,7 +470,7 @@ function TravelPlanDetailLoaded({
       collapsedDayDates: [...nextCollapsed],
     });
   };
-  const notesExpanded = planUi?.notesExpanded ?? true;
+  const notesExpanded = planUi?.notesExpanded ?? false;
   const setNotesExpanded = (expanded: boolean) => {
     patchPlanUi(planId, { notesExpanded: expanded });
   };

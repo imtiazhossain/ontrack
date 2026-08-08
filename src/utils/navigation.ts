@@ -3,15 +3,12 @@ import type { Href, ImperativeRouter } from 'expo-router';
 /**
  * Close / back with a safe fallback.
  *
- * Prefer stack `dismiss` over `router.back()` / `GO_BACK`. Tab-history "back"
- * and empty stacks (agent-ui replace, deep link) otherwise hit Expo Router’s
- * dev-only LogBox: "The action 'GO_BACK' was not handled by any navigator."
+ * Prefer `dismissTo(fallback)` over blind stack `POP` / `GO_BACK`.
+ * Empty-stack pops hit Expo Router’s dev-only LogBox when the focused stack
+ * can’t pop (index === 0) — iOS and Android (agent-ui replace, deep link,
+ * empty tab root). `dismissTo` pops when the href is in history; otherwise
+ * it swaps the current screen for the fallback.
  */
 export function goBackOrReplace(router: ImperativeRouter, fallback: Href = '/') {
-  if (router.canDismiss()) {
-    router.dismiss(1);
-    return;
-  }
-
-  router.replace(fallback);
+  router.dismissTo(fallback);
 }

@@ -1,5 +1,5 @@
 import { StayLocationThumbnail } from '@/features/travel/stay-location-thumbnail';
-import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
     formatDateKeyMedium,
@@ -50,7 +50,6 @@ export function StayDetailsSummary({
 }) {
   const theme = useTheme();
   const accent = kindAccent('stay', theme);
-  const tint = kindTint('stay', theme);
   const checkinStamp = formatStamp(checkinDate, checkinMinutes);
   const checkoutStamp = formatStamp(
     details.checkoutDate,
@@ -115,7 +114,6 @@ export function StayDetailsSummary({
         />
       }
       accentColor={accent}
-      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined

@@ -12,8 +12,12 @@ import {
     Dropdown,
     EmptyState,
     ErrorMessage,
+    GlassIconWell,
+    GlassMetaChip,
     GlassPlate,
     GlassPrimaryAction,
+    GlassSwitch,
+    GlassTonePill,
     IconButton,
     LoadingBlock,
     MetaList,
@@ -21,6 +25,7 @@ import {
     ProgressRing,
     SectionHeader,
     StatusBadge,
+    Symbol,
     ToolbarRow,
 } from '@/components/primitives';
 import {
@@ -102,7 +107,7 @@ function DemoCard({
 }) {
   const { spacing } = useResponsive();
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card airy style={{ gap: spacing.md }}>
       <View style={{ gap: spacing.xxs }}>
         <PanelTitle>{title}</PanelTitle>
         <AppText variant="caption" color="tertiary" numberOfLines={2}>
@@ -124,15 +129,11 @@ export function DesignSystemComponentsPanel({
   const [sort, setSort] = useState<'unhealthy' | 'healthy' | 'name'>('unhealthy');
   const [chip, setChip] = useState<'a' | 'b' | 'c'>('a');
   const [collapsedOpen, setCollapsedOpen] = useState(false);
+  const [glassSwitchOn, setGlassSwitchOn] = useState(true);
 
   return (
     <View style={{ gap: spacing.xl }}>
-      <AppText variant="callout" color="secondary">
-        Live demos of layout, actions, feedback, and shared patterns. Each card lists the features
-        that use the element.
-      </AppText>
-
-      <SectionHeader title="Layout" flush />
+      <SectionHeader title="Screens & layout" flush />
       <DemoCard title="Section header" catalogId="sectionHeader">
         <SectionHeader title="Book & Organize" actionLabel="See all" onAction={onOpenSheet} />
       </DemoCard>
@@ -165,6 +166,43 @@ export function DesignSystemComponentsPanel({
           />
         </GlassPlate>
       </DemoCard>
+      <DemoCard title="Glass icon well" catalogId="glassIconWell">
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <GlassIconWell size={48} borderRadius={14}>
+            <Symbol name="flight" size="md" color={theme.accentPrimary} />
+          </GlassIconWell>
+          <GlassIconWell size={48} borderRadius={14} variant="airy">
+            <Symbol name="itinerary" size="md" color={theme.accentPrimary} />
+          </GlassIconWell>
+        </View>
+      </DemoCard>
+      <DemoCard title="Glass tone pill" catalogId="glassTonePill">
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <GlassTonePill label="On time" toneColor={theme.accentPrimary} />
+          <GlassTonePill label="Delayed" toneColor={theme.danger} />
+        </View>
+      </DemoCard>
+      <DemoCard title="Glass meta chip" catalogId="glassMetaChip">
+        <GlassMetaChip accessibilityLabel="2h 15m duration">
+          <Symbol name="clock" size="sm" color={theme.textPrimary} />
+          <AppText variant="caption" fit>
+            2h 15m
+          </AppText>
+        </GlassMetaChip>
+      </DemoCard>
+      <DemoCard title="Glass switch" catalogId="glassSwitch">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <GlassSwitch value={glassSwitchOn} accessibilityLabel="Demo glass switch" />
+          <Button
+            size="sm"
+            variant="secondary"
+            testID={AgentUiIds.designSystem.demo('glassSwitchToggle')}
+            accessibilityLabel="Toggle glass switch demo"
+            onPress={() => setGlassSwitchOn((on) => !on)}>
+            {glassSwitchOn ? 'On' : 'Off'}
+          </Button>
+        </View>
+      </DemoCard>
       <DemoCard title="Sheet scaffold" catalogId="sheetScaffold">
         <Button
           variant="secondary"
@@ -175,7 +213,7 @@ export function DesignSystemComponentsPanel({
         </Button>
       </DemoCard>
 
-      <SectionHeader title="Actions" flush />
+      <SectionHeader title="Buttons & actions" flush />
       <DemoCard title="Buttons" catalogId="button">
         <Button
           size="lg"
@@ -213,8 +251,6 @@ export function DesignSystemComponentsPanel({
           testID={AgentUiIds.designSystem.info}
           accessibilityLabel="Icon button example"
           onPress={onOpenSheet}
-          background={theme.backgroundSunken}
-          borderColor={theme.separator}
         />
       </DemoCard>
       <DemoCard title="Destructive section" catalogId="destructive">
@@ -237,7 +273,7 @@ export function DesignSystemComponentsPanel({
           <DestructiveSection
             flush
             label="Reset Example"
-            description="Grouped irreversible actions sit in a red-bordered panel."
+            description="Grouped irreversible actions sit in a red-rimmed glass panel."
             testID={AgentUiIds.designSystem.demo('dangerZoneReset')}
             onPress={() =>
               confirmDestructiveAction({
@@ -282,7 +318,7 @@ export function DesignSystemComponentsPanel({
         />
       </DemoCard>
 
-      <SectionHeader title="Feedback" flush />
+      <SectionHeader title="Status & feedback" flush />
       <DemoCard title="Status badge" catalogId="statusBadge">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <StatusBadge tone="success" label="Healthy" />
@@ -310,6 +346,7 @@ export function DesignSystemComponentsPanel({
           actionTestID={AgentUiIds.designSystem.demo('emptyAction')}
         />
         <LoadingBlock label="Loading…" />
+        <LoadingBlock label="Loading onTrack…" surface="glass" />
         <ErrorMessage message="Errors use the shared semantic danger treatment." />
       </DemoCard>
       <DemoCard title="Progress ring" catalogId="progress">
@@ -382,7 +419,7 @@ function FeatureAccentCard({ label }: { label: string }) {
   const theme = useTheme();
   const { spacing } = useResponsive();
   return (
-    <Card variant="sunken" style={{ gap: spacing.sm }}>
+    <Card airy style={{ gap: spacing.sm }}>
       <AppText variant="callout" color="accent" bold fit>
         {label}
       </AppText>
@@ -401,6 +438,13 @@ function FeatureAccentCard({ label }: { label: string }) {
 export const COMPONENTS_PANEL_CATALOG_IDS: readonly DesignCatalogElement['id'][] = [
   'sectionHeader',
   'collapsibleSection',
+  'glassPlate',
+  'glassIconWell',
+  'glassTonePill',
+  'glassMetaChip',
+  'glassSwitch',
+  'glassPrimaryAction',
+  'dangerZone',
   'sheetScaffold',
   'button',
   'iconButton',

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View, type DimensionValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton, Symbol } from '@/components/primitives';
+import { GlassIconWell, IconButton, Symbol } from '@/components/primitives';
 import {
     fetchDestinationCoverUri,
     localTripCoverUri,
@@ -43,6 +43,10 @@ export function TravelTripCover({
   const [uri, setUri] = useState<string | undefined>(localUri);
   const [expanded, setExpanded] = useState(false);
   const destinationKey = `${plan.id}:${plan.destination}:${plan.title}`;
+  const coverSize = {
+    width: width ?? size,
+    height: height ?? size,
+  };
 
   useEffect(() => {
     let active = true;
@@ -63,29 +67,32 @@ export function TravelTripCover({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- destinationKey covers plan fields used for remote covers
   }, [destinationKey, localUri]);
 
-  const cover = (
+  const cover = uri ? (
     <View
       style={[
         styles.cover,
-        {
-          width: width ?? size,
-          height: height ?? size,
-          borderRadius: resolvedRadius,
-          backgroundColor: flightTone.bg,
-        },
+        coverSize,
+        { borderRadius: resolvedRadius },
       ]}>
-      {uri ? (
-        <Image
-          source={{ uri }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={180}
-          recyclingKey={uri}
-        />
-      ) : (
-        <Symbol name={travelPlanModeIcon(plan.mode ?? 'flight')} size="md" color={flightTone.fg} />
-      )}
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={180}
+        recyclingKey={uri}
+      />
     </View>
+  ) : (
+    <GlassIconWell
+      size={typeof coverSize.width === 'number' ? coverSize.width : size}
+      borderRadius={resolvedRadius}
+      style={[styles.cover, coverSize]}>
+      <Symbol
+        name={travelPlanModeIcon(plan.mode ?? 'flight')}
+        size="md"
+        color={flightTone.fg}
+      />
+    </GlassIconWell>
   );
 
   const open = () => {

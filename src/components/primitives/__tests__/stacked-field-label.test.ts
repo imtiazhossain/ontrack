@@ -41,4 +41,11 @@ describe('fieldTitleCase', () => {
     expect(fieldTitleCase('Create playbook')).toBe('Create Playbook');
     expect(fieldTitleCase('Jump to today')).toBe('Jump to Today');
   });
+
+  it('keeps possessive s lowercase for ASCII and curly apostrophes', () => {
+    expect(fieldTitleCase("Imtiaz's Icon")).toBe("Imtiaz's Icon");
+    expect(fieldTitleCase('Imtiaz’s Icon')).toBe('Imtiaz’s Icon');
+    expect(fieldTitleCase("imtiaz's icon")).toBe("Imtiaz's Icon");
+    expect(fieldTitleCase('imtiaz’s icon')).toBe('Imtiaz’s Icon');
+  });
 });

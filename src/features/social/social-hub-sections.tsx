@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText, GlassPlate, IconButton, LoadingBlock, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  GlassIconWell,
+  GlassPlate,
+  IconButton,
+  LoadingBlock,
+  Symbol,
+} from '@/components/primitives';
 import { radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { socialActionTones, socialChrome, socialShadow } from '@/features/social/social-chrome';
@@ -395,9 +402,9 @@ export function SocialUpcomingTogether({
                 gap: spacing.md,
               },
             ]}>
-          <View style={[styles.emptyIcon, { backgroundColor: chrome.mint }]}>
+          <GlassIconWell size={52} borderRadius={18} style={styles.emptyIcon}>
             <Symbol name="flight" size="md" color={chrome.primary} />
-          </View>
+          </GlassIconWell>
           <View style={styles.emptyCopy}>
             <AppText variant="subheading" bold fit>
               Plan something together

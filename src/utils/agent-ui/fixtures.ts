@@ -99,9 +99,13 @@ export type AgentUiFixtureName =
   | 'vehicle-demo'
   | 'plants-demo'
   | 'activity-demo'
+  | 'home-weather'
   | 'food-demo'
   | 'workouts-demo'
   | 'vision-board-demo';
+
+/** Stable place label for Today weather agent flows (not a personal address). */
+export const AGENT_UI_DEMO_HOME_LOCATION = 'Austin, Texas, United States';
 
 /** Reserved sandbox / agent-ui trip ids — never keep these on a live account. */
 export const AGENT_UI_RESERVED_TRIP_IDS: readonly string[] = [
@@ -781,6 +785,17 @@ export function seedAgentUiFixture(
     };
   }
 
+  if (fixture === 'home-weather') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { usePreferences } =
+      require('@/store/preferences') as typeof import('@/store/preferences');
+    usePreferences.getState().setHomeLocation(AGENT_UI_DEMO_HOME_LOCATION);
+    return {
+      fixture,
+      primaryId: AGENT_UI_DEMO_HOME_LOCATION,
+    };
+  }
+
   if (fixture === 'activity-demo') {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { todayKey } = require('@/utils/date') as typeof import('@/utils/date');
@@ -986,6 +1001,13 @@ export function normalizeFixtureName(
     return 'activity-demo';
   }
   if (
+    key === 'home-weather' ||
+    key === 'today-weather' ||
+    key === 'weather-home'
+  ) {
+    return 'home-weather';
+  }
+  if (
     key === 'food-demo' ||
     key === 'food' ||
     key === 'meal' ||
@@ -1022,6 +1044,7 @@ export const AGENT_UI_FIXTURE_NAMES = [
   'vehicle-demo',
   'plants-demo',
   'activity-demo',
+  'home-weather',
   'food-demo',
   'workouts-demo',
   'vision-board-demo',

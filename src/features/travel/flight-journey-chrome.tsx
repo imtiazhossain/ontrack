@@ -3,7 +3,13 @@ import { useId, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, Line, LinearGradient, Stop } from 'react-native-svg';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
+import {
+    AppText,
+    GlassIconWell,
+    GlassMetaChip,
+    IconButton,
+    Symbol,
+} from '@/components/primitives';
 import { radii } from '@/design-system';
 import { AirlineLogo } from '@/features/travel/airline-logo';
 import {
@@ -15,7 +21,6 @@ import type {
     FlightJourneyLayover,
     FlightJourneyViewModel,
 } from '@/features/travel/flight-journey-model';
-import { travelMainCardFill } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDuration, formatMinutes } from '@/utils/date';
@@ -158,23 +163,12 @@ export function FlightFacilityChips({
   return (
     <View style={[styles.chipRow, { gap: rs.xs, marginTop: rs.xxs }]}>
       {chips.map((chip) => (
-        <View
-          key={chip.icon}
-          style={[
-            styles.chip,
-            {
-              backgroundColor: theme.backgroundSunken,
-              borderRadius: radii.pill,
-              paddingHorizontal: rs.sm,
-              paddingVertical: Math.max(3, s(4)),
-              gap: rs.xxs,
-            },
-          ]}>
+        <GlassMetaChip key={chip.icon} accessibilityLabel={chip.label}>
           <Symbol name={chip.icon} size="sm" color={accent} />
           <AppText variant="caption" fit style={{ color: theme.textPrimary }}>
             {chip.label}
           </AppText>
-        </View>
+        </GlassMetaChip>
       ))}
     </View>
   );
@@ -365,20 +359,11 @@ export function JourneyStrip({
                 {segment.minutes ? formatDuration(segment.minutes) : ' '}
               </AppText>
             ) : (
-              <View
-                style={[
-                  styles.stripLayoverPill,
-                  {
-                    backgroundColor: theme.backgroundSunken,
-                    borderRadius: radii.pill,
-                    paddingHorizontal: rs.sm,
-                    paddingVertical: Math.max(3, s(3)),
-                  },
-                ]}>
+              <GlassMetaChip accessibilityLabel="Layover">
                 <AppText variant="caption" color="secondary" fit>
                   Layover
                 </AppText>
-              </View>
+              </GlassMetaChip>
             )}
           </View>
         ),
@@ -397,7 +382,6 @@ export function VerticalStop({
   showPlane,
   filledDot,
   accent,
-  tint,
   airline,
   flightNumber,
   carrier,
@@ -422,7 +406,6 @@ export function VerticalStop({
   showPlane?: boolean;
   filledDot?: boolean;
   accent: string;
-  tint: string;
   airline?: string;
   flightNumber?: string;
   carrier?: string;
@@ -474,22 +457,15 @@ export function VerticalStop({
           {timeLabel(timeMinutes)}
         </AppText>
         {hasAirlineMeta ? (
-          <View
-            style={[
-              styles.planePlate,
-              {
-                width: plateSize,
-                height: plateSize,
-                borderRadius: Math.max(radii.sm, s(8)),
-                backgroundColor: tint,
-              },
-            ]}>
+          <GlassIconWell
+            size={plateSize}
+            borderRadius={Math.max(radii.sm, s(8))}>
             <AirlineLogo
               airline={airline}
               flightNumber={flightNumber}
               fallbackColor={accent}
             />
-          </View>
+          </GlassIconWell>
         ) : null}
       </View>
 
@@ -501,7 +477,8 @@ export function VerticalStop({
             borderRadius: dotSize / 2,
             borderWidth: filledDot ? 0 : Math.max(2, s(2)),
             borderColor: accent,
-            backgroundColor: filledDot ? accent : travelMainCardFill(theme),
+            // Hollow dots stay transparent so the mist board shows through.
+            backgroundColor: filledDot ? accent : 'transparent',
             marginTop: Math.max(4, s(5)),
           }}
         />
@@ -593,32 +570,14 @@ export function VerticalStop({
           </AppText>
         ) : null}
         {durationMinutes ? (
-          <View
-            style={[
-              styles.durationChip,
-              {
-                backgroundColor: hasAirlineMeta ? tint : theme.backgroundSunken,
-                borderRadius: radii.pill,
-                paddingHorizontal: rs.sm,
-                paddingVertical: Math.max(3, s(4)),
-                gap: rs.xxs,
-                marginTop: Math.max(2, s(2)),
-              },
-            ]}>
-            <Symbol
-              name="clock"
-              size="sm"
-              color={hasAirlineMeta ? accent : theme.textPrimary}
-            />
-            <AppText
-              variant="caption"
-              fit
-              style={{
-                color: hasAirlineMeta ? accent : theme.textPrimary,
-              }}>
+          <GlassMetaChip
+            accessibilityLabel={`${formatDuration(durationMinutes)} flight`}
+            style={{ marginTop: Math.max(2, s(2)) }}>
+            <Symbol name="clock" size="sm" color={accent} />
+            <AppText variant="caption" fit style={{ color: theme.textPrimary }}>
               {formatDuration(durationMinutes)} flight
             </AppText>
-          </View>
+          </GlassMetaChip>
         ) : null}
       </View>
     </View>
@@ -661,17 +620,12 @@ export function LayoverBanner({
           gapLength={4}
         />
       </View>
-      <View
-        style={[
-          styles.layoverBadge,
-          {
-            gap: rs.xs,
-            backgroundColor: theme.backgroundSunken,
-            borderRadius: radii.pill,
-            paddingHorizontal: rs.md,
-            paddingVertical: rs.sm,
-          },
-        ]}>
+      <GlassMetaChip
+        style={{
+          gap: rs.xs,
+          paddingHorizontal: rs.md,
+          paddingVertical: rs.sm,
+        }}>
         <Symbol name="clock" size="sm" color={ink} />
         <AppText
           variant="callout"
@@ -680,7 +634,7 @@ export function LayoverBanner({
           {formatDuration(layover.minutes)} layover
           {city ? ` in ${city}` : ''}
         </AppText>
-      </View>
+      </GlassMetaChip>
       <View style={styles.layoverDash}>
         <DashedLine
           color={railColor}
@@ -697,12 +651,6 @@ const styles = StyleSheet.create({
   dashedHost: { width: '100%', overflow: 'hidden' },
   dashedHostVertical: { height: '100%', alignSelf: 'center', overflow: 'hidden' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexShrink: 1,
-  },
   stripRow: { flexDirection: 'row' },
   stripStop: { alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 },
   stripSegment: { minWidth: 0, justifyContent: 'center' },
@@ -710,11 +658,6 @@ const styles = StyleSheet.create({
   stripOverhang: { position: 'absolute', alignItems: 'center' },
   stripLayoverRail: { flexDirection: 'row', alignItems: 'center' },
   stripDashFill: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  stripLayoverPill: {
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   verticalStop: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -723,13 +666,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
     alignSelf: 'stretch',
-  },
-  planePlate: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    flexShrink: 0,
   },
   railCol: { alignItems: 'center', flexShrink: 0 },
   stopCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
@@ -740,11 +676,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   carrierText: { flexShrink: 1, minWidth: 0 },
-  durationChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
   layoverRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -753,13 +684,5 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     justifyContent: 'center',
-  },
-  layoverBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    minWidth: 0,
-    maxWidth: '72%',
-    borderCurve: 'continuous',
   },
 });

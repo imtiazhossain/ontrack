@@ -5,17 +5,23 @@
 #   iOS:     "onTrack Agent N"  (simctl device, headless by default)
 #   Android: onTrack_Agent_N    (AVD cloned from Galaxy_S26 profile)
 #
-# Claim a free cold slot (create devices as needed). Already-booted agent
-# sims/AVDs are treated as in-use — pick a different slot. If all slots are
-# busy, wait until one finishes (AGENT_UI_LOCK_WAIT_SECS). Nested children
-# inherit AGENT_UI_SLOT + AGENT_UI_LOCK_HELD.
+# Claim order: preferred pin → warm orphan (iOS Booted and/or Android
+# boot_completed, lock free) → cold free slot. Live lock holders are in-use;
+# lock-free warm devices are reusable (KEEP_IOS/KEEP_ANDROID=1 by default).
+# Idle warm devices GC after AGENT_UI_*_IDLE_SECS. If all slots are busy, wait
+# (AGENT_UI_LOCK_WAIT_SECS). Nested children inherit AGENT_UI_SLOT + LOCK_HELD.
 #
 # Opt out: AGENT_UI_SKIP_LEASE=1 or AGENT_UI_USE_POOL=0 (legacy single device /
 # explicit ONTRACK_* pins without pool naming).
+# Escape kill-on-exit: AGENT_UI_KEEP_IOS=0 / AGENT_UI_KEEP_ANDROID=0.
 
 : "${AGENT_UI_POOL_MAX:=5}"
 : "${AGENT_UI_LOCK_WAIT_SECS:=300}"
 : "${AGENT_UI_USE_POOL:=1}"
+: "${AGENT_UI_KEEP_IOS:=1}"
+: "${AGENT_UI_KEEP_ANDROID:=1}"
+: "${AGENT_UI_IOS_IDLE_SECS:=1800}"
+: "${AGENT_UI_ANDROID_IDLE_SECS:=1800}"
 : "${BUNDLE_ID:=com.imtihoss.ontracknow}"
 
 # Resolve repo root without requiring agent-ui-host.sh (ensure-packager sources
@@ -191,10 +197,12 @@ raise SystemExit(1)
     return 1
   fi
   echo "agent-ui: cloning ${BUNDLE_ID} → $(agent_ui_pool_ios_name "${AGENT_UI_SLOT:-?}") from ${source_udid}" >&2
-  xcrun simctl install "$target_udid" "$app_path" >/dev/null 2>&1 || {
-    echo "error: simctl install failed for ${target_udid}" >&2
+  # Untimed install wedges forever when CoreSimulator is stuck on orphaned
+  # `simctl io screenshot` — always use the shared alarm wrapper.
+  if ! ios_simctl_timed 90 install "$target_udid" "$app_path" >/dev/null 2>&1; then
+    echo "error: simctl install failed/timed out for ${target_udid}" >&2
     return 1
-  }
+  fi
 }
 
 # Apply pool device env for the claimed slot (both platforms named; boot lazily).
@@ -223,9 +231,238 @@ agent_ui_pool_slot_lockdir() {
   printf '%s/%s.lockdir' "$(agent_ui_pool_root)" "$1"
 }
 
+# Keep iOS agent sims warm across lease EXIT (default). KEEP_DEVICES=1 keeps
+# both platforms. KEEP_IOS=0 restores kill-on-exit for iOS.
+agent_ui_pool_keep_ios() {
+  case "${AGENT_UI_KEEP_DEVICES:-0}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+  esac
+  case "${AGENT_UI_KEEP_IOS:-1}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Keep Android agent AVDs warm across lease EXIT (default). KEEP_DEVICES=1 keeps
+# both platforms. KEEP_ANDROID=0 restores kill-on-exit for Android.
+agent_ui_pool_keep_android() {
+  case "${AGENT_UI_KEEP_DEVICES:-0}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+  esac
+  case "${AGENT_UI_KEEP_ANDROID:-1}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+agent_ui_pool_ios_idle_path() {
+  printf '%s/%s.ios-idle' "$(agent_ui_pool_root)" "$1"
+}
+
+agent_ui_pool_android_idle_path() {
+  printf '%s/%s.android-idle' "$(agent_ui_pool_root)" "$1"
+}
+
+agent_ui_pool_clear_ios_idle() {
+  rm -f "$(agent_ui_pool_ios_idle_path "$1")" 2>/dev/null || true
+}
+
+agent_ui_pool_clear_android_idle() {
+  rm -f "$(agent_ui_pool_android_idle_path "$1")" 2>/dev/null || true
+}
+
+agent_ui_pool_clear_idle_stamps() {
+  agent_ui_pool_clear_ios_idle "$1"
+  agent_ui_pool_clear_android_idle "$1"
+}
+
+agent_ui_pool_mark_ios_idle() {
+  local slot="$1" path
+  [[ -n "$slot" && "$slot" =~ ^[1-9][0-9]*$ ]] || return 0
+  path="$(agent_ui_pool_ios_idle_path "$slot")"
+  mkdir -p "$(dirname "$path")" 2>/dev/null || true
+  date +%s >"$path" 2>/dev/null || true
+}
+
+agent_ui_pool_mark_android_idle() {
+  local slot="$1" path
+  [[ -n "$slot" && "$slot" =~ ^[1-9][0-9]*$ ]] || return 0
+  path="$(agent_ui_pool_android_idle_path "$slot")"
+  mkdir -p "$(dirname "$path")" 2>/dev/null || true
+  date +%s >"$path" 2>/dev/null || true
+}
+
+# True when slot lockdir is absent or holder pid is dead.
+agent_ui_pool_slot_lock_free() {
+  local slot="$1" lockdir owner
+  lockdir="$(agent_ui_pool_slot_lockdir "$slot")"
+  if [[ ! -d "$lockdir" ]]; then
+    return 0
+  fi
+  owner="$(cat "${lockdir}/pid" 2>/dev/null || true)"
+  if [[ -n "${owner}" ]] && kill -0 "${owner}" 2>/dev/null; then
+    return 1
+  fi
+  return 0
+}
+
+# True when this slot's iOS agent sim is Booted.
+agent_ui_pool_slot_ios_warm() {
+  local slot="$1" ios_name
+  case "${AGENT_UI_POOL_BIND_DEVICES:-1}" in
+    0|false|FALSE|no|NO) return 1 ;;
+  esac
+  [[ -n "$slot" && "$slot" =~ ^[1-9][0-9]*$ ]] || return 1
+
+  ios_name="$(agent_ui_pool_ios_name "$slot")"
+  xcrun simctl list devices booted -j 2>/dev/null | python3 -c '
+import json, sys
+name = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for devices in data.get("devices", {}).values():
+    for d in devices:
+        if d.get("name") == name and d.get("state") == "Booted":
+            raise SystemExit(0)
+raise SystemExit(1)
+' "$ios_name" >/dev/null 2>&1
+}
+
+# True when this slot's Android AVD is on adb with sys.boot_completed=1.
+agent_ui_pool_slot_android_warm() {
+  local slot="$1" android_name root serial boot adb_bin
+  case "${AGENT_UI_POOL_BIND_DEVICES:-1}" in
+    0|false|FALSE|no|NO) return 1 ;;
+  esac
+  [[ -n "$slot" && "$slot" =~ ^[1-9][0-9]*$ ]] || return 1
+
+  android_name="$(agent_ui_pool_android_name "$slot")"
+  root="$(agent_ui_pool_repo_root)"
+  # shellcheck disable=SC1091
+  source "${root}/scripts/lib/android-emulator.sh"
+  serial="$(
+    ONTRACK_ANDROID_AVD="$android_name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+  )"
+  [[ -n "${serial:-}" ]] || return 1
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 1
+  boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  [[ "$boot" == "1" ]]
+}
+
+# True when either platform is warm (reusable orphan).
+agent_ui_pool_slot_warm() {
+  agent_ui_pool_slot_ios_warm "$1" || agent_ui_pool_slot_android_warm "$1"
+}
+
+# Human-readable warm reason for reclaim logs.
+agent_ui_pool_slot_warm_label() {
+  local slot="$1" parts=() out=""
+  if agent_ui_pool_slot_ios_warm "$slot"; then
+    parts+=("iOS Booted")
+  fi
+  if agent_ui_pool_slot_android_warm "$slot"; then
+    parts+=("Android AVD up")
+  fi
+  if ((${#parts[@]} == 0)); then
+    printf 'warm'
+    return 0
+  fi
+  out="${parts[0]}"
+  if ((${#parts[@]} > 1)); then
+    out+=" + ${parts[1]}"
+  fi
+  printf '%s' "$out"
+}
+
+# Shut down lock-free warm iOS agent sims idle longer than AGENT_UI_IOS_IDLE_SECS.
+agent_ui_pool_gc_idle_ios() {
+  local max slot path age now idle_secs ios_name root
+  agent_ui_pool_keep_ios || return 0
+  case "${AGENT_UI_POOL_BIND_DEVICES:-1}" in
+    0|false|FALSE|no|NO) return 0 ;;
+  esac
+  idle_secs="${AGENT_UI_IOS_IDLE_SECS:-1800}"
+  if ! [[ "$idle_secs" =~ ^[0-9]+$ ]]; then
+    idle_secs=1800
+  fi
+  max="$(agent_ui_pool_max)"
+  now="$(date +%s)"
+  root="$(agent_ui_pool_repo_root)"
+  # shellcheck disable=SC1091
+  source "${root}/scripts/lib/ios-simulator.sh"
+  for ((slot = 1; slot <= max; slot++)); do
+    agent_ui_pool_slot_lock_free "$slot" || continue
+    path="$(agent_ui_pool_ios_idle_path "$slot")"
+    [[ -f "$path" ]] || continue
+    age="$(cat "$path" 2>/dev/null || echo 0)"
+    if ! [[ "$age" =~ ^[0-9]+$ ]]; then
+      continue
+    fi
+    if (( now - age < idle_secs )); then
+      continue
+    fi
+    agent_ui_pool_slot_ios_warm "$slot" || {
+      agent_ui_pool_clear_ios_idle "$slot"
+      continue
+    }
+    ios_name="$(agent_ui_pool_ios_name "$slot")"
+    echo "agent-ui: GC idle iOS sim '${ios_name}' (slot ${slot}; idle $((now - age))s)" >&2
+    ios_sim_shutdown_agent_named "$ios_name" || true
+    agent_ui_pool_clear_ios_idle "$slot"
+  done
+  return 0
+}
+
+# Shut down lock-free warm Android AVDs idle longer than AGENT_UI_ANDROID_IDLE_SECS.
+agent_ui_pool_gc_idle_android() {
+  local max slot path age now idle_secs android_name root
+  agent_ui_pool_keep_android || return 0
+  case "${AGENT_UI_POOL_BIND_DEVICES:-1}" in
+    0|false|FALSE|no|NO) return 0 ;;
+  esac
+  idle_secs="${AGENT_UI_ANDROID_IDLE_SECS:-1800}"
+  if ! [[ "$idle_secs" =~ ^[0-9]+$ ]]; then
+    idle_secs=1800
+  fi
+  max="$(agent_ui_pool_max)"
+  now="$(date +%s)"
+  root="$(agent_ui_pool_repo_root)"
+  # shellcheck disable=SC1091
+  source "${root}/scripts/lib/android-emulator.sh"
+  for ((slot = 1; slot <= max; slot++)); do
+    agent_ui_pool_slot_lock_free "$slot" || continue
+    path="$(agent_ui_pool_android_idle_path "$slot")"
+    [[ -f "$path" ]] || continue
+    age="$(cat "$path" 2>/dev/null || echo 0)"
+    if ! [[ "$age" =~ ^[0-9]+$ ]]; then
+      continue
+    fi
+    if (( now - age < idle_secs )); then
+      continue
+    fi
+    agent_ui_pool_slot_android_warm "$slot" || {
+      agent_ui_pool_clear_android_idle "$slot"
+      continue
+    }
+    android_name="$(agent_ui_pool_android_name "$slot")"
+    echo "agent-ui: GC idle Android AVD '${android_name}' (slot ${slot}; idle $((now - age))s)" >&2
+    android_emu_shutdown_named "$android_name" || true
+    agent_ui_pool_clear_android_idle "$slot"
+  done
+  return 0
+}
+
+agent_ui_pool_gc_idle_devices() {
+  agent_ui_pool_gc_idle_ios || true
+  agent_ui_pool_gc_idle_android || true
+}
+
 # True when this slot's iOS agent sim is Booted and/or its Android AVD is on adb.
-# Already-up pool devices are treated as in-use (even without a lockdir) so a
-# new agent claims a different cold slot instead of hijacking a running one.
+# Used by cold-slot claiming: already-up devices are skipped unless allow_busy
+# (warm-orphan reclaim). Live lock holders are never claimable.
 # BIND_DEVICES=0 (unit tests) → always "not up".
 agent_ui_pool_slot_devices_up() {
   local slot="$1" ios_name android_name root serial
@@ -299,10 +536,13 @@ agent_ui_pool_try_claim_slot() {
   return 0
 }
 
-# Shut down this slot's iOS sim + Android AVD when the lease ends.
-# Escape: AGENT_UI_KEEP_DEVICES=1 (debug). Skipped when BIND_DEVICES=0 (unit tests).
+# Shut down this slot's devices when the lease ends.
+# Default: keep iOS + Android warm (KEEP_IOS/KEEP_ANDROID=1). Escape keep both
+# forever this turn: KEEP_DEVICES=1. Kill a platform: KEEP_IOS=0 / KEEP_ANDROID=0.
+# Skipped when BIND_DEVICES=0 (unit tests).
 agent_ui_pool_shutdown_slot() {
-  local slot="${1:-${AGENT_UI_SLOT:-}}" ios_name android_name
+  local slot="${1:-${AGENT_UI_SLOT:-}}" ios_name android_name keep_ios=0 keep_android=0
+  local keep_parts=() kill_parts=()
   case "${AGENT_UI_KEEP_DEVICES:-0}" in
     1|true|TRUE|yes|YES) return 0 ;;
   esac
@@ -313,15 +553,44 @@ agent_ui_pool_shutdown_slot() {
 
   ios_name="$(agent_ui_pool_ios_name "$slot")"
   android_name="$(agent_ui_pool_android_name "$slot")"
-  echo "agent-ui: releasing slot ${slot} — shutting down '${ios_name}' / '${android_name}'" >&2
+  if agent_ui_pool_keep_ios; then
+    keep_ios=1
+    keep_parts+=("iOS '${ios_name}'")
+  else
+    kill_parts+=("iOS '${ios_name}'")
+  fi
+  if agent_ui_pool_keep_android; then
+    keep_android=1
+    keep_parts+=("Android '${android_name}'")
+  else
+    kill_parts+=("Android '${android_name}'")
+  fi
 
-  # shellcheck disable=SC1091
-  source "$(agent_ui_pool_repo_root)/scripts/lib/ios-simulator.sh"
-  ios_sim_shutdown_agent_named "$ios_name" || true
+  if ((${#kill_parts[@]} == 0)); then
+    echo "agent-ui: releasing slot ${slot} — keeping ${keep_parts[*]} warm" >&2
+  elif ((${#keep_parts[@]} == 0)); then
+    echo "agent-ui: releasing slot ${slot} — shutting down ${kill_parts[*]}" >&2
+  else
+    echo "agent-ui: releasing slot ${slot} — shutting down ${kill_parts[*]}; keeping ${keep_parts[*]} warm" >&2
+  fi
 
-  # shellcheck disable=SC1091
-  source "$(agent_ui_pool_repo_root)/scripts/lib/android-emulator.sh"
-  android_emu_shutdown_named "$android_name" || true
+  if (( keep_ios == 0 )); then
+    # shellcheck disable=SC1091
+    source "$(agent_ui_pool_repo_root)/scripts/lib/ios-simulator.sh"
+    ios_sim_shutdown_agent_named "$ios_name" || true
+    agent_ui_pool_clear_ios_idle "$slot"
+  else
+    agent_ui_pool_mark_ios_idle "$slot"
+  fi
+
+  if (( keep_android == 0 )); then
+    # shellcheck disable=SC1091
+    source "$(agent_ui_pool_repo_root)/scripts/lib/android-emulator.sh"
+    android_emu_shutdown_named "$android_name" || true
+    agent_ui_pool_clear_android_idle "$slot"
+  else
+    agent_ui_pool_mark_android_idle "$slot"
+  fi
 }
 
 agent_ui_release_lease() {
@@ -378,7 +647,7 @@ agent_ui_ensure_lease() {
     return $?
   fi
 
-  local max wait_secs deadline last_msg slot lockdir owner claimed=0 orphan=""
+  local max wait_secs deadline last_msg slot lockdir owner claimed=0 orphan="" warm=""
   max="$(agent_ui_pool_max)"
   mkdir -p "$(agent_ui_pool_root)"
   wait_secs="${AGENT_UI_LOCK_WAIT_SECS:-300}"
@@ -386,9 +655,21 @@ agent_ui_ensure_lease() {
   last_msg=-999
   unset AGENT_UI_POOL_CLAIM_SLOT AGENT_UI_POOL_CLAIM_LOCKDIR
 
-  # Preferred slot pin (parent / explicit) — still skip if devices already up.
+  # Drop lock-free devices that sat idle past the TTL.
+  agent_ui_pool_gc_idle_devices || true
+
+  # Preferred slot pin (parent / explicit).
+  # Warm pin (iOS Booted and/or Android up, lock free) → allow_busy; else cold.
   if [[ -n "${AGENT_UI_SLOT:-}" && "${AGENT_UI_SLOT}" =~ ^[1-9][0-9]*$ ]] && (( AGENT_UI_SLOT <= max )); then
-    if agent_ui_pool_try_claim_slot "$AGENT_UI_SLOT" 0; then
+    if agent_ui_pool_slot_lock_free "$AGENT_UI_SLOT" \
+      && agent_ui_pool_slot_warm "$AGENT_UI_SLOT"; then
+      if agent_ui_pool_try_claim_slot "$AGENT_UI_SLOT" 1; then
+        claimed=1
+        slot="$AGENT_UI_POOL_CLAIM_SLOT"
+        lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
+        echo "agent-ui: reclaiming warm slot ${slot} ($(agent_ui_pool_slot_warm_label "$slot"))" >&2
+      fi
+    elif agent_ui_pool_try_claim_slot "$AGENT_UI_SLOT" 0; then
       claimed=1
       slot="$AGENT_UI_POOL_CLAIM_SLOT"
       lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
@@ -397,25 +678,39 @@ agent_ui_ensure_lease() {
 
   while (( claimed == 0 && SECONDS < deadline )); do
     orphan=""
-    # Prefer cold free slots (lock free + devices not running).
+    warm=""
+    # Prefer warm orphans (lock free + iOS Booted and/or Android up) over cold.
     for ((slot = 1; slot <= max; slot++)); do
-      if agent_ui_pool_try_claim_slot "$slot" 0; then
-        claimed=1
-        slot="$AGENT_UI_POOL_CLAIM_SLOT"
-        lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
-        break
+      agent_ui_pool_slot_lock_free "$slot" || continue
+      if agent_ui_pool_slot_warm "$slot"; then
+        warm="$slot"
+        if agent_ui_pool_try_claim_slot "$warm" 1; then
+          echo "agent-ui: reclaiming warm slot ${warm} ($(agent_ui_pool_slot_warm_label "$warm"))" >&2
+          claimed=1
+          slot="$AGENT_UI_POOL_CLAIM_SLOT"
+          lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
+          break
+        fi
+        warm=""
       fi
-      # Remember first lock-free orphan (devices up, no live holder) for fallback.
-      if [[ -z "$orphan" ]]; then
-        lockdir="$(agent_ui_pool_slot_lockdir "$slot")"
-        owner="$(cat "${lockdir}/pid" 2>/dev/null || true)"
-        if [[ ! -d "$lockdir" ]] || { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2>/dev/null; }; then
+    done
+    # Cold free slots (lock free + devices not running).
+    if (( claimed == 0 )); then
+      for ((slot = 1; slot <= max; slot++)); do
+        if agent_ui_pool_try_claim_slot "$slot" 0; then
+          claimed=1
+          slot="$AGENT_UI_POOL_CLAIM_SLOT"
+          lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
+          break
+        fi
+        # Remember first lock-free orphan (devices up, no live holder) for fallback.
+        if [[ -z "$orphan" ]] && agent_ui_pool_slot_lock_free "$slot"; then
           if agent_ui_pool_slot_devices_up "$slot"; then
             orphan="$slot"
           fi
         fi
-      fi
-    done
+      done
+    fi
     # No cold slot: reclaim an orphaned already-up device rather than stall.
     if (( claimed == 0 )) && [[ -n "$orphan" ]]; then
       if agent_ui_pool_try_claim_slot "$orphan" 1; then
@@ -456,6 +751,8 @@ agent_ui_ensure_lease() {
   AGENT_UI_LOCK_ACQUIRED=1
   export AGENT_UI_SLOT AGENT_UI_LOCK_DIR AGENT_UI_LOCK_HELD AGENT_UI_LOCK_ACQUIRED
   trap 'agent_ui_release_lease' EXIT
+
+  agent_ui_pool_clear_idle_stamps "$slot"
 
   if ! agent_ui_pool_apply_devices "$slot"; then
     agent_ui_release_lease

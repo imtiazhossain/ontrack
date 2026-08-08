@@ -178,9 +178,10 @@ describe('metro launch command contract', () => {
     expect(sim).toContain('headed-agents');
     expect(sim).toContain('AXMinimizeButton');
     expect(sim).toContain('onTrack Agent');
-    // Explicit open centers the window (park geometry can leave it off-screen).
+    // Explicit open places the window on the right (Android owns left).
+    expect(sim).toContain('ios_sim_place_window_named');
     expect(sim).toContain('ios_sim_center_agent_window_named');
-    expect(sim).toContain('((dW - winW) div 2)');
+    expect(sim).toContain('dLeft + dW - winW - margin');
     expect(sim).toContain('AXPress');
     expect(sim).toContain('UI element "${safe}" of list 1');
     expect(sim).not.toContain('ios_sim_quit_gui');
@@ -275,6 +276,9 @@ describe('metro launch command contract', () => {
     expect(emu).toContain('ONTRACK_ANDROID_AVD:=Galaxy_S26');
     expect(emu).toContain('ONTRACK_ANDROID_EMULATOR_WINDOW:=0');
     expect(emu).toContain('android_emu_want_window');
+    // Headed GUI snaps to the left of the main display (iOS on the right).
+    expect(emu).toContain('android_emu_place_window');
+    expect(emu).toContain('android_emu_place_window left');
     expect(emu).toContain('android_emu_pool_mode');
     expect(emu).toContain('android_emu_ensure_agent_avd');
     expect(emu).toContain('onTrack_Agent_');
@@ -290,6 +294,8 @@ describe('metro launch command contract', () => {
     expect(emu).toContain('-no-snapshot-save');
     expect(emu).toContain('stuck before boot_completed');
     expect(emu).toContain('android_emu_discard_default_snapshot');
+    expect(emu).toContain('android_emu_regenerate_default_snapshot');
+    expect(emu).toContain('post-cold heal');
     expect(emu).toContain('android_emu_clear_stale_locks');
     expect(emu).toContain('went offline before boot_completed');
     expect(emu).toContain('Leaving agent emulator up');
@@ -298,6 +304,21 @@ describe('metro launch command contract', () => {
     expect(emu).toContain('ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL');
     expect(emu).toContain('android_emu_avd_is_complete');
     expect(emu).toContain('android_emu_set_clipboard');
+    expect(emu).toContain('hw.gpu.mode=host');
+    // Agent RAM must not inherit headed Galaxy 8GB (16GB host OOM / Metal crash).
+    expect(emu).toContain('ONTRACK_ANDROID_AGENT_RAM_MB');
+    expect(emu).toContain('hw.ramSize={cap}');
+    expect(emu).toContain('Shutting down agent emulator (headed');
+    expect(emu).toContain('headed ${headed_name} keep needs RAM/GPU');
+    expect(emu).toContain('Leaving headed emulator up (user window)');
+    expect(emu).toContain('android_emu_mark_headed_keep');
+    expect(emu).toContain('ONTRACK_ANDROID_KEEP_HEADED');
+    expect(emu).toContain('clearing stale headed keep');
+    // Headed keep: adopt Galaxy and kill agents — 16GB cannot run both.
+    expect(emu).toContain('android_emu_adopt_android_for_headed_host');
+    expect(emu).toContain('adopting headed');
+    expect(emu).toContain('cannot run agent beside GUI');
+    expect(emu).toContain('NEVER run agents');
     // Must detach like Metro — nohup alone dies with Cursor agent shells.
     expect(emu).toContain('start_new_session=True');
     expect(emu).toContain('Emulator detached (new session)');
@@ -309,6 +330,11 @@ describe('metro launch command contract', () => {
     expect(emu).toContain('android_emu_want_app_surface');
     expect(emu).toContain('blank SurfaceView');
     expect(emu).toContain('android_emu_surface.py');
+    // Warm agent reconnect: cold 90s budget only when app process missing.
+    const packager = read('scripts/ensure-packager.sh');
+    expect(packager).toContain('extra=90');
+    expect(packager).toContain('pidof "$BUNDLE_ID"');
+    expect(packager).toContain("Warm reuse: app already running");
     const ensure = read('scripts/ensure-android-emulator.sh');
     expect(ensure).toContain('ensure_preferred_android_emulator');
     expect(ensure).toContain('--window');
@@ -369,11 +395,29 @@ describe('metro launch command contract', () => {
     const color = read('scripts/lib/agent_ui_color.py');
     expect(color).toContain('screencap');
     expect(color).toContain('_agent_ui_platform');
-    // Parked agent windows lose IOSurface — unpark + retry before failing.
+    // Parked / no-display agents — unpark or reattach, but never hang forever.
     expect(color).toContain('_ios_unpark_agent_window');
-    expect(color).toContain('screen surfaces');
+    expect(color).toContain('_ios_reattach_agent_display');
+    expect(color).toContain('_ios_screen_capture_healable');
+    expect(color).toContain('display port');
+    expect(color).toContain('_ios_run_simctl_screenshot');
+    expect(color).toContain('start_new_session=True');
+    expect(color).toContain('os.killpg');
+    expect(color).toContain('_ios_device_is_booted');
+    expect(color).toContain('_ios_kill_wedged_simctl_io');
+    expect(color).toContain('_ios_screenshot_heal_secs');
+    expect(color).toContain('ios_sim_unminimize_agent_window_named');
+    expect(color).toContain('_ios_acquire_capture_lock');
+    expect(color).toContain('device not Booted');
+    const iosLib = read('scripts/lib/ios-simulator.sh');
+    expect(iosLib).toContain('ios_sim_ios_capture_in_progress');
+    expect(iosLib).toContain('ios-capture.lock');
     const alerts = read('scripts/lib/ios_system_alert.py');
-    expect(alerts).toContain('screenshot surfaces unavailable');
+    // Soft-skip true headless + headless Agent pool; headed viewer still hard-fails.
+    expect(alerts).toContain('headless, screenshot surfaces unavailable');
+    expect(alerts).toContain('headless agent pool');
+    expect(alerts).toContain('Cannot prove system sheets are clear');
+    expect(alerts).toContain('agent_headless');
     const recipe = read('scripts/agent-ui-android-travel-demo.sh');
     expect(recipe).toContain('AGENT_UI_PLATFORM=android');
     expect(recipe).toContain('travel-demo');

@@ -157,11 +157,28 @@ export function categoryColors(theme: Theme, key: CategoryColorKey): CategoryCol
 /** Time-of-day ambient wash colors for the Today header. */
 export function timeOfDayGradient(theme: Theme, hour: number): [string, string] {
   const light = theme.name === 'light';
-  if (hour < 6) return light ? ['#E4E0EC', palette.paper0] : ['#221F2E', palette.night0];
-  if (hour < 11) return light ? ['#F4E7D3', palette.paper0] : ['#2E2418', palette.night0];
-  if (hour < 17) return light ? ['#F0EBDD', palette.paper0] : ['#292520', palette.night0];
-  if (hour < 21) return light ? ['#EFDFD3', palette.paper0] : ['#2E211A', palette.night0];
-  return light ? ['#E1DFE9', palette.paper0] : ['#1F1D28', palette.night0];
+  // Tops sit near atmosphere cream so the header dissolve never opens a muddy ditch.
+  if (hour < 6) return light ? ['#E8E4F0', palette.paper0] : ['#221F2E', palette.night0];
+  if (hour < 11) return light ? ['#F5EBDF', palette.paper0] : ['#2E2418', palette.night0];
+  if (hour < 17) return light ? ['#F2EDE4', palette.paper0] : ['#292520', palette.night0];
+  if (hour < 21) return light ? ['#F1E6DC', palette.paper0] : ['#2E211A', palette.night0];
+  return light ? ['#E6E4EE', palette.paper0] : ['#1F1D28', palette.night0];
+}
+
+/** Soft alpha stops for Today / scenic header washes (8-digit hex). */
+export function hexWithAlpha(hex: string, alpha: number): string {
+  const normalized = hex.trim().replace('#', '');
+  const rgb =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((ch) => `${ch}${ch}`)
+          .join('')
+      : normalized.slice(0, 6);
+  const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${rgb}${a}`;
 }
 
 /** Top stop of the Today wash — paint the status-bar shell to match. */

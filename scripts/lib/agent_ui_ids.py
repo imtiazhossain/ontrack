@@ -75,6 +75,17 @@ def load_id_aliases(ids_path: str) -> dict[str, str]:
     return {k: v for k, v in aliases.items() if v}
 
 
+def _canonicalize_travel_home_namespace(value: str) -> str:
+    """Travel Home UI/flows say ``home``; stamped wire ids use ``travel.list.*``.
+
+    Agents often invent ``travel.home.section.yourTrips`` from the surface name.
+    Rewrite to the stamped ``travel.list.*`` namespace before alias/fallback.
+    """
+    if "travel.home." not in value:
+        return value
+    return value.replace("travel.home.", "travel.list.", 1)
+
+
 def resolve_test_id(raw: str, *, root: Path | None = None) -> str:
     """Resolve a wire id or AgentUiIds key path. Passthrough when unknown.
 
@@ -84,10 +95,16 @@ def resolve_test_id(raw: str, *, root: Path | None = None) -> str:
     prepend ontrack. so agents can pass:
       travel.timelineItem.<itemId>.default
       travel.flight.openConfirmation.<itemId>
+
+    Colloquial Travel Home paths (``travel.home.*``) rewrite to stamped
+    ``travel.list.*`` wire ids.
     """
     value = (raw or "").strip()
     if not value:
         return value
+
+    value = _canonicalize_travel_home_namespace(value)
+
     if value.startswith("ontrack."):
         return value
 
@@ -124,7 +141,10 @@ def resolve_prefix(raw: str, *, root: Path | None = None) -> str:
         return value
     if value.startswith("AgentUiIds."):
         value = value[len("AgentUiIds.") :]
+    value = _canonicalize_travel_home_namespace(value.lstrip("."))
     # travel.planDetail. → ontrack.travel.planDetail.
+    if value.startswith("ontrack."):
+        return value
     return "ontrack." + value.lstrip(".")
 
 

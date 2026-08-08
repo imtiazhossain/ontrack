@@ -1,18 +1,19 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  CollapsibleBody,
-  IconButton,
-  Input,
-  Symbol,
+    AppText,
+    Button,
+    CollapsibleBody,
+    GlassTonePill,
+    IconButton,
+    Input,
+    Symbol,
 } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import type {
-  TravelParticipant,
-  TravelTripRosterPerson,
+    TravelParticipant,
+    TravelTripRosterPerson,
 } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -176,8 +177,6 @@ export function TripFriendRow({
                 accessibilityLabel="Cancel rename"
                 disabled={busy}
                 onPress={() => onCancelRename?.()}
-                background={theme.backgroundSunken}
-                borderColor={theme.separator}
               />
             </View>
           </View>
@@ -190,40 +189,25 @@ export function TripFriendRow({
             </AppText>
           </View>
           {badge === 'host' ? (
-            <View
-              style={[
-                styles.status,
-                {
-                  backgroundColor: theme.accentFaint,
-                  minHeight: Math.max(28, s(28)),
-                },
-              ]}>
-              <AppText variant="caption" color="accent" fit>
-                Host
-              </AppText>
-            </View>
+            <GlassTonePill
+              label="Host"
+              toneColor={theme.accentPrimary}
+              showDot={false}
+            />
           ) : null}
           {badge === 'cohost' ? (
-            <View
-              style={[
-                styles.status,
-                {
-                  backgroundColor: theme.backgroundSunken,
-                  minHeight: Math.max(28, s(28)),
-                },
-              ]}>
-              <AppText variant="caption" color="secondary" fit>
-                Co-host
-              </AppText>
-            </View>
+            <GlassTonePill
+              label="Co-host"
+              toneColor={theme.textSecondary}
+              showDot={false}
+            />
           ) : null}
           {badge === 'pending' ? (
-            <View style={[styles.status, { backgroundColor: theme.backgroundSunken }]}>
-              <Symbol name="clock" size="sm" color={theme.textTertiary} />
-              <AppText variant="caption" color="secondary" fit>
-                Pending
-              </AppText>
-            </View>
+            <GlassTonePill
+              label="Pending"
+              toneColor={theme.textSecondary}
+              showDot={false}
+            />
           ) : null}
           {canOpenMenu ? (
             <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
@@ -388,13 +372,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-  },
-  status: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   },
 });

@@ -1,16 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { formatFlightNumber } from '@/features/travel/airline-catalog';
 import {
     flightPassengerLabel,
     type FlightJourneyViewModel,
 } from '@/features/travel/flight-journey-model';
-import {
-    travelCardBorder,
-    travelMainCardFill,
-} from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -90,7 +86,6 @@ export function FlightJourneyCard({
   journey,
   date,
   accentColor,
-  tintColor,
   confirmationCode,
   confirmationUris,
   passengerName,
@@ -103,7 +98,6 @@ export function FlightJourneyCard({
   journey: FlightJourneyViewModel;
   date?: string;
   accentColor: string;
-  tintColor: string;
   confirmationCode?: string;
   confirmationUris?: string[];
   passengerName?: string;
@@ -115,31 +109,13 @@ export function FlightJourneyCard({
   /** Drop the outer card chrome when nested inside a timeline node card. */
   bare?: boolean;
 }) {
-  const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
   const status = useFlightStatus(statusRequests);
   const radius = Math.max(radii.md, s(14));
-  const borderColor = travelCardBorder(theme);
-  const fill = travelMainCardFill(theme);
   const passengerLabel = flightPassengerLabel({ passengerName, passengerCount });
 
-  return (
-    <View
-      style={
-        bare
-          ? { gap: rs.md }
-          : [
-              styles.card,
-              {
-                backgroundColor: fill,
-                borderColor,
-                borderRadius: radius,
-                borderWidth: StyleSheet.hairlineWidth,
-                padding: rs.md,
-                gap: rs.md,
-              },
-            ]
-      }>
+  const body = (
+    <>
       {hideHero ? null : <JourneyHero journey={journey} date={date} />}
 
       <FlightBookingPanel
@@ -148,7 +124,6 @@ export function FlightJourneyCard({
         confirmationUris={confirmationUris}
         passengerLabel={passengerLabel}
         accent={accentColor}
-        fill={fill}
       />
 
       <JourneyStrip journey={journey} accent={accentColor} />
@@ -179,7 +154,6 @@ export function FlightJourneyCard({
                 gate={leg.departure.gate ?? live?.departureGate}
                 showPlane
                 accent={accentColor}
-                tint={tintColor}
                 airline={leg.departure.airline}
                 flightNumber={flightNumber}
                 carrier={carrier || undefined}
@@ -202,7 +176,6 @@ export function FlightJourneyCard({
                 terminal={leg.arrival.terminal ?? live?.arrivalTerminal}
                 gate={leg.arrival.gate ?? live?.arrivalGate}
                 accent={accentColor}
-                tint={tintColor}
                 isLast={isLastLeg && !leg.layoverAfter}
               />
               {leg.layoverAfter ? (
@@ -215,8 +188,26 @@ export function FlightJourneyCard({
           );
         })}
       </View>
+    </>
+  );
 
-    </View>
+  if (bare) {
+    return <View style={{ gap: rs.md }}>{body}</View>;
+  }
+
+  return (
+    <GlassPlate
+      airy
+      style={[
+        styles.card,
+        {
+          borderRadius: radius,
+          padding: rs.md,
+          gap: rs.md,
+        },
+      ]}>
+      {body}
+    </GlassPlate>
   );
 }
 

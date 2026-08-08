@@ -1,15 +1,16 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
-import { radii } from '@/design-system';
+import { AppText, GlassMetaChip, Symbol } from '@/components/primitives';
 import { tripDatesBadge } from '@/features/travel/date-range';
 import {
-  TRAVEL_TITLE_ICON_GAP,
-  travelEditorialTextStyle,
+    TRAVEL_TITLE_ICON_GAP,
+    travelEditorialTextStyle,
 } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
-import { travelPillBg } from '@/features/travel/travel-surface';
+import {
+    travelItineraryInk,
+    travelItineraryShellProps,
+} from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -19,7 +20,7 @@ import {
 } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
-const TRAVEL_DATE_SHADOW = '0 2px 8px rgba(17, 74, 110, 0.10)';
+const TRAVEL_DATE_SHADOW = '0 4px 14px rgba(0, 0, 0, 0.22)';
 
 interface TravelTripDatesRowProps {
   /** Non-compact list chrome: preformatted start label. */
@@ -47,7 +48,6 @@ export function TravelTripDatesRow({
   testID,
 }: TravelTripDatesRowProps) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs, typography } = useResponsive();
   const titleIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
   const durationLabel = `${dayCount} ${dayCount === 1 ? 'Day' : 'Days'}`;
@@ -88,10 +88,10 @@ export function TravelTripDatesRow({
   const badgePadH = compact ? rs.sm : Math.max(12, rs.md);
   const badgePadHIcon = compact ? Math.max(6, rs.xs) : Math.max(8, rs.sm);
   const badgeMinWidthIcon = compact ? Math.max(24, s(26)) : Math.max(30, s(32));
-  const badgeFill =
-    theme.name === 'dark' ? theme.backgroundSunken : theme.accentFaint;
-  const badgeBorder =
-    theme.name === 'dark' ? theme.separator : theme.accentSoft;
+  // Clear/paper shell (light) / dark glass — mist chips + matching ink.
+  const primaryInk = travelItineraryInk(theme);
+  const secondaryInk = travelItineraryInk(theme, 'secondary');
+  const badgeInk = primaryInk;
   const badgeTextSize = compact
     ? Math.max(11, s(11))
     : Math.max(14, typography.caption.fontSize + 1.5);
@@ -104,38 +104,37 @@ export function TravelTripDatesRow({
       paddingVertical: compact ? rs.sm : rs.sm,
       gap: titleIconGap,
       borderRadius: radius,
-      // Non-compact fallback keeps a soft pill fill under glass intensity.
-      ...(compact ? {} : { backgroundColor: travelPillBg(theme) }),
     },
   ];
 
   const renderTextBadge = (label: string) => (
-    <View
+    <GlassMetaChip
       key={label}
-      style={[
-        styles.badge,
-        {
-          backgroundColor: badgeFill,
-          borderColor: badgeBorder,
-          minHeight: badgeMinHeight,
-          paddingHorizontal: badgePadH,
-          borderWidth: StyleSheet.hairlineWidth,
-        },
-      ]}>
+      accessibilityLabel={label}
+      style={{
+        minHeight: badgeMinHeight,
+        paddingHorizontal: badgePadH,
+        paddingVertical: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
       <AppText
         variant="caption"
-        fit
+        align="center"
         numberOfLines={1}
         style={[
           compact ? styles.badgeLabelCompact : styles.badgeLabel,
           {
-            color: theme.accentPrimary,
+            color: badgeInk,
             fontSize: badgeTextSize,
+            lineHeight: badgeTextSize,
+            textAlign: 'center',
+            ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
           },
         ]}>
         {label}
       </AppText>
-    </View>
+    </GlassMetaChip>
   );
 
   const content = (
@@ -148,7 +147,7 @@ export function TravelTripDatesRow({
             style={[
               styles.label,
               {
-                color: chrome.subtitle,
+                color: secondaryInk,
                 fontSize: Math.max(12, typography.caption.fontSize - 0.5),
                 lineHeight: Math.max(16, s(16)),
               },
@@ -163,7 +162,7 @@ export function TravelTripDatesRow({
           style={[
             compact ? styles.datesCompact : styles.dates,
             {
-              color: chrome.title,
+              color: primaryInk,
               fontSize: compact
                 ? Math.max(14, typography.callout.fontSize)
                 : Math.max(16, typography.callout.fontSize + 1),
@@ -177,10 +176,10 @@ export function TravelTripDatesRow({
         {weekdayRange ? (
           <AppText
             variant="caption"
-            color="secondary"
             fit
             numberOfLines={1}
             style={{
+              color: secondaryInk,
               fontSize: Math.max(12, typography.caption.fontSize - 0.5),
               lineHeight: Math.max(16, s(16)),
             }}>
@@ -192,31 +191,29 @@ export function TravelTripDatesRow({
         {renderTextBadge(durationLabel)}
         {statusLabel && !badgeComplete ? renderTextBadge(statusLabel) : null}
         {badgeComplete ? (
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor: badgeFill,
-                borderColor: badgeBorder,
-                minHeight: badgeMinHeight,
-                minWidth: badgeMinWidthIcon,
-                paddingHorizontal: badgePadHIcon,
-                borderWidth: StyleSheet.hairlineWidth,
-              },
-            ]}>
+          <GlassMetaChip
+            accessibilityLabel="Trip complete"
+            style={{
+              minHeight: badgeMinHeight,
+              minWidth: badgeMinWidthIcon,
+              paddingHorizontal: badgePadHIcon,
+              justifyContent: 'center',
+            }}>
             <Symbol
               name="check"
               size={compact ? Math.max(14, s(14)) : Math.max(16, s(16))}
-              color={theme.accentPrimary}
+              color={badgeInk}
             />
-          </View>
+          </GlassMetaChip>
         ) : null}
       </View>
     </>
   );
 
   const plate = (
-    <TravelHomeGlass clear style={rowStyle}>
+    <TravelHomeGlass
+      {...travelItineraryShellProps(theme)}
+      style={rowStyle}>
       {content}
     </TravelHomeGlass>
   );
@@ -274,14 +271,6 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 0,
-  },
-  badge: {
-    borderRadius: radii.pill,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     flexShrink: 0,
   },
   badgeLabel: {

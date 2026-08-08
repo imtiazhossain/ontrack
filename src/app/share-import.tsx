@@ -6,13 +6,14 @@ import {
     type SharePayload,
 } from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
     appPrompt,
     AppText,
     Button,
     Card,
+    GlassIconWell,
     Input,
     Screen,
     Symbol,
@@ -157,9 +158,9 @@ export default function ShareImportScreen() {
             onPress={() => setMode('recipe')}
             accessibilityLabel="Add shared content as a recipe"
             style={styles.choice}>
-            <View style={[styles.choiceIcon, { backgroundColor: theme.accentFaint }]}>
+            <GlassIconWell size={48} borderRadius={radii.md}>
               <Symbol name="groceries" size={28} color={theme.accentPrimary} />
-            </View>
+            </GlassIconWell>
             <View style={styles.flex}>
               <AppText variant="heading">Add Recipe</AppText>
               <AppText variant="body" color="secondary">
@@ -175,9 +176,9 @@ export default function ShareImportScreen() {
             }}
             accessibilityLabel="Add shared content as a calendar event"
             style={styles.choice}>
-            <View style={[styles.choiceIcon, { backgroundColor: theme.backgroundSunken }]}>
+            <GlassIconWell size={48} borderRadius={radii.md} variant="airy">
               <Symbol name="calendar-add" size={28} color={theme.textSecondary} />
-            </View>
+            </GlassIconWell>
             <View style={styles.flex}>
               <AppText variant="heading">Add Calendar Event</AppText>
               <AppText variant="body" color="secondary">
@@ -190,25 +191,21 @@ export default function ShareImportScreen() {
       ) : (
         <View style={styles.destinations}>
           {lists.map((list) => (
-            <Pressable
+            <Card
               key={list.id}
-              accessibilityRole="button"
+              airy
+              padded={false}
               onPress={() => openRecipe(list.id)}
-              style={[
-                styles.listChoice,
-                {
-                  backgroundColor: theme.backgroundElevated,
-                  borderColor: theme.separator,
-                },
-              ]}>
-              <View style={[styles.choiceIcon, { backgroundColor: theme.accentFaint }]}>
+              accessibilityLabel={list.name}
+              style={[styles.listChoice, { borderColor: theme.separator }]}>
+              <GlassIconWell size={40} borderRadius={radii.md}>
                 <Symbol name="groceries" size={22} color={theme.accentPrimary} />
-              </View>
+              </GlassIconWell>
               <AppText variant="subheading" style={styles.flex}>
                 {list.name}
               </AppText>
               <Symbol name="chevron-right" size={19} color={theme.textTertiary} />
-            </Pressable>
+            </Card>
           ))}
           <Card style={styles.newList}>
             <AppText variant="subheading">Create a Grocery list</AppText>

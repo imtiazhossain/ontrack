@@ -47,11 +47,11 @@ export function DesignSystemFontsPanel() {
   return (
     <View style={{ gap: spacing.lg }}>
       <AppText variant="callout" color="secondary">
-        Shipped UI face is system serif (`{typeConfig.fontFamily}`). Changing a preset updates AppText
-        live across the app and persists until restored.
+        Type foundations. Default UI face is system serif (`{typeConfig.fontFamily}`). Presets apply
+        live until restored.
       </AppText>
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <PanelTitle>Active faces</PanelTitle>
         <AppText variant="caption" color="secondary">
           UI: {uiPreset.label} · {faces.fontFamily}
@@ -95,7 +95,7 @@ export function DesignSystemFontsPanel() {
         onSelect={(id) => setFont('mono', id)}
       />
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <AgentTestId testID={AgentUiIds.designSystem.fontScale} label="Type scale preview">
           <View style={{ gap: spacing.md }}>
             <PanelTitle>Type scale</PanelTitle>
@@ -150,7 +150,7 @@ function FontRolePicker({
   }));
 
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card airy style={{ gap: spacing.md }}>
       <AppText variant="caption" color="secondary">
         {description}
       </AppText>

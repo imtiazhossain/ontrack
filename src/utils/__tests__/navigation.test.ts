@@ -4,15 +4,12 @@ import { join } from 'node:path';
 
 import { goBackOrReplace } from '@/utils/navigation';
 
-function routerWith({
-  canDismiss,
-}: {
-  canDismiss: boolean;
-}) {
+function routerWith() {
   return {
     router: {
-      canDismiss: jest.fn(() => canDismiss),
+      canDismiss: jest.fn(() => false),
       dismiss: jest.fn(),
+      dismissTo: jest.fn(),
       canGoBack: jest.fn(() => false),
       back: jest.fn(),
       replace: jest.fn(),
@@ -21,24 +18,15 @@ function routerWith({
 }
 
 describe('goBackOrReplace', () => {
-  it('dismisses the stack when a screen can be popped', () => {
-    const { router } = routerWith({ canDismiss: true });
+  it('dismisses to the fallback instead of a blind POP / GO_BACK', () => {
+    const { router } = routerWith();
 
     goBackOrReplace(router, '/(tabs)/calendar');
 
-    expect(router.dismiss).toHaveBeenCalledWith(1);
-    expect(router.back).not.toHaveBeenCalled();
-    expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  it('replaces with the fallback when the stack cannot dismiss', () => {
-    const { router } = routerWith({ canDismiss: false });
-
-    goBackOrReplace(router, '/(tabs)/calendar');
-
+    expect(router.dismissTo).toHaveBeenCalledWith('/(tabs)/calendar');
     expect(router.dismiss).not.toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
-    expect(router.replace).toHaveBeenCalledWith('/(tabs)/calendar');
+    expect(router.replace).not.toHaveBeenCalled();
   });
 });
 
@@ -105,5 +93,28 @@ describe('root stack back button', () => {
     expect(rootLayout).toMatch(
       /name="\(tabs\)"[\s\S]*?gestureEnabled:\s*false/,
     );
+  });
+
+  it('consumes Android hardware back on empty tab root to avoid POP LogBox', () => {
+    const tabsLayout = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/_layout.tsx'),
+      'utf8',
+    );
+    expect(tabsLayout).toContain('BackHandler');
+    expect(tabsLayout).toContain('hardwareBackPress');
+    expect(tabsLayout).toContain('canDismiss()');
+    expect(tabsLayout).toContain('canGoBack()');
+  });
+
+  it('avoids blind stack POP in goBackOrReplace', () => {
+    const navigation = readFileSync(
+      join(process.cwd(), 'src/utils/navigation.ts'),
+      'utf8',
+    );
+    const body = navigation.replace(/\/\*\*[\s\S]*?\*\//, '');
+    expect(body).toContain('dismissTo(fallback)');
+    expect(body).not.toMatch(/\.dismiss\(/);
+    expect(body).not.toContain('router.back()');
+    expect(body).not.toContain('router.replace(');
   });
 });

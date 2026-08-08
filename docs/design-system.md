@@ -10,14 +10,16 @@ imagery, category colors, and data visualizations; they do not redefine controls
 | Dismiss or cancel | `IconButton` through `ScreenHeader` / `SheetScaffold` | Neutral top-right X |
 | Back | `HeaderBackButton compact` via `ScreenHeader` `leading` | Overline-sized on the eyebrow row; title + subtitle stay full-bleed left |
 | Section rhythm | `SectionHeader flush` | Use inside `Screen`/`View` gaps so margins are not doubled |
-| Settings panel | `SettingsGroup` | Single sunken panel for stacked `SettingsRow` / toggle / action rows |
+| Settings panel | `SettingsGroup` | Frosted glass panel for stacked `SettingsRow` / toggle / action rows |
 | Collapsible group | `CollapsibleSection` | Overline + chevron; optional expanded-only `detail` or trailing action |
-| Save, create, confirm | `Button variant="primary"` | Main footer or final form action |
-| Secondary action | `Button variant="secondary"` | After the primary action |
+| Save, create, confirm | `Button variant="primary"` (glass) | Main footer or final form action |
+| Secondary action | `Button variant="secondary"` (glass) | After the primary action |
 | Low-emphasis inline action | `Button variant="ghost"` | Inline only; never the sheet dismiss action |
 | Delete or remove | `Button variant="danger"` / `DestructiveSection` | Separated destructive section |
-| Irreversible account/data actions | `DangerZone` + `DestructiveSection flush` | Red-bordered GitHub-style panel |
-| Icon-only action | `IconButton` | At least 44pt with label and `testID` |
+| Irreversible account/data actions | `DangerZone` + `DestructiveSection flush` | Red-rimmed glass panel |
+| Icon-only action | `IconButton` (glass disc) | At least 44pt with label and `testID` |
+| Icon wells / meta chips | `GlassIconWell` / `GlassTonePill` / `GlassMetaChip` | Mist frost — never `accentFaint` / sunken paper |
+| Settings toggles | `GlassSwitch` (via `SettingsToggleRow`) | Fill-only frost track + thumb |
 
 Irreversible actions must call `confirmDestructiveAction`. Its Cancel action is represented by the prompt’s
 top-right X; it is not rendered as a second full-width button.
@@ -39,10 +41,14 @@ top-right X; it is not rendered as a second full-width button.
 - Modal sheets use `SheetScaffold`; do not create feature-specific sheet frames.
 - Forms group related fields with `FormSection`, use `Input` / `DateField` / `TimeField`, and use
   `SegmentedControl` for compact exclusive choices.
-- Surfaces use `Card`; loading, empty, and error states use `LoadingBlock`, `EmptyState`, and `ErrorMessage`.
-- Status pills use `StatusBadge` (success / warning / danger / neutral). Diagnostic label/value rows use
-  `MetaList`. Sort+action bands use `ToolbarRow`. Compact secondary actions use `ActionChip` /
-  `ActionChipRow`. Overlay selects use `Dropdown` (never push layout).
+- **Glass UI:** product chrome uses `GlassPlate` / `Card` (prefer `airy` on atmosphere), `SettingsGroup`,
+  mist wells/chips, and glass fields. Do not paint cards/rows with `backgroundElevated` /
+  `backgroundSunken` / `accentFaint`. See `.cursor/rules/glass-ui.mdc`.
+- Surfaces use `Card` (glass default); loading, empty, and error states use `LoadingBlock`, `EmptyState`,
+  and `ErrorMessage`.
+- Status pills use `StatusBadge` → `GlassTonePill` (success / warning / danger / neutral). Diagnostic
+  label/value rows use `MetaList`. Sort+action bands use `ToolbarRow`. Compact secondary actions use
+  `ActionChip` / `ActionChipRow`. Overlay selects use `Dropdown` (never push layout).
 - **Title Case:** field labels use `StackedFieldLabel` / `fieldTitleCase`; in-card panel titles use
   `PanelTitle`. `ScreenHeader`, `SectionHeader`, `FormSection`, `Button`, `GlassPrimaryAction`,
   `ActionChip`, and prompt actions title-case their labels automatically.
@@ -60,15 +66,16 @@ the shared system.
 
 ## Gallery
 
-Dev-only route `/design-system` (Developer Tools → Design System):
+Dev-only route `/design-system` (Developer Tools → Design System).
 
-| Tab | Contents |
+| Tab | What it’s for |
 |---|---|
-| Catalog | Every shared element + which features use it (by element / by feature) |
-| UI | Layout, actions, feedback, shared patterns (`ChipRow`, `ActivityCard`, …) |
-| Forms | `Input`, `DateField`, `TimeField`, `SegmentedControl`, `Dropdown`, settings rows |
-| Colors | Editable theme accents + history |
-| Type | Font presets + type scale |
-| Icons | Semantic `appIcons` catalog |
+| **Elements** | Full list of shared building blocks, grouped by job. Tap a row → jump to its demo. |
+| **Demos** | Live playground (layout, glass, buttons, forms, settings). |
+| **Colors** | Theme accents and history |
+| **Type** | Font presets and type scale |
+| **Icons** | Semantic `appIcons` catalog |
 
-Source of truth for the usage map: `src/features/design-system/design-system-catalog.ts`.
+Mental model: **browse → try → tune foundations**.
+
+Source of truth for the element list: `src/features/design-system/design-system-catalog.ts`.

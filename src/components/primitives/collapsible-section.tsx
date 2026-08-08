@@ -88,13 +88,13 @@ export function CollapsibleSection({
           onPress={toggle}
           style={[styles.toggle, { minHeight: layout.minTapTarget, gap: spacing.xs }]}>
           {leading}
-          <AppText variant="overline" color="tertiary" fit style={styles.title}>
+          <AppText variant="overline" color="secondary" fit style={styles.title}>
             {titleText}
           </AppText>
           <DisclosureChevron
             expanded={expanded}
             size="sm"
-            color={theme.textTertiary}
+            color={theme.textSecondary}
           />
         </Pressable>
         {showAction ? (

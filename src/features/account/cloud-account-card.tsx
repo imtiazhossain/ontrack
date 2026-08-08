@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  appPrompt,
-  Button,
-  Card,
-  ErrorMessage,
-  StatusBadge,
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    ErrorMessage,
+    StatusBadge,
 } from '@/components/primitives';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -64,39 +64,45 @@ export function CloudAccountCard() {
   };
 
   return (
-    <Card variant="elevated" style={{ gap: spacing.sm, padding: spacing.sm }}>
+    <Card variant="elevated" style={{ gap: spacing.md }}>
       {isGuest ? (
         <>
-          <View style={[styles.heading, { gap: spacing.sm }]}>
-            <View style={[styles.flex, { gap: spacing.xxs, minWidth: 0 }]}>
-              <AppText variant="callout" fit>
+          <View style={{ gap: spacing.xxs }}>
+            <View style={[styles.identityRow, { gap: spacing.sm }]}>
+              <AppText variant="callout" fit style={styles.flex}>
                 Guest mode
               </AppText>
-              <AppText variant="caption" color="secondary" numberOfLines={2}>
-                Sign in to back up plans and continue on other devices.
-              </AppText>
+              <View style={styles.badge}>
+                <StatusBadge label="This device" tone="neutral" showDot={false} />
+              </View>
             </View>
-            <StatusBadge label="This device" tone="neutral" showDot={false} />
+            <AppText variant="caption" color="secondary" numberOfLines={2}>
+              Sign in to back up plans and continue on other devices.
+            </AppText>
           </View>
           <Button
             size="sm"
+            testID={AgentUiIds.profile.createOrSignIn}
             onPress={() => router.push('/account' as never)}
-            accessibilityLabel="Create or Sign In to an account">
+            accessibilityLabel="Create or Sign In to an account"
+            style={styles.action}>
             Create or Sign In
           </Button>
         </>
       ) : (
         <>
-          <View style={[styles.heading, { gap: spacing.sm }]}>
-            <View style={[styles.flex, { gap: spacing.xxs, minWidth: 0 }]}>
-              <AppText variant="callout" fit numberOfLines={1}>
+          <View style={{ gap: spacing.xxs }}>
+            <View style={[styles.identityRow, { gap: spacing.sm }]}>
+              <AppText variant="callout" fit numberOfLines={1} style={styles.flex}>
                 {user?.email ?? 'Signed in'}
               </AppText>
-              <AppText variant="caption" color="secondary" fit>
-                {providerLabel}
-              </AppText>
+              <View style={styles.badge}>
+                <StatusBadge label={syncLabel} tone={syncTone} />
+              </View>
             </View>
-            <StatusBadge label={syncLabel} tone={syncTone} />
+            <AppText variant="caption" color="secondary" fit>
+              {providerLabel}
+            </AppText>
           </View>
           {sync.state === 'error' ? (
             <ErrorMessage message={sync.message ?? 'Cloud sync needs attention.'} variant="caption" />
@@ -107,7 +113,8 @@ export function CloudAccountCard() {
             disabled={working}
             testID={AgentUiIds.profile.signOut}
             onPress={() => void signOut()}
-            accessibilityLabel="Sign Out of This Device">
+            accessibilityLabel="Sign Out of This Device"
+            style={styles.action}>
             {working ? 'Working…' : 'Sign Out'}
           </Button>
         </>
@@ -118,9 +125,18 @@ export function CloudAccountCard() {
 }
 
 const styles = StyleSheet.create({
-  heading: {
+  identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  flex: { flex: 1 },
+  flex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  badge: {
+    flexShrink: 0,
+  },
+  action: {
+    alignSelf: 'stretch',
+  },
 });

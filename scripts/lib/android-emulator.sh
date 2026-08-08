@@ -45,6 +45,74 @@ android_emu_want_window() {
   esac
 }
 
+# Place the headed Android Emulator GUI on the left of the main display
+# (iOS Simulator owns the right). Matches window title containing the AVD name
+# (e.g. "Android Emulator - Galaxy_S26:5554"). Skips tiny tool chrome.
+# Side override: android_emu_place_window [left|right|center] [avd_name]
+android_emu_place_window() {
+  local side="${1:-left}" name safe margin
+  name="${2:-$(android_emu_preferred_name)}"
+  [[ -n "$name" ]] || return 1
+  # Headless qemu has no placeable GUI.
+  android_emu_is_headless "$name" 2>/dev/null && return 0
+  pgrep -x qemu-system-aarch64 >/dev/null 2>&1 \
+    || pgrep -x qemu-system-x86_64 >/dev/null 2>&1 \
+    || return 0
+  margin="${ONTRACK_DEVICE_WINDOW_MARGIN:-24}"
+  safe="$(printf '%s' "$name" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  osascript >/dev/null 2>&1 <<EOF || true
+tell application "System Events"
+  set procs to {"qemu-system-aarch64", "qemu-system-x86_64", "emulator"}
+  repeat with procName in procs
+    if not (exists process procName) then
+      -- skip
+    else
+      tell process procName
+        repeat with w in (get every window)
+          try
+            set wn to name of w as text
+            if wn contains "${safe}" or wn contains "Android Emulator" then
+              set winSize to size of w
+              set winW to item 1 of winSize
+              set winH to item 2 of winSize
+              -- Skip thin tool/extended-controls chrome.
+              if winW < 200 or winH < 200 then
+                -- skip
+              else
+                set deskBounds to {0, 0, 1800, 1169}
+                try
+                  tell application "Finder" to set deskBounds to bounds of window of desktop
+                end try
+                set dLeft to item 1 of deskBounds
+                set dTopY to item 2 of deskBounds
+                set dW to (item 3 of deskBounds) - dLeft
+                set dH to (item 4 of deskBounds) - dTopY
+                set margin to ${margin}
+                if "${side}" is "right" then
+                  set newX to dLeft + dW - winW - margin
+                else if "${side}" is "center" then
+                  set newX to dLeft + ((dW - winW) div 2)
+                else
+                  set newX to dLeft + margin
+                end if
+                set newY to dTopY + ((dH - winH) div 2)
+                if newY < 40 then set newY to 40
+                if newX < dLeft then set newX to dLeft
+                set maxX to dLeft + dW - winW
+                if newX > maxX then set newX to maxX
+                set position of w to {newX, newY}
+                return
+              end if
+            end if
+          end try
+        end repeat
+      end tell
+    end if
+  end repeat
+end tell
+EOF
+}
+
 android_emu_pool_mode() {
   case "${AGENT_UI_POOL_MODE:-0}" in
     1|true|TRUE|yes|YES) return 0 ;;
@@ -58,6 +126,8 @@ android_emu_is_agent_avd_name() {
 
 # Keys copied from Galaxy_S26 (or ONTRACK_ANDROID_AVD_TEMPLATE) onto agent AVDs.
 # Includes GPU — avdmanager's pixel_9_pro_xl defaults hw.gpu.enabled=no.
+# hw.ramSize is synced then clamped (AGENT_RAM_CAP) so a headed 8GB Galaxy
+# template cannot OOM a 16GB host when warm agents stay up beside it.
 android_emu_agent_template_keys() {
   printf '%s\n' \
     hw.lcd.width hw.lcd.height hw.lcd.density \
@@ -67,11 +137,13 @@ android_emu_agent_template_keys() {
 }
 
 # Sync display/keyboard/RAM/GPU from template → target config.ini.
+# Agent RAM capped at 4096 MB (override: ONTRACK_ANDROID_AGENT_RAM_MB).
 android_emu_sync_avd_config_from_template() {
   local conf="$1" tmpl="$2"
   [[ -f "$conf" && -f "$tmpl" ]] || return 0
+  ONTRACK_ANDROID_AGENT_RAM_MB="${ONTRACK_ANDROID_AGENT_RAM_MB:-4096}" \
   python3 - "$conf" "$tmpl" <<'PY'
-import re, sys
+import os, re, sys
 from pathlib import Path
 conf, tmpl = Path(sys.argv[1]), Path(sys.argv[2])
 text = conf.read_text(encoding="utf-8")
@@ -107,8 +179,44 @@ elif re.search(r"(?m)^hw\.gpu\.enabled\s*=\s*no\s*$", text):
         r"(?m)^hw\.gpu\.enabled\s*=\s*.*$", "hw.gpu.enabled=yes", text, count=1
     )
     changed = True
+# Prefer host GPU for agent/headless speed (auto often falls back to software).
 if not re.search(r"(?m)^hw\.gpu\.mode\s*=", text):
-    text = text.rstrip() + "\nhw.gpu.mode=auto\n"
+    text = text.rstrip() + "\nhw.gpu.mode=host\n"
+    changed = True
+elif re.search(r"(?m)^hw\.gpu\.mode\s*=\s*auto\s*$", text):
+    text = re.sub(
+        r"(?m)^hw\.gpu\.mode\s*=\s*.*$", "hw.gpu.mode=host", text, count=1
+    )
+    changed = True
+# Cap agent RAM — Galaxy may be 8GB for headed SVG; agents must stay lean.
+try:
+    cap = int(os.environ.get("ONTRACK_ANDROID_AGENT_RAM_MB", "4096"))
+except ValueError:
+    cap = 4096
+if cap < 1536:
+    cap = 1536
+
+def _ram_mb(raw: str):
+    s = raw.strip().upper().replace(" ", "")
+    try:
+        if s.endswith("G"):
+            return int(float(s[:-1]) * 1024)
+        if s.endswith("M"):
+            return int(float(s[:-1]))
+        return int(float(s))
+    except ValueError:
+        return None
+
+m = re.search(r"(?m)^hw\.ramSize\s*=\s*(.*)$", text)
+if m:
+    mb = _ram_mb(m.group(1))
+    if mb is None or mb > cap:
+        text = re.sub(
+            r"(?m)^hw\.ramSize\s*=\s*.*$", f"hw.ramSize={cap}", text, count=1
+        )
+        changed = True
+elif not re.search(r"(?m)^hw\.ramSize\s*=", text):
+    text = text.rstrip() + f"\nhw.ramSize={cap}\n"
     changed = True
 if changed:
     conf.write_text(text, encoding="utf-8")
@@ -199,10 +307,31 @@ PY
   return 0
 }
 
+# True when the named AVD (default: preferred) is running headed (GUI window).
+# Headed Galaxy must not be pool-killed — that shows "Saving state…" and looks
+# like the emulator "turns off on its own" while another chat runs verify-both.
+android_emu_avd_is_headed() {
+  local name="${1:-$(android_emu_preferred_name)}"
+  [[ -n "$name" ]] || return 1
+  # Headless binary ⇒ not headed.
+  if pgrep -lf "qemu-system-.*-headless.*-avd[[:space:]]+${name}|${name}.*-no-window|-no-window.*${name}" >/dev/null 2>&1; then
+    return 1
+  fi
+  # Windowed qemu (non-headless binary, no -no-window).
+  if pgrep -lf "qemu-system-aarch64[[:space:]].*-avd[[:space:]]+${name}" >/dev/null 2>&1; then
+    return 0
+  fi
+  if pgrep -lf "emulator.*-avd[[:space:]]+${name}" 2>/dev/null | grep -vq -- '-no-window'; then
+    return 0
+  fi
+  return 1
+}
+
 # True when the preferred AVD is running with `-no-window` / headless qemu.
 android_emu_is_headless() {
   local name
   name="$(android_emu_preferred_name)"
+  android_emu_avd_is_headed "$name" && return 1
   # Match either the headless qemu binary or an emulator cmdline with -no-window.
   if pgrep -lf "qemu-system-.*-headless.*${name}|${name}.*-no-window|-no-window.*${name}" >/dev/null 2>&1; then
     return 0
@@ -211,7 +340,108 @@ android_emu_is_headless() {
   if pgrep -lf "qemu-system.*-avd[[:space:]]+${name}" 2>/dev/null | grep -q -- '-no-window'; then
     return 0
   fi
+  # No process → treat as not-headless for restart logic (cold boot path).
   return 1
+}
+
+# Sticky protect for user-headed Galaxy (written by ensure:window).
+android_emu_headed_keep_file() {
+  printf '%s/.cursor/android-headed.keep' "${ROOT:-.}"
+}
+
+android_emu_mark_headed_keep() {
+  local f
+  f="$(android_emu_headed_keep_file)"
+  mkdir -p "$(dirname "$f")" 2>/dev/null || true
+  printf '%s\n' "$(android_emu_preferred_name)" >"$f"
+}
+
+android_emu_clear_headed_keep() {
+  rm -f "$(android_emu_headed_keep_file)" 2>/dev/null || true
+}
+
+android_emu_want_keep_headed() {
+  case "${ONTRACK_ANDROID_KEEP_HEADED:-}" in
+    0|false|FALSE|no|NO) return 1 ;;
+    1|true|TRUE|yes|YES) return 0 ;;
+  esac
+  # Sticky file from android:ensure:window — only while the GUI AVD is actually
+  # headed. Stale keeps (Galaxy closed / pool killed it) used to force every
+  # handoff to "adopt" then skip with 16GB / not-cold-booting noise.
+  local keep
+  keep="$(android_emu_headed_keep_name 2>/dev/null || true)"
+  [[ -n "$keep" ]] || return 1
+  if android_emu_avd_is_headed "$keep"; then
+    return 0
+  fi
+  echo "android-emu: clearing stale headed keep (${keep} not running headed)" >&2
+  android_emu_clear_headed_keep
+  return 1
+}
+
+# AVD name from sticky headed keep (usually Galaxy_S26). Empty if none.
+android_emu_headed_keep_name() {
+  local f name
+  f="$(android_emu_headed_keep_file)"
+  [[ -f "$f" ]] || return 1
+  name="$(head -1 "$f" 2>/dev/null | tr -d '\r\n' || true)"
+  [[ -n "$name" ]] || return 1
+  printf '%s' "$name"
+}
+
+# True when named AVD is on adb with sys.boot_completed=1.
+android_emu_avd_is_ready_named() {
+  local name="${1:-}" serial boot adb_bin
+  [[ -n "$name" ]] || return 1
+  serial="$(
+    ONTRACK_ANDROID_AVD="$name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+  )"
+  [[ -n "$serial" ]] || return 1
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 1
+  "$adb_bin" -s "$serial" get-state >/dev/null 2>&1 || return 1
+  boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  [[ "$boot" == "1" ]]
+}
+
+# First boot_completed onTrack_Agent_* on adb (optional exclude name).
+android_emu_first_warm_agent_name() {
+  local exclude="${1:-}" adb_bin serial avd boot
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 1
+  while IFS= read -r serial; do
+    [[ -z "$serial" ]] && continue
+    avd="$("$adb_bin" -s "$serial" emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)"
+    avd="$(printf '%s\n' "$avd" | awk 'NF && $0!="OK"{print; exit}')"
+    android_emu_is_agent_avd_name "$avd" || continue
+    [[ -n "$exclude" && "$avd" == "$exclude" ]] && continue
+    boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+    [[ "$boot" == "1" ]] || continue
+    printf '%s' "$avd"
+    return 0
+  done < <("$adb_bin" devices 2>/dev/null | awk '/^emulator-[0-9]+[[:space:]]+device/{print $1}')
+  return 1
+}
+
+# Headed Galaxy (≈8GB) + any agent (≈4GB) thrash a 16GB host (minutes of
+# swap, bridge timeouts, "AVD going down"). When sticky keep / --window is
+# active, Android work MUST use the headed AVD — never an agent beside it.
+# No-op when keep is stale (Galaxy not headed) — want_keep_headed GCs the file.
+android_emu_adopt_android_for_headed_host() {
+  local name keep
+  android_emu_want_keep_headed || android_emu_want_window || return 0
+  keep="$(android_emu_headed_keep_name 2>/dev/null || true)"
+  [[ -n "$keep" ]] || keep="Galaxy_S26"
+  name="$(android_emu_preferred_name)"
+  [[ "$name" == "$keep" ]] && return 0
+  # --window will cold-boot; sticky keep only adopts a live headed GUI.
+  if ! android_emu_want_window && ! android_emu_avd_is_headed "$keep"; then
+    return 0
+  fi
+  echo "android-emu: adopting headed ${keep} (was ${name} — 16GB host cannot run agent beside GUI)" >&2
+  export ONTRACK_ANDROID_AVD="$keep"
+  unset ONTRACK_ANDROID_SERIAL ANDROID_SERIAL
+  return 0
 }
 
 # Soft keyboard visible even with hw.keyboard=yes (needed for keyboard layout hunts).
@@ -433,6 +663,33 @@ android_emu_discard_default_snapshot() {
   rm -rf "$snap" 2>/dev/null || true
 }
 
+# After a successful cold agent boot, explicitly save default_boot so the next
+# launch can use the fast snapshot path. Normal agent launches still pass
+# -no-snapshot-save so lease/kill never corrupts a mid-write snapshot.
+# Escape: ONTRACK_ANDROID_SNAPSHOT_REGEN=0.
+android_emu_regenerate_default_snapshot() {
+  local serial="${1:-}" name="${2:-$(android_emu_preferred_name)}" adb_bin
+  case "${ONTRACK_ANDROID_SNAPSHOT_REGEN:-1}" in
+    0|false|FALSE|no|NO) return 0 ;;
+  esac
+  android_emu_is_agent_avd_name "$name" || return 0
+  [[ -n "$serial" ]] || serial="$(android_emu_preferred_serial || true)"
+  [[ -n "$serial" ]] || return 1
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 1
+  # Still on adb + boot_completed — never save while shutting down.
+  local boot
+  boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  [[ "$boot" == "1" ]] || return 1
+  echo "Saving default_boot snapshot for ${name} (post-cold heal)…" >&2
+  # Console snapshot save (not qemu exit-save). Fail soft — boot already succeeded.
+  if ! "$adb_bin" -s "$serial" emu avd snapshot save default_boot >/dev/null 2>&1; then
+    echo "warn: snapshot save failed for ${name} (next boot may stay cold)" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Set clipboard text on the preferred emulator (Custom Tabs / WebViews may still
 # need a long-press Paste — Chrome often ignores automated paste).
 android_emu_set_clipboard() {
@@ -451,20 +708,42 @@ android_emu_set_clipboard() {
 }
 
 # Shut down peer emulators so adb + the android agent-ui bridge stay unambiguous.
-# - Pool mode: kill non-agent AVDs (Galaxy/IdeaHome). Leaving Galaxy up lets its
-#   JS bridge answer route probes while onTrack_Agent_N has no app → route=?.
-# - Non-pool: kill other non-agent emulators; never touch onTrack_Agent_* slots.
+# - Pool mode (no headed keep): kill non-agent AVDs (Galaxy/IdeaHome) so their
+#   JS bridge cannot spoof route probes; leave other onTrack_Agent_* up.
+# - Headed Galaxy / sticky android-headed.keep / --window: NEVER run agents
+#   beside the 8GB GUI on 16GB hosts — kill every onTrack_Agent_* and adopt
+#   Galaxy for Android work (see android_emu_adopt_android_for_headed_host).
+#   Never kill the headed Galaxy itself (looks like "Saving state…" / random off).
 android_emu_shutdown_others() {
   local keep_serial="${1:-}" adb_bin serial avd
+  local kill_agents=0 preferred keep_headed=0 headed_name=""
+  local -a killed_agent_serials=()
   adb_bin="$(android_emu_sdk_bin adb)"
   [[ -n "$adb_bin" ]] || return 0
+  preferred="$(android_emu_preferred_name)"
+  if android_emu_want_keep_headed; then
+    keep_headed=1
+  fi
+  headed_name="$(android_emu_headed_keep_name 2>/dev/null || true)"
+  [[ -n "$headed_name" ]] || headed_name="Galaxy_S26"
+  # 16GB host: headed Galaxy GUI cannot share RAM/GPU with any agent AVD.
+  if android_emu_want_window || (( keep_headed )); then
+    kill_agents=1
+  fi
   while IFS= read -r serial; do
     [[ -z "$serial" || "$serial" == "$keep_serial" ]] && continue
     avd="$("$adb_bin" -s "$serial" emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)"
     avd="$(printf '%s\n' "$avd" | awk 'NF && $0!="OK"{print; exit}')"
     if android_emu_is_agent_avd_name "$avd"; then
-      # Other pool slots must stay up for parallel agents.
-      echo "Leaving agent emulator up: ${serial} (${avd})" >&2
+      if (( kill_agents )); then
+        echo "Shutting down agent emulator (headed ${headed_name} keep needs RAM/GPU): ${serial} (${avd})" >&2
+        ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
+          "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+        killed_agent_serials+=("$serial")
+      else
+        # Other pool slots must stay up for parallel agents.
+        echo "Leaving agent emulator up: ${serial} (${avd})" >&2
+      fi
       continue
     fi
     if [[ -z "$avd" ]]; then
@@ -475,6 +754,16 @@ android_emu_shutdown_others() {
         continue
       fi
     fi
+    # Leave headed Galaxy only while keep is active. Explicit
+    # ONTRACK_ANDROID_KEEP_HEADED=0 (pool verify-both) must free RAM/GPU for
+    # Agent_* — leftover GUI + Agent thrash a 16GB host for minutes.
+    if (( keep_headed )) && {
+      android_emu_avd_is_headed "$avd" \
+        || [[ "$avd" == "Galaxy_S26" || "$avd" == "$headed_name" ]]
+    }; then
+      echo "Leaving headed emulator up (user window): ${serial} (${avd})" >&2
+      continue
+    fi
     if android_emu_pool_mode; then
       echo "Shutting down non-agent emulator (pool): ${serial} (${avd})" >&2
     else
@@ -483,6 +772,23 @@ android_emu_shutdown_others() {
     ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
       "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
   done < <("$adb_bin" devices 2>/dev/null | awk '/^emulator-[0-9]+[[:space:]]+device/{print $1}')
+
+  # Wait for killed agents to drop off adb before any sibling boot reuses the
+  # console port (5554/5556 race → "went offline before boot_completed").
+  if ((${#killed_agent_serials[@]} > 0)); then
+    local deadline=$((SECONDS + 15)) still s
+    while (( SECONDS < deadline )); do
+      still=0
+      for s in "${killed_agent_serials[@]}"; do
+        if "$adb_bin" -s "$s" get-state >/dev/null 2>&1; then
+          still=1
+          break
+        fi
+      done
+      (( still == 0 )) && break
+      sleep 1
+    done
+  fi
 }
 
 # Wait for sys.boot_completed. SECONDS_BUDGET overrides the default (120).
@@ -536,6 +842,8 @@ android_emu_is_ready() {
 # and wait for sys.boot_completed (via ensure_preferred_android_emulator).
 android_emu_ensure_ready() {
   local serial
+  # Headed Galaxy keep: adopt warm agent / Galaxy before cold-booting a sibling.
+  android_emu_adopt_android_for_headed_host || true
   if android_emu_is_ready; then
     serial="$(android_emu_preferred_serial || true)"
     export ANDROID_SERIAL="$serial"
@@ -680,9 +988,9 @@ android_emu_ensure_app_surface() {
 }
 
 # Pin serial, reverse ports, soft IME, headed app-surface heal, then announce ready.
-# $1=serial $2=avd_name $3=want_window(0|1) $4=window_restarted(0|1)
+# $1=serial $2=avd_name $3=want_window(0|1) $4=window_restarted(0|1) $5=did_cold(0|1)
 android_emu_mark_ready() {
-  local serial="$1" name="$2" want_window="${3:-0}" window_restarted="${4:-0}"
+  local serial="$1" name="$2" want_window="${3:-0}" window_restarted="${4:-0}" did_cold="${5:-0}"
   [[ -n "$serial" ]] || return 1
   export ANDROID_SERIAL="$serial"
   export ONTRACK_ANDROID_SERIAL="$serial"
@@ -693,6 +1001,18 @@ android_emu_mark_ready() {
     if ! android_emu_ensure_app_surface "$window_restarted"; then
       return 1
     fi
+  fi
+  if (( did_cold )); then
+    android_emu_regenerate_default_snapshot "$serial" "$name" || true
+  fi
+  if (( want_window )); then
+    android_emu_mark_headed_keep
+    # GUI may take a beat after SurfaceView heal — place left beside iOS.
+    android_emu_place_window left "$name" 2>/dev/null || true
+    (
+      sleep 0.8
+      android_emu_place_window left "$name" 2>/dev/null || true
+    ) &
   fi
   echo "Emulator ready: ${name} (${serial})$((( want_window )) && echo '' || echo ' (headless)')"
   return 0
@@ -725,6 +1045,11 @@ ensure_preferred_android_emulator() {
     echo "hint: sdkmanager \"system-images;android-36;google_apis;arm64-v8a\"" >&2
     return 1
   fi
+
+  # Before shutdown/boot: if headed Galaxy is sticky and this agent isn't up,
+  # remount to a warm agent (or Galaxy) instead of cold-booting beside the GUI.
+  android_emu_adopt_android_for_headed_host || true
+  name="$(android_emu_preferred_name)"
 
   android_emu_ensure_avd_runtime_config
   android_emu_clear_stale_locks "$name"
@@ -864,7 +1189,9 @@ PY
 
     android_emu_shutdown_others "$serial"
     if android_emu_wait_boot "$serial" "$boot_budget"; then
-      android_emu_mark_ready "$serial" "$name" "$want_window" "$window_restarted" || return 1
+      # Attempt 2 is always cold (-no-snapshot-load); heal default_boot after.
+      android_emu_mark_ready "$serial" "$name" "$want_window" "$window_restarted" "$no_snap" \
+        || return 1
       return 0
     fi
 

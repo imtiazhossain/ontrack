@@ -66,6 +66,16 @@ export const DESIGN_CATALOG_GROUPS: readonly DesignCatalogGroup[] = [
   'Shared',
 ] as const;
 
+/** Plain-language section titles for the Elements tab. */
+export const DESIGN_CATALOG_GROUP_LABELS: Record<DesignCatalogGroup, string> = {
+  Layout: 'Screens & layout',
+  Actions: 'Buttons & actions',
+  Forms: 'Forms & settings',
+  Feedback: 'Status & feedback',
+  Content: 'Content blocks',
+  Shared: 'Shared patterns',
+};
+
 export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
   // Layout
   {
@@ -124,7 +134,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'card',
     name: 'Card',
     group: 'Layout',
-    description: 'Frosted glass plate (elevated) or soft wash (sunken); solid escape hatch.',
+    description: 'Frosted GlassPlate (elevated / airy / sunken); solid is an escape hatch only.',
     demo: 'components',
     usedBy: [
       'account',
@@ -138,6 +148,22 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
       'vehicles',
       'workouts',
     ],
+  },
+  {
+    id: 'settingsGroup',
+    name: 'SettingsGroup',
+    group: 'Layout',
+    description: 'Frosted panel for stacked settings rows (glass default).',
+    demo: 'forms',
+    usedBy: ['account', 'agents'],
+  },
+  {
+    id: 'screenAtmosphere',
+    name: 'ScreenAtmosphere',
+    group: 'Layout',
+    description: 'Page wash under glass so frost reads (not flat paper).',
+    demo: 'components',
+    usedBy: ['account', 'daily-tracking', 'travel'],
   },
   {
     id: 'formSection',
@@ -167,9 +193,49 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'glassPlate',
     name: 'GlassPlate',
     group: 'Layout',
-    description: 'Shared frosted glass underlay for chips, cards, and CTAs.',
+    description: 'Shared frosted glass underlay (default / airy / mist / clear / accent).',
     demo: 'components',
-    usedBy: ['travel', 'account', 'daily-tracking'],
+    usedBy: ['travel', 'account', 'daily-tracking', 'todos', 'vision-board'],
+  },
+  {
+    id: 'glassIconWell',
+    name: 'GlassIconWell',
+    group: 'Layout',
+    description: 'Mist frost icon well — replaces accentFaint / sunken squares.',
+    demo: 'components',
+    usedBy: ['account', 'travel', 'todos'],
+  },
+  {
+    id: 'glassTonePill',
+    name: 'GlassTonePill',
+    group: 'Feedback',
+    description: 'Mist status / meta pill with optional tone dot.',
+    demo: 'components',
+    usedBy: ['travel'],
+  },
+  {
+    id: 'glassMetaChip',
+    name: 'GlassMetaChip',
+    group: 'Content',
+    description: 'Mist chip for icon+label meta (duration, layover, gates).',
+    demo: 'components',
+    usedBy: ['travel', 'plants'],
+  },
+  {
+    id: 'glassSwitch',
+    name: 'GlassSwitch',
+    group: 'Forms',
+    description: 'Fill-only frost toggle used by SettingsToggleRow.',
+    demo: 'forms',
+    usedBy: ['account'],
+  },
+  {
+    id: 'glassPrimaryAction',
+    name: 'GlassPrimaryAction',
+    group: 'Actions',
+    description: 'Sage / accent frosted primary CTA for sheets and heroes.',
+    demo: 'components',
+    usedBy: ['travel', 'account'],
   },
   {
     id: 'panelTitle',
@@ -184,7 +250,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'button',
     name: 'Button',
     group: 'Actions',
-    description: 'primary · secondary · ghost · danger (+ loading/disabled; auto title case).',
+    description: 'Glass primary · secondary · ghost · danger (+ loading/disabled; auto title case).',
     demo: 'components',
     usedBy: [
       'account',
@@ -242,7 +308,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'dangerZone',
     name: 'DangerZone',
     group: 'Actions',
-    description: 'GitHub-style red-bordered panel for irreversible actions.',
+    description: 'Red-rimmed glass panel for irreversible actions.',
     demo: 'components',
     usedBy: ['account'],
   },
@@ -318,7 +384,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'settingsRow',
     name: 'SettingsRow family',
     group: 'Forms',
-    description: 'SettingsRow · SettingsToggleRow · SettingsActionRow.',
+    description: 'SettingsRow · SettingsToggleRow · SettingsActionRow (GlassIconWell + GlassSwitch).',
     demo: 'forms',
     usedBy: ['account', 'agents'],
   },
@@ -326,7 +392,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'fieldLeading',
     name: 'FieldLeadingIcon',
     group: 'Forms',
-    description: 'Vertically centered leading glyph plate for fields.',
+    description: 'Vertically centered mist GlassIconWell for field glyphs.',
     demo: 'forms',
     usedBy: ['travel'],
   },
@@ -372,7 +438,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'loading',
     name: 'LoadingBlock',
     group: 'Feedback',
-    description: 'Centered or inline spinner block.',
+    description: 'Centered or inline spinner; surface=glass for launch / atmosphere.',
     demo: 'components',
     usedBy: ['account', 'auth', 'daily-tracking', 'social', 'travel', 'workouts'],
   },

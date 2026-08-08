@@ -66,7 +66,6 @@ export function DeveloperInsightsPanel() {
   return (
     <CollapsibleSection
       title="Product insights"
-      defaultExpanded
       testID={AgentUiIds.developer.section.insights}
       actionLabel="Sync"
       actionTestID={AgentUiIds.developer.insightsRefresh}

@@ -111,10 +111,10 @@ export function DesignSystemColorsPanel() {
   return (
     <View style={{ gap: spacing.lg }}>
       <AppText variant="callout" color="secondary">
-        Edits apply live across the app and persist on this device until you restore defaults.
+        App color foundations. Changes apply live on this device until you restore defaults.
       </AppText>
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <PanelTitle>Defaults</PanelTitle>
         <AppText variant="caption" color="secondary">
           Current app accent: {theme.accentPrimary}
@@ -165,7 +165,7 @@ function ScopeEditor({ config }: { config: ScopeConfig }) {
       testID={AgentUiIds.designSystem.section(config.scope)}
       label={config.title}
       style={{ gap: spacing.md }}>
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <View style={{ gap: spacing.xs }}>
           <PanelTitle>{config.title}</PanelTitle>
           <AppText variant="caption" color="secondary">

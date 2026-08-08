@@ -1,4 +1,5 @@
 import type { ImageContentPosition } from 'expo-image';
+import type { ImageStyle } from 'react-native';
 
 import { relativeLuminanceFromHex } from '@/features/travel/travel-home-atmosphere-ink';
 
@@ -7,6 +8,27 @@ import { relativeLuminanceFromHex } from '@/features/travel/travel-home-atmosphe
  * landscape photos otherwise pin to mid-sky and read empty.
  */
 export const TRAVEL_HOME_HERO_FOCUS_TOP_DEFAULT = 74;
+
+/**
+ * Slight overscan so Wikimedia edge captions / watermark crumbs clip outside
+ * the rounded hero plate (short covers barely crop the source top edge).
+ */
+export const TRAVEL_HOME_HERO_EDGE_OVERSCAN = 1.045;
+
+/** Layout for a cover image that bleeds past the hero clip bounds. */
+export function travelHomeHeroOverscanStyle(
+  width: number,
+  height: number,
+): ImageStyle {
+  const w = Math.ceil(width * TRAVEL_HOME_HERO_EDGE_OVERSCAN);
+  const h = Math.ceil(height * TRAVEL_HOME_HERO_EDGE_OVERSCAN);
+  return {
+    width: w,
+    height: h,
+    marginLeft: -Math.floor((w - width) / 2),
+    marginTop: -Math.floor((h - height) / 2),
+  };
+}
 
 /**
  * Vertical focal point (0–100, top → bottom) for trip-card destination heroes.

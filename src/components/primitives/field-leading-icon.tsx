@@ -6,6 +6,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
 import { fieldLeadingIconPlateSize } from './field-leading-icon-style';
+import { GlassIconWell } from './glass-icon-well';
 import { Symbol } from './symbol';
 
 export {
@@ -21,7 +22,10 @@ export function FieldLeadingIcon({
   size,
 }: {
   name: AppIconName | (string & {});
-  /** When set, renders a rounded square plate behind the glyph (sheet chrome). */
+  /**
+   * When set, renders a frosted glass plate behind the glyph.
+   * Fill color is ignored — mist GlassIconWell owns the material.
+   */
   backgroundColor?: string;
   color?: string;
   /** Override plate edge length (e.g. StackedIconField matching label+value). */
@@ -29,28 +33,40 @@ export function FieldLeadingIcon({
 }) {
   const theme = useTheme();
   const { iconSizes, s } = useResponsive();
+  const withPlate = Boolean(backgroundColor);
   const plate =
     size
     ?? fieldLeadingIconPlateSize({
       iconSize: iconSizes.sm,
       s,
-      withPlate: Boolean(backgroundColor),
+      withPlate,
     });
+  const glyph = (
+    <Symbol name={name} size="sm" color={color ?? theme.textSecondary} />
+  );
+
+  if (!withPlate) {
+    return (
+      <View
+        style={{
+          width: plate,
+          height: plate,
+          alignItems: 'center',
+          justifyContent: 'center',
+          alignSelf: 'center',
+          flexShrink: 0,
+        }}>
+        {glyph}
+      </View>
+    );
+  }
 
   return (
-    <View
-      style={{
-        width: plate,
-        height: plate,
-        borderRadius: backgroundColor ? radii.sm : 0,
-        borderCurve: backgroundColor ? 'continuous' : undefined,
-        backgroundColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        alignSelf: 'center',
-        flexShrink: 0,
-      }}>
-      <Symbol name={name} size="sm" color={color ?? theme.textSecondary} />
-    </View>
+    <GlassIconWell
+      size={plate}
+      borderRadius={radii.sm}
+      style={{ alignSelf: 'center' }}>
+      {glyph}
+    </GlassIconWell>
   );
 }

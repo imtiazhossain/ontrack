@@ -44,6 +44,26 @@ ios_sim_preferred_name() {
   printf '%s' "${ONTRACK_IOS_SIMULATOR}"
 }
 
+# User-facing headed Simulator name. Pool leases set ONTRACK_IOS_SIMULATOR to
+# `onTrack Agent N` — never hand off / focus that; always the preferred Pro
+# (or ONTRACK_IOS_VIEWER_SIMULATOR override).
+ios_sim_viewer_name() {
+  local name="${ONTRACK_IOS_VIEWER_SIMULATOR:-}"
+  if [[ -n "$name" ]]; then
+    printf '%s' "$name"
+    return 0
+  fi
+  name="${ONTRACK_IOS_SIMULATOR:-onTrack iPhone 17 Pro}"
+  case "$name" in
+    onTrack\ Agent*|onTrack_Agent*)
+      printf '%s' "onTrack iPhone 17 Pro"
+      ;;
+    *)
+      printf '%s' "$name"
+      ;;
+  esac
+}
+
 ios_sim_want_window() {
   case "${ONTRACK_IOS_SIMULATOR_WINDOW:-0}" in
     1|true|TRUE|yes|YES) return 0 ;;
@@ -242,6 +262,43 @@ ios_sim_open_focused() {
     || true
 }
 
+# True when Simulator.app is running (user may be watching a headed window).
+ios_sim_app_running() {
+  pgrep -x Simulator >/dev/null 2>&1
+}
+
+# Raise + unminimize the Simulator window whose title contains the device name.
+# Used by headed handoff so the preferred Pro is what the user sees — not a
+# minimized/stale agent pool window.
+ios_sim_focus_window_named() {
+  local want="$1" safe
+  [[ -n "$want" ]] || return 1
+  safe="$(printf '%s' "$want" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  osascript >/dev/null 2>&1 <<EOF || true
+tell application "Simulator" to activate
+tell application "System Events"
+  if not (exists process "Simulator") then return
+  tell process "Simulator"
+    set frontmost to true
+    repeat with w in (get every window)
+      try
+        set wn to name of w as text
+        if wn contains "${safe}" then
+          try
+            set value of attribute "AXMinimized" of w to false
+          end try
+          perform action "AXRaise" of w
+          set index of w to 1
+          return
+        end if
+      end try
+    end repeat
+  end tell
+end tell
+EOF
+  ios_sim_place_window_named "$want" right 2>/dev/null || true
+}
+
 ios_sim_agent_pool_dir() {
   local root="${AGENT_UI_POOL_DIR:-}"
   if [[ -z "$root" ]]; then
@@ -267,6 +324,20 @@ ios_sim_headed_agents_file() {
 
 ios_sim_minimized_agents_file() {
   printf '%s/minimized-agents' "$(ios_sim_agent_pool_dir)"
+}
+
+# Fresh while agent_ui_color.py is unparking for simctl screenshot / alert OCR.
+ios_sim_ios_capture_lock_file() {
+  printf '%s/ios-capture.lock' "$(ios_sim_agent_pool_dir)"
+}
+
+# True when a capture heal holds the reaper (stale locks >90s are ignored).
+ios_sim_ios_capture_in_progress() {
+  local lock age
+  lock="$(ios_sim_ios_capture_lock_file)"
+  [[ -f "$lock" ]] || return 1
+  age="$(perl -e 'print int(time - (stat($ARGV[0]))[9])' "$lock" 2>/dev/null || echo 999)"
+  [[ "${age:-999}" -lt 90 ]]
 }
 
 # "onTrack Agent 1 – iOS 26.5" → "onTrack Agent 1"
@@ -415,11 +486,16 @@ end tell
 EOF
 }
 
-# Center a Simulator window on the main display (uses dTopY — deskTop is reserved).
-ios_sim_center_agent_window_named() {
-  local want safe
+# Place a Simulator window on the right side of the main display
+# (Android headed GUI owns the left). Uses dTopY — deskTop is reserved.
+# Side override: ios_sim_place_window_named <name> [right|left|center]
+ios_sim_place_window_named() {
+  local want safe side margin
   want="$(ios_sim_agent_base_name "${1:-}")"
+  [[ -n "$want" ]] || want="${1:-}"
   [[ -n "$want" ]] || return 1
+  side="${2:-right}"
+  margin="${ONTRACK_DEVICE_WINDOW_MARGIN:-24}"
   safe="$(printf '%s' "$want" | sed 's/\\/\\\\/g; s/"/\\"/g')"
   osascript >/dev/null 2>&1 <<EOF || true
 tell application "System Events"
@@ -440,10 +516,19 @@ tell application "System Events"
           set dH to (item 4 of deskBounds) - dTopY
           set winW to item 1 of winSize
           set winH to item 2 of winSize
-          set newX to dLeft + ((dW - winW) div 2)
+          set margin to ${margin}
+          if "${side}" is "left" then
+            set newX to dLeft + margin
+          else if "${side}" is "center" then
+            set newX to dLeft + ((dW - winW) div 2)
+          else
+            set newX to dLeft + dW - winW - margin
+          end if
           set newY to dTopY + ((dH - winH) div 2)
           if newY < 40 then set newY to 40
           if newX < dLeft then set newX to dLeft
+          set maxX to dLeft + dW - winW
+          if newX > maxX then set newX to maxX
           set position of w to {newX, newY}
           return
         end if
@@ -454,16 +539,21 @@ end tell
 EOF
 }
 
-# Unminimize an agent window and place it in the middle of the main display.
+# Compat alias — preferred/user windows go right (not center) beside Android.
+ios_sim_center_agent_window_named() {
+  ios_sim_place_window_named "${1:-}" right
+}
+
+# Unminimize an agent window and place it on the right of the main display.
 # AXMinimized=false is unreliable for Simulator — restore via Dock click when needed.
-# Center geometry first so Dock restore does not reopen off-screen.
+# Place geometry first so Dock restore does not reopen off-screen.
 ios_sim_unminimize_agent_window_named() {
   local want safe
   want="$(ios_sim_agent_base_name "${1:-}")"
   [[ -n "$want" ]] || return 1
   safe="$(printf '%s' "$want" | sed 's/\\/\\\\/g; s/"/\\"/g')"
-  # 1) Move restore-frame to screen center while still minimized (if present).
-  ios_sim_center_agent_window_named "$want"
+  # 1) Move restore-frame to the right while still minimized (if present).
+  ios_sim_place_window_named "$want" right
   # 2) Restore from Dock when miniaturized (AXMinimized=false often no-ops;
   #    AXPress on the minimized Dock item is what actually restores).
   local attempt
@@ -508,7 +598,7 @@ EOF
     fi
   done
   sleep 0.15
-  # 3) Raise + center again after restore.
+  # 3) Raise + place right again after restore.
   osascript >/dev/null 2>&1 <<EOF || true
 tell application "Simulator" to activate
 tell application "System Events"
@@ -531,7 +621,7 @@ tell application "System Events"
   end tell
 end tell
 EOF
-  ios_sim_center_agent_window_named "$want"
+  ios_sim_place_window_named "$want" right
 }
 
 # Minimize auto-attached agent windows, but keep user-pinned / restored ones open.
@@ -541,6 +631,11 @@ ios_sim_park_agent_windows() {
     return 0
   fi
   if ! pgrep -x Simulator >/dev/null 2>&1; then
+    return 0
+  fi
+  # Do not re-minimize while screenshot/alert OCR is unparking IOSurface —
+  # that race left verify stuck on "unparking agent window…" forever.
+  if ios_sim_ios_capture_in_progress; then
     return 0
   fi
   ios_sim_import_headed_env
@@ -558,7 +653,7 @@ ios_sim_park_agent_windows() {
       continue
     fi
     # Visible: if we previously minimized it, the user restored it — pin headed
-    # and recenter (restore often keeps an off-screen park position).
+    # and place right (restore often keeps an off-screen park position).
     if ios_sim_was_minimized_agent "$base"; then
       ios_sim_mark_agent_headed "$base"
       ios_sim_unminimize_agent_window_named "$base"
@@ -617,7 +712,7 @@ ios_sim_open_agent_headed() {
   done
   sleep 0.6
   ios_sim_unminimize_agent_window_named "$name"
-  echo "Opened ${name} headed (pinned, centered)"
+  echo "Opened ${name} headed (pinned, right)"
 }
 
 # True while any agent sim is Booted or any pool slot lock exists.
@@ -822,6 +917,9 @@ ensure_preferred_ios_simulator() {
       fi
       if ! ios_sim_want_window && [[ "$name" == onTrack\ Agent* ]]; then
         ios_sim_enforce_agent_headless_gui
+      fi
+      if ios_sim_want_window; then
+        ios_sim_place_window_named "$name" right 2>/dev/null || true
       fi
       echo "Simulator ready: ${name}$(ios_sim_want_window && echo '' || echo ' (headless)')"
       return 0

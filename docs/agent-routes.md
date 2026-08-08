@@ -120,7 +120,9 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `travel-demo` | Seed demo trip → open plan detail |
 | `travel-demo-list` | Seed → travel list with demo itinerary button |
 | `travel-home` | Seed Iceland/Antigua visual fixtures → Travel Home list |
+| `travel-home-iceland` | Seed travel-home → open Iceland itinerary (`skyDecor`) |
 | `travel-demo-add-flight` | Seed → add-flight sheet |
+| `travel-demo-timeline-add` | Seed → plan detail → Add to Timeline kind picker |
 | `travel-demo-add-flight-connecting` | Seed → United GUA→IAH→LGA connecting prefills Add Flight Name/route |
 | `travel-demo-add-flight-roundtrip` | Seed → Chase round-trip prefills → submit → expand outbound card (passenger ready) |
 | `travel-demo-edit-flight` | Seed → open demo flight editor |
@@ -128,6 +130,11 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `open-new-trip` | Travel list → New Trip sheet |
 | `open-new-checklist` | Checklists → new-list name field ready |
 | `open-home-location` | Today → Home location weather sheet |
+| `today-prev-day` | Seed home-weather → Today → previous day (H/L banner) |
+| `today-next-day` | Seed home-weather → Today → next day (H/L banner) |
+| `open-avatar-editor` | Profile → avatar editor sheet |
+| `open-developer` | Profile → Developer Tools (Dev Mode toggle; needs developer_tools) |
+| `profile-usage-analytics` | Profile → Usage Analytics GlassSwitch row |
 | `checklist-demo` | Seed demo checklist → open list detail (task ready) |
 | `checklist-demo-list` | Seed → checklists overview with demo list card |
 | `checklist-demo-settings` | Seed → checklist settings (add editors) |

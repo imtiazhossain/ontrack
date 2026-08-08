@@ -63,8 +63,7 @@ export default function WorkDetailScreen() {
       <SectionHeader title="Tasks" />
       {tasks.map((task) => (
         <GlassPlate
-          clear
-          wash
+          airy
           key={task.id}
           style={[
             styles.taskRow,

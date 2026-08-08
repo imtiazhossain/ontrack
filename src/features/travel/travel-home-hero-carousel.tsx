@@ -23,7 +23,10 @@ import {
 } from '@/features/travel/travel-home-background';
 import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
-import { travelHomeHeroContentPosition } from '@/features/travel/travel-home-hero-focus';
+import {
+    travelHomeHeroContentPosition,
+    travelHomeHeroOverscanStyle,
+} from '@/features/travel/travel-home-hero-focus';
 import { TravelHomeEditIcon } from '@/features/travel/travel-home-icons';
 import {
     travelHomeImageHeight,
@@ -215,30 +218,11 @@ export function TravelHomeHeroCarousel({
         pointerEvents="box-none"
         style={[StyleSheet.absoluteFill, imageRadiusStyle, { backgroundColor: heroSurface }]}>
         {/*
-          Scenic underlay (fixture or atmosphere) until a remote plate paints.
-          Never key visibility off URI presence alone — Android often sits on
-          brandBlueSoft while proxy covers are still loading / silent-fail.
+          Remotes stay at full opacity underneath so iOS expo-image can decode
+          and fire onLoad. Hiding this ScrollView at opacity 0 until paint
+          deadlocked iOS: steppers showed (URI count) but onLoad never ran,
+          so the scenic plate + scroll lock stuck forever.
         */}
-        <Image
-          source={scenicUnderlay}
-          style={[
-            StyleSheet.absoluteFill,
-            styles.fallback,
-            imageRadiusStyle,
-            {
-              width: heroWidth,
-              height,
-              backgroundColor: heroSurface,
-              opacity: hasPaintedRemote ? 0 : 1,
-            },
-          ]}
-          contentFit="cover"
-          contentPosition={travelHomeHeroContentPosition()}
-          transition={180}
-          pointerEvents="none"
-          accessible={false}
-          importantForAccessibility="no"
-        />
         <Animated.ScrollView
           ref={scrollRef}
           horizontal
@@ -248,11 +232,7 @@ export function TravelHomeHeroCarousel({
           onScroll={onScroll}
           onMomentumScrollEnd={onScrollEnd}
           scrollEventThrottle={16}
-          style={[
-            StyleSheet.absoluteFill,
-            imageRadiusStyle,
-            { opacity: hasPaintedRemote ? 1 : 0 },
-          ]}
+          style={[StyleSheet.absoluteFill, imageRadiusStyle]}
           pointerEvents={hasPaintedRemote ? 'auto' : 'none'}
           accessibilityElementsHidden={!hasPaintedRemote}
           importantForAccessibility={
@@ -275,14 +255,13 @@ export function TravelHomeHeroCarousel({
               <View
                 key={`hero-page-${pageIndex}`}
                 collapsable={false}
-                style={{ width: heroWidth, height }}>
+                style={[styles.heroPage, { width: heroWidth, height }]}>
                 <Image
                   source={uri ? { uri } : fallbackSource}
                   style={[
                     imageRadiusStyle,
+                    travelHomeHeroOverscanStyle(heroWidth, height),
                     {
-                      width: heroWidth,
-                      height,
                       backgroundColor: heroSurface,
                       opacity: uri ? 1 : 0,
                     },
@@ -315,6 +294,31 @@ export function TravelHomeHeroCarousel({
             );
           })}
         </Animated.ScrollView>
+        {/*
+          Scenic cover on top until a remote plate paints. Never key this off
+          URI presence alone — Android used to flash brandBlueSoft while
+          proxies were mid-load / silent-fail. pointerEvents none so the
+          underlay never steals the edit FAB hit target.
+        */}
+        <Image
+          source={scenicUnderlay}
+          style={[
+            styles.fallback,
+            imageRadiusStyle,
+            travelHomeHeroOverscanStyle(heroWidth, height),
+            {
+              backgroundColor: heroSurface,
+              zIndex: 1,
+              opacity: hasPaintedRemote ? 0 : 1,
+            },
+          ]}
+          contentFit="cover"
+          contentPosition={travelHomeHeroContentPosition()}
+          transition={180}
+          pointerEvents="none"
+          accessible={false}
+          importantForAccessibility="no"
+        />
       </View>
 
       {/*
@@ -394,7 +398,8 @@ export function TravelHomeHeroCarousel({
         pointerEvents="none"
         style={[styles.stepperOverlay, { top: stepperTop }]}>
         <TravelHomeCarouselStepper
-          count={visibleUris.length}
+          // Match scrollInteractive — never advertise paging before remotes paint.
+          count={hasPaintedRemote ? visibleUris.length : 0}
           index={index}
           progress={scrollProgress}
         />
@@ -408,7 +413,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
+  heroPage: {
+    overflow: 'hidden',
+  },
   fallback: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
     overflow: 'hidden',
     borderCurve: 'continuous',
   },

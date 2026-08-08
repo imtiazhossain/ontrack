@@ -45,11 +45,6 @@ export function kindAccent(kind: TravelItemKind, theme: Theme): string {
   return kindChrome(kind, theme).accent;
 }
 
-/** Soft tint behind kind pills / day accents. */
-export function kindTint(kind: TravelItemKind, theme: Theme): string {
-  return kindChrome(kind, theme).tint;
-}
-
 /** Soft border used by the Add-to-Timeline choice cards. */
 export function kindBorder(kind: TravelItemKind, theme: Theme): string {
   return kindChrome(kind, theme).border;

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, Button } from '@/components/primitives';
+import { AppText, Button, Card } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useSchedule } from '@/store/schedule';
@@ -123,7 +123,7 @@ export default function ActiveWorkoutScreen() {
         </AppText>
       </View>
 
-      <View style={[styles.setCard, { backgroundColor: theme.backgroundSunken }]}>
+      <Card airy padded={false} style={styles.setCard}>
         <AppText variant="metric">{currentSet.reps} reps</AppText>
         <AppText variant="title" color="secondary">
           {currentSet.weightKg > 0 ? `${currentSet.weightKg} kg` : 'Bodyweight'}
@@ -133,7 +133,7 @@ export default function ActiveWorkoutScreen() {
             Previous best · {current.previousBest}
           </AppText>
         ) : null}
-      </View>
+      </Card>
 
       {restSeconds > 0 ? (
         <View style={styles.rest}>

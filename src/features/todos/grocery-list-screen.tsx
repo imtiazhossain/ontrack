@@ -534,8 +534,7 @@ export function GroceryListScreen({ listId }: { listId: string }) {
             ) : null}
 
             <GlassPlate
-              clear
-              wash
+              airy
               accessibilityRole="tablist"
               style={styles.segmented}>
               {([

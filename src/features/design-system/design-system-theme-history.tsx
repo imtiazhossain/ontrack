@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { AppText, Card, CollapsibleSection } from '@/components/primitives';
+import { AppText, Card, CollapsibleSection, GlassPlate } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { useThemeOverrides } from '@/store/theme-overrides';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
@@ -23,7 +22,6 @@ function formatHistoryWhen(iso: string): string {
 }
 
 export function DesignSystemThemeHistory() {
-  const theme = useTheme();
   const { spacing, s } = useResponsive();
   const history = useThemeOverrides((state) => state.history);
   const clearHistory = useThemeOverrides((state) => state.clearHistory);
@@ -51,7 +49,7 @@ export function DesignSystemThemeHistory() {
       actionLabel={history.length > 0 ? 'Clear' : undefined}
       actionTestID={history.length > 0 ? AgentUiIds.designSystem.clearHistory : undefined}
       onAction={history.length > 0 ? clearHistoryAction : undefined}>
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <AppText variant="caption" color="secondary">
           What changed, when, and who edited colors or fonts on this device.
         </AppText>
@@ -83,26 +81,26 @@ export function DesignSystemThemeHistory() {
                 }>
                 <AgentTestId
                   testID={AgentUiIds.designSystem.historyEntry(entry.id)}
-                  label={entry.summary}
-                  style={{
-                    gap: spacing.xs,
-                    padding: spacing.md,
-                    borderRadius: s(14),
-                    backgroundColor: theme.backgroundSunken,
-                    borderWidth: 1,
-                    borderColor: theme.separator,
-                  }}>
-                  <AppText variant="callout" bold>
-                    {entry.summary}
-                  </AppText>
-                  {entry.from || entry.to ? (
-                    <AppText variant="caption" color="tertiary" fit>
-                      {entry.from ?? 'default'} → {entry.to ?? 'default'}
+                  label={entry.summary}>
+                  <GlassPlate
+                    mist
+                    style={{
+                      gap: spacing.xs,
+                      padding: spacing.md,
+                      borderRadius: s(14),
+                    }}>
+                    <AppText variant="callout" bold>
+                      {entry.summary}
                     </AppText>
-                  ) : null}
-                  <AppText variant="caption" color="secondary" fit>
-                    {formatHistoryWhen(entry.at)} · {entry.by}
-                  </AppText>
+                    {entry.from || entry.to ? (
+                      <AppText variant="caption" color="tertiary" fit>
+                        {entry.from ?? 'default'} → {entry.to ?? 'default'}
+                      </AppText>
+                    ) : null}
+                    <AppText variant="caption" color="secondary" fit>
+                      {formatHistoryWhen(entry.at)} · {entry.by}
+                    </AppText>
+                  </GlassPlate>
                 </AgentTestId>
               </View>
             ))}

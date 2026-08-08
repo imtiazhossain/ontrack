@@ -25,6 +25,7 @@ import {
 } from '@/features/travel/provider';
 import {
     itinerarySheetChrome,
+    travelInputFieldBackground,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { TravelSheetIconControl, TravelSheetSecondaryAction } from '@/features/travel/travel-list-actions';
 import {
@@ -109,7 +110,7 @@ export function FlightSearchScreen({
     return {
       iconBackground: icon.bg,
       iconColor: icon.fg,
-      fieldBackground: theme.backgroundSunken,
+      fieldBackground: travelInputFieldBackground(theme),
       stackedLabelColor: accent,
       placeholderColor: chrome.placeholder,
       placeholderTextColor: chrome.placeholder,
