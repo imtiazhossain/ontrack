@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.7',
+    date: '2026-08-08',
+    notes: [
+      'Soften travel trip-card frost scoop into a two-cubic swoop with a feathered milk lip.',
+    ],
+  },
+  {
     version: '1.0.6',
     date: '2026-08-08',
     notes: [
@@ -67,6 +74,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.7',
+    date: '2026-08-08',
+    notes: [
+      'Soften travel trip-card frost scoop into a two-cubic swoop with a feathered milk lip.',
+      'Touched: features/travel.',
+    ],
+  },
   {
     version: '1.0.6',
     date: '2026-08-08',

@@ -39,7 +39,7 @@ type TravelHomeTripFrostScoopProps = ViewProps & {
  * Separate ramps (never black→white in one gradient — muddy shelf):
  * 1. Soft photo soften (iOS blur) under the title band
  * 2. Short full-width paper join into solid paper
- * 3. Wedge title veil — dense milk under left title ink, tapers out right
+ * 3. Soft swoop title veil — dense milk under left title ink, tapers out right
  *
  * Destination lives on paper below. iOS BlurView softener over the title band
  * only; Android stays gradient-only.
@@ -90,18 +90,22 @@ export function TravelHomeTripFrostScoop({
     ? (hexToRgba(paperColor, 1) ?? paperColor)
     : '#FFFFFF';
   /**
-   * Wedge in viewBox units (x 0–100). Left hugs the top so serif ascenders
-   * sit on milk (not busy photo); right still drops so avatars keep open photo.
+   * Soft swoop in viewBox units (x 0–100). Left stays high so serif ascenders
+   * sit on milk; right eases down so avatars keep open photo. Two cubics —
+   * a flat title plate then a rounded ease — read as a curve, not a slash.
    */
   const leftTop = 0;
   const rightTop = Math.max(
     Math.round(milkHeight - joinHeight * 0.55),
     Math.round(milkHeight * 0.52),
   );
+  const drop = Math.max(1, rightTop - leftTop);
   const veilPath = [
     `M 0 ${leftTop}`,
-    // Hold high through the title column (~45%), then ease down for avatars.
-    `C 32 ${leftTop} 48 ${leftTop + (rightTop - leftTop) * 0.22} 100 ${rightTop}`,
+    // Title plate — hold high through ~half the card, barely settle.
+    `C 22 ${leftTop} 38 ${leftTop} 52 ${leftTop + drop * 0.16}`,
+    // Avatar bay — deep controls so the drop rounds instead of knifing.
+    `C 70 ${leftTop + drop * 0.55} 84 ${rightTop} 100 ${rightTop}`,
     `L 100 ${milkHeight}`,
     `L 0 ${milkHeight}`,
     'Z',
@@ -181,8 +185,8 @@ export function TravelHomeTripFrostScoop({
         }}
       />
       {/*
-        Title veil — high behind left title ink, tapers out toward the right
-        (avatars keep more open photo). Vertical milk + left-side boost.
+        Title veil — soft swoop high behind left title ink, eases out toward
+        the right (avatars keep more open photo). Vertical milk + left boost.
       */}
       <Svg
         pointerEvents="none"
@@ -193,20 +197,20 @@ export function TravelHomeTripFrostScoop({
         style={styles.titleVeil}>
         <Defs>
           <SvgLinearGradient id="titleMilk" x1="0" y1="0" x2="0" y2="1">
-            {/* Early milk so title glyphs never straddle clear photo → solid paper. */}
-            <Stop offset="0" stopColor={milkFill} stopOpacity={0.42} />
-            <Stop offset="0.18" stopColor={milkFill} stopOpacity={0.78} />
-            <Stop offset="0.45" stopColor={milkFill} stopOpacity={0.96} />
+            {/* Feather the swoop lip, then dense milk under the title baseline. */}
+            <Stop offset="0" stopColor={milkFill} stopOpacity={0.14} />
+            <Stop offset="0.16" stopColor={milkFill} stopOpacity={0.72} />
+            <Stop offset="0.4" stopColor={milkFill} stopOpacity={0.96} />
             <Stop offset="1" stopColor={milkFill} stopOpacity={1} />
           </SvgLinearGradient>
           <SvgLinearGradient id="titleSide" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor={milkFill} stopOpacity={sideBoost} />
             <Stop
-              offset="0.42"
+              offset="0.46"
               stopColor={milkFill}
-              stopOpacity={sideBoost * 0.62}
+              stopOpacity={sideBoost * 0.58}
             />
-            <Stop offset="0.72" stopColor={milkFill} stopOpacity={0} />
+            <Stop offset="0.78" stopColor={milkFill} stopOpacity={0} />
           </SvgLinearGradient>
         </Defs>
         <Path d={veilPath} fill="url(#titleMilk)" />

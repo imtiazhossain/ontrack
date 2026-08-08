@@ -114,7 +114,7 @@ describe('travel home kit contract', () => {
     expect(scoop).toContain('fadeHeight = totalHeight');
     expect(scoop).toContain('milkHeight');
     expect(scoop).toContain('borderWidth: 0');
-    // Join milk + SVG wedge title veil (high left → taper right) + left boost.
+    // Join milk + SVG soft-swoop title veil (high left → ease right) + left boost.
     expect(scoop.match(/<LinearGradient/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(scoop).not.toContain('rgba(0,0,0,');
     expect(scoop).toContain('joinHeight');
@@ -122,6 +122,8 @@ describe('travel home kit contract', () => {
     expect(scoop).toContain('titleSide');
     expect(scoop).toContain('sideBoost');
     expect(scoop).toContain('veilPath');
+    expect(scoop).toContain('drop = Math.max');
+    expect(scoop).toMatch(/C 22 \$\{leftTop\}/);
     expect(scoop).toContain('preserveAspectRatio="none"');
     expect(scoop).toContain("from 'react-native-svg'");
     // Gradient-led milk-out — no Android expo-image blur plate.
