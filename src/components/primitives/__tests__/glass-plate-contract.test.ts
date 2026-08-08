@@ -52,7 +52,10 @@ describe('glass plate contract', () => {
   it('keeps Home location sheet and Add Event assistant on glass atmosphere', () => {
     const home = read('src/features/daily-tracking/home-location-sheet.tsx');
     const activity = read('src/app/activity-form.tsx');
-    expect(home).toContain('useScreenAtmosphereChrome');
+    expect(home).toContain('SheetScaffold');
+    expect(home).toContain("surface=\"glass\"");
+    expect(home).toContain('GlassPrimaryAction');
+    expect(home).not.toContain('presentationStyle="pageSheet"');
     expect(home).not.toContain('backgroundColor: theme.backgroundPrimary');
     expect(activity).toContain('GlassPlate');
     expect(activity).not.toContain('backgroundColor: theme.backgroundSunken');

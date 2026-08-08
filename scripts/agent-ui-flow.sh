@@ -23,6 +23,7 @@ KNOWN_FLOWS=(
   travel-demo-edit-flight
   open-new-trip
   open-new-checklist
+  open-home-location
   calendar
   today
   checklists
