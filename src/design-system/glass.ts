@@ -67,10 +67,11 @@ export const glassMaterials = {
     darkCool: 'rgba(70, 100, 130, 0.18)',
   },
   sheet: {
-    lightFillBlur: 'rgba(255, 255, 255, 0.62)',
-    lightFillSolid: 'rgba(255, 255, 255, 0.9)',
-    darkFillBlur: 'rgba(12, 16, 24, 0.55)',
-    darkFillSolid: 'rgba(12, 16, 24, 0.82)',
+    /** Keep translucent enough that backdrop chroma reads through frost. */
+    lightFillBlur: 'rgba(255, 255, 255, 0.42)',
+    lightFillSolid: 'rgba(255, 255, 255, 0.82)',
+    darkFillBlur: 'rgba(12, 16, 24, 0.42)',
+    darkFillSolid: 'rgba(12, 16, 24, 0.78)',
   },
   nav: {
     lightFillBlur: 'rgba(255, 255, 255, 0.42)',

@@ -52,11 +52,14 @@ describe('glass plate contract', () => {
   it('keeps Home location sheet and Add Event assistant on glass atmosphere', () => {
     const home = read('src/features/daily-tracking/home-location-sheet.tsx');
     const activity = read('src/app/activity-form.tsx');
+    const scaffold = read('src/components/primitives/sheet-scaffold.tsx');
     expect(home).toContain('SheetScaffold');
     expect(home).toContain("surface=\"glass\"");
     expect(home).toContain('GlassPrimaryAction');
+    expect(home).toContain('glassFieldBackground');
     expect(home).not.toContain('presentationStyle="pageSheet"');
     expect(home).not.toContain('backgroundColor: theme.backgroundPrimary');
+    expect(scaffold).toContain('ScreenAtmosphere');
     expect(activity).toContain('GlassPlate');
     expect(activity).not.toContain('backgroundColor: theme.backgroundSunken');
   });
@@ -73,6 +76,30 @@ describe('glass plate contract', () => {
     expect(atmosphere).toContain('radial-gradient');
     expect(atmosphere).toContain('useScreenAtmosphereChrome');
     expect(atmosphere).toContain('useSafeAreaChromeOverlay');
+  });
+
+  it('keeps Vision Board consolidated chips and cards on airy glass', () => {
+    const card = read('src/features/vision-board/consolidated-card.tsx');
+    const consolidated = read(
+      'src/features/vision-board/vision-board-consolidated.tsx',
+    );
+    expect(card).toContain('GlassPlate');
+    expect(card).toContain('airy');
+    expect(card).not.toContain("backgroundColor: '#303636'");
+    expect(card).not.toContain("backgroundColor: selected ? '#9A7654'");
+    expect(card).not.toContain('LinearGradient');
+    expect(consolidated).not.toContain('background="transparent"');
+    expect(consolidated).toContain('consolidatedSearch');
+  });
+
+  it('keeps Vision Board dashboard categories on airy GlassPlate', () => {
+    const dashboard = read('src/features/vision-board/vision-board-dashboard.tsx');
+    expect(dashboard).toContain('<Card');
+    expect(dashboard).toContain('airy');
+    expect(dashboard).toContain('GlassPlate');
+    expect(dashboard).not.toContain('categoryCardWrap');
+    expect(dashboard).not.toContain('background={theme.backgroundPrimary}');
+    expect(dashboard).not.toContain('background={theme.success}');
   });
 
   it('keeps Calendar on frosted GlassPlate chrome', () => {

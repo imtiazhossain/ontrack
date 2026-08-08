@@ -239,6 +239,14 @@ export const AgentUiIds = {
     },
   },
   vision: {
+    dashboardFilter: 'ontrack.vision.dashboard.filter',
+    dashboardAdd: 'ontrack.vision.dashboard.add',
+    dashboardViewAll: 'ontrack.vision.dashboard.viewAll',
+    dashboardEdit: 'ontrack.vision.dashboard.edit',
+    dashboardCategory: (categoryId: string) =>
+      `ontrack.vision.dashboard.category.${categoryId}`,
+    consolidatedSearch: 'ontrack.vision.consolidated.search',
+    consolidatedMore: 'ontrack.vision.consolidated.more',
     consolidatedCategory: (categoryId: string) =>
       `ontrack.vision.consolidated.category.${categoryId}`,
     categoryMode: 'ontrack.vision.category.mode',

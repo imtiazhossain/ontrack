@@ -5,11 +5,18 @@ import {
   AppText,
   Button,
   ErrorMessage,
+  GlassPrimaryAction,
   Input,
   SheetScaffold,
 } from '@/components/primitives';
+import {
+  glassFieldBackground,
+  glassFieldBorder,
+  radii,
+} from '@/design-system';
 import { getDestinationCurrentWeather } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import type { DateDisplayFormat } from '@/utils/date';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -27,6 +34,7 @@ export function HomeLocationSheet({
   visible: boolean;
   onClose: () => void;
 }) {
+  const theme = useTheme();
   const { spacing, s } = useResponsive();
   const homeLocation = usePreferences((state) => state.homeLocation);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
@@ -113,6 +121,7 @@ export function HomeLocationSheet({
   };
 
   const busy = saving || detecting;
+  const dark = theme.name === 'dark';
 
   return (
     <SheetScaffold
@@ -126,15 +135,12 @@ export function HomeLocationSheet({
       contentContainerStyle={{ gap: spacing.md }}
       footer={
         <View style={{ gap: spacing.sm }}>
-          <Button
-            variant="secondary"
+          <GlassPrimaryAction
+            label={saving ? 'Saving…' : 'Save'}
             onPress={() => void save()}
-            loading={saving}
-            disabled={detecting}
+            disabled={busy}
             testID={AgentUiIds.today.location.save}
-            accessibilityLabel="Save home location">
-            Save
-          </Button>
+          />
           {homeLocation.trim() ? (
             <Button
               variant="ghost"
@@ -147,22 +153,21 @@ export function HomeLocationSheet({
           ) : null}
         </View>
       }>
-      <Button
+      <GlassPrimaryAction
         icon="location"
+        label={detecting ? 'Finding location…' : 'Use current location'}
         onPress={() => void handleUseCurrentLocation()}
-        loading={detecting}
         disabled={busy}
         testID={AgentUiIds.today.location.useCurrent}
-        accessibilityLabel="Use current location">
-        {detecting ? 'Finding location…' : 'Use current location'}
-      </Button>
+      />
 
       <AppText variant="caption" color="tertiary" fit>
         Or enter a different city
       </AppText>
 
       <Input
-        label="City or place"
+        icon="location"
+        stackedLabel="City or place"
         value={draft}
         onChangeText={setDraft}
         autoCapitalize="words"
@@ -170,6 +175,11 @@ export function HomeLocationSheet({
         returnKeyType="done"
         onSubmitEditing={() => void save()}
         placeholder="e.g. Austin, TX"
+        iconBackground={dark ? '#143F3C' : '#C9F2EC'}
+        iconColor={dark ? '#68D7CC' : '#087E73'}
+        fieldBackground={glassFieldBackground(theme.name)}
+        fieldBorderColor={glassFieldBorder(theme.name)}
+        fieldBorderRadius={radii.pill}
         testID={AgentUiIds.today.location.place}
         accessibilityLabel="Home location city or place"
       />

@@ -237,8 +237,7 @@ export function VisionBoardConsolidated() {
             <IconButton
               icon="search"
               size={36}
-              background="transparent"
-              borderColor={theme.separator}
+              testID={AgentUiIds.vision.consolidatedSearch}
               accessibilityLabel={
                 searchVisible ? 'Close vision board search' : 'Search vision board'
               }
@@ -252,8 +251,7 @@ export function VisionBoardConsolidated() {
             <IconButton
               icon="more"
               size={36}
-              background="transparent"
-              borderColor={theme.separator}
+              testID={AgentUiIds.vision.consolidatedMore}
               accessibilityLabel="Vision board options"
               onPress={showHeaderMenu}
             />
@@ -262,6 +260,7 @@ export function VisionBoardConsolidated() {
 
         {searchVisible ? (
           <GlassPlate
+            airy
             style={[
               styles.searchBar,
               {
@@ -453,6 +452,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   searchBar: {
+    zIndex: 1,
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
