@@ -39,6 +39,7 @@ KNOWN_FLOWS=(
   plants
   plants-new
   vision-board
+  vision-board-categories
   games
 )
 

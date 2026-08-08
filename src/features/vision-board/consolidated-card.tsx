@@ -1,9 +1,8 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, ProgressRing, GlassPlate, Symbol } from '@/components/primitives';
-import { fontFamilies, glassMaterials, radii, spacing, type AppIconName } from '@/design-system';
+import { fontFamilies, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
@@ -11,6 +10,9 @@ import { haptics } from '@/utils/haptics';
 import { VISION_BOARD_ACCENTS } from './defaults';
 import { SIZE_RATIO, type DisplayCard } from './consolidated-model';
 import type { VisionBoardCategory } from './types';
+
+const FILTER_SELECTED_FILL = 'rgba(154, 118, 84, 0.52)';
+const FILTER_SELECTED_BORDER = 'rgba(255, 255, 255, 0.38)';
 
 export function FilterChip({
   label,
@@ -34,6 +36,7 @@ export function FilterChip({
     label,
     onPress: handlePress,
   });
+  const ink = selected ? '#FFFFFF' : theme.textPrimary;
   return (
     <Pressable
       ref={agent.ref}
@@ -42,26 +45,23 @@ export function FilterChip({
       accessibilityRole="tab"
       accessibilityState={{ selected }}
       onPress={handlePress}
-      style={({ pressed }) => [
-        styles.filterChip,
-        {
-          backgroundColor: selected ? '#9A7654' : 'transparent',
-          borderColor: selected ? '#9A7654' : theme.separator,
-          opacity: pressed ? 0.72 : 1,
-        },
-      ]}>
-      <Symbol
-        name={icon}
-        size={12}
-        color={selected ? '#FFFFFF' : theme.textPrimary}
-      />
-      <AppText
+      style={({ pressed }) => [{ opacity: pressed ? 0.78 : 1 }]}>
+      <GlassPlate
+        airy
         style={[
-          styles.filterLabel,
-          { color: selected ? '#FFFFFF' : theme.textPrimary },
+          styles.filterChip,
+          selected
+            ? {
+                backgroundColor: FILTER_SELECTED_FILL,
+                borderColor: FILTER_SELECTED_BORDER,
+              }
+            : null,
         ]}>
-        {label}
-      </AppText>
+        <Symbol name={icon} size={12} color={ink} />
+        <AppText fit style={[styles.filterLabel, { color: ink }]}>
+          {label}
+        </AppText>
+      </GlassPlate>
     </Pressable>
   );
 }
@@ -117,51 +117,6 @@ export function BoardCard({
 
   if (card.kind === 'quote') {
     const dark = card.dark === true;
-    if (dark) {
-      return (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${category.name} vision board`}
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.boardCard,
-            styles.textCard,
-            styles.compactTextCard,
-            cardSize,
-            { backgroundColor: '#303636' },
-            pressedOpacity(pressed),
-          ]}>
-          <AppText
-            style={[styles.quoteMark, styles.compactQuoteMark, { color: '#FFFFFF' }]}>
-            “
-          </AppText>
-          <AppText
-            style={[
-              styles.quoteText,
-              styles.compactQuoteText,
-              {
-                color: '#FFFFFF',
-                fontSize: Math.min(17, Math.max(11.5, width * 0.057)),
-                lineHeight: Math.min(22, Math.max(15, width * 0.072)),
-              },
-            ]}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.78}
-            align="center">
-            {card.text}
-          </AppText>
-          {card.attribution ? (
-            <AppText
-              style={[styles.quoteAttribution, { color: 'rgba(255,255,255,0.72)' }]}
-              align="center">
-              — {card.attribution}
-            </AppText>
-          ) : null}
-        </Pressable>
-      );
-    }
-
     return (
       <Pressable
         accessibilityRole="button"
@@ -169,21 +124,37 @@ export function BoardCard({
         onPress={onPress}
         style={({ pressed }) => [cardSize, pressedOpacity(pressed)]}>
         <GlassPlate
-          style={[styles.boardCard, cardSize, styles.textCard]}>
+          airy
+          inverted={dark}
+          style={[
+            styles.boardCard,
+            styles.textCard,
+            dark ? styles.compactTextCard : null,
+            cardSize,
+          ]}>
           <AppText
-            style={[styles.quoteMark, { color: theme.textPrimary }]}>
+            style={[
+              styles.quoteMark,
+              dark ? styles.compactQuoteMark : null,
+              { color: dark ? '#FFFFFF' : theme.textPrimary },
+            ]}>
             “
           </AppText>
           <AppText
             style={[
               styles.quoteText,
+              dark ? styles.compactQuoteText : null,
               {
-                color: theme.textPrimary,
-                fontSize: Math.min(18, Math.max(11.5, width * 0.105)),
-                lineHeight: Math.min(23, Math.max(14.5, width * 0.135)),
+                color: dark ? '#FFFFFF' : theme.textPrimary,
+                fontSize: dark
+                  ? Math.min(17, Math.max(11.5, width * 0.057))
+                  : Math.min(18, Math.max(11.5, width * 0.105)),
+                lineHeight: dark
+                  ? Math.min(22, Math.max(15, width * 0.072))
+                  : Math.min(23, Math.max(14.5, width * 0.135)),
               },
             ]}
-            numberOfLines={6}
+            numberOfLines={dark ? 2 : 6}
             adjustsFontSizeToFit
             minimumFontScale={0.78}
             align="center">
@@ -191,21 +162,25 @@ export function BoardCard({
           </AppText>
           {card.attribution ? (
             <AppText
-              style={[styles.quoteAttribution, { color: theme.textSecondary }]}
+              style={[
+                styles.quoteAttribution,
+                {
+                  color: dark
+                    ? 'rgba(255,255,255,0.72)'
+                    : theme.textSecondary,
+                },
+              ]}
               align="center">
               — {card.attribution}
             </AppText>
           ) : null}
-          <Symbol name="favorite" size={16} color={theme.textTertiary} />
+          {!dark ? (
+            <Symbol name="favorite" size={16} color={theme.textTertiary} />
+          ) : null}
         </GlassPlate>
       </Pressable>
     );
   }
-
-  const glassEnd =
-    theme.name === 'dark'
-      ? glassMaterials.fill.darkSolid
-      : glassMaterials.fill.lightSolid;
 
   return (
     <Pressable
@@ -213,94 +188,95 @@ export function BoardCard({
       accessibilityLabel={`Open ${category.name} vision board`}
       onPress={onPress}
       style={({ pressed }) => [cardSize, pressedOpacity(pressed)]}>
-      <GlassPlate style={[styles.boardCard, cardSize]}>
-        <LinearGradient
-          colors={[tint, glassEnd]}
-          style={styles.goalCard}>
-        <View style={styles.goalEyebrow}>
-          <Symbol name={category.icon} size={14} color={accent} />
-          <AppText
-            style={[styles.goalEyebrowText, { color: accent }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}>
-            {card.eyebrow}
-          </AppText>
-        </View>
-        <AppText
-          style={[
-            styles.goalTitle,
-            {
-              color: theme.textPrimary,
-              fontSize: Math.min(23, Math.max(15, width * 0.14)),
-              lineHeight: Math.min(28, Math.max(18, width * 0.17)),
-            },
-          ]}
-          numberOfLines={card.title.length > 18 ? 3 : 2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.72}
-          align="center">
-          {card.title}
-        </AppText>
-        {card.note ? (
-          <AppText
-            style={[styles.goalNote, { color: theme.textSecondary }]}
-            align="center"
-            numberOfLines={2}>
-            {card.note}
-          </AppText>
-        ) : null}
-        {card.support ? (
-          <AppText
-            style={[styles.goalSupport, { color: theme.textSecondary }]}
-            align="center"
-            numberOfLines={1}>
-            {card.support}
-          </AppText>
-        ) : null}
-        {card.progressStyle === 'ring' && card.progress !== undefined ? (
-          <ProgressRing
-            progress={card.progress}
-            size={Math.min(48, width * 0.42)}
-            strokeWidth={4}
-            color={accent}
-            trackColor={`${accent}24`}
-            label={`${Math.round(card.progress * 100)}%`}
-          />
-        ) : null}
-        {card.progressStyle === 'bar' && card.progress !== undefined ? (
-          <View style={styles.barBlock}>
-            <View
-              style={[
-                styles.progressTrack,
-                { backgroundColor: `${accent}24` },
-              ]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${card.progress * 100}%`,
-                    backgroundColor: accent,
-                  },
-                ]}
-              />
-            </View>
+      <GlassPlate airy style={[styles.boardCard, cardSize]}>
+        <View
+          pointerEvents="none"
+          style={[styles.goalTint, { backgroundColor: `${tint}40` }]}
+        />
+        <View style={styles.goalCard}>
+          <View style={styles.goalEyebrow}>
+            <Symbol name={category.icon} size={14} color={accent} />
             <AppText
-              style={[styles.progressLabel, { color: theme.textPrimary }]}
-              align="center">
-              {Math.round(card.progress * 100)}%
+              style={[styles.goalEyebrowText, { color: accent }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}>
+              {card.eyebrow}
             </AppText>
           </View>
-        ) : null}
-        {card.progress === undefined ? (
-          <Symbol name="favorite" size={16} color={theme.textTertiary} />
-        ) : null}
-      </LinearGradient>
+          <AppText
+            style={[
+              styles.goalTitle,
+              {
+                color: theme.textPrimary,
+                fontSize: Math.min(23, Math.max(15, width * 0.14)),
+                lineHeight: Math.min(28, Math.max(18, width * 0.17)),
+              },
+            ]}
+            numberOfLines={card.title.length > 18 ? 3 : 2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+            align="center">
+            {card.title}
+          </AppText>
+          {card.note ? (
+            <AppText
+              style={[styles.goalNote, { color: theme.textSecondary }]}
+              align="center"
+              numberOfLines={2}>
+              {card.note}
+            </AppText>
+          ) : null}
+          {card.support ? (
+            <AppText
+              style={[styles.goalSupport, { color: theme.textSecondary }]}
+              align="center"
+              numberOfLines={1}>
+              {card.support}
+            </AppText>
+          ) : null}
+          {card.progressStyle === 'ring' && card.progress !== undefined ? (
+            <ProgressRing
+              progress={card.progress}
+              size={Math.min(48, width * 0.42)}
+              strokeWidth={4}
+              color={accent}
+              trackColor={`${accent}24`}
+              label={`${Math.round(card.progress * 100)}%`}
+            />
+          ) : null}
+          {card.progressStyle === 'bar' && card.progress !== undefined ? (
+            <View style={styles.barBlock}>
+              <View
+                style={[
+                  styles.progressTrack,
+                  { backgroundColor: `${accent}24` },
+                ]}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${card.progress * 100}%`,
+                      backgroundColor: accent,
+                    },
+                  ]}
+                />
+              </View>
+              <AppText
+                style={[styles.progressLabel, { color: theme.textPrimary }]}
+                align="center">
+                {Math.round(card.progress * 100)}%
+              </AppText>
+            </View>
+          ) : null}
+          {card.progress === undefined ? (
+            <Symbol name="favorite" size={16} color={theme.textTertiary} />
+          ) : null}
+        </View>
       </GlassPlate>
     </Pressable>
   );
 }
-
 
 const styles = StyleSheet.create({
   barBlock: {
@@ -311,7 +287,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 13,
     borderCurve: 'continuous',
-    boxShadow: '0 3px 12px rgba(51, 39, 28, 0.11)',
+    zIndex: 1,
   },
   compactQuoteMark: {
     position: 'absolute',
@@ -330,12 +306,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   filterChip: {
+    zIndex: 1,
     minHeight: 26,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 7,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
   filterLabel: {
@@ -343,14 +319,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     fontWeight: '400',
+    flexShrink: 1,
+    minWidth: 0,
   },
   goalCard: {
+    zIndex: 1,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-around',
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 10,
+  },
+  goalTint: {
+    ...StyleSheet.absoluteFill,
   },
   goalEyebrow: {
     maxWidth: '100%',

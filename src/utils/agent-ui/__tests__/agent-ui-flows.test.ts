@@ -348,6 +348,7 @@ describe('agent-ui flows', () => {
     expect(listAgentUiFlowNames()).toContain('grocery-demo-recipe-import');
     expect(listAgentUiFlowNames()).toContain('workouts-demo');
     expect(listAgentUiFlowNames()).toContain('vision-board-demo-edit');
+    expect(listAgentUiFlowNames()).toContain('vision-board-categories');
     expect(listAgentUiFlowNames()).toContain('profile');
     expect(listAgentUiFlowNames()).toContain('health-settings');
     expect(listAgentUiFlowNames()).toContain('vehicles-new');

@@ -7,16 +7,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
     AppText,
+    Card,
     EmptyState,
     GlassPlate,
     IconButton,
     Screen,
     Symbol,
 } from '@/components/primitives';
-import { fontFamilies, layout, radii, spacing } from '@/design-system';
+import { fontFamilies, layout, radii, spacing, type AppIconName } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
 
 import { VISION_BOARD_ACCENTS } from './defaults';
@@ -52,6 +54,44 @@ function countLabel(counts: ReturnType<typeof countVisionBoardItems>) {
 
 function boardFillPercent(counts: ReturnType<typeof countVisionBoardItems>) {
   return Math.min(100, Math.round((counts.total / 8) * 100));
+}
+
+function VisionSectionChip({
+  label,
+  icon,
+  color,
+  onPress,
+  accessibilityLabel,
+  testID,
+}: {
+  label: string;
+  icon: AppIconName;
+  color: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+  testID: string;
+}) {
+  const agent = useAgentUiTarget(testID, {
+    label: accessibilityLabel,
+    onPress,
+  });
+  return (
+    <Pressable
+      ref={agent.ref}
+      testID={testID}
+      onLayout={agent.onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [{ opacity: pressed ? 0.78 : 1 }]}>
+      <GlassPlate airy style={styles.sectionChip}>
+        <Symbol name={icon} size={16} color={color} />
+        <AppText fit style={[styles.sectionButtonText, { color }]}>
+          {label}
+        </AppText>
+      </GlassPlate>
+    </Pressable>
+  );
 }
 
 export function VisionBoardDashboard() {
@@ -146,15 +186,12 @@ export function VisionBoardDashboard() {
           <IconButton
             icon="filter"
             shape="rounded"
+            testID={AgentUiIds.vision.dashboardFilter}
             accessibilityLabel={
               showPopulatedOnly
                 ? 'Show all vision board categories'
                 : 'Show categories with board items'
             }
-            background={
-              showPopulatedOnly ? theme.accentFaint : theme.backgroundPrimary
-            }
-            borderColor={theme.separator}
             color={showPopulatedOnly ? theme.accentPrimary : theme.textSecondary}
             onPress={() => setShowPopulatedOnly((value) => !value)}
           />
@@ -162,9 +199,9 @@ export function VisionBoardDashboard() {
             <IconButton
               icon="add"
               shape="rounded"
+              testID={AgentUiIds.vision.dashboardAdd}
               accessibilityLabel="Add a vision board category"
-              color={theme.textOnAccent}
-              background={theme.success}
+              color={theme.accentPrimary}
               onPress={() => router.push('/vision-board/category-editor' as never)}
             />
           ) : null}
@@ -201,12 +238,12 @@ export function VisionBoardDashboard() {
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.heroContent}>
-          <View style={styles.heroPill}>
+          <GlassPlate airy style={styles.heroPill}>
             <AppText style={styles.heroPillMark}>“</AppText>
             <AppText variant="caption" style={styles.heroPillText}>
               Today’s Affirmation
             </AppText>
-          </View>
+          </GlassPlate>
           <View style={styles.heroCopy}>
             <AppText
               style={[styles.heroQuote, { fontFamily: fontFamilies.serif }]}
@@ -241,41 +278,27 @@ export function VisionBoardDashboard() {
           Your Categories
         </AppText>
         <View style={styles.sectionActions}>
-          <Pressable
-            accessibilityRole="button"
+          <VisionSectionChip
+            testID={AgentUiIds.vision.dashboardViewAll}
             accessibilityLabel="Open consolidated vision board"
+            icon="gallery"
+            label="View All"
+            color={theme.accentPrimary}
             onPress={() => router.push('/vision-board/all' as never)}
-            style={({ pressed }) => [
-              styles.sectionButton,
-              { opacity: pressed ? 0.62 : 1 },
-            ]}>
-            <Symbol name="gallery" size={16} color={theme.accentPrimary} />
-            <AppText style={[styles.sectionButtonText, { color: theme.accentPrimary }]}>
-              View All
-            </AppText>
-          </Pressable>
+          />
           {!isWeb ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setEditing((value) => !value)}
+            <VisionSectionChip
+              testID={AgentUiIds.vision.dashboardEdit}
               accessibilityLabel={
                 editing
                   ? 'Finish editing vision board categories'
                   : 'Edit vision board categories'
               }
-              style={({ pressed }) => [
-                styles.sectionButton,
-                { opacity: pressed ? 0.62 : 1 },
-              ]}>
-              <AppText style={[styles.sectionButtonText, { color: theme.success }]}>
-                {editing ? 'Done' : 'Edit'}
-              </AppText>
-              <Symbol
-                name={editing ? 'check' : 'edit'}
-                size={16}
-                color={theme.success}
-              />
-            </Pressable>
+              icon={editing ? 'check' : 'edit'}
+              label={editing ? 'Done' : 'Edit'}
+              color={theme.success}
+              onPress={() => setEditing((value) => !value)}
+            />
           ) : null}
         </View>
       </View>
@@ -337,21 +360,21 @@ export function VisionBoardDashboard() {
               (item) => item.id === category.id,
             );
             return (
-              <Pressable
+              <Card
                 key={category.id}
-                accessibilityRole="button"
+                airy
+                padded={false}
+                testID={AgentUiIds.vision.dashboardCategory(category.id)}
                 accessibilityLabel={`Open ${category.name} vision board, ${countLabel(counts)}, ${fillPercent}% filled`}
-                disabled={editing}
-                onPress={() => router.push(`/vision-board/${category.id}` as never)}
-                style={({ pressed }) => [
-                  styles.categoryCardWrap,
-                  { opacity: pressed ? 0.78 : 1 },
+                onPress={
+                  editing
+                    ? undefined
+                    : () => router.push(`/vision-board/${category.id}` as never)
+                }
+                style={[
+                  styles.categoryCard,
+                  editing && styles.categoryCardEditing,
                 ]}>
-                <GlassPlate
-                  style={[
-                    styles.categoryCard,
-                    editing && styles.categoryCardEditing,
-                  ]}>
                 <View style={styles.cover}>
                   <View
                     style={[
@@ -455,8 +478,7 @@ export function VisionBoardDashboard() {
                     </View>
                   ) : null}
                 </View>
-                </GlassPlate>
-              </Pressable>
+              </Card>
             );
           })}
         </View>
@@ -525,13 +547,13 @@ const styles = StyleSheet.create({
   },
   heroPill: {
     alignSelf: 'flex-start',
+    zIndex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   heroPillMark: {
     color: '#FFFFFF',
@@ -598,31 +620,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  sectionButton: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
   sectionButtonText: {
     fontFamily: fontFamilies.serif,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '400',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  sectionChip: {
+    zIndex: 1,
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
   },
   categories: { gap: spacing.sm },
-  categoryCardWrap: {
-    width: '100%',
-  },
   categoryCard: {
     minHeight: 88,
     overflow: 'hidden',
     flexDirection: 'row',
     borderRadius: 18,
     borderCurve: 'continuous',
-    boxShadow: '0 3px 12px rgba(45, 38, 31, 0.065)',
+    zIndex: 1,
   },
   categoryCardEditing: { minHeight: 144 },
   cover: { width: 116 },

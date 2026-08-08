@@ -383,6 +383,13 @@ Demo fixture: `activity-agent-ui-demo-workout` via `workouts-demo`; explorer wai
 
 | testID                                                    | Control                      |
 | --------------------------------------------------------- | ---------------------------- |
+| `ontrack.vision.dashboard.filter`                         | Show populated / all filter  |
+| `ontrack.vision.dashboard.add`                            | Add category                 |
+| `ontrack.vision.dashboard.viewAll`                        | Open consolidated board      |
+| `ontrack.vision.dashboard.edit`                           | Edit categories              |
+| `ontrack.vision.dashboard.category.<categoryId>`          | Open category card           |
+| `ontrack.vision.consolidated.search`                      | Search toggle                |
+| `ontrack.vision.consolidated.more`                        | Options menu                 |
 | `ontrack.vision.consolidated.category.<categoryId>`       | Category filter chip         |
 | `ontrack.vision.category.mode`                            | Edit Board / Gallery toggle  |
 | `ontrack.vision.category.addImage`                        | Add image                    |

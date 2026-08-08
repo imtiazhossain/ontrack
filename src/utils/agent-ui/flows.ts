@@ -640,6 +640,14 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
+  'vision-board-categories': [
+    { op: 'goto', to: 'vision-board-categories' },
+    {
+      op: 'wait',
+      id: 'ontrack.vision.dashboard.filter',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
   'vision-board-demo': [
     { op: 'seed', to: 'vision-board-demo' },
     { op: 'goto', to: 'vision-board' },

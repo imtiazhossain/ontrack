@@ -174,11 +174,9 @@ export function GlassPlate({
               : airy
                 ? g.border.lightAiry
                 : g.border.light,
-          backgroundColor: greenGlass
-            ? greenFill
-            : darkPlate
-              ? darkFill
-              : lightFill,
+          // Keep the plate shell transparent — fill is a sibling underlay so
+          // BlurView frost isn't smothered by an opaque parent background.
+          backgroundColor: 'transparent',
         },
         style,
       ]}>
@@ -192,6 +190,19 @@ export function GlassPlate({
         tint={greenGlass || darkPlate ? 'dark' : 'light'}
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
+      />
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: greenGlass
+              ? greenFill
+              : darkPlate
+                ? darkFill
+                : lightFill,
+          },
+        ]}
       />
       {children}
     </View>

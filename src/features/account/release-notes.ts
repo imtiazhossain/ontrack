@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.12',
+    date: '2026-08-08',
+    notes: [
+      'Ship vision board glass surfaces and clearer SheetScaffold frost with home-location glass CTAs.',
+    ],
+  },
+  {
     version: '1.0.11',
     date: '2026-08-08',
     notes: [
@@ -102,6 +109,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.12',
+    date: '2026-08-08',
+    notes: [
+      'Ship vision board glass surfaces and clearer SheetScaffold frost with home-location glass CTAs.',
+      'Touched: features/daily-tracking, features/vision-board.',
+    ],
+  },
   {
     version: '1.0.11',
     date: '2026-08-08',

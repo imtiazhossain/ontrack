@@ -27,6 +27,7 @@ import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
 import { AppPromptHost } from './app-prompt';
+import { ScreenAtmosphere } from './screen-atmosphere';
 import { ScreenHeader } from './screen-header';
 
 export interface SheetHeaderProps {
@@ -178,6 +179,15 @@ export function SheetScaffold({
             { backgroundColor: theme.overlayScrim },
           ]}
         />
+        {/*
+          Soft chroma wash under glass sheets so BlurView / frosted CTAs catch
+          color instead of milking a flat dim scrim into opaque beige paper.
+        */}
+        {glass ? (
+          <View pointerEvents="none" style={styles.atmosphereUnderlay}>
+            <ScreenAtmosphere />
+          </View>
+        ) : null}
         {dismissOnBackdropPress ? (
           <Pressable
             testID={backdropTestID}
@@ -243,7 +253,7 @@ export function SheetScaffold({
               ) : (
                 <>
                   <BlurView
-                    intensity={allowsBlur ? 56 : 0}
+                    intensity={allowsBlur ? 64 : 0}
                     tint={dark ? 'dark' : 'light'}
                     pointerEvents="none"
                     style={StyleSheet.absoluteFill}
@@ -310,6 +320,10 @@ export function SheetScaffold({
 
 const styles = StyleSheet.create({
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  atmosphereUnderlay: {
+    ...StyleSheet.absoluteFill,
+    opacity: 0.55,
+  },
   dismissLayer: { zIndex: 0 },
   avoid: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
@@ -327,14 +341,14 @@ const styles = StyleSheet.create({
   },
   /** Dense frosted plate — readable form chrome over the dim scrim. */
   androidGlassLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
     experimental_backgroundImage:
-      'linear-gradient(165deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.64) 48%, rgba(255,255,255,0.8) 100%)',
+      'linear-gradient(165deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.48) 48%, rgba(255,255,255,0.64) 100%)',
   },
   androidGlassDark: {
-    backgroundColor: 'rgba(12, 16, 24, 0.72)',
+    backgroundColor: 'rgba(12, 16, 24, 0.52)',
     experimental_backgroundImage:
-      'linear-gradient(165deg, rgba(36,42,54,0.78) 0%, rgba(12,16,24,0.62) 50%, rgba(8,12,18,0.76) 100%)',
+      'linear-gradient(165deg, rgba(36,42,54,0.62) 0%, rgba(12,16,24,0.48) 50%, rgba(8,12,18,0.58) 100%)',
   },
   scroll: { flexShrink: 1 },
   content: { flexGrow: 1 },

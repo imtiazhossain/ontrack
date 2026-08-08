@@ -149,6 +149,7 @@ Do **not** dump before every tap when the id is already in [`agent-ui-map.md`](.
 | `workouts-demo-gym-detail` | Seed → gym detail (Start workout) |
 | `workouts-demo-gym-active` | Seed → active workout (Complete set) |
 | `vision-board-demo` | Seed sample board → consolidated Mindset filter |
+| `vision-board-categories` | Categories dashboard (filter / add / View All) |
 | `vision-board-demo-edit` | Seed → Mindset board edit (affirmation + sample canvas item) |
 | `vision-board-demo-item-editor` | Seed → select sample item → edit → item editor primary |
 | `vehicle-demo` | Seed demo vehicle → vehicles list card |
