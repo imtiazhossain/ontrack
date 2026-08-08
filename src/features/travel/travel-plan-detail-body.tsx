@@ -4,13 +4,14 @@ import { Screen } from '@/components/primitives';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import { TravelCollapsibleSection } from '@/features/travel/travel-collapsible-section';
 import {
-    TRAVEL_HEADER_SKY_CONTENT_BAND,
     TRAVEL_HEADER_DATES_SKY_OVERLAP,
     TRAVEL_HEADER_DATES_TOP_GAP,
+    TRAVEL_HEADER_SKY_CONTENT_BAND,
     TRAVEL_HEADER_SKY_FADE_TAIL,
     travelPlanSkyPageWashStyle,
 } from '@/features/travel/travel-header-sky-height';
 import { TravelItineraryTimeline } from '@/features/travel/travel-itinerary-timeline';
+import { TravelPlanChatFab } from '@/features/travel/travel-plan-chat-fab';
 import type { DetailSectionKey } from '@/features/travel/travel-plan-detail-sections';
 import { TravelPlanHero } from '@/features/travel/travel-plan-hero';
 import { TravelPlanTripTools } from '@/features/travel/travel-plan-trip-tools';
@@ -115,13 +116,6 @@ export function TravelPlanDetailBody({
           notesExpanded={notesExpanded}
           onNotesExpandedChange={onNotesExpandedChange}
         />
-        <TravelPlanTripTools
-          plan={plan}
-          expanded={isSectionExpanded('tools')}
-          onToggle={() => toggleSection('tools')}
-          onOpenExpenses={onOpenExpenses}
-          onAddTransport={() => onAddKind('transport')}
-        />
         <TravelTransportSections
           items={sortedItinerary}
           transportExpanded={isSectionExpanded('transport')}
@@ -156,7 +150,15 @@ export function TravelPlanDetailBody({
             {...itemEditHandlers}
           />
         </TravelCollapsibleSection>
+        <TravelPlanTripTools
+          plan={plan}
+          expanded={isSectionExpanded('tools')}
+          onToggle={() => toggleSection('tools')}
+          onOpenExpenses={onOpenExpenses}
+          onAddTransport={() => onAddKind('transport')}
+        />
       </Screen>
+      <TravelPlanChatFab planId={plan.id} tripTitle={plan.title} />
     </View>
   );
 }

@@ -967,9 +967,13 @@ def _android_cold_root(current: str | None, route_want: str | None) -> bool:
 def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
     """Skip flow/open when already on --route; then assert (+ optional color/shot).
 
-    Android cold boot / reconnect always wakes on `/`. In that case we never
-    skip land: auto-goto the wanted route when --flow/--open was omitted, wait
-    for the route, and retry land once if the first pass races JS mount.
+    When --route is set and the device is on another surface, auto-goto that
+    route if --flow/--open/--goto was omitted (both platforms). Agents used to
+    thrash assert-only retries on whatever tab was left open — especially iOS
+    after Profile → Privacy/Terms work.
+
+    Android cold boot / reconnect still wakes on `/`: same auto-goto path, plus
+    one land retry if the first pass races JS mount.
     """
     args = list(argv)
     route_want: str | None = None
@@ -998,6 +1002,7 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
     already = False
     current: str | None = None
     cold_root = False
+    auto_land = False
     force_land = _env_flag("AGENT_UI_ANDROID_FORCE_LAND")
     if route_want:
         probe = send({"op": "route"}, wait_secs=min(2.5, wait_secs), allow_fail=True)
@@ -1013,16 +1018,24 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
                 and not force_land
                 and not has_flow_land
             )
-        # Android reconnect wakes on `/` — auto-land instead of failing assert-only.
-        if cold_root and not land_ops:
-            print(
-                f"verify: Android on {current or '?'} after cold boot — "
-                f"auto-landing via goto {route_want}",
-                file=sys.stderr,
-            )
-            land_ops.append({"op": "goto", "to": route_want})
-            already = False
-        elif force_land and land_ops:
+        else:
+            # No explicit land — skip only when already on the wanted surface.
+            already = route_matches(current, route_want) and not force_land
+            if not already:
+                # Assert-only on a wrong tab forces redo loops; auto-goto once.
+                reason = (
+                    f"Android on {current or '?'} after cold boot"
+                    if cold_root
+                    else f"on {current or '?'}"
+                )
+                print(
+                    f"verify: {reason} — auto-landing via goto {route_want}",
+                    file=sys.stderr,
+                )
+                land_ops.append({"op": "goto", "to": route_want})
+                auto_land = True
+                already = False
+        if force_land and land_ops and not auto_land:
             already = False
             print(
                 "verify: Android force-land (post reconnect) — not skipping flow/open",
@@ -1036,8 +1049,8 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
                 chain.extend(["--flow", str(lop["to"])])
             else:
                 chain.extend(["--open", str(lop["to"])])
-        # Cold Android: wait for navigation before asserts race the mount.
-        if route_want and (cold_root or force_land or agent_ui_platform() == "android"):
+        # Wait for navigation before asserts race the mount (both platforms).
+        if route_want:
             chain.extend(["--wait-route", route_want])
     elif already:
         # Cheap settle — no flow/seed.
@@ -1079,6 +1092,12 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
             **data,
             "coldLand": True,
             "detail": data.get("detail") or "landed after Android cold boot",
+        }
+    elif auto_land:
+        data = {
+            **data,
+            "autoLand": True,
+            "detail": data.get("detail") or "auto-landed via goto",
         }
     return data
 

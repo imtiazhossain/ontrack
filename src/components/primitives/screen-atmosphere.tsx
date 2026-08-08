@@ -35,9 +35,9 @@ export function ScreenAtmosphere() {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient
         colors={[...colors]}
-        locations={[0, 0.45, 1]}
-        start={{ x: 0.15, y: 0 }}
-        end={{ x: 0.85, y: 1 }}
+        locations={[0, 0.42, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       {/* Soft blooms — radial so edges dissolve (no hard orb arcs). */}
@@ -47,9 +47,9 @@ export function ScreenAtmosphere() {
           {
             width: orbSize,
             height: orbSize,
-            top: -orbSize * 0.35,
-            right: -orbSize * 0.28,
-            experimental_backgroundImage: `radial-gradient(circle at 50% 50%, ${orb} 0%, transparent 72%)`,
+            top: -orbSize * 0.42,
+            right: -orbSize * 0.34,
+            experimental_backgroundImage: `radial-gradient(circle at 50% 50%, ${orb} 0%, transparent 78%)`,
           },
         ]}
       />
@@ -59,9 +59,9 @@ export function ScreenAtmosphere() {
           {
             width: orbSize * 0.85,
             height: orbSize * 0.85,
-            bottom: -orbSize * 0.4,
-            left: -orbSize * 0.32,
-            experimental_backgroundImage: `radial-gradient(circle at 50% 50%, ${cool} 0%, transparent 72%)`,
+            bottom: -orbSize * 0.42,
+            left: -orbSize * 0.36,
+            experimental_backgroundImage: `radial-gradient(circle at 50% 50%, ${cool} 0%, transparent 78%)`,
           },
         ]}
       />
@@ -69,9 +69,14 @@ export function ScreenAtmosphere() {
         colors={
           dark
             ? ['rgba(255,255,255,0.04)', 'transparent', 'rgba(0,0,0,0.25)']
-            : ['rgba(255,255,255,0.35)', 'transparent', 'rgba(80,55,35,0.06)']
+            : [
+                'rgba(255,255,255,0.42)',
+                'rgba(255,255,255,0.12)',
+                'transparent',
+                'rgba(80,55,35,0.04)',
+              ]
         }
-        locations={[0, 0.4, 1]}
+        locations={dark ? [0, 0.4, 1] : [0, 0.28, 0.62, 1]}
         style={StyleSheet.absoluteFill}
       />
     </View>

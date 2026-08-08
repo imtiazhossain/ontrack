@@ -1,7 +1,9 @@
 import {
+    TRAVEL_HOME_HERO_EDGE_OVERSCAN,
     TRAVEL_HOME_HERO_FOCUS_TOP_DEFAULT,
     travelHomeHeroContentPosition,
     travelHomeHeroFocusTopPercent,
+    travelHomeHeroOverscanStyle,
 } from '@/features/travel/travel-home-hero-focus';
 
 describe('travelHomeHeroFocusTopPercent', () => {
@@ -36,6 +38,22 @@ describe('travelHomeHeroContentPosition', () => {
     expect(travelHomeHeroContentPosition()).toEqual({
       top: `${TRAVEL_HOME_HERO_FOCUS_TOP_DEFAULT}%`,
       left: '50%',
+    });
+  });
+});
+
+describe('travelHomeHeroOverscanStyle', () => {
+  it('bleeds past the plate so edge captions clip under overflow', () => {
+    expect(TRAVEL_HOME_HERO_EDGE_OVERSCAN).toBeGreaterThan(1);
+    expect(travelHomeHeroOverscanStyle(360, 200)).toEqual({
+      width: Math.ceil(360 * TRAVEL_HOME_HERO_EDGE_OVERSCAN),
+      height: Math.ceil(200 * TRAVEL_HOME_HERO_EDGE_OVERSCAN),
+      marginLeft: -Math.floor(
+        (Math.ceil(360 * TRAVEL_HOME_HERO_EDGE_OVERSCAN) - 360) / 2,
+      ),
+      marginTop: -Math.floor(
+        (Math.ceil(200 * TRAVEL_HOME_HERO_EDGE_OVERSCAN) - 200) / 2,
+      ),
     });
   });
 });

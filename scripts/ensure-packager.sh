@@ -790,13 +790,18 @@ reconnect_dev_client() {
 
   # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.
   # Android first paint after reconnect is slower — give more headroom.
-  # Pool agent AVDs are often cold (no snapshot) and need a full JS bundle.
+  # Pool agent AVDs need a full JS bundle only when the app process is missing.
   local extra=30
   if [[ "$PACKAGER_TARGET" == "android" ]]; then
     extra=45
     if [[ "${AGENT_UI_POOL_MODE:-0}" == "1" ]] \
       || [[ "${ONTRACK_ANDROID_AVD:-}" =~ ^onTrack_Agent_[0-9]+$ ]]; then
-      extra=90
+      if android_emu_adb shell pidof "$BUNDLE_ID" >/dev/null 2>&1; then
+        # Warm reuse: app already running — don't sit on the cold 90s budget.
+        extra=45
+      else
+        extra=90
+      fi
     fi
   fi
   local deadline=$((SECONDS + WAIT_SECS + extra))
@@ -910,13 +915,17 @@ else
     exit 0
   fi
 
+  echo "Checking app install on $(ios_sim_preferred_name)…"
   if ! app_installed; then
+    echo "App missing — cloning onto pool simulator…"
     if packager_pool_clone_app_if_needed; then
       echo "Installed ${BUNDLE_ID} onto pool simulator $(ios_sim_preferred_name) via clone."
     else
       echo "note: app not installed on $(ios_sim_preferred_name) — Metro is healthy"
       exit 0
     fi
+  else
+    echo "App already installed on $(ios_sim_preferred_name)."
   fi
 fi
 

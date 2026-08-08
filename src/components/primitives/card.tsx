@@ -18,7 +18,7 @@ import { GlassPlate } from './glass-plate';
 interface CardProps extends PropsWithChildren {
   onPress?: () => void;
   onLongPress?: () => void;
-  /** elevated = frosted raised plate, sunken = soft clear wash */
+  /** elevated = frosted raised plate, sunken = lighter airy frost */
   variant?: 'elevated' | 'sunken';
   /**
    * `glass` = frosted plate (app default). `solid` = opaque elevated/sunken paper.
@@ -79,15 +79,15 @@ export function Card({
   };
 
   if (glass) {
+    // Sunken = airy frost (not clear/wash paper). Explicit `airy` also frosts elevated.
+    const useAiry = airy || variant === 'sunken';
     const plate = (
       <GlassPlate
-        clear={variant === 'sunken'}
-        wash={variant === 'sunken'}
-        airy={airy && variant === 'elevated'}
+        airy={useAiry}
         style={[
           styles.glassCard,
           radiusStyle,
-          variant === 'elevated' && !airy ? shadows.card : null,
+          variant === 'elevated' && !useAiry ? shadows.card : null,
           padStyle,
           style,
         ]}>

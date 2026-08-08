@@ -166,7 +166,7 @@ describe('Travel home atmosphere resolve', () => {
     expect(resolved.key.startsWith('curated:')).toBe(true);
   });
 
-  it('prefers curated people-free plates for labeled destinations', async () => {
+  it('prefers remote web plates for labeled destinations when available', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
       destination: 'Reykjavik, Iceland',
@@ -175,21 +175,22 @@ describe('Travel home atmosphere resolve', () => {
       salt: 1,
       fetchPool: async () => ['https://images.unsplash.com/photo-demo-label'],
     });
-    expect(resolved.origin).toBe('curated');
+    expect(resolved.origin).toBe('remote');
     expect(resolved.label).toMatch(/Reykjavík|Iceland/i);
+    expect(resolved.key).toBe('remote:https://images.unsplash.com/photo-demo-label');
     expect(
       matchCuratedAtmosphereForPlace('Reykjavik, Iceland').length,
     ).toBeGreaterThan(0);
   });
 
-  it('prefers curated Lisbon plate over remote people stock', async () => {
+  it('falls back to curated Lisbon plate when remote pool is empty', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
       destination: 'Lisbon, Portugal',
       timeOfDay: 'day',
       weatherCode: 0,
       salt: 1,
-      fetchPool: async () => ['https://images.unsplash.com/photo-demo-lisbon-people'],
+      fetchPool: async () => [],
     });
     expect(resolved.origin).toBe('curated');
     expect(resolved.key).toBe('curated:lisbon-bridge');
@@ -197,7 +198,7 @@ describe('Travel home atmosphere resolve', () => {
     expect(matchCuratedAtmosphereForPlace('Lisbon').length).toBeGreaterThan(0);
   });
 
-  it('uses curated Antigua plate before remote stock', async () => {
+  it('uses remote Antigua plate when the place rotates into focus', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
       destinations: ['Iceland', 'Antigua', 'Lisbon'],
@@ -207,8 +208,8 @@ describe('Travel home atmosphere resolve', () => {
       recentKeys: [atmosphereDestinationKey('Iceland')],
       fetchPool: async () => ['https://images.unsplash.com/photo-demo-antigua'],
     });
-    expect(resolved.origin).toBe('curated');
-    expect(resolved.label).toBe('Antigua, Guatemala');
+    expect(resolved.origin).toBe('remote');
+    expect(resolved.label).toMatch(/Antigua/i);
     expect(resolved.destinationKey).toBe(atmosphereDestinationKey('Antigua'));
   });
 

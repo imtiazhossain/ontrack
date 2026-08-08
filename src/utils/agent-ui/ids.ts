@@ -276,6 +276,14 @@ export const AgentUiIds = {
   },
   profile: {
     avatar: 'ontrack.profile.avatar',
+    avatarEditor: {
+      close: 'ontrack.profile.avatar.close',
+      save: 'ontrack.profile.avatar.save',
+      mode: (mode: string) => `ontrack.profile.avatar.mode.${mode}`,
+      takePhoto: 'ontrack.profile.avatar.takePhoto',
+      chooseLibrary: 'ontrack.profile.avatar.chooseLibrary',
+      searchIcons: 'ontrack.profile.avatar.searchIcons',
+    },
     homeLocation: 'ontrack.profile.homeLocation',
     agents: 'ontrack.profile.agents',
     nutrition: 'ontrack.profile.nutrition',
@@ -285,6 +293,7 @@ export const AgentUiIds = {
     usageAnalytics: 'ontrack.profile.usageAnalytics',
     resetData: 'ontrack.profile.resetData',
     signOut: 'ontrack.profile.signOut',
+    createOrSignIn: 'ontrack.profile.createOrSignIn',
     deleteAccount: 'ontrack.profile.deleteAccount',
     privacy: 'ontrack.profile.privacy',
     terms: 'ontrack.profile.terms',
@@ -302,7 +311,12 @@ export const AgentUiIds = {
       legal: 'ontrack.profile.section.legal',
       dangerZone: 'ontrack.profile.section.dangerZone',
       disclaimers: 'ontrack.profile.section.disclaimers',
+      appInformation: 'ontrack.profile.section.appInformation',
     },
+  },
+  /** Privacy Policy / Terms of Use document body (`/privacy`, `/terms`). */
+  legal: {
+    document: 'ontrack.legal.document',
   },
   auth: {
     apple: 'ontrack.auth.apple',
@@ -412,11 +426,7 @@ export const AgentUiIds = {
     back: 'ontrack.designSystem.back',
     info: 'ontrack.designSystem.info',
     mode: (mode: string) => `ontrack.designSystem.mode.${mode}`,
-    catalogView: (view: string) => `ontrack.designSystem.catalogView.${view}`,
     catalogGroup: (group: string) => `ontrack.designSystem.catalogGroup.${group}`,
-    catalogFeature: (feature: string) => `ontrack.designSystem.catalogFeature.${feature}`,
-    catalogFeatureElement: (feature: string, id: string) =>
-      `ontrack.designSystem.catalogFeature.${feature}.element.${id}`,
     catalogElement: (id: string) => `ontrack.designSystem.catalogElement.${id}`,
     demo: (name: string) => `ontrack.designSystem.demo.${name}`,
     primary: 'ontrack.designSystem.primary',
@@ -524,6 +534,28 @@ export const AgentUiIds = {
       `${fieldTestID}.suggestionsDismiss`,
     addressSuggestion: (fieldTestID: string, index: number) =>
       `${fieldTestID}.suggestion.${index}`,
+    /**
+     * Travel Home (`/travel`, flow `travel-home`). Wire ids stay `travel.list.*`
+     * (historical). Prefer these keys in new code; `list` remains the stamp source.
+     * Host resolve also rewrites `travel.home.*` → `travel.list.*`.
+     */
+    home: {
+      sectionYourTrips: 'ontrack.travel.list.section.yourTrips',
+      atmosphereLocation: 'ontrack.travel.list.section.atmosphereLocation',
+      search: 'ontrack.travel.list.search',
+      searchMinimize: 'ontrack.travel.list.searchMinimize',
+      searchDismiss: 'ontrack.travel.list.searchDismiss',
+      searchClear: 'ontrack.travel.list.searchClear',
+      emptyCreate: 'ontrack.travel.list.empty.create',
+      emptySearch: 'ontrack.travel.list.empty.search',
+      itinerary: (tripId: string) => `ontrack.travel.list.itinerary.${tripId}`,
+      dates: (tripId: string) => `ontrack.travel.list.dates.${tripId}`,
+      openHub: (tripId: string) => `ontrack.travel.list.openHub.${tripId}`,
+      editTrip: (tripId: string) => `ontrack.travel.list.editTrip.${tripId}`,
+      coTravelers: (tripId: string) =>
+        `ontrack.travel.list.coTravelers.${tripId}`,
+    },
+    /** Historical wire namespace for Travel Home + plan-detail tool ids. */
     list: {
       cover: (tripId: string) => `ontrack.travel.list.cover.${tripId}`,
       collapse: (tripId: string) => `ontrack.travel.list.collapse.${tripId}`,
@@ -660,6 +692,8 @@ export const AgentUiIds = {
       addStay: 'ontrack.travel.planDetail.addStay',
       addRental: 'ontrack.travel.planDetail.addRental',
       backToTravel: 'ontrack.travel.planDetail.backToTravel',
+      /** Floating glass Group Chat FAB on itinerary (icon only). */
+      groupChat: 'ontrack.travel.planDetail.groupChat',
     },
     timelineAdd: {
       dismiss: 'ontrack.travel.timelineAdd.dismiss',

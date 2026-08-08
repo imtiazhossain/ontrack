@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
+  GlassPlate,
   LoadingSpinner,
   Symbol,
 } from '@/components/primitives';
@@ -41,37 +42,39 @@ export function ConfirmationImportAction({
       accessibilityState={{ busy: importing }}
       disabled={importing}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: chrome.importActionBg,
-          borderColor: chrome.importActionBorder,
-          borderRadius: radii.md,
-          gap: rs.sm,
-          minHeight: Math.max(60, s(64)),
-          opacity: pressed ? 0.72 : 1,
-          paddingHorizontal: rs.sm,
-          paddingVertical: rs.sm,
-        },
-      ]}>
-      <FieldLeadingIcon
-        name="scan-document"
-        backgroundColor={chrome.icons.import.bg}
-        color={chrome.icons.import.fg}
-      />
-      <View style={styles.copy}>
-        <AppText variant="callout" fit style={styles.label}>
-          Import Confirmation
-        </AppText>
-        <AppText variant="caption" color="tertiary" fit>
-          Scan email or paste details
-        </AppText>
-      </View>
-      {importing ? (
-        <LoadingSpinner size={16} color={chrome.icons.import.fg} />
-      ) : (
-        <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-      )}
+      style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}>
+      <GlassPlate
+        airy
+        style={[
+          styles.row,
+          {
+            borderColor: chrome.importActionBorder,
+            borderRadius: radii.md,
+            gap: rs.sm,
+            minHeight: Math.max(60, s(64)),
+            paddingHorizontal: rs.sm,
+            paddingVertical: rs.sm,
+          },
+        ]}>
+        <FieldLeadingIcon
+          name="scan-document"
+          backgroundColor={chrome.icons.import.bg}
+          color={chrome.icons.import.fg}
+        />
+        <View style={styles.copy}>
+          <AppText variant="callout" fit style={styles.label}>
+            Import Confirmation
+          </AppText>
+          <AppText variant="caption" color="tertiary" fit>
+            Scan email or paste details
+          </AppText>
+        </View>
+        {importing ? (
+          <LoadingSpinner size={16} color={chrome.icons.import.fg} />
+        ) : (
+          <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+        )}
+      </GlassPlate>
     </Pressable>
   );
 }

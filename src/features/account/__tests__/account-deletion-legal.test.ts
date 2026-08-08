@@ -50,4 +50,13 @@ describe('account deletion and legal release gates', () => {
     expect(profile).not.toContain('Testers have access');
     expect(profile).not.toContain('release gates');
   });
+
+  it('sends Privacy / Terms header back to Profile', () => {
+    const rootLayout = readFileSync(
+      join(process.cwd(), 'src/app', '_layout.tsx'),
+      'utf8',
+    );
+    expect(rootLayout).toContain('legalDocumentScreenOptions');
+    expect(rootLayout).toContain('fallback="/(tabs)/profile"');
+  });
 });

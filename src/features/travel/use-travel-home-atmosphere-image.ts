@@ -11,7 +11,9 @@ import {
 } from '@/features/travel/travel-atmosphere-model';
 import { useTravelAtmosphere } from '@/features/travel/travel-atmosphere';
 import {
+  atmosphereDestinationKey,
   mergeAtmospherePlaces,
+  pickAtmosphereDestination,
   rememberRecentKeys,
 } from '@/features/travel/travel-home-atmosphere-queries';
 import {
@@ -20,6 +22,7 @@ import {
 } from '@/features/travel/travel-home-atmosphere-ink';
 import {
   pickCuratedTravelHomeAtmosphere,
+  pickCuratedTravelHomeAtmosphereForPlace,
   resolveTravelHomeAtmosphereImage,
   type TravelHomeAtmosphereImage,
 } from '@/features/travel/travel-home-atmosphere-resolve';
@@ -139,14 +142,34 @@ export function useTravelHomeAtmosphereImage({
         const recentKeys = await loadRecentKeys();
         if (cancelled || requestId.current !== id) return;
 
-        // Show a curated plate immediately so the band never flashes empty.
-        const curated = pickCuratedTravelHomeAtmosphere(
-          timeOfDay,
-          weatherCode,
-          recentKeys,
-          salt,
+        // Place-matched curated first so the band never flashes empty / unlabeled
+        // while remote covers resolve — web plate replaces this when ready.
+        const place = pickAtmosphereDestination(places, recentKeys, salt);
+        const immediate =
+          (place
+            ? pickCuratedTravelHomeAtmosphereForPlace(
+                place,
+                timeOfDay,
+                weatherCode,
+                recentKeys,
+                salt,
+              )
+            : undefined) ??
+          pickCuratedTravelHomeAtmosphere(
+            timeOfDay,
+            weatherCode,
+            recentKeys,
+            salt,
+          );
+        setImage(
+          place
+            ? {
+                ...immediate,
+                destinationKey: atmosphereDestinationKey(place),
+                label: immediate.label ?? place,
+              }
+            : immediate,
         );
-        setImage(curated);
 
         const resolved = await resolveTravelHomeAtmosphereImage({
           mode,

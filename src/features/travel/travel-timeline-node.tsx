@@ -3,10 +3,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import {
-  AppText,
-  CollapsibleBody,
-  DisclosureChevron,
-  Symbol,
+    AppText,
+    CollapsibleBody,
+    DisclosureChevron,
+    GlassIconWell,
+    GlassPlate,
+    Symbol,
 } from '@/components/primitives';
 import { motion, radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
@@ -17,68 +19,41 @@ import {
 } from '@/features/travel/booking-open';
 import { BookingOpenSheet } from '@/features/travel/booking-open-sheet';
 import { flightItineraryCaptionParts } from '@/features/travel/flight-arrival';
-import type { FlightDetailsDraft } from '@/features/travel/flight-details';
-import { FlightDetailsCardEditor } from '@/features/travel/flight-details-card-editor';
-import { FlightDetailsSummary } from '@/features/travel/flight-details-summary';
 import { flightItemDisplayTitle } from '@/features/travel/flight-route-label';
-import type { FlightScheduleDraft } from '@/features/travel/flight-schedule';
-import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
-import { RentalCompanyLogo } from '@/features/travel/rental-company-logo';
-import type { RentalDetailsDraft } from '@/features/travel/rental-details';
-import { RentalDetailsCardEditor } from '@/features/travel/rental-details-card-editor';
-import { RentalDetailsSummary } from '@/features/travel/rental-details-summary';
-import type { StayDetailsDraft } from '@/features/travel/stay-details';
-import { StayDetailsCardEditor } from '@/features/travel/stay-details-card-editor';
-import { StayDetailsSummary } from '@/features/travel/stay-details-summary';
-import { StayLocationThumbnail } from '@/features/travel/stay-location-thumbnail';
-import { TransportDetailsCardEditor } from '@/features/travel/transport-details-card-editor';
-import { TransportDetailsSummary } from '@/features/travel/transport-details-summary';
-import {
-    titleCaseTravelKind,
-    TRAVEL_TITLE_ICON_GAP,
-} from '@/features/travel/travel-chrome';
 import {
     isItineraryItemOwnedBy,
     itineraryShareCueLabel,
 } from '@/features/travel/itinerary-visibility';
+import { openAddressWithMapsChooser } from '@/features/travel/open-address-with-maps';
+import { RentalCompanyLogo } from '@/features/travel/rental-company-logo';
+import { StayLocationThumbnail } from '@/features/travel/stay-location-thumbnail';
+import {
+    TRAVEL_TITLE_ICON_GAP,
+    travelEditorialTextStyle,
+} from '@/features/travel/travel-chrome';
+import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { TravelItemNotesSheet } from '@/features/travel/travel-item-notes-sheet';
 import {
     kindAccent,
     kindIcon,
-    kindTint,
 } from '@/features/travel/travel-kind-chrome';
 import { resolveTravelPhotoUris } from '@/features/travel/travel-moment-media';
-import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
-import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
-import {
-    TRAVEL_CARD_SHADOW,
-    travelCardFill,
-} from '@/features/travel/travel-surface';
+import { TRAVEL_CARD_SHADOW } from '@/features/travel/travel-surface';
 import {
     flightCaptionInput,
     timelineEntryCaption,
-    type TravelTimelinePhase,
 } from '@/features/travel/travel-timeline-entries';
 import {
     PhotoStrip,
     TimelineFlightCaption,
     TimelineItemTitle,
-    TimelineItemToolbar,
 } from '@/features/travel/travel-timeline-node-chrome';
-import type {
-    TravelItemNote,
-    TravelPlan,
-    TravelTransportDetails,
-} from '@/features/travel/types';
+import type { TravelTimelineNodeProps } from '@/features/travel/travel-timeline-node-props';
+import { TravelTimelineNodeStructured } from '@/features/travel/travel-timeline-node-structured';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
-import type { DateDisplayFormat } from '@/utils/date';
 import { useState } from 'react';
-
-export { kindDotColor } from '@/features/travel/travel-kind-chrome';
-
-type TravelItineraryItemModel = TravelPlan['itinerary'][number];
 
 export function TravelTimelineNode({
   item,
@@ -98,7 +73,6 @@ export function TravelTimelineNode({
   /** Kept for call-site compatibility; page reveal owns entrance motion. */
   index: _index = 0,
   accentColor,
-  tintColor,
   editingFlightItemId,
   editedFlightDetails,
   editedFlightDetailsError,
@@ -138,78 +112,16 @@ export function TravelTimelineNode({
   onRemove,
   onSaveNotes,
   onShare,
-}: {
-  item: TravelItineraryItemModel;
-  plan: TravelPlan;
-  expanded: boolean;
-  dateDisplayFormat: DateDisplayFormat;
-  /** Timeline action phase; defaults keep transport-section titles as stored. */
-  phase?: TravelTimelinePhase;
-  displayTitle?: string;
-  /** Override date/time for land / drop-off markers. */
-  entryDate?: string;
-  entryStartMinutes?: number;
-  /** Hide when the timeline spine already shows the kind icon. */
-  showKindBadge?: boolean;
-  compact?: boolean;
-  /** Extra-tight timeline presentation; transport cards use regular compact density. */
-  dense?: boolean;
-  /** Hour label rendered in the dense title row (keeps time · icon · title vertically aligned). */
-  leadingTimeLabel?: string;
-  /** Kept for call-site compatibility; page reveal owns entrance motion. */
-  index?: number;
-  /** Structured flight/stay/rental editors belong only in the transport section. */
-  allowStructuredEditing?: boolean;
-  /** Structured summaries and transport actions belong only in the transport section. */
-  showStructuredDetails?: boolean;
-  accentColor?: string;
-  tintColor?: string;
-  editingFlightItemId?: string;
-  editedFlightDetails: FlightDetailsDraft;
-  editedFlightDetailsError?: string;
-  editedFlightFileName?: string;
-  importingFlight: boolean;
-  editingRentalItemId?: string;
-  editedRentalDetails: RentalDetailsDraft;
-  editedRentalDetailsError?: string;
-  editedRentalFileName?: string;
-  importingRental: boolean;
-  editingStayItemId?: string;
-  editedStayDetails: StayDetailsDraft;
-  editedStayDetailsError?: string;
-  editedStayFileName?: string;
-  importingStay: boolean;
-  planStartDate: string;
-  planEndDate: string;
-  onToggle: () => void;
-  onEditedFlightDetailsChange: (value: FlightDetailsDraft) => void;
-  onImportFlight: () => void;
-  onSaveFlightDetails: (schedule: FlightScheduleDraft) => void;
-  onCancelFlightEdit: () => void;
-  onBeginFlightEdit: () => void;
-  onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
-  onImportRental: () => void;
-  onSaveRentalDetails: (schedule: TravelRangeScheduleDraft) => void;
-  onCancelRentalEdit: () => void;
-  onBeginRentalEdit: () => void;
-  onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
-  onImportStay: () => void;
-  onSaveStayDetails: (schedule: TravelRangeScheduleDraft) => void;
-  onCancelStayEdit: () => void;
-  onBeginStayEdit: () => void;
-  onSaveTransportDetails?: (
-    details: TravelTransportDetails,
-    schedule: TravelRangeScheduleDraft,
-  ) => void;
-  onAddPhotos: () => void;
-  onRemovePhoto: (uri: string) => void;
-  onRemove: () => void;
-  onSaveNotes: (notes: TravelItemNote[]) => void;
-  onShare?: () => void;
-}) {
+}: TravelTimelineNodeProps) {
   const theme = useTheme();
-  const { s, spacing: rs } = useResponsive();
+  const { s, spacing: rs, typography } = useResponsive();
   const { user } = useAuthSession();
+  /** Tight leading so dense mist-row glyphs sit in the vertical center of the row. */
+  const denseChromeLineHeight = Math.round(typography.caption.fontSize + 1);
+  const denseChromeTextStyle = {
+    ...travelEditorialTextStyle,
+    lineHeight: denseChromeLineHeight,
+  };
   const localUserId = user?.id;
   const ownsItem = isItineraryItemOwnedBy(item, localUserId);
   const shareCue = itineraryShareCueLabel(item, localUserId);
@@ -292,11 +204,13 @@ export function TravelTimelineNode({
     editingFlight || editingTransport || editingRental || editingStay;
   const photos = resolveTravelPhotoUris(item.photoUris);
   const accent = accentColor ?? kindAccent(item.kind, theme);
-  const tint = tintColor ?? kindTint(item.kind, theme);
   const icon = kindIcon(item.kind);
   // Transport board cards (flights/ground/stays/rentals) share one compact chrome.
   // Timeline day markers also pass `compact` with `dense` and keep smaller chrome.
   const isCompactBoardCard = compact && !dense && isStructuredTravelKind;
+  // Dense day rows / board cards sit on mist. Dark boards need light ink;
+  // white itinerary boards use theme paper ink.
+  const onGlass = (isCompactBoardCard || dense) && theme.name === 'dark';
   const isCompactFlight = isCompactBoardCard && item.kind === 'flight';
   const showKindBadgeResolved = showKindBadge;
   // Board cards always surface schedule meta under the title (including after a
@@ -328,7 +242,8 @@ export function TravelTimelineNode({
     denseTimeWidth +
     (hasDenseTimeSlot ? denseIconGap : 0) +
     (showKindBadgeResolved ? kindPillSize + denseIconGap : 0);
-  const cardFill = dense ? 'transparent' : travelCardFill(theme);
+  // Dense rows sit in a parent mist stack (transparent). Board + other cards use mist.
+  const useMistShell = !dense;
   const collapsedBoardMinHeight = Math.max(64, s(68));
   const cardRadius = dense
     ? 0
@@ -365,7 +280,16 @@ export function TravelTimelineNode({
                 : !isExpanded && compact && !isCompactBoardCard
                   ? rs.xxs
                   : undefined,
-            gap: dense ? rs.xs : compact ? rs.xs : rs.sm,
+            // Collapsed dense rows keep a zero-height CollapsibleBody sibling —
+            // gap would bias the header toward the top of the event shell.
+            gap:
+              dense && !isExpanded && photos.length === 0
+                ? 0
+                : dense
+                  ? rs.xs
+                  : compact
+                    ? rs.xs
+                    : rs.sm,
             minHeight:
               !isExpanded && isCompactBoardCard
                 ? collapsedBoardMinHeight
@@ -409,33 +333,23 @@ export function TravelTimelineNode({
                 {leadingTimeLabel ? (
                   <AppText
                     variant="caption"
-                    color="secondary"
                     fit
-                    style={styles.denseTimeLabel}>
+                    style={[
+                      styles.denseTimeLabel,
+                      denseChromeTextStyle,
+                      onGlass ? { color: 'rgba(255,255,255,0.72)' } : undefined,
+                    ]}>
                     {leadingTimeLabel}
                   </AppText>
                 ) : null}
               </View>
             ) : null}
             {showKindBadgeResolved ? (
-              <View
-                style={[
-                  styles.kindPill,
-                  {
-                    backgroundColor: dense ? accent : tint,
-                    width: kindPillSize,
-                    height: kindPillSize,
-                    overflow: 'hidden',
-                  },
-                ]}
-                accessibilityLabel={titleCaseTravelKind(item.kind)}
-              >
+              <GlassIconWell
+                size={kindPillSize}
+                borderRadius={kindPillSize / 2}>
                 {dense ? (
-                  <Symbol
-                    name={icon}
-                    size={11}
-                    color={theme.textOnAccent}
-                  />
+                  <Symbol name={icon} size={11} color={accent} />
                 ) : item.kind === 'flight' ? (
                   <AirlineLogo
                     airline={item.flight?.airline}
@@ -459,54 +373,61 @@ export function TravelTimelineNode({
                     fallbackColor={accent}
                   />
                 ) : (
-                  <Symbol
-                    name={icon}
-                    size={boardIconSize}
-                    color={accent}
-                  />
+                  <Symbol name={icon} size={boardIconSize} color={accent} />
                 )}
-              </View>
+              </GlassIconWell>
             ) : null}
             <View
               style={[
                 styles.flex,
-                isCompactBoardCard
-                  ? {
-                      gap: rs.xxs,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }
-                  : null,
+                dense
+                  ? styles.denseCopy
+                  : isCompactBoardCard
+                    ? {
+                        gap: rs.xxs,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }
+                    : null,
               ]}>
               <TimelineItemTitle
                 title={title}
                 compact={compact}
                 dense={dense}
                 align={isCompactBoardCard ? 'center' : 'left'}
+                onGlass={onGlass}
               />
               {showHeaderCaption ? (
                 flightCaption ? (
                   <TimelineFlightCaption
                     {...flightCaption}
                     align={isCompactBoardCard ? 'center' : 'left'}
+                    onGlass={onGlass}
                   />
                 ) : (
                   <AppText
                     variant="caption"
-                    color="secondary"
+                    color={onGlass ? undefined : 'secondary'}
                     fit
                     align={isCompactBoardCard ? 'center' : undefined}
-                    style={
-                      isCompactBoardCard
-                        ? styles.centeredCaption
-                        : undefined
-                    }>
+                    style={[
+                      isCompactBoardCard ? styles.centeredCaption : undefined,
+                      dense ? denseChromeTextStyle : undefined,
+                      onGlass ? { color: 'rgba(255,255,255,0.72)' } : undefined,
+                    ]}>
                     {caption}
                   </AppText>
                 )
               ) : null}
               {shareCue && !isCompactBoardCard ? (
-                <AppText variant="caption" color="secondary" fit>
+                <AppText
+                  variant="caption"
+                  color={onGlass ? undefined : 'secondary'}
+                  fit
+                  style={[
+                    dense ? denseChromeTextStyle : undefined,
+                    onGlass ? { color: 'rgba(255,255,255,0.72)' } : undefined,
+                  ]}>
                   {shareCue}
                 </AppText>
               ) : null}
@@ -531,7 +452,7 @@ export function TravelTimelineNode({
               <DisclosureChevron
                 expanded={isExpanded}
                 size={dense || compact ? 10 : 12}
-                color={isCompactBoardCard ? accent : theme.textTertiary}
+                color={onGlass ? '#FFFFFF' : theme.textTertiary}
               />
             </View>
         </Pressable>
@@ -542,22 +463,26 @@ export function TravelTimelineNode({
 
         <CollapsibleBody expanded={isExpanded}>
           <View
-            style={[
-              styles.itemDetails,
-              {
-                gap: dense ? rs.xs : rs.md,
-                paddingLeft: dense ? denseDetailsInset : undefined,
-                paddingBottom: dense ? rs.xs : undefined,
-              },
-            ]}
+            style={{
+              gap: dense ? rs.xs : rs.md,
+              paddingLeft: dense ? denseDetailsInset : undefined,
+              paddingBottom: dense ? rs.xs : undefined,
+            }}
           >
             {showDenseMeta ? (
-              <AppText variant="caption" color="secondary" fit>
+              <AppText
+                variant="caption"
+                color={onGlass ? undefined : 'secondary'}
+                fit
+                style={onGlass ? { color: 'rgba(255,255,255,0.72)' } : undefined}>
                 {caption}
               </AppText>
             ) : null}
             {caption && !showHeaderCaption && !showDenseMeta ? (
-              <AppText variant="caption" color="accent">
+              <AppText
+                variant="caption"
+                color={onGlass ? undefined : 'accent'}
+                style={onGlass ? { color: 'rgba(255,255,255,0.85)' } : undefined}>
                 {caption}
               </AppText>
             ) : null}
@@ -575,28 +500,35 @@ export function TravelTimelineNode({
                   onPress={() => {
                     openAddressWithMapsChooser(item.details!);
                   }}
-                  style={({ pressed }) => [
-                    styles.addressLink,
-                    {
-                      minHeight: Math.max(48, s(48)),
-                      paddingHorizontal: rs.sm,
-                      paddingVertical: rs.xs,
-                      gap: rs.sm,
-                      backgroundColor: tint,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Symbol name="location" size="sm" color={accent} />
-                  <View style={styles.addressCopy}>
-                    <AppText variant="callout" color="primary" selectable>
-                      {item.details}
-                    </AppText>
-                  </View>
-                  <Symbol name="open-external" size="sm" color={accent} />
+                  style={({ pressed }) => [pressed && styles.pressed]}>
+                  <GlassPlate
+                    mist
+                    style={[
+                      styles.addressLink,
+                      {
+                        minHeight: Math.max(48, s(48)),
+                        paddingHorizontal: rs.sm,
+                        paddingVertical: rs.xs,
+                        gap: rs.sm,
+                        borderRadius: radii.md,
+                      },
+                    ]}>
+                    <Symbol name="location" size="sm" color={accent} />
+                    <View style={styles.addressCopy}>
+                      <AppText variant="callout" color="primary" selectable>
+                        {item.details}
+                      </AppText>
+                    </View>
+                    <Symbol name="open-external" size="sm" color={accent} />
+                  </GlassPlate>
                 </Pressable>
               ) : (
-                <AppText variant="body" color="secondary">
+                <AppText
+                  variant="body"
+                  color={onGlass ? undefined : 'secondary'}
+                  style={
+                    onGlass ? { color: 'rgba(255,255,255,0.72)' } : undefined
+                  }>
                   {item.details}
                 </AppText>
               )
@@ -604,139 +536,60 @@ export function TravelTimelineNode({
 
             <PhotoStrip uris={photos} onRemove={onRemovePhoto} />
 
-            {showStructuredDetails &&
-            item.kind === 'flight' &&
-            item.flight &&
-            !editingFlight ? (
-              <FlightDetailsSummary
-                itemId={item.id}
-                details={item.flight}
-                date={item.date}
-                startMinutes={item.startMinutes}
-                durationMinutes={item.durationMinutes}
-                hideHero={isCompactFlight}
-                bare={isCompactFlight}
-              />
-            ) : null}
-            {showStructuredDetails &&
-            item.kind === 'transport' &&
-            item.transport &&
-            !editingTransport ? (
-              <TransportDetailsSummary
-                itemId={item.id}
-                details={item.transport}
-                departureDate={item.date}
-                departureMinutes={item.startMinutes}
-                dateDisplayFormat={dateDisplayFormat}
-              />
-            ) : null}
-            {showStructuredDetails &&
-            item.kind === 'rental' &&
-            item.rental &&
-            !editingRental ? (
-              <RentalDetailsSummary
-                details={item.rental}
-                pickupDate={item.date}
-                pickupMinutes={item.startMinutes}
-                dateDisplayFormat={dateDisplayFormat}
-              />
-            ) : null}
-            {showStructuredDetails &&
-            item.kind === 'stay' &&
-            item.stay &&
-            !editingStay ? (
-              <StayDetailsSummary
-                details={item.stay}
-                title={item.title}
-                address={item.details}
-                bookingUrl={item.bookingUrl}
-                photoUris={item.photoUris}
-                checkinDate={item.date}
-                checkinMinutes={item.startMinutes}
-                dateDisplayFormat={dateDisplayFormat}
-              />
-            ) : null}
-            {item.kind === 'flight' && editingFlight ? (
-              <FlightDetailsCardEditor
-                value={editedFlightDetails}
-                error={editedFlightDetailsError}
-                importedFileName={editedFlightFileName}
-                importing={importingFlight}
-                item={item}
-                onChange={onEditedFlightDetailsChange}
-                onImport={onImportFlight}
-                onSave={onSaveFlightDetails}
-                onCancel={onCancelFlightEdit}
-                onRemove={onRemove}
-              />
-            ) : null}
-            {item.kind === 'rental' && editingRental ? (
-              <RentalDetailsCardEditor
-                key={editedRentalFileName ?? item.id}
-                value={editedRentalDetails}
-                onChange={onEditedRentalDetailsChange}
-                error={editedRentalDetailsError}
-                importedFileName={editedRentalFileName}
-                importing={importingRental}
-                item={item}
-                onImport={onImportRental}
-                planStartDate={planStartDate}
-                planEndDate={planEndDate}
-                onSave={onSaveRentalDetails}
-                onCancel={onCancelRentalEdit}
-                onRemove={onRemove}
-              />
-            ) : null}
-            {item.kind === 'stay' && editingStay ? (
-              <StayDetailsCardEditor
-                key={editedStayFileName ?? item.id}
-                value={editedStayDetails}
-                onChange={onEditedStayDetailsChange}
-                error={editedStayDetailsError}
-                importedFileName={editedStayFileName}
-                importing={importingStay}
-                item={item}
-                onImport={onImportStay}
-                planStartDate={planStartDate}
-                planEndDate={planEndDate}
-                onSave={onSaveStayDetails}
-                onCancel={onCancelStayEdit}
-                onRemove={onRemove}
-              />
-            ) : null}
-            {item.kind === 'transport' && editingTransport ? (
-              <TransportDetailsCardEditor
-                item={item}
-                planStartDate={planStartDate}
-                planEndDate={planEndDate}
-                onSave={(nextDetails, schedule) => {
-                  onSaveTransportDetails?.(nextDetails, schedule);
-                  setEditingTransport(false);
-                }}
-                onCancel={() => setEditingTransport(false)}
-                onRemove={onRemove}
-              />
-            ) : null}
-            {!editingStructured ? (
-              <TimelineItemToolbar
-                item={item}
-                size={toolbarActionSize}
-                allowStructuredEditing={allowStructuredEditing}
-                showStructuredDetails={showStructuredDetails}
-                isMoment={isMoment}
-                canShare={ownsItem && Boolean(onShare)}
-                align={dense ? 'left' : 'center'}
-                onOpenNotes={() => setNotesOpen(true)}
-                onAddPhotos={onAddPhotos}
-                onShare={onShare}
-                onBeginFlightEdit={onBeginFlightEdit}
-                onBeginRentalEdit={onBeginRentalEdit}
-                onBeginStayEdit={onBeginStayEdit}
-                onBeginTransportEdit={() => setEditingTransport(true)}
-                onOpenBooking={openBooking}
-                onRemove={onRemove}
-              />
-            ) : null}
+            <TravelTimelineNodeStructured
+              item={item}
+              dateDisplayFormat={dateDisplayFormat}
+              allowStructuredEditing={allowStructuredEditing}
+              showStructuredDetails={showStructuredDetails}
+              isMoment={isMoment}
+              isCompactFlight={isCompactFlight}
+              editingFlight={editingFlight}
+              editingRental={editingRental}
+              editingStay={editingStay}
+              editingTransport={editingTransport}
+              editingStructured={editingStructured}
+              editedFlightDetails={editedFlightDetails}
+              editedFlightDetailsError={editedFlightDetailsError}
+              editedFlightFileName={editedFlightFileName}
+              importingFlight={importingFlight}
+              editedRentalDetails={editedRentalDetails}
+              editedRentalDetailsError={editedRentalDetailsError}
+              editedRentalFileName={editedRentalFileName}
+              importingRental={importingRental}
+              editedStayDetails={editedStayDetails}
+              editedStayDetailsError={editedStayDetailsError}
+              editedStayFileName={editedStayFileName}
+              importingStay={importingStay}
+              planStartDate={planStartDate}
+              planEndDate={planEndDate}
+              toolbarActionSize={toolbarActionSize}
+              canShare={ownsItem && Boolean(onShare)}
+              dense={dense}
+              onGlass={onGlass}
+              onEditedFlightDetailsChange={onEditedFlightDetailsChange}
+              onImportFlight={onImportFlight}
+              onSaveFlightDetails={onSaveFlightDetails}
+              onCancelFlightEdit={onCancelFlightEdit}
+              onBeginFlightEdit={onBeginFlightEdit}
+              onEditedRentalDetailsChange={onEditedRentalDetailsChange}
+              onImportRental={onImportRental}
+              onSaveRentalDetails={onSaveRentalDetails}
+              onCancelRentalEdit={onCancelRentalEdit}
+              onBeginRentalEdit={onBeginRentalEdit}
+              onEditedStayDetailsChange={onEditedStayDetailsChange}
+              onImportStay={onImportStay}
+              onSaveStayDetails={onSaveStayDetails}
+              onCancelStayEdit={onCancelStayEdit}
+              onBeginStayEdit={onBeginStayEdit}
+              onSaveTransportDetails={onSaveTransportDetails}
+              onBeginTransportEdit={() => setEditingTransport(true)}
+              onCancelTransportEdit={() => setEditingTransport(false)}
+              onOpenNotes={() => setNotesOpen(true)}
+              onAddPhotos={onAddPhotos}
+              onShare={onShare}
+              onOpenBooking={openBooking}
+              onRemove={onRemove}
+            />
           </View>
         </CollapsibleBody>
       </View>
@@ -750,20 +603,14 @@ export function TravelTimelineNode({
         {
           borderRadius: cardRadius,
           borderCurve: 'continuous',
-          overflow: 'hidden',
-          ...(isCompactBoardCard
-            ? {}
-            : {
-                backgroundColor: cardFill,
-                borderWidth: 0,
-                borderColor: 'transparent',
-                boxShadow: dense ? undefined : TRAVEL_CARD_SHADOW,
-              }),
+          // Mist glass clips itself — parent overflow:hidden kills iOS frost.
+          overflow: useMistShell ? 'visible' : 'hidden',
+          boxShadow: useMistShell && !isCompactBoardCard ? TRAVEL_CARD_SHADOW : undefined,
         },
       ]}>
-      {isCompactBoardCard ? (
+      {useMistShell ? (
         <TravelHomeGlass
-          clear
+          mist
           style={[
             styles.nodeCard,
             {
@@ -802,22 +649,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  kindPill: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-    flexShrink: 0,
-  },
-  itineraryActionsWrap: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  itineraryActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   addressLink: {
     width: '100%',
     flexDirection: 'row',
@@ -826,17 +657,16 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   addressCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
-  itemDetails: {},
   itemSizeAction: {
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  itemHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  itemHeader: { flexDirection: 'row', alignItems: 'center' },
   denseTime: {
     flexShrink: 0,
     justifyContent: 'center',
-    alignSelf: 'center',
+    alignSelf: 'stretch',
   },
   denseTimeLabel: {
     flexShrink: 1,
@@ -845,5 +675,9 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   flex: { flex: 1, minWidth: 0, flexShrink: 1, gap: spacing.xxs },
+  denseCopy: {
+    gap: 0,
+    justifyContent: 'center',
+  },
   centeredCaption: { textAlign: 'center', width: '100%' },
 });

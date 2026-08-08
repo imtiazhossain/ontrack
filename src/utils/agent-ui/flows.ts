@@ -90,6 +90,17 @@ export const AGENT_UI_FLOWS = {
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
   ],
+  /** Visual QA: Travel Home seed → Iceland itinerary (live sky when tier allows). */
+  'travel-home-iceland': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-home' },
+    { op: 'goto', to: 'travel/trip-travel-home-iceland' },
+    {
+      op: 'wait',
+      id: 'ontrack.travel.chrome.skyDecor',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+  ],
   'travel-demo-hub': [
     { op: 'dismiss', prefix: 'ontrack.travel.' },
     { op: 'seed', to: 'travel-demo' },
@@ -121,6 +132,24 @@ export const AGENT_UI_FLOWS = {
     {
       op: 'wait',
       prefix: 'ontrack.travel.itineraryAdd.',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'wait', ms: 250 },
+  ],
+  /** Add-to-timeline kind picker (Transit / Flights / Stays / …). */
+  'travel-demo-timeline-add': [
+    { op: 'dismiss', prefix: 'ontrack.travel.' },
+    { op: 'seed', to: 'travel-demo' },
+    { op: 'goto', to: `travel/${AGENT_UI_DEMO_TRIP_ID}` },
+    {
+      op: 'wait',
+      id: 'ontrack.travel.planDetail.addToTimeline',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'tap', id: 'ontrack.travel.planDetail.addToTimeline' },
+    {
+      op: 'wait',
+      id: 'ontrack.travel.timelineAdd.kind.transport',
       timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
     },
     { op: 'wait', ms: 250 },
@@ -255,8 +284,30 @@ export const AGENT_UI_FLOWS = {
     { op: 'goto', to: 'today' },
     { op: 'wait', prefix: 'ontrack.today.', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
   ],
+  /** Yesterday on Today — weather chrome stays when Open-Meteo still has that day. */
+  'today-prev-day': [
+    { op: 'seed', to: 'home-weather' },
+    { op: 'goto', to: 'today' },
+    { op: 'wait', id: 'ontrack.today.prevDay', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'tap', id: 'ontrack.today.prevDay' },
+    { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'wait', ms: 800 },
+  ],
+  /** Tomorrow on Today — daily H/L (banner only when forecast data exists). */
+  'today-next-day': [
+    { op: 'seed', to: 'home-weather' },
+    { op: 'goto', to: 'today' },
+    { op: 'wait', id: 'ontrack.today.nextDay', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'tap', id: 'ontrack.today.nextDay' },
+    { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    // Forecast resolve after day change (past-window fetch can be slower).
+    { op: 'wait', ms: 800 },
+  ],
   'open-home-location': [
     { op: 'dismiss', prefix: 'ontrack.today.location.' },
+    { op: 'seed', to: 'home-weather' },
     { op: 'goto', to: 'today' },
     { op: 'wait', id: 'ontrack.today.weather', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
     { op: 'tap', id: 'ontrack.today.weather' },
@@ -462,6 +513,38 @@ export const AGENT_UI_FLOWS = {
   profile: [
     { op: 'goto', to: 'profile' },
     { op: 'wait', prefix: 'ontrack.profile.', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+  ],
+  'open-avatar-editor': [
+    { op: 'dismiss', prefix: 'ontrack.profile.avatar.' },
+    { op: 'goto', to: 'profile' },
+    { op: 'wait', id: 'ontrack.profile.avatar', timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS },
+    { op: 'tap', id: 'ontrack.profile.avatar' },
+    {
+      op: 'wait',
+      id: 'ontrack.profile.avatar.close',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'wait', ms: 250 },
+  ],
+  'open-developer': [
+    { op: 'goto', to: 'developer' },
+    {
+      op: 'wait',
+      id: 'ontrack.developer.devMode',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'wait', ms: 250 },
+  ],
+  /** Profile preferences GlassSwitch (works without developer_tools flag). */
+  'profile-usage-analytics': [
+    { op: 'goto', to: 'profile' },
+    {
+      op: 'wait',
+      id: 'ontrack.profile.usageAnalytics',
+      timeoutMs: AGENT_UI_WAIT_TIMEOUT_MS,
+    },
+    { op: 'scroll', id: 'ontrack.profile.usageAnalytics' },
+    { op: 'wait', ms: 250 },
   ],
   vehicles: [
     { op: 'goto', to: 'vehicles' },

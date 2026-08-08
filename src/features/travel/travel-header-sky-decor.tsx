@@ -2,10 +2,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import type { TravelTimeOfDay } from '@/features/travel/travel-atmosphere-model';
-import { matchCuratedAtmosphereForPlace } from '@/features/travel/travel-home-atmosphere-catalog';
 import {
-  headerSkyChromeColor,
-  resolveHeaderSkyCondition,
+    headerSkyChromeColor,
+    resolveHeaderSkyCondition,
 } from '@/features/travel/travel-sky-condition';
 import { TravelSkyDay } from '@/features/travel/travel-sky-day';
 import { TravelSkyGround } from '@/features/travel/travel-sky-ground';
@@ -13,8 +12,8 @@ import { resolveTravelSkyGroundKind } from '@/features/travel/travel-sky-ground-
 import { TravelSkyNight } from '@/features/travel/travel-sky-night';
 import { SKY_VIEW_H } from '@/features/travel/travel-sky-plate';
 import { TravelSkyStaticDestination } from '@/features/travel/travel-sky-static-destination';
-import { useTravelSkyQuality } from '@/features/travel/use-travel-sky-quality';
 import { useTiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
+import { useTravelSkyQuality } from '@/features/travel/use-travel-sky-quality';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 
@@ -25,6 +24,8 @@ import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
  *
  * Fidelity follows device capability (and can step down at runtime) from full
  * motion → thinned FX → static SVG plate → destination still (Ken Burns).
+ * Every trip uses live SVG when the tier allows (`full` / `reduced`); destination
+ * stills are only for `minimal` / `static` devices.
  *
  * @param statusBandRatio Fraction of the plate reserved for the status-bar band
  *   (celestial discs stay below the clock / Dynamic Island).
@@ -57,7 +58,7 @@ export function TravelHeaderSkyDecor({
 } = {}) {
   const theme = useTheme();
   const dark = theme.name === 'dark';
-  const { plan } = useTravelSkyQuality();
+  const { plan, quality } = useTravelSkyQuality();
   const motion = useTiltSkyMotion(plan.tilt);
   const statusBand = Math.max(0, Math.min(0.55, statusBandRatio)) * SKY_VIEW_H;
   const condition = resolveHeaderSkyCondition({
@@ -79,13 +80,10 @@ export function TravelHeaderSkyDecor({
   });
   const horizon = fadeTo ?? chrome;
   const groundKind = resolveTravelSkyGroundKind(destination, latitude);
-  // Labeled curated places (Antigua, Iceland, Lisbon, …) always get the
-  // sky+ground still — procedural SVG reads as an empty wash on warm Android
-  // day chromes, and the trip card already shows the same plate.
+  // Capability only — do not force photo stills for curated destinations.
+  // Gate on tier (not settle-gated plan.liveFx) so we never flash still→live.
   const preferDestinationStill =
-    plan.quality === 'static' ||
-    (destination.trim().length > 0 &&
-      matchCuratedAtmosphereForPlace(destination).length > 0);
+    quality === 'static' || quality === 'minimal';
 
   return (
     <AgentTestId

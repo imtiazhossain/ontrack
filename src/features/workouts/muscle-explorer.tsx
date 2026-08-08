@@ -221,7 +221,7 @@ function AnatomySexTab({
       onPress={onPress}
       style={[styles.sexToggleTab, selected && styles.selectedToggleTab]}>
       {selected ? (
-        <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+        <GlassPlate airy style={StyleSheet.absoluteFill} />
       ) : null}
       <AppText
         variant="caption"
@@ -261,7 +261,7 @@ function BodyViewTab({
       onPress={onPress}
       style={[styles.bodyTab, selected && styles.selectedToggleTab]}>
       {selected ? (
-        <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+        <GlassPlate airy style={StyleSheet.absoluteFill} />
       ) : null}
       <AppText
         variant="caption"

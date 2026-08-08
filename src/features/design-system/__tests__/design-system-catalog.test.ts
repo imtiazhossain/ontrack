@@ -1,5 +1,6 @@
 import {
   DESIGN_CATALOG,
+  DESIGN_CATALOG_GROUP_LABELS,
   DESIGN_CATALOG_GROUPS,
   catalogByFeature,
   catalogByGroup,
@@ -11,11 +12,12 @@ describe('design-system catalog', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('covers every catalog group', () => {
+  it('covers every catalog group with a plain-language label', () => {
     const groups = new Set(DESIGN_CATALOG.map((el) => el.group));
     for (const group of DESIGN_CATALOG_GROUPS) {
       expect(groups.has(group)).toBe(true);
       expect(catalogByGroup()[group].length).toBeGreaterThan(0);
+      expect(DESIGN_CATALOG_GROUP_LABELS[group].length).toBeGreaterThan(0);
     }
   });
 

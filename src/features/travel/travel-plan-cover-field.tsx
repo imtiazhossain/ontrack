@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassIconWell, Symbol } from '@/components/primitives';
 import { fontFamilies } from '@/design-system';
 import {
   fetchDestinationCoverUri,
@@ -95,27 +95,28 @@ export function TravelPlanCoverField({
           styles.row,
           { gap: rs.md, opacity: pressed ? 0.78 : 1 },
         ]}>
-        <View
-          style={[
-            styles.thumb,
-            {
-              width: size,
-              height: size,
-              borderRadius: Math.max(16, s(16)),
-              backgroundColor: chrome.icons.flight.bg,
-            },
-          ]}>
-          {preview ? (
+        {preview ? (
+          <View
+            style={[
+              styles.thumb,
+              {
+                width: size,
+                height: size,
+                borderRadius: Math.max(16, s(16)),
+              },
+            ]}>
             <Image
               source={{ uri: preview }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               recyclingKey={preview}
             />
-          ) : (
+          </View>
+        ) : (
+          <GlassIconWell size={size} borderRadius={Math.max(16, s(16))}>
             <Symbol name="flight" size="md" color={chrome.icons.flight.fg} />
-          )}
-        </View>
+          </GlassIconWell>
+        )}
         <View style={styles.copy}>
           <AppText
             style={[

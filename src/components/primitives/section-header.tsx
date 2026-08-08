@@ -31,7 +31,7 @@ export function SectionHeader({
   actionTestID,
   actionDisabled,
   titleStyle,
-  titleColor = 'tertiary',
+  titleColor = 'secondary',
   flush = false,
 }: SectionHeaderProps) {
   const { spacing, layout } = useResponsive();

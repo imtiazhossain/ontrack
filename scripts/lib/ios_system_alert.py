@@ -146,9 +146,16 @@ def _ios_sim_target() -> str:
 
 def take_screenshot(path: Path) -> None:
     # Shared retry/unpark path — parked agent windows lose IOSurface otherwise.
+    # Fail before spawn when the lease device is Shutdown (simctl hangs forever).
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import agent_ui_color as color  # type: ignore
 
+    target = _ios_sim_target()
+    if not color._ios_device_is_booted(target):  # noqa: SLF001 — shared preflight
+        raise SystemExit(
+            f"error: iOS screenshot failed: device not Booted "
+            f"({target[:8] if target != 'booted' else target})"
+        )
     try:
         color.capture_screenshot(path)
     except SystemExit as exc:
@@ -647,16 +654,39 @@ def ensure_clear(*, force: bool = False) -> int:
             first = probe(force=force)
         except SystemExit as exc:
             detail = str(exc)
-            # Scheme pre-approval covers Open-in; don't fail verify when the
-            # parked agent window still has no IOSurface after retries.
-            if "screen surfaces" in detail.lower() or "screenshot failed" in detail.lower():
+            surfaces = (
+                "screen surfaces" in detail.lower()
+                or "screenshot failed" in detail.lower()
+                or "screenshot timed out" in detail.lower()
+                or "heal budget" in detail.lower()
+            )
+            if not surfaces:
+                raise
+            # Soft-continue when we are not proving a headed viewer:
+            # - true headless (no Simulator.app), or
+            # - headless agent-pool lease (Agent N minimized while user's Pro
+            #   keeps Simulator.app open). Hard-fail only for headed verify.
+            want_window = _want_simulator_window()
+            lease = _preferred_sim_name()
+            agent_headless = (not want_window) and ("Agent" in lease)
+            if not simulator_running() or agent_headless:
+                why = (
+                    "headless agent pool"
+                    if agent_headless and simulator_running()
+                    else "headless, screenshot surfaces unavailable"
+                )
                 print(
-                    "agent-ui: iOS alert OCR skipped (screenshot surfaces unavailable) — continuing",
+                    f"agent-ui: iOS alert OCR skipped ({why}) — continuing",
                     file=sys.stderr,
                 )
                 mark_clear()
                 return 0
-            raise
+            print(
+                "error: iOS alert OCR failed (screenshot surfaces unavailable after unpark). "
+                "Cannot prove system sheets are clear — retry verify.",
+                file=sys.stderr,
+            )
+            return 2
         if not first.get("blocking"):
             if not first.get("cached"):
                 mark_clear()

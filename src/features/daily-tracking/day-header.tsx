@@ -11,6 +11,7 @@ import {
     useSafeAreaChrome,
 } from '@/components/primitives';
 import {
+    hexWithAlpha,
     layout,
     radii,
     spacing,
@@ -19,9 +20,11 @@ import {
 } from '@/design-system';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import {
-    unitSymbol,
-    useHomeWeather,
-} from '@/features/daily-tracking/use-home-weather';
+    formatHomeWeatherPrimaryLabel,
+    formatHomeWeatherRangeLabel,
+    formatHomeWeatherTemperatureLabel,
+} from '@/features/daily-tracking/resolve-home-weather-day';
+import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
@@ -51,24 +54,29 @@ export function DayHeader({
   const gradient = timeOfDayGradient(theme, hour);
   useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour));
   const viewingToday = isToday(date);
-  const { hasLocation, weather, icon, loading, detectingLocation, error } =
-    useHomeWeather();
+  const { weather, icon, showWeather } = useHomeWeather(date);
   const [locationOpen, setLocationOpen] = useState(false);
   const openWeather = () => setLocationOpen(true);
+  const primaryLabel = weather ? formatHomeWeatherPrimaryLabel(weather) : '';
+  const rangeLabel = weather ? formatHomeWeatherRangeLabel(weather) : undefined;
   const weatherAccessibilityLabel = weather
-    ? `${weather.condition}, ${weather.temperature}${unitSymbol(weather.temperatureUnit)} in ${weather.locationLabel}. Edit home location.`
-    : hasLocation
-      ? 'Edit home location for weather'
-      : 'Set location for weather';
+    ? `${formatHomeWeatherTemperatureLabel(weather)} in ${weather.locationLabel}. Edit home location.`
+    : 'Edit home location for weather';
   return (
     <View style={[styles.container, { paddingTop: topInset + spacing.md }]}>
       {/*
-        Fade time-of-day wash into transparent so ScreenAtmosphere orbs
-        show through — opaque paper stops kill frost readability.
+        Soft multi-stop dissolve into ScreenAtmosphere — avoid a mid-header
+        muddy band from a hard opaque→transparent seam.
       */}
       <LinearGradient
-        colors={[gradient[0], `${gradient[0]}99`, 'transparent']}
-        locations={[0, 0.55, 1]}
+        colors={[
+          gradient[0],
+          hexWithAlpha(gradient[0], 0.78),
+          hexWithAlpha(gradient[0], 0.42),
+          hexWithAlpha(gradient[0], 0.14),
+          'transparent',
+        ]}
+        locations={[0, 0.24, 0.5, 0.76, 1]}
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
       />
@@ -95,7 +103,7 @@ export function DayHeader({
         />
       </View>
 
-      {viewingToday ? (
+      {showWeather && weather ? (
         <Card
           airy
           padded={false}
@@ -103,51 +111,57 @@ export function DayHeader({
           accessibilityLabel={weatherAccessibilityLabel}
           onPress={openWeather}
           style={[
-            styles.weatherRow,
+            styles.weatherCard,
             {
-              minHeight: Math.max(44, s(44)),
-              paddingHorizontal: rs.md,
-              paddingVertical: rs.sm,
+              minHeight: Math.max(48, s(48)),
+              paddingHorizontal: rs.xl,
+              paddingVertical: rs.md,
               gap: rs.sm,
               borderRadius: radii.lg,
             },
           ]}>
-          <Symbol
-            name={icon ?? (hasLocation ? 'weather' : 'location')}
-            size="md"
-            color={theme.accentPrimary}
-          />
-          <View style={styles.weatherCopy}>
-            {weather ? (
-              <>
-                <AppText variant="callout" color="accent" fit numberOfLines={1}>
-                  {`${weather.temperature}${unitSymbol(weather.temperatureUnit)} · ${weather.condition}`}
-                </AppText>
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  fit
-                  numberOfLines={1}>
-                  {weather.locationLabel}
-                </AppText>
-              </>
-            ) : loading || detectingLocation ? (
-              <AppText variant="callout" color="secondary" fit numberOfLines={1}>
-                {detectingLocation
-                  ? 'Finding your location…'
-                  : 'Checking weather…'}
+          <View style={[styles.weatherStack, { gap: rs.xs }]}>
+            <View style={styles.weatherPrimaryRow}>
+              <Symbol
+                name={icon ?? 'weather'}
+                size="md"
+                color={theme.accentPrimary}
+              />
+              <AppText
+                variant="callout"
+                color="accent"
+                align="center"
+                fit
+                numberOfLines={1}
+                style={styles.weatherPrimaryText}>
+                {/* Same ` · ` break + spacing as temp · condition in the label. */}
+                {` · ${primaryLabel}`}
               </AppText>
-            ) : error && hasLocation ? (
-              <AppText variant="callout" color="secondary" fit numberOfLines={1}>
-                Weather unavailable · tap to edit location
+            </View>
+            {rangeLabel ? (
+              <AppText
+                variant="caption"
+                color="secondary"
+                align="center"
+                fit
+                numberOfLines={1}>
+                {rangeLabel}
               </AppText>
-            ) : (
-              <AppText variant="callout" color="secondary" fit numberOfLines={1}>
-                Set location for weather
-              </AppText>
-            )}
+            ) : null}
+            <AppText
+              variant="caption"
+              color="tertiary"
+              align="center"
+              fit
+              numberOfLines={1}>
+              {weather.locationLabel}
+            </AppText>
           </View>
-          <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+          <View
+            style={[styles.weatherChevron, { right: rs.md }]}
+            pointerEvents="none">
+            <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+          </View>
         </Card>
       ) : null}
 
@@ -203,14 +217,32 @@ const styles = StyleSheet.create({
   titleBlock: {
     gap: spacing.xxs,
   },
-  weatherRow: {
+  weatherCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weatherStack: {
+    width: '100%',
+    alignItems: 'center',
+    minWidth: 0,
+    paddingHorizontal: spacing.lg,
+  },
+  weatherPrimaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  weatherCopy: {
-    flex: 1,
+    justifyContent: 'center',
+    maxWidth: '100%',
     minWidth: 0,
-    gap: 2,
+  },
+  weatherPrimaryText: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  weatherChevron: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   progressRow: {
     flexDirection: 'row',

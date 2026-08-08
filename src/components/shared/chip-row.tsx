@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
-import { AppText } from '@/components/primitives';
+import { AppText, GlassPlate } from '@/components/primitives';
 import { borders, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId } from '@/utils/agent-ui';
@@ -28,7 +28,8 @@ export function ChipRow<T extends string>({
   testIDForOption,
 }: ChipRowProps<T>) {
   const theme = useTheme();
-  const isSelected = (v: T) => (Array.isArray(selected) ? selected.includes(v) : selected === v);
+  const isSelected = (v: T) =>
+    Array.isArray(selected) ? selected.includes(v) : selected === v;
 
   const chips = options.map((option) => {
     const active = isSelected(option.value);
@@ -45,20 +46,28 @@ export function ChipRow<T extends string>({
         accessibilityLabel={option.label}
         accessibilityState={{ selected: active }}
         onPress={select}
-        style={[
-          styles.chip,
-          {
-            backgroundColor: active ? theme.accentFaint : theme.backgroundSunken,
-            borderColor: active ? theme.accentPrimary : 'transparent',
-          },
-        ]}>
-        <AppText variant="callout" color={active ? 'accent' : 'secondary'} fit>
-          {option.label}
-        </AppText>
+        style={styles.chipPressable}>
+        <GlassPlate
+          mist
+          style={[
+            styles.chip,
+            {
+              borderColor: active ? theme.accentPrimary : 'transparent',
+              borderWidth: borders.thin,
+            },
+          ]}>
+          <AppText variant="callout" color={active ? 'accent' : 'secondary'} fit>
+            {option.label}
+          </AppText>
+        </GlassPlate>
       </Pressable>
     );
     return testID ? (
-      <AgentTestId key={option.value} testID={testID} label={option.label} onPress={select}>
+      <AgentTestId
+        key={option.value}
+        testID={testID}
+        label={option.label}
+        onPress={select}>
         {chip}
       </AgentTestId>
     ) : (
@@ -76,7 +85,13 @@ export function ChipRow<T extends string>({
       </ScrollView>
     );
   }
-  return <ScrollView scrollEnabled={false} contentContainerStyle={[styles.row, styles.wrap]}>{chips}</ScrollView>;
+  return (
+    <ScrollView
+      scrollEnabled={false}
+      contentContainerStyle={[styles.row, styles.wrap]}>
+      {chips}
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -87,14 +102,16 @@ const styles = StyleSheet.create({
   wrap: {
     flexWrap: 'wrap',
   },
+  chipPressable: {
+    minWidth: 0,
+    maxWidth: 140,
+  },
   chip: {
     borderRadius: radii.pill,
-    borderWidth: borders.thin,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 44,
     minWidth: 0,
-    maxWidth: 140,
     justifyContent: 'center',
   },
 });

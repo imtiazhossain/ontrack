@@ -145,26 +145,6 @@ export async function resolveTravelHomeAtmosphereImage(
 
   const destinationKey = place ? atmosphereDestinationKey(place) : undefined;
 
-  // Labeled destinations → curated first (bundled plates are people-free).
-  if (place) {
-    const placeCurated = pickCuratedTravelHomeAtmosphereForPlace(
-      place,
-      options.timeOfDay,
-      options.weatherCode,
-      recentKeys,
-      salt,
-    );
-    if (placeCurated) {
-      return destinationKey
-        ? {
-            ...placeCurated,
-            destinationKey,
-            label: placeCurated.label ?? place,
-          }
-        : placeCurated;
-    }
-  }
-
   try {
     const pool = await fetchPool(queries);
     if (pool.length > 0) {
@@ -182,6 +162,26 @@ export async function resolveTravelHomeAtmosphereImage(
     }
   } catch {
     // Curated fallback below.
+  }
+
+  // Prefer a people-vetted place plate when remote misses; else rotate catalog.
+  if (place) {
+    const placeCurated = pickCuratedTravelHomeAtmosphereForPlace(
+      place,
+      options.timeOfDay,
+      options.weatherCode,
+      recentKeys,
+      salt,
+    );
+    if (placeCurated) {
+      return destinationKey
+        ? {
+            ...placeCurated,
+            destinationKey,
+            label: placeCurated.label ?? place,
+          }
+        : placeCurated;
+    }
   }
 
   const curated = pickCuratedTravelHomeAtmosphere(

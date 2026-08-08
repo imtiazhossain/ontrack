@@ -4,11 +4,15 @@ export { googleWeatherUrl } from './google-weather';
 export {
   describeWeatherCode,
   getDestinationCurrentWeather,
+  getTravelWeather,
+  normalizeTravelWeatherDays,
+  OPEN_METEO_PAST_DAYS_MAX,
   weatherIconForCode,
 } from './provider';
+export type { TravelWeatherFetchOptions } from './provider';
 export type {
-  DestinationCurrentWeather,
-  TemperatureUnit,
-  TravelWeather,
-  TravelWeatherDay,
+    DestinationCurrentWeather,
+    TemperatureUnit,
+    TravelWeather,
+    TravelWeatherDay,
 } from './types';

@@ -174,8 +174,12 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     s(travelHomeTokens.sizes.itineraryIcon) - (Platform.OS === 'android' ? 3 : 0),
   );
   const itineraryGap = Platform.OS === 'android' ? 5 : 7;
-  /** CTA takes a bit more than dates so “View Itinerary” fits on ~384 Android. */
-  const itineraryFlex = compact ? undefined : Platform.OS === 'android' ? 1.35 : 1;
+  /**
+   * iOS: equal flex peer with dates.
+   * Android: hug the label (no flex grow) so days get leftover width — padding/icon
+   * already trimmed above; flexShrink:0 keeps “View Itinerary” from ellipsizing.
+   */
+  const itineraryFlex = compact || Platform.OS === 'android' ? undefined : 1;
   const itineraryContent = (
     <>
       <TravelHomeRouteIcon size={itineraryIconSize} color={itineraryFg} />
@@ -438,12 +442,14 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
                 paddingTop: destination || compact ? 0 : Math.max(8, footerPadV - 2),
                 paddingBottom: footerPadV,
-                // Dates + CTA flex peers (Android CTA slightly wider so the
-                // full “View Itinerary” label fits serif metrics).
+                // Dates + CTA: iOS equal flex; Android CTA hugs label width.
                 // Center (not stretch): date block is taller than the CTA once
                 // weekdays + day pill stack; stretch + metaBody overflow clips
                 // the calendar range line off the top.
-                gap: Math.max(10, rs.sm),
+                gap: Math.max(
+                  travelHomeTokens.spacing.datesToItinerary,
+                  s(travelHomeTokens.spacing.datesToItinerary),
+                ),
                 flexDirection: compact ? 'column' : 'row',
                 alignItems: compact ? 'stretch' : 'center',
               },
@@ -465,7 +471,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.itineraryHit,
                 {
                   flex: itineraryFlex,
-                  // Android: never shrink below the full label width.
+                  // Android: hug label; never shrink below full “View Itinerary”.
+                  flexGrow: Platform.OS === 'android' && !compact ? 0 : undefined,
                   flexShrink: Platform.OS === 'android' ? 0 : 1,
                   minWidth: Platform.OS === 'android' ? undefined : 0,
                   height: buttonHeight,
@@ -483,6 +490,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                     height: buttonHeight,
                     gap: itineraryGap,
                     paddingHorizontal: itineraryPadH,
+                    // Intrinsic width on Android landscape footer — not 100% of a flex peer.
+                    width: Platform.OS === 'android' && !compact ? undefined : '100%',
                     borderRadius: travelHomeTokens.radius.itineraryButton,
                     boxShadow: dark
                       ? travelHomeTokens.colors.itineraryButtonShadowDark

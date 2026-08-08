@@ -49,7 +49,7 @@ export function BalloonPopHud({
         <AppText variant="heading">{level}</AppText>
       </View>
 
-      <GlassPlate clear wash style={styles.target}>
+      <GlassPlate airy style={styles.target}>
         <View style={styles.targetInner}>
           <View style={[styles.swatch, { backgroundColor: fill }]} />
           <View style={styles.targetCopy}>

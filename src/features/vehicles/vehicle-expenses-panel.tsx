@@ -2,17 +2,18 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  Button,
-  Card,
-  DateField,
-  EmptyState,
-  ErrorMessage,
-  GlassPlate,
-  IconButton,
-  Input,
-  SectionHeader,
-  Symbol,
+    AppText,
+    Button,
+    Card,
+    DateField,
+    EmptyState,
+    ErrorMessage,
+    GlassIconWell,
+    GlassPlate,
+    IconButton,
+    Input,
+    SectionHeader,
+    Symbol,
 } from '@/components/primitives';
 import { ChipRow } from '@/components/shared';
 import { radii, type AppIconName } from '@/design-system';
@@ -143,17 +144,9 @@ export function VehicleExpensesPanel({
     <View style={{ gap: gap.lg }}>
       <Card style={{ ...styles.summaryCard, gap: gap.md, padding: gap.lg }}>
         <View style={[styles.summaryTop, { gap: gap.md }]}>
-          <View
-            style={[
-              styles.summaryIcon,
-              {
-                width: Math.max(48, s(52)),
-                height: Math.max(48, s(52)),
-                backgroundColor: theme.accentFaint,
-              },
-            ]}>
+          <GlassIconWell size={Math.max(48, s(52))} borderRadius={radii.md}>
             <Symbol name="receipt" size="md" color={theme.accentPrimary} />
-          </View>
+          </GlassIconWell>
           <View style={styles.summaryCopy}>
             <AppText variant="overline" color="accent" fit>
               Total spent · {vehicle.baseCurrency}
@@ -167,7 +160,7 @@ export function VehicleExpensesPanel({
             </AppText>
           </View>
         </View>
-        <GlassPlate clear wash style={styles.summaryMetrics}>
+        <GlassPlate airy style={styles.summaryMetrics}>
           <View
             style={[
               styles.summaryMetricsInner,
@@ -214,21 +207,13 @@ export function VehicleExpensesPanel({
           sortedExpenses.slice(0, 20).map((expense) => (
             <Card key={expense.id} style={{ padding: gap.md }}>
               <View style={[styles.expenseRow, { gap: gap.sm }]}>
-                <View
-                  style={[
-                    styles.categoryIcon,
-                    {
-                      width: Math.max(44, s(46)),
-                      height: Math.max(44, s(46)),
-                      backgroundColor: theme.accentFaint,
-                    },
-                  ]}>
+                <GlassIconWell size={Math.max(44, s(46))} borderRadius={radii.md}>
                   <Symbol
                     name={CATEGORY_ICONS[expense.category]}
                     size="sm"
                     color={theme.accentPrimary}
                   />
-                </View>
+                </GlassIconWell>
                 <View style={[styles.expenseCopy, { gap: gap.xxs }]}>
                   <AppText variant="subheading" fit numberOfLines={1}>
                     {expense.title}

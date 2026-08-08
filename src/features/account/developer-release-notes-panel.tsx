@@ -28,7 +28,7 @@ type NotesTab = 'releaseNotes' | 'changelog';
 
 const TAB_OPTIONS: { value: NotesTab; label: string }[] = [
   { value: 'releaseNotes', label: 'Release Notes' },
-  { value: 'changelog', label: 'Changelog' },
+  { value: 'changelog', label: 'Changelogs' },
 ];
 
 function VersionNotesBlock({ entry }: { entry: VersionNotesEntry }) {
@@ -56,12 +56,16 @@ function NotesDayPager({
   emptyLabel,
   dayIndex,
   onDayIndexChange,
+  currentVersionLabel,
+  mismatchHint,
 }: {
   entries: readonly VersionNotesEntry[];
   emptyLabel: string;
   /** 0 = newest day. */
   dayIndex: number;
   onDayIndexChange: (index: number) => void;
+  currentVersionLabel: string;
+  mismatchHint: boolean;
 }) {
   const theme = useTheme();
   const { spacing, layout } = useResponsive();
@@ -69,9 +73,24 @@ function NotesDayPager({
 
   if (days.length === 0) {
     return (
-      <AppText variant="caption" color="secondary">
-        {emptyLabel}
-      </AppText>
+      <View style={{ gap: spacing.xs }}>
+        <AgentTestId
+          testID={AgentUiIds.developer.releaseNotesCurrentVersion}
+          label={currentVersionLabel}>
+          <AppText variant="caption" color="secondary" fit>
+            {currentVersionLabel}
+          </AppText>
+        </AgentTestId>
+        {mismatchHint ? (
+          <AppText variant="caption" color="tertiary">
+            Catalog top version differs from this build (common in OTA or local
+            Metro).
+          </AppText>
+        ) : null}
+        <AppText variant="caption" color="secondary">
+          {emptyLabel}
+        </AppText>
+      </View>
     );
   }
 
@@ -126,6 +145,22 @@ function NotesDayPager({
         />
       </View>
 
+      <View style={{ gap: spacing.xs, alignItems: 'center' }}>
+        <AgentTestId
+          testID={AgentUiIds.developer.releaseNotesCurrentVersion}
+          label={currentVersionLabel}>
+          <AppText variant="caption" color="secondary" fit align="center">
+            {currentVersionLabel}
+          </AppText>
+        </AgentTestId>
+        {mismatchHint ? (
+          <AppText variant="caption" color="tertiary" align="center">
+            Catalog top version differs from this build (common in OTA or local
+            Metro).
+          </AppText>
+        ) : null}
+      </View>
+
       <AgentTestId
         testID={AgentUiIds.developer.releaseNotesList}
         label={`Versions for ${dateLabel}`}
@@ -160,6 +195,7 @@ export function DeveloperReleaseNotesPanel() {
   return (
     <CollapsibleSection
       title="App Updates"
+      defaultExpanded
       testID={AgentUiIds.developer.section.appUpdates}
       onExpandedChange={(expanded) => {
         if (expanded) setDayIndex(0);
@@ -168,20 +204,6 @@ export function DeveloperReleaseNotesPanel() {
         testID={AgentUiIds.developer.releaseNotes}
         label="App Updates"
         style={{ gap: spacing.sm }}>
-        <AgentTestId
-          testID={AgentUiIds.developer.releaseNotesCurrentVersion}
-          label={currentVersionLabel}>
-          <AppText variant="caption" color="secondary" fit>
-            {currentVersionLabel}
-          </AppText>
-        </AgentTestId>
-        {mismatch ? (
-          <AppText variant="caption" color="tertiary">
-            Catalog top version differs from this build (common in OTA or local
-            Metro).
-          </AppText>
-        ) : null}
-
         <AgentTestId
           testID={AgentUiIds.developer.releaseNotesTabs}
           label="Release notes tabs">
@@ -209,6 +231,8 @@ export function DeveloperReleaseNotesPanel() {
           }
           dayIndex={dayIndex}
           onDayIndexChange={setDayIndex}
+          currentVersionLabel={currentVersionLabel}
+          mismatchHint={mismatch}
         />
       </AgentTestId>
     </CollapsibleSection>

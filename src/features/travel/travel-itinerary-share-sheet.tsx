@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button } from '@/components/primitives';
+import { AppText, Button, GlassPlate } from '@/components/primitives';
 import { radii } from '@/design-system';
 import {
   TRAVEL_ITEM_SHARE_MODES,
@@ -123,25 +123,28 @@ export function TravelItineraryShareSheet({
                 testID={AgentUiIds.travel.itineraryShare.mode(mode)}
                 label={travelItemShareModeLabel(mode)}
                 onPress={() => setShareMode(mode)}
-                style={[
-                  styles.modeRow,
-                  {
-                    minHeight: s(56),
-                    padding: spacing.md,
-                    borderRadius: radii.lg,
-                    borderWidth: selected ? 2 : 1,
-                    borderColor: selected
-                      ? theme.accentPrimary
-                      : theme.separator,
-                    backgroundColor: theme.backgroundSunken,
-                  },
-                ]}>
-                <AppText variant="callout" fit>
-                  {travelItemShareModeLabel(mode)}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {travelItemShareModeHint(mode)}
-                </AppText>
+                style={{ borderRadius: radii.lg }}>
+                <GlassPlate
+                  airy
+                  style={[
+                    styles.modeRow,
+                    {
+                      minHeight: s(56),
+                      padding: spacing.md,
+                      borderRadius: radii.lg,
+                      borderWidth: selected ? 2 : 1,
+                      borderColor: selected
+                        ? theme.accentPrimary
+                        : theme.separator,
+                    },
+                  ]}>
+                  <AppText variant="callout" fit>
+                    {travelItemShareModeLabel(mode)}
+                  </AppText>
+                  <AppText variant="caption" color="secondary">
+                    {travelItemShareModeHint(mode)}
+                  </AppText>
+                </GlassPlate>
               </AgentTestId>
             );
           })}
@@ -165,26 +168,31 @@ export function TravelItineraryShareSheet({
                       )}
                       label={`Share with ${person.displayName}`}
                       onPress={() => togglePerson(person.userId)}
-                      style={[
-                        styles.personRow,
-                        {
-                          minHeight: s(48),
-                          paddingHorizontal: spacing.md,
-                          borderRadius: radii.md,
-                          backgroundColor: selected
-                            ? theme.accentSoft
-                            : theme.backgroundSunken,
-                        },
-                      ]}>
-                      <AppText
-                        variant="callout"
-                        fit
-                        style={styles.personName}>
-                        {person.displayName}
-                      </AppText>
-                      <AppText variant="caption" color="secondary" fit>
-                        {selected ? 'Shared' : 'Not shared'}
-                      </AppText>
+                      style={{ borderRadius: radii.md }}>
+                      <GlassPlate
+                        airy
+                        style={[
+                          styles.personRow,
+                          {
+                            minHeight: s(48),
+                            paddingHorizontal: spacing.md,
+                            borderRadius: radii.md,
+                            borderWidth: selected ? 2 : 1,
+                            borderColor: selected
+                              ? theme.accentPrimary
+                              : theme.separator,
+                          },
+                        ]}>
+                        <AppText
+                          variant="callout"
+                          fit
+                          style={styles.personName}>
+                          {person.displayName}
+                        </AppText>
+                        <AppText variant="caption" color="secondary" fit>
+                          {selected ? 'Shared' : 'Not shared'}
+                        </AppText>
+                      </GlassPlate>
                     </AgentTestId>
                   );
                 })

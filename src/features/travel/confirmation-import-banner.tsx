@@ -1,14 +1,14 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
 import {
-  confirmationUrisForDisplay,
-  isImageConfirmationUri,
-  openConfirmationAttachments,
+    confirmationUrisForDisplay,
+    isImageConfirmationUri,
+    openConfirmationAttachments,
 } from './confirmation-attachments';
 
 export function ConfirmationImportBanner({
@@ -52,43 +52,45 @@ export function ConfirmationImportBanner({
       }
       disabled={!canOpen}
       onPress={open}
-      style={({ pressed }) => [
-        styles.banner,
-        {
-          backgroundColor: theme.accentFaint,
-          borderColor: theme.accentPrimary,
-          gap: rs.sm,
-          minHeight: Math.max(44, s(56)),
-          opacity: pressed && canOpen ? 0.82 : 1,
-          paddingHorizontal: rs.md,
-          paddingVertical: rs.sm,
-        },
-      ]}>
-      <View style={[styles.copy, { gap: rs.xs }]}>
-        <View style={[styles.header, { gap: rs.sm }]}>
-          <Symbol name="receipt" size="sm" color={theme.accentPrimary} />
-          <AppText variant="caption" color="secondary" fit style={styles.shrink}>
-            Imported · Review before saving.
+      style={({ pressed }) => [{ opacity: pressed && canOpen ? 0.82 : 1 }]}>
+      <GlassPlate
+        mist
+        style={[
+          styles.banner,
+          {
+            borderColor: theme.accentPrimary,
+            gap: rs.sm,
+            minHeight: Math.max(44, s(56)),
+            paddingHorizontal: rs.md,
+            paddingVertical: rs.sm,
+          },
+        ]}>
+        <View style={[styles.copy, { gap: rs.xs }]}>
+          <View style={[styles.header, { gap: rs.sm }]}>
+            <Symbol name="receipt" size="sm" color={theme.accentPrimary} />
+            <AppText variant="caption" color="secondary" fit style={styles.shrink}>
+              Imported · Review before saving.
+            </AppText>
+          </View>
+          <AppText
+            variant="callout"
+            color={canOpen ? 'accent' : 'primary'}
+            selectable={!canOpen}
+            style={styles.fileName}>
+            {fileName}
           </AppText>
+          {note ? (
+            <AppText variant="caption" color="secondary" style={styles.fileName}>
+              {note}
+            </AppText>
+          ) : null}
         </View>
-        <AppText
-          variant="callout"
-          color={canOpen ? 'accent' : 'primary'}
-          selectable={!canOpen}
-          style={styles.fileName}>
-          {fileName}
-        </AppText>
-        {note ? (
-          <AppText variant="caption" color="secondary" style={styles.fileName}>
-            {note}
-          </AppText>
+        {canOpen ? (
+          <View pointerEvents="none" style={styles.chevronSlot}>
+            <Symbol name="chevron-right" size="sm" color={theme.accentPrimary} />
+          </View>
         ) : null}
-      </View>
-      {canOpen ? (
-        <View pointerEvents="none" style={styles.chevronSlot}>
-          <Symbol name="chevron-right" size="sm" color={theme.accentPrimary} />
-        </View>
-      ) : null}
+      </GlassPlate>
     </Pressable>
   );
 }

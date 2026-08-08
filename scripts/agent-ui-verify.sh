@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Fast surface verification: skip --flow/--open when already on --route.
+# Fast surface verification: skip --flow/--open when already on --route;
+# otherwise auto-goto --route when land was omitted (both platforms).
 #
 # Usage:
 #   ./scripts/agent-ui-verify.sh \
@@ -9,13 +10,12 @@
 #     --color travel.planDetail.transportSection '#2474A8' \
 #     --screenshot .tmp/proof.png
 #
+# Bare --route /privacy (no --open) lands via goto when not already there.
 # JS key paths (travel.planDetail.transportSection) resolve via ids.ts.
 # --color samples accent pixels in the element frame (Pillow).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# shellcheck source=lib/agent-ui-host.sh
-source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 usage() {
   cat >&2 <<'EOF'
@@ -26,9 +26,19 @@ EOF
   exit 2
 }
 
+# Help before host source (source auto-leases a pool slot).
+for arg in "$@"; do
+  case "${arg}" in
+    -h|--help) usage ;;
+  esac
+done
+
 if [[ $# -lt 1 ]]; then
   usage
 fi
+
+# shellcheck source=lib/agent-ui-host.sh
+source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 agent_ui_ensure_app_up
 agent_ui_apply_wait_budget flow
@@ -44,6 +54,7 @@ if [[ -z "${STATUS_JSON}" ]]; then
   exit 1
 fi
 
+VERIFY_EXIT=0
 python3 - "${STATUS_JSON}" <<'PY'
 import json, sys
 
@@ -71,3 +82,10 @@ header = f"verify {'passed' if ok else 'failed'} route={route}"
 print(header + ("\n" + "\n".join(lines) if lines else ""))
 raise SystemExit(0 if ok else 1)
 PY
+VERIFY_EXIT=$?
+
+# Headed Simulator/Galaxy open → sync that viewer to the verified surface.
+if [[ "${VERIFY_EXIT}" -eq 0 ]]; then
+  agent_ui_headed_viewer_handoff "$@" || true
+fi
+exit "${VERIFY_EXIT}"

@@ -3,24 +3,26 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
     AppText,
     Button,
+    GlassIconWell,
     GlassPrimaryAction,
     IconButton,
     Symbol,
     fieldTitleCase,
 } from '@/components/primitives';
-import { type AppIconName } from '@/design-system';
+import { type AppIconName, glassMaterials } from '@/design-system';
 import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
     itinerarySheetChrome,
     type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
+import { travelItineraryInk } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentTestId } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
-/** Compact trip action — white paper tile matching itinerary chrome. */
+/** Compact trip action — mist tile on itinerary boards. */
 export function TravelSheetAction({
   label,
   icon,
@@ -43,11 +45,13 @@ export function TravelSheetAction({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const iconTone = chrome.icons[tone];
+  const labelInk = travelItineraryInk(theme);
   const { s, spacing } = useResponsive();
   // Dense glass chips — keep ≥44pt hit via Pressable, trim visual chrome.
   const iconBox = Math.max(22, s(24));
   const badgeSize = Math.max(11, s(12));
   const radius = Math.max(10, s(11));
+  const wellRadius = Math.max(7, s(8));
   const title = fieldTitleCase(label);
   const a11yLabel = fieldTitleCase(accessibilityLabel);
   const handlePress = () => {
@@ -71,7 +75,7 @@ export function TravelSheetAction({
           { opacity: pressed ? 0.82 : 1 },
         ]}>
         <TravelHomeGlass
-          clear
+          mist
           style={[
             styles.actionGlass,
             {
@@ -79,21 +83,13 @@ export function TravelSheetAction({
               paddingHorizontal: Math.max(10, spacing.sm),
               paddingVertical: Math.max(6, s(7)),
               borderRadius: radius,
-              justifyContent: wide ? 'center' : 'flex-start',
             },
           ]}>
           <View style={[styles.actionContent, { gap: Math.max(6, spacing.xs) }]}>
-            <View
-              style={[
-                styles.actionIcon,
-                {
-                  width: iconBox,
-                  height: iconBox,
-                  borderRadius: Math.max(7, s(8)),
-                  backgroundColor: iconTone.bg,
-                },
-              ]}>
-              <Symbol name={icon} size={14} color={iconTone.fg} />
+            <View style={[styles.actionIcon, { width: iconBox, height: iconBox }]}>
+              <GlassIconWell size={iconBox} borderRadius={wellRadius}>
+                <Symbol name={icon} size={14} color={iconTone.fg} />
+              </GlassIconWell>
               {badgeIcon ? (
                 <View
                   style={[
@@ -102,15 +98,22 @@ export function TravelSheetAction({
                       width: badgeSize,
                       height: badgeSize,
                       borderRadius: badgeSize / 2,
-                      backgroundColor: theme.backgroundElevated,
-                      borderColor: iconTone.bg,
+                      backgroundColor: 'rgba(12,16,24,0.55)',
+                      borderColor:
+                        theme.name === 'dark'
+                          ? glassMaterials.border.mist
+                          : glassMaterials.border.mistLight,
                     },
                   ]}>
                   <Symbol name={badgeIcon} size={8} color={iconTone.fg} />
                 </View>
               ) : null}
             </View>
-            <AppText variant="caption" fit style={styles.actionLabel}>
+            <AppText
+              variant="caption"
+              fit
+              align="center"
+              style={[styles.actionLabel, { color: labelInk }]}>
               {title}
             </AppText>
           </View>
@@ -200,6 +203,7 @@ export function TravelSheetIconControl({
   const theme = useTheme();
   return (
     <IconButton
+      appearance="glass"
       icon={icon}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
@@ -207,8 +211,6 @@ export function TravelSheetIconControl({
       size={size}
       iconSize={iconSize}
       color={tone === 'accent' ? theme.accentPrimary : theme.textPrimary}
-      background={theme.backgroundSunken}
-      borderColor={theme.separator}
     />
   );
 }
@@ -217,8 +219,10 @@ const styles = StyleSheet.create({
   actionContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 1,
     minWidth: 0,
+    width: '100%',
   },
   actionIcon: {
     position: 'relative',
@@ -239,6 +243,7 @@ const styles = StyleSheet.create({
     ...travelEditorialTextStyle,
     flexShrink: 1,
     minWidth: 0,
+    textAlign: 'center',
   },
   action: {
     flexGrow: 1,
@@ -256,9 +261,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    // Left-align icon+label so every tile in the 2-column grid shares one
-    // icon column (center justify makes short labels drift vs long ones).
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     borderCurve: 'continuous',
   },
 });

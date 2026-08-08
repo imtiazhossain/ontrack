@@ -8,6 +8,7 @@ import {
   Button,
   EmptyState,
   ErrorMessage,
+  GlassIconWell,
   GlassPlate,
   IconButton,
   Input,
@@ -151,9 +152,9 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
                 },
               ]}>
               <View style={styles.sectionTitleRow}>
-                <View style={[styles.sectionIcon, { backgroundColor: chrome.mint }]}>
+                <GlassIconWell size={40} borderRadius={14} style={styles.sectionIcon}>
                   <Symbol name="invite" size="sm" color={chrome.primary} />
-                </View>
+                </GlassIconWell>
                 <View style={styles.sectionTitleCopy}>
                   <AppText variant="subheading" bold fit>
                     Add by email

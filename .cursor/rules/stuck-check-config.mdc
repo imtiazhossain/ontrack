@@ -11,10 +11,13 @@ alwaysApply: false
 
 If a step is slow, unclear, or needs multiple retries — **stop and fix the hang-up**. Do not keep re-running verify/flows hoping it clears. Prefer simple causes (config, pins, Metro/daemon) before deep debug or bridge rewrites.
 
+**When the user complains about Simulator / emulator / verify hang / “takes forever”:** open [`docs/agent-ui-verify-benchmark.md`](../../docs/agent-ui-verify-benchmark.md) **before** grinding. Match the symptom to hang classes H1–H12, check recent TSV timings, then continue triage below. Append a run with `./scripts/agent-ui-benchmark-open.sh` when proving an open/close-out fix.
+
 ## Device timeout → diagnose + lasting fix
 
 A device / bridge / boot / wait **timeout is not “try again”** — treat it as a defect signal. In the same turn:
 
+0. **Known hang catalog** — skim `docs/agent-ui-verify-benchmark.md` (pipe buffer, Galaxy adopt, cold ensure, unpark/`simctl io`, mid-edit epilogue, …).
 1. **Classify the timeout** from the error text (do not guess):
    - `simctl … timed out` / `simulator may be wedged` → CoreSimulator wedge (`ONTRACK_SIMCTL_TIMEOUT_SECS`)
    - `timed out booting` (iOS/AVD) / `timed out waiting for AVD … on adb` → boot / qemu / adb
@@ -31,7 +34,7 @@ A device / bridge / boot / wait **timeout is not “try again”** — treat it 
 ## Agent-ui triage
 
 1. Sticky pins — `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, serials/sim overrides.
-2. Agent device pool wait (`waiting for agent device slot` / slots busy) — up to 5 dedicated headless devices; already-booted agent sims/AVDs count as busy (claim a cold slot); wait if full (`AGENT_UI_SKIP_LEASE=1` escape only).
+2. Agent device pool wait (`waiting for agent device slot` / slots busy) — up to 5 dedicated headless devices; live lock holders are busy; lock-free warm iOS sims / Android AVDs are reused (`reclaiming warm slot`, `KEEP_IOS`/`KEEP_ANDROID=1` default); wait if full (`AGENT_UI_SKIP_LEASE=1` escape only).
 3. `route` with pin: iOS ~402×874, Android ~384×832. Width mismatch → fix env/device.
 4. Pin Android ops; unset/`ios` before iOS. Prefer `agent-ui-verify-both.sh` + named `--flow`.
 5. Android after reconnect often `route=/` — `verify` auto-lands (goto/`--flow`) + wait-route + one cold retry; `verify-both` sets `AGENT_UI_ANDROID_FORCE_LAND` when on `/`. `route=?` → emu/app not ready (`boot_completed`); do not treat allow_fail route timeouts as up.
@@ -39,6 +42,6 @@ A device / bridge / boot / wait **timeout is not “try again”** — treat it 
 7. Headless is the default — do **not** open Simulator.app / `ensure-android-emulator.sh --window` unless the user asked for headed. Assert/`--color` work without a GUI.
 8. Metro `:8081/status`, daemon `:8191/health`; Android `adb reverse` for 8081/8191.
 9. Do **not** force-stop / `--force-reconnect` for glyph/orientation checks — edit source, Fast Refresh, assert.
-10. “Running Dual-platform verify…” looks hung for minutes → check for `| tail`/`| head` on `verify-both` (buffers until exit) or a cold pool boot after mass `emu kill`. Drop the pipe; do not kill warm devices before verify.
+10. Hang classes H1–H12 (piped `| head`/`| tail`, Galaxy adopt thrash, unpark/`simctl io`, mid-edit epilogue, …) → [`docs/agent-ui-verify-benchmark.md`](../../docs/agent-ui-verify-benchmark.md) + TSV; don’t restate fixes here.
 
 Details: [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).

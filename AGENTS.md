@@ -25,21 +25,16 @@ iOS-first, local-first daily-life Expo app (schedule, food, fitness, plants, tra
 
 ## Commands (agents)
 
-- Metro: `npm run packager:ensure` / `packager:ensure:start` — **never** `npm start` in agent shells (Cursor kills it). Node 24 (`.nvmrc`).
-- Android packager+emu: `packager:ensure:android` / `android:ensure:start` (Galaxy_S26).
-- Sideload APK (native / runtimeVersion only) → Drive replace: `npm run android:release-to-drive` → **android-release-apk** skill. Or `npm run build:device:android` (EAS, `device` channel).
-- **`push`** (also “push script” / “ship push”) → `npm run ship:push -- -m "…"` — patch-bump version + release notes/changelog → commit → PR → merge main → delete branch → TestFlight + device OTA (no APK). Script: `scripts/ship-push.sh`.
-- Dual verify (headless pool by default): `npm run agent-ui:verify-both -- --route … [--flow …] --exists …` (named flow when not already on route). Uses dedicated `onTrack Agent N` devices (max 5 parallel; wait if full). Headed Simulator/AVD only when the user asks.
-- `npm run typecheck` · `npm test` · `npm run lint`
-
-Prefer leaving Metro up for Fast Refresh. Details: agent-ui skill + `package.json` scripts.
+- Metro / Android / APK / `push` / dual verify → `package.json` scripts + **agent-ui** / **android-release-apk** skills. **Never** `npm start` in agent shells. Node 24 (`.nvmrc`).
+- `npm run typecheck` · `npm test` · `npm run lint` — prefer leaving Metro up for Fast Refresh.
 
 ## Agent close-out
 
-App-affecting change → typecheck/tests + **dual iOS/Android** verify via agent-ui skill (`verify` if on route, else `once`/`flow`; assert/`--color`; no ritual screenshot). Stay **headless** unless the user asks for a headed Simulator/AVD. Stamp `ontrack.*` testIDs on new/edited interactive controls. Migrations → `supabase db push` same turn.
+App-affecting → typecheck/tests + dual verify (**agent-ui** skill). Stamp `ontrack.*` testIDs. Migrations → `supabase db push` same turn.
 
 ## Non-negotiable UI
 
+- **Glass UI:** product chrome is glass — see `.cursor/rules/glass-ui.mdc`.
 - **Safe area:** `AppSafeArea`; never `insets.top` in scroll content; native Modals pad non-scrolling parent with `insets.top`.
 - **Responsive:** `useResponsive()` + `AppText fit` — `.cursor/rules/responsive-layout.mdc`.
 - **Field icons:** `FieldLeadingIcon` + `fieldLeadingIconRowStyle` — vertically centered.

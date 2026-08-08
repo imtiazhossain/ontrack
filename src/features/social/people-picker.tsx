@@ -123,8 +123,7 @@ export function PeoplePicker({
         </View>
 
         <GlassPlate
-          clear
-          wash
+          airy
           style={[
             styles.search,
             {
@@ -171,7 +170,6 @@ export function PeoplePicker({
                 selected={selected.has(friend.userId)}
                 accentBorder={theme.accentPrimary}
                 idleBorder={theme.separator}
-                selectedBg={theme.accentFaint}
                 minHeight={Math.max(52, s(56))}
                 paddingHorizontal={spacing.md}
                 marginBottom={spacing.sm}
@@ -199,7 +197,6 @@ function PeoplePickerFriendRow({
   selected,
   accentBorder,
   idleBorder,
-  selectedBg,
   minHeight,
   paddingHorizontal,
   marginBottom,
@@ -210,7 +207,6 @@ function PeoplePickerFriendRow({
   selected: boolean;
   accentBorder: string;
   idleBorder: string;
-  selectedBg: string;
   minHeight: number;
   paddingHorizontal: number;
   marginBottom: number;
@@ -237,14 +233,13 @@ function PeoplePickerFriendRow({
         },
       ]}>
       <GlassPlate
-        clear={!selected}
-        wash={!selected}
+        airy
         style={[
           styles.row,
           {
             minHeight,
+            borderWidth: selected ? 2 : 1,
             borderColor: selected ? accentBorder : idleBorder,
-            backgroundColor: selected ? selectedBg : undefined,
             paddingHorizontal,
             gap,
           },

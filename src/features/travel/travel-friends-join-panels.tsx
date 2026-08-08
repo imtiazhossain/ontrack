@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Symbol } from '@/components/primitives';
+import { AppText, Button, GlassIconWell, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { createTravelInviteUrl } from '@/features/travel/share';
 import { travelOverlineStyle } from '@/features/travel/travel-chrome';
@@ -47,18 +47,12 @@ export function TravelOpenJoinCard({
   return (
     <TravelSurfaceCard bodyStyle={styles.openJoinCard}>
       <View style={[styles.joinHeader, { gap: rs.sm }]}>
-        <View
-          style={[
-            styles.joinIcon,
-            {
-              width: Math.max(36, s(36)),
-              height: Math.max(36, s(36)),
-              borderRadius: radii.pill,
-              backgroundColor: chrome.icons.link.bg,
-            },
-          ]}>
+        <GlassIconWell
+          size={Math.max(36, s(36))}
+          borderRadius={radii.pill}
+          style={styles.joinIcon}>
           <Symbol name="link" size="sm" color={chrome.icons.link.fg} />
-        </View>
+        </GlassIconWell>
         <View style={styles.joinHeaderCopy}>
           <AppText variant="subheading" fit numberOfLines={1}>
             Join Link

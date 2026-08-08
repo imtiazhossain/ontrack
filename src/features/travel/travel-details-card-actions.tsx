@@ -2,7 +2,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, DestructiveSection, IconButton } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
 
 export function TravelDetailsCardActions({
@@ -20,7 +19,6 @@ export function TravelDetailsCardActions({
   onCancel: () => void;
   onRemove: () => void;
 }) {
-  const theme = useTheme();
   const { spacing } = useResponsive();
   return (
     <View style={{ gap: spacing.lg }}>
@@ -30,8 +28,6 @@ export function TravelDetailsCardActions({
           testID={AgentUiIds.travel.detailsEditor.cancel(itemId)}
           accessibilityLabel={`Cancel editing ${itemTitle}`}
           onPress={onCancel}
-          background={theme.backgroundSunken}
-          borderColor={theme.separator}
         />
       </View>
       <Button

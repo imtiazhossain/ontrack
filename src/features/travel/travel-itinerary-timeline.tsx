@@ -12,7 +12,7 @@ import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import type { TravelRangeScheduleDraft } from '@/features/travel/travel-range-schedule';
 import {
     TRAVEL_EDITORIAL_ACCENT,
-    travelPanelTint,
+    travelItineraryInk,
 } from '@/features/travel/travel-surface';
 import {
     dayNumberFor,
@@ -35,7 +35,10 @@ import {
     TimelineNowMarker,
     TimelineProgressStrip,
 } from '@/features/travel/travel-timeline-progress-chrome';
-import type { TravelPlan } from '@/features/travel/types';
+import type {
+    TravelItineraryItem,
+    TravelPlan,
+} from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
@@ -45,8 +48,6 @@ import {
     formatWeekday,
     type DateDisplayFormat,
 } from '@/utils/date';
-
-type TravelItineraryItemModel = TravelPlan['itinerary'][number];
 
 export function TravelItineraryTimeline({
   plan,
@@ -93,7 +94,7 @@ export function TravelItineraryTimeline({
   onShare,
 }: {
   plan: TravelPlan;
-  items: TravelItineraryItemModel[];
+  items: TravelItineraryItem[];
   minimizedItemIds: Set<string>;
   collapsedDayDates: Set<string>;
   dateDisplayFormat: DateDisplayFormat;
@@ -120,7 +121,7 @@ export function TravelItineraryTimeline({
   onCancelFlightEdit: () => void;
   onBeginFlightEdit: (
     itemId: string,
-    flight: TravelItineraryItemModel['flight'],
+    flight: TravelItineraryItem['flight'],
   ) => void;
   onEditedRentalDetailsChange: (value: RentalDetailsDraft) => void;
   onImportRental: (itemId: string) => void;
@@ -131,7 +132,7 @@ export function TravelItineraryTimeline({
   onCancelRentalEdit: () => void;
   onBeginRentalEdit: (
     itemId: string,
-    rental: TravelItineraryItemModel['rental'],
+    rental: TravelItineraryItem['rental'],
   ) => void;
   onEditedStayDetailsChange: (value: StayDetailsDraft) => void;
   onImportStay: (itemId: string) => void;
@@ -142,16 +143,16 @@ export function TravelItineraryTimeline({
   onCancelStayEdit: () => void;
   onBeginStayEdit: (
     itemId: string,
-    stay: TravelItineraryItemModel['stay'],
+    stay: TravelItineraryItem['stay'],
   ) => void;
   onAddPhotos: (itemId: string) => void;
   onRemovePhoto: (itemId: string, uri: string) => void;
-  onRemove: (item: TravelItineraryItemModel) => void;
+  onRemove: (item: TravelItineraryItem) => void;
   onSaveNotes: (
     itemId: string,
-    notes: NonNullable<TravelItineraryItemModel['notes']>,
+    notes: NonNullable<TravelItineraryItem['notes']>,
   ) => void;
-  onShare?: (item: TravelItineraryItemModel) => void;
+  onShare?: (item: TravelItineraryItem) => void;
 }) {
   const theme = useTheme();
   const { s, spacing: rs, typography } = useResponsive();
@@ -198,9 +199,13 @@ export function TravelItineraryTimeline({
   }, []);
 
   if (days.length === 0) {
+    const emptyIconBg =
+      theme.name === 'dark'
+        ? 'rgba(255,255,255,0.12)'
+        : 'rgba(17, 74, 110, 0.08)';
     return (
       <TravelHomeGlass
-        clear
+        mist
         style={[
           styles.emptyCard,
           {
@@ -214,18 +219,32 @@ export function TravelItineraryTimeline({
           style={[
             styles.emptyIcon,
             {
-              backgroundColor: travelPanelTint(theme),
+              backgroundColor: emptyIconBg,
               width: Math.max(56, s(64)),
               height: Math.max(56, s(64)),
               borderRadius: radii.xl,
             },
           ]}>
-          <Symbol name="flight" size="lg" color={TRAVEL_EDITORIAL_ACCENT} />
+          <Symbol
+            name="flight"
+            size="lg"
+            color={travelItineraryInk(theme)}
+          />
         </View>
-        <AppText variant="subheading" style={travelEditorialTextStyle}>
+        <AppText
+          variant="subheading"
+          style={[
+            travelEditorialTextStyle,
+            { color: travelItineraryInk(theme) },
+          ]}>
           Your Journey Starts Here
         </AppText>
-        <AppText variant="body" color="secondary" style={travelEditorialTextStyle}>
+        <AppText
+          variant="body"
+          style={[
+            travelEditorialTextStyle,
+            { color: travelItineraryInk(theme, 'secondary') },
+          ]}>
           Add flights, stays, activities, or moments with photos and notes —
           they show up here day by day. Tap + above to begin.
         </AppText>
@@ -326,7 +345,10 @@ export function TravelItineraryTimeline({
                           marginTop: Math.max(6, s(6)),
                           borderWidth:
                             dayPhase === 'current' ? Math.max(2, s(2)) : 0,
-                          borderColor: theme.backgroundElevated,
+                          borderColor:
+                            theme.name === 'dark'
+                              ? 'rgba(255,255,255,0.55)'
+                              : 'rgba(17, 74, 110, 0.22)',
                         },
                       ]}
                     />
@@ -358,15 +380,6 @@ export function TravelItineraryTimeline({
                       dayPhase={dayPhase}
                       dayExpanded={dayExpanded}
                       dayTap={dayTap}
-                      chipBackground={
-                        dayPhase === 'current'
-                          ? theme.name === 'light'
-                            ? '#DCEAF8'
-                            : travelPanelTint(theme)
-                          : theme.name === 'light'
-                            ? '#E8F1FB'
-                            : travelPanelTint(theme)
-                      }
                       overlineSize={typography.overline.fontSize}
                       overlineLineHeight={typography.overline.lineHeight}
                       onToggleDay={onToggleDay}
@@ -380,14 +393,15 @@ export function TravelItineraryTimeline({
                           />
                         ) : null}
                         <TravelHomeGlass
-                          clear
+                          mist
                           style={[
                             styles.eventStack,
                             {
                               borderRadius: Math.max(10, s(11)),
                               borderCurve: 'continuous',
-                              // Last row was flush against the glass radius.
-                              paddingBottom: Math.max(6, s(6)),
+                              // Match top/bottom so the first/last rows don’t
+                              // sit flush against the glass radius unevenly.
+                              paddingVertical: Math.max(2, s(2)),
                             },
                           ]}>
                           {day.entries.map((entry, index) => {
@@ -412,8 +426,14 @@ export function TravelItineraryTimeline({
                                         paddingHorizontal: rs.sm,
                                         paddingVertical: Math.max(6, s(6)),
                                         borderTopWidth: StyleSheet.hairlineWidth,
-                                        borderTopColor: theme.separator,
-                                        backgroundColor: theme.accentFaint,
+                                        borderTopColor:
+                                          theme.name === 'dark'
+                                            ? 'rgba(255,255,255,0.18)'
+                                            : 'rgba(17, 74, 110, 0.10)',
+                                        backgroundColor:
+                                          theme.name === 'dark'
+                                            ? 'rgba(255,255,255,0.08)'
+                                            : 'rgba(17, 74, 110, 0.06)',
                                       },
                                     ]}>
                                     <View
@@ -426,9 +446,11 @@ export function TravelItineraryTimeline({
                                     />
                                     <AppText
                                       variant="caption"
-                                      color="accent"
                                       fit
-                                      style={styles.nowInStackLabel}>
+                                      style={[
+                                        styles.nowInStackLabel,
+                                        { color: travelItineraryInk(theme) },
+                                      ]}>
                                       Now
                                     </AppText>
                                   </View>
@@ -439,9 +461,10 @@ export function TravelItineraryTimeline({
                                     {
                                       paddingLeft: rs.sm,
                                       paddingRight: rs.xs,
-                                      paddingVertical: Math.max(6, s(6)),
+                                      paddingVertical: Math.max(8, s(8)),
                                       minHeight: Math.max(44, s(44)),
                                       justifyContent: 'center',
+                                      alignItems: 'stretch',
                                       borderTopWidth:
                                         index > 0 || showNowBefore
                                           ? StyleSheet.hairlineWidth

@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, ErrorMessage, LoadingSpinner, Symbol } from '@/components/primitives';
+import {
+    AppText,
+    ErrorMessage,
+    GlassIconWell,
+    GlassMetaChip,
+    GlassPlate,
+    LoadingSpinner,
+    Symbol,
+} from '@/components/primitives';
 import type { Theme } from '@/design-system';
 import { fontFamilies, radii } from '@/design-system';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import {
-  travelCardBorder,
-  travelCardFill,
-  travelCardShadow,
-  travelPanelTint,
-  TRAVEL_EDITORIAL_ACCENT,
+    TRAVEL_EDITORIAL_ACCENT,
+    travelCardShadow
 } from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -134,13 +139,12 @@ export function TravelWeatherCard({
   const error = currentError && forecastError ? forecastError : forecastError;
 
   return (
-    <View
+    <GlassPlate
+      airy
       accessibilityLabel={`Destination Weather for ${destination}`}
       style={[
         styles.card,
         {
-          backgroundColor: light ? '#F7F1E8' : travelPanelTint(theme),
-          borderColor: travelCardBorder(theme),
           borderRadius: Math.max(20, s(22)),
           padding: Math.max(16, rs.md + 2),
           gap: Math.max(14, rs.md),
@@ -148,22 +152,13 @@ export function TravelWeatherCard({
         },
       ]}>
       <View style={styles.header}>
-        <View
-          style={[
-            styles.iconBadge,
-            {
-              width: iconSize,
-              height: iconSize,
-              borderRadius: iconSize / 2,
-              backgroundColor: light ? '#EFE6D8' : chrome.icons.clock.bg,
-            },
-          ]}>
+        <GlassIconWell size={iconSize} borderRadius={iconSize / 2}>
           <Symbol
             name={current ? weatherIconForCode(current.weatherCode) : 'weather'}
             size="md"
             color={accent}
           />
-        </View>
+        </GlassIconWell>
         <View style={styles.flex}>
           <AppText
             variant="callout"
@@ -222,12 +217,12 @@ export function TravelWeatherCard({
       {shownDays.length > 0 ? (
         <View style={[styles.days, { gap: rs.sm }]}>
           {shownDays.map((day) => (
-            <View
+            <GlassPlate
+              mist
               key={day.date}
               style={[
                 styles.day,
                 {
-                  backgroundColor: travelCardFill(theme),
                   borderRadius: radii.sm,
                   padding: rs.sm,
                   gap: rs.xxs,
@@ -244,23 +239,20 @@ export function TravelWeatherCard({
               <AppText variant="caption" color="secondary">
                 {day.temperatureMin}° · {day.precipitationProbability}% rain
               </AppText>
-            </View>
+            </GlassPlate>
           ))}
           {hiddenDayCount > 0 ? (
-            <View
-              style={[
-                styles.moreDays,
-                {
-                  borderColor: theme.separator,
-                  minWidth: Math.max(72, s(72)),
-                  minHeight: Math.max(40, s(40)),
-                  paddingHorizontal: rs.sm,
-                },
-              ]}>
+            <GlassMetaChip
+              accessibilityLabel={`Plus ${hiddenDayCount} more days`}
+              style={{
+                minWidth: Math.max(72, s(72)),
+                minHeight: Math.max(40, s(40)),
+                alignSelf: 'center',
+              }}>
               <AppText variant="caption" color="accent" fit>
                 +{hiddenDayCount} days
               </AppText>
-            </View>
+            </GlassMetaChip>
           ) : null}
         </View>
       ) : null}
@@ -293,7 +285,7 @@ export function TravelWeatherCard({
           </Pressable>
         </View>
       ) : null}
-    </View>
+    </GlassPlate>
   );
 }
 
@@ -308,22 +300,21 @@ function CurrentWeatherBlock({
 }) {
   const chrome = itinerarySheetChrome(theme);
   const { s, spacing: rs } = useResponsive();
-  const light = theme.name === 'light';
   const iconSize = Math.max(52, s(56));
 
   return (
     <AgentTestId testID={AgentUiIds.travel.weather.current} label="Current destination weather">
-      <View
+      <GlassPlate
+        airy
         accessibilityLabel={`Right now ${current.temperature}${unitSymbol(current.temperatureUnit)}, ${current.condition}`}
         style={[
           styles.currentBox,
           {
-            backgroundColor: travelCardFill(theme),
-            borderColor: travelCardBorder(theme),
             borderRadius: Math.max(16, s(18)),
             padding: Math.max(16, rs.md),
             gap: Math.max(12, rs.sm + 2),
-            boxShadow: light ? '0 2px 10px rgba(51, 39, 28, 0.06)' : undefined,
+            boxShadow:
+              theme.name === 'light' ? '0 2px 10px rgba(51, 39, 28, 0.06)' : undefined,
           },
         ]}>
         <AppText
@@ -340,18 +331,9 @@ function CurrentWeatherBlock({
           Right now
         </AppText>
         <View style={[styles.currentRow, { gap: rs.md }]}>
-          <View
-            style={[
-              styles.iconBadge,
-              {
-                width: iconSize,
-                height: iconSize,
-                borderRadius: iconSize / 2,
-                backgroundColor: light ? '#EFE6D8' : chrome.icons.clock.bg,
-              },
-            ]}>
+          <GlassIconWell size={iconSize} borderRadius={iconSize / 2} variant="airy">
             <Symbol name={weatherIconForCode(current.weatherCode)} size="lg" color={accent} />
-          </View>
+          </GlassIconWell>
           <View style={styles.flex}>
             <AppText
               variant="title"
@@ -380,7 +362,7 @@ function CurrentWeatherBlock({
             </AppText>
           </View>
         </View>
-      </View>
+      </GlassPlate>
     </AgentTestId>
   );
 }
@@ -425,12 +407,11 @@ function TypicalWeatherBlock({
         }}>
         Exact daily forecasts will be available {formatDateKey(availableOn, dateDisplayFormat)}.
       </AppText>
-      <View
+      <GlassPlate
+        airy
         style={[
           styles.typicalWeatherBox,
           {
-            backgroundColor: travelCardFill(theme),
-            borderColor: travelCardBorder(theme),
             borderRadius: Math.max(16, s(18)),
             padding: Math.max(16, rs.md),
             gap: Math.max(14, rs.md),
@@ -473,7 +454,7 @@ function TypicalWeatherBlock({
           Daily highs, lows, and conditions appear here once this trip is inside the forecast
           window. Check back closer to departure for destination-specific weather.
         </AppText>
-      </View>
+      </GlassPlate>
     </View>
   );
 }
@@ -512,13 +493,6 @@ const styles = StyleSheet.create({
     minWidth: 108,
     flexGrow: 1,
     flexBasis: '28%',
-  },
-  moreDays: {
-    borderWidth: 1,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
   },
   errorRow: { flexDirection: 'row', alignItems: 'center' },
   pressed: { opacity: 0.6 },

@@ -105,6 +105,8 @@ describe('canonical travel sheet design', () => {
     );
     // Itinerary back must dismiss to Travel home, never stack-pop to a prior trip.
     expect(planHero).toContain("dismissTo('/(tabs)/travel'");
+    expect(planHero).toContain('canDismiss()');
+    expect(planHero).toContain("replace('/(tabs)/travel'");
     expect(planHero).not.toContain('goBackOrReplace');
   });
 
@@ -131,8 +133,12 @@ describe('canonical travel sheet design', () => {
 
     expect(actions).not.toContain('chevron-right');
     expect(actions).toContain('TravelHomeGlass');
-    expect(actions).toContain('clear');
-    expect(actions).toContain('backgroundColor: iconTone.bg');
+    expect(actions).toContain('mist');
+    expect(actions).not.toMatch(
+      /<TravelHomeGlass(?:\s[^>]*)?\sclear[\s/>]/,
+    );
+    expect(actions).toContain('GlassIconWell');
+    expect(actions).not.toContain('backgroundColor: iconTone.bg');
     // Primary sheet footer CTA = shared sage GlassPrimaryAction (not solid Button).
     expect(actions).toMatch(
       /function TravelSheetPrimaryAction[\s\S]*?<GlassPrimaryAction[\s\S]*?function TravelSheetSecondaryAction/,
@@ -145,13 +151,14 @@ describe('canonical travel sheet design', () => {
       'utf8',
     );
     expect(primary).toContain('accent="green"');
-    // Grid tiles left-align icon+label; wide CTA centers via glass justifyContent.
+    // Grid tiles + wide CTAs center icon+label in the glass plate.
     expect(actions).toMatch(
-      /actionGlass:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s,
+      /actionGlass:\s*\{[^}]*justifyContent:\s*['"]center['"]/s,
     );
     expect(actions).toMatch(
-      /justifyContent:\s*wide\s*\?\s*['"]center['"]\s*:\s*['"]flex-start['"]/,
+      /actionContent:\s*\{[^}]*justifyContent:\s*['"]center['"]/s,
     );
+    expect(actions).toContain('align="center"');
     // Icon+label share one centered row (not Button leading/label split).
     expect(actions).toMatch(/actionContent:\s*\{[^}]*alignItems:\s*['"]center['"]/s);
     expect(actions).not.toContain('translateY');
@@ -167,8 +174,8 @@ describe('canonical travel sheet design', () => {
       'utf8',
     );
 
-    expect(grid).toContain('icon="calendar"');
-    expect(grid).toContain('badgeIcon="repeat"');
+    expect(grid).toContain('icon="sync"');
+    expect(grid).not.toContain('badgeIcon=');
     expect(grid).toContain('Sync changes for ${tripTitle} with Calendar');
     expect(tools).toContain('travelCalendarDrafts(plan)');
     expect(tools).toContain('replaceTravelActivities');

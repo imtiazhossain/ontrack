@@ -8,7 +8,7 @@ import {
     type ViewStyle,
 } from 'react-native';
 
-import { glassMaterials } from '@/design-system/glass';
+import { glassMaterials, glassMistWashStyle } from '@/design-system/glass';
 import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -36,6 +36,13 @@ export type GlassPlateProps = ViewProps & {
    */
   airy?: boolean;
   /**
+   * Translucent nested chips (itinerary board cards / day stacks).
+   * Theme-aware: white frost on dark boards, cool graphite wash on white.
+   * Fill-only (no BlurView) — nested under section `overflow:hidden` kills iOS
+   * UIVisualEffect and light BlurView paints opaque milk.
+   */
+  mist?: boolean;
+  /**
    * Tinted glass accent. `green` = frosted sage CTA.
    * Ignored when `clear` is set.
    */
@@ -50,9 +57,11 @@ export type GlassPlateProps = ViewProps & {
  * - `clear`: solid white paper in light; soft wash in dark.
  * - `clear` + `wash`: cool blue section shell in light.
  * - `airy`: lighter frost for circular controls over sky / photos.
+ * - `mist`: translucent nested frost (fill-only — safe under clipped parents).
  *
  * Blur is a sibling underlay (no React children inside BlurView). Always mount
  * BlurView when frosted (intensity 0 when blur gated) to avoid Fabric SIGABRTs.
+ * Exception: `mist` never mounts BlurView (clipped ancestors → white milk on iOS).
  */
 export function GlassPlate({
   children,
@@ -62,6 +71,7 @@ export function GlassPlate({
   clear = false,
   wash = false,
   airy = false,
+  mist = false,
   accent = 'default',
   ...rest
 }: GlassPlateProps) {
@@ -72,7 +82,7 @@ export function GlassPlate({
     ? theme.name !== 'dark'
     : theme.name === 'dark';
   const invertedDark = inverted && darkPlate;
-  const greenGlass = accent === 'green' && !clear;
+  const greenGlass = accent === 'green' && !clear && !mist;
   const greenOnLight = greenGlass && theme.name !== 'dark';
   const greenBorder = greenOnLight
     ? g.accentGreen.borderLight
@@ -99,13 +109,45 @@ export function GlassPlate({
     );
   }
 
+  // Mist chips sit inside section plates (`overflow: hidden`). Nested BlurView
+  // is clipped on iOS and paints opaque white milk — fill only.
+  if (mist) {
+    const mistOnLight = theme.name !== 'dark';
+    return (
+      <View
+        {...rest}
+        collapsable={false}
+        style={[
+          styles.glass,
+          {
+            borderWidth: 1,
+            borderColor: mistOnLight ? g.border.mistLight : g.border.mist,
+            backgroundColor: 'transparent',
+          },
+          style,
+        ]}>
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { zIndex: 0 },
+            mistOnLight ? styles.mistTintLight : styles.mistTint,
+          ]}
+        />
+        {children}
+      </View>
+    );
+  }
+
   if (Platform.OS === 'android') {
     const androidTint = greenGlass
       ? greenOnLight
         ? styles.androidTintGreenLight
         : styles.androidTintGreen
       : invertedDark
-        ? styles.androidTintInverted
+        ? airy
+          ? styles.androidTintInvertedAiry
+          : styles.androidTintInverted
         : darkPlate
           ? airy
             ? styles.androidTintDarkAiry
@@ -142,8 +184,12 @@ export function GlassPlate({
 
   const darkFill = invertedDark
     ? allowsBlur
-      ? g.fill.invertedBlur
-      : g.fill.invertedSolid
+      ? airy
+        ? g.fill.invertedAiryBlur
+        : g.fill.invertedBlur
+      : airy
+        ? g.fill.invertedAirySolid
+        : g.fill.invertedSolid
     : airy
       ? allowsBlur
         ? g.fill.darkAiryBlur
@@ -224,6 +270,10 @@ const styles = StyleSheet.create({
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.34) 45%, rgba(255,255,255,0.5) 100%)',
   },
+  /** Shared iOS+Android mist wash — never BlurView (clipped parents → milk). */
+  mistTint: glassMistWashStyle.onDark,
+  /** Nested mist on white itinerary boards — cool graphite, not white milk. */
+  mistTintLight: glassMistWashStyle.onLight,
   androidTintDark: {
     backgroundColor: 'rgba(12, 16, 24, 0.32)',
     experimental_backgroundImage:
@@ -238,6 +288,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12, 16, 24, 0.58)',
     experimental_backgroundImage:
       'linear-gradient(160deg, rgba(36,42,54,0.64) 0%, rgba(12,16,24,0.54) 50%, rgba(8,12,18,0.62) 100%)',
+  },
+  androidTintInvertedAiry: {
+    backgroundColor: 'rgba(12, 16, 24, 0.38)',
+    experimental_backgroundImage:
+      'linear-gradient(160deg, rgba(36,42,54,0.44) 0%, rgba(12,16,24,0.32) 50%, rgba(8,12,18,0.40) 100%)',
   },
   androidTintGreen: {
     backgroundColor: glassMaterials.accentGreen.fill,

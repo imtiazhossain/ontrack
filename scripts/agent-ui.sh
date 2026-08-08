@@ -15,8 +15,6 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# shellcheck source=lib/agent-ui-host.sh
-source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 usage() {
   cat >&2 <<'EOF'
@@ -36,9 +34,20 @@ EOF
   exit 2
 }
 
+# Help must run BEFORE sourcing host.sh — source auto-leases a pool slot.
 if [[ $# -lt 1 ]]; then
   usage
 fi
+case "${1}" in
+  -h|--help|help) usage ;;
+esac
+if [[ "${1}" == "once" || "${1}" == "verify" ]] &&
+  [[ "${2:-}" == "-h" || "${2:-}" == "--help" ]]; then
+  usage
+fi
+
+# shellcheck source=lib/agent-ui-host.sh
+source "${ROOT}/scripts/lib/agent-ui-host.sh"
 
 CMD="$1"
 shift || true

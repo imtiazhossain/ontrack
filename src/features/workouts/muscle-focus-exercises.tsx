@@ -87,7 +87,7 @@ export function MuscleFocusExercises({
                     selected && styles.selectedLoadTab,
                   ]}>
                   {selected ? (
-                    <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+                    <GlassPlate airy style={StyleSheet.absoluteFill} />
                   ) : null}
                   <View style={[styles.loadTabLabel, styles.glassContent]}>
                     <AppText
@@ -205,7 +205,7 @@ function MuscleFocusExerciseCard({
               <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
             </View>
           ) : (
-            <GlassPlate clear wash style={styles.exerciseIndex}>
+            <GlassPlate airy style={styles.exerciseIndex}>
               <AppText variant="caption" color="secondary" fit style={styles.glassContent}>
                 0{index + 1}
               </AppText>
@@ -217,7 +217,7 @@ function MuscleFocusExerciseCard({
               {exercise.equipment}
             </AppText>
           </View>
-          <GlassPlate clear wash style={styles.previewControl}>
+          <GlassPlate airy style={styles.previewControl}>
             <View style={[styles.previewControlInner, styles.glassContent]}>
               <Symbol name="play.fill" size={10} color={accentMain} />
             </View>

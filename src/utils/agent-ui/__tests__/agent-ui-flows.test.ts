@@ -195,6 +195,19 @@ describe('agent-ui fixtures', () => {
       op: 'seed',
       to: 'travel-home',
     });
+    expect(resolveAgentUiFlow('travel-home-iceland')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: 'seed', to: 'travel-home' }),
+        expect.objectContaining({
+          op: 'goto',
+          to: 'travel/trip-travel-home-iceland',
+        }),
+        expect.objectContaining({
+          op: 'wait',
+          id: 'ontrack.travel.chrome.skyDecor',
+        }),
+      ]),
+    );
   });
 
   it('builds and seeds checklist / grocery / health / vehicle fixtures', () => {
@@ -339,6 +352,11 @@ describe('agent-ui flows', () => {
     expect(listAgentUiFlowNames()).toContain('open-new-trip');
     expect(listAgentUiFlowNames()).toContain('open-new-checklist');
     expect(listAgentUiFlowNames()).toContain('open-home-location');
+    expect(listAgentUiFlowNames()).toContain('today-prev-day');
+    expect(listAgentUiFlowNames()).toContain('today-next-day');
+    expect(listAgentUiFlowNames()).toContain('open-avatar-editor');
+    expect(listAgentUiFlowNames()).toContain('open-developer');
+    expect(listAgentUiFlowNames()).toContain('profile-usage-analytics');
     expect(listAgentUiFlowNames()).toContain('checklist-demo');
     expect(listAgentUiFlowNames()).toContain('grocery-demo');
     expect(listAgentUiFlowNames()).toContain('health-demo');

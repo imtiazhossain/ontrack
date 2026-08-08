@@ -1,6 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
+import {
+  AppText,
+  Button,
+  GlassIconWell,
+  IconButton,
+  Symbol,
+} from '@/components/primitives';
 import { radii, type AppIconName } from '@/design-system';
 import {
   itinerarySheetChrome,
@@ -54,18 +60,9 @@ export function ItinerarySheetImportCard({
         },
       ]}>
       <View style={[styles.importIcon, { marginTop: s(2) }]}>
-        <View
-          style={{
-            width: Math.max(32, s(32)),
-            height: Math.max(32, s(32)),
-            borderRadius: radii.sm,
-            borderCurve: 'continuous',
-            backgroundColor: importTone.bg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
+        <GlassIconWell size={Math.max(32, s(32))} borderRadius={radii.sm}>
           <Symbol name="smart" size="sm" color={importTone.fg} />
-        </View>
+        </GlassIconWell>
       </View>
       <View style={styles.importCopy}>
         <AppText

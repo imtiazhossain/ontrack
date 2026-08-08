@@ -14,6 +14,7 @@ import {
     HeaderBackButton,
     LoadingBlock,
     RouteErrorBoundary,
+    ScreenAtmosphere,
 } from '@/components/primitives';
 import { motion, spacing } from '@/design-system';
 import { UsageAnalyticsTracker } from '@/features/analytics/usage-analytics-tracker';
@@ -92,6 +93,27 @@ export default function RootLayout() {
   );
 }
 
+/** Privacy / Terms: glass chrome + back dismisses to Profile (not `/` / Today). */
+function legalDocumentScreenOptions(title: string) {
+  const back = <HeaderBackButton fallback="/(tabs)/profile" />;
+  return {
+    title,
+    headerStyle: { backgroundColor: 'transparent' as const },
+    contentStyle: { backgroundColor: 'transparent' as const },
+    ...(process.env.EXPO_OS === 'ios'
+      ? {
+          unstable_headerLeftItems: () => [
+            {
+              type: 'custom' as const,
+              element: back,
+              hidesSharedBackground: true,
+            },
+          ],
+        }
+      : { headerLeft: () => back }),
+  };
+}
+
 function RootNavigator({ hydrated }: { hydrated: boolean }) {
   const theme = useTheme();
   const router = useRouter();
@@ -127,8 +149,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
 
   if (!hydrated || phase === 'loading') {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.backgroundPrimary, justifyContent: 'center' }}>
-        <LoadingBlock label="Loading onTrack…" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ScreenAtmosphere />
+        <LoadingBlock label="Loading onTrack…" surface="glass" />
       </View>
     );
   }
@@ -284,8 +307,8 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
       <Stack.Screen name="l/[code]" />
       <Stack.Screen name="c/[code]" />
       <Stack.Screen name="v/[code]" />
-      <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
-      <Stack.Screen name="terms" options={{ title: 'Terms of Use' }} />
+      <Stack.Screen name="privacy" options={legalDocumentScreenOptions('Privacy Policy')} />
+      <Stack.Screen name="terms" options={legalDocumentScreenOptions('Terms of Use')} />
       <Stack.Screen
         name="agent/ui"
         options={{

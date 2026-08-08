@@ -1,5 +1,5 @@
 import { RentalCompanyLogo } from '@/features/travel/rental-company-logo';
-import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 import {
     formatDateKeyMedium,
@@ -42,7 +42,6 @@ export function RentalDetailsSummary({
 }) {
   const theme = useTheme();
   const accent = kindAccent('rental', theme);
-  const tint = kindTint('rental', theme);
   const pickupStamp = formatStamp(pickupDate, pickupMinutes);
   const dropoffStamp = formatStamp(details.dropoffDate, details.dropoffMinutes);
   const confirmationUris = confirmationUrisForDisplay(
@@ -91,7 +90,6 @@ export function RentalDetailsSummary({
         />
       }
       accentColor={accent}
-      tintColor={tint}
       confirmationCode={details.confirmationCode}
       onPressConfirmation={
         confirmationUris.length ? openConfirmation : undefined

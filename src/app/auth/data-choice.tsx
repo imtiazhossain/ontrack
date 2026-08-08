@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, appPrompt, Button, ErrorMessage, Screen } from '@/components/primitives';
+import {
+    appPrompt,
+    AppText,
+    Button,
+    Card,
+    ErrorMessage,
+    GlassTonePill,
+    Screen,
+} from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useAuthSession, type DataResolution } from '@/features/auth/auth-provider';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,15 +47,17 @@ export default function DataChoiceScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <View style={[styles.badge, { backgroundColor: theme.accentFaint }]}>
-        <AppText variant="overline" color="accent">One careful choice</AppText>
-      </View>
+      <GlassTonePill
+        label="One careful choice"
+        toneColor={theme.accentPrimary}
+        showDot={false}
+      />
       <AppText variant="title">Which plans should onTrack keep?</AppText>
       <AppText variant="body" color="secondary">
         This device and your cloud account both contain changes. Nothing has been replaced yet.
       </AppText>
 
-      <View style={[styles.option, { backgroundColor: theme.backgroundElevated, borderColor: theme.accentPrimary }]}>
+      <Card airy style={[styles.option, { borderColor: theme.accentPrimary }]}>
         <AppText variant="heading">Use Cloud Account</AppText>
         <AppText variant="body" color="secondary">
           Restore the account’s plans on this device. This is the safest choice when you already use onTrack elsewhere.
@@ -59,9 +69,9 @@ export default function DataChoiceScreen() {
           accessibilityLabel="Use Cloud Account data">
           {working === 'cloud' ? 'Restoring…' : 'Use Cloud Account'}
         </Button>
-      </View>
+      </Card>
 
-      <View style={[styles.option, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
+      <Card airy style={[styles.option, { borderColor: theme.separator }]}>
         <AppText variant="heading">Use This Device</AppText>
         <AppText variant="body" color="secondary">
           Upload every plan and app-owned photo from this device, replacing the account dataset.
@@ -73,7 +83,7 @@ export default function DataChoiceScreen() {
           accessibilityLabel="Use data from this device">
           {working === 'device' ? 'Uploading…' : 'Use This Device'}
         </Button>
-      </View>
+      </Card>
 
       {error ? <ErrorMessage message={error} /> : null}
 
@@ -100,5 +110,5 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   badge: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.pill },
-  option: { padding: spacing.xl, borderWidth: 1, borderRadius: radii.lg, gap: spacing.md },
+  option: { borderWidth: 1, borderRadius: radii.lg, gap: spacing.md },
 });

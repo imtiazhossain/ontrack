@@ -21,7 +21,7 @@ type TravelHomeDateBlockProps = {
 };
 
 /**
- * Footer date half — flex:1 peer of View Itinerary (Android CTA slightly wider).
+ * Footer date half — flex:1; Android CTA hugs its label so this half keeps width.
  *
  * Calendar range on top; soft duration pill + weekday rule under — matches
  * the trip-card mock. Height is content-sized (do not stretch to CTA height
@@ -49,10 +49,23 @@ export function TravelHomeDateBlock({
   const dateSize = Math.max(18, s(travelHomeTokens.type.date));
   const dateLine =
     Platform.OS === 'ios' ? dateSize + 1 : Math.max(22, s(24));
-  const weekdaySize = Math.max(12, s(13));
-  const pillTextSize = Math.max(11, s(12));
-  const pillPadH = Math.max(8, s(9));
-  const pillMinH = Math.max(22, s(24));
+  // Android: slightly larger duration chrome — CTA hugs label, so meta has room.
+  const weekdaySize = Math.max(
+    Platform.OS === 'android' ? 13 : 12,
+    s(Platform.OS === 'android' ? 14 : 13),
+  );
+  const pillTextSize = Math.max(
+    Platform.OS === 'android' ? 13 : 11,
+    s(Platform.OS === 'android' ? 14 : 12),
+  );
+  const pillPadH = Math.max(
+    Platform.OS === 'android' ? 9 : 8,
+    s(Platform.OS === 'android' ? 10 : 9),
+  );
+  const pillMinH = Math.max(
+    Platform.OS === 'android' ? 24 : 22,
+    s(Platform.OS === 'android' ? 26 : 24),
+  );
   const accessibilityLabel = `Trip dates ${rangeLabel}${weekdayLabel ? `, ${weekdayLabel}` : ''}, ${dayLabel}`;
 
   return (

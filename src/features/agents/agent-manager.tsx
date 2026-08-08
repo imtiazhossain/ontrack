@@ -1,17 +1,18 @@
 import { StyleSheet, View } from 'react-native';
 
+import { getAddon } from '@/addons/registry';
 import { AGENTS, agentAvailability, getAgentCapability } from '@/agents/registry';
 import type { AgentDefinition } from '@/agents/types';
-import { getAddon } from '@/addons/registry';
 import {
-  AppText,
-  Button,
-  Card,
-  EmptyState,
-  Screen,
-  SectionHeader,
-  SettingsToggleRow,
-  Symbol,
+    AppText,
+    Button,
+    Card,
+    EmptyState,
+    GlassIconWell,
+    Screen,
+    SectionHeader,
+    SettingsToggleRow,
+    Symbol,
 } from '@/components/primitives';
 import { spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
@@ -96,9 +97,9 @@ function AgentCard({
   return (
     <Card variant="sunken" style={styles.card}>
       <View style={styles.cardHeader}>
-        <View style={[styles.agentIcon, { backgroundColor: theme.accentFaint }]}>
+        <GlassIconWell size={48} borderRadius={12}>
           <Symbol name={definition.icon} size="lg" color={theme.accentPrimary} />
-        </View>
+        </GlassIconWell>
         <View style={styles.flex}>
           <AppText variant="subheading">{definition.name}</AppText>
           <AppText variant="caption" color="secondary">

@@ -1,13 +1,15 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { AppText, GlassMetaChip } from '@/components/primitives';
+import { spacing } from '@/design-system';
 import {
   travelEditorialTextStyle,
   travelOverlineStyle,
 } from '@/features/travel/travel-chrome';
+import { travelItineraryInk } from '@/features/travel/travel-surface';
 import type { TimelineDayPhase } from '@/features/travel/travel-timeline-progress';
 import { useResponsive } from '@/hooks/use-responsive';
+import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { fromDateKey } from '@/utils/date';
 
@@ -109,7 +111,6 @@ export function TimelineDayHeader({
   dayPhase,
   dayExpanded,
   dayTap,
-  chipBackground,
   overlineSize,
   overlineLineHeight,
   onToggleDay,
@@ -122,12 +123,14 @@ export function TimelineDayHeader({
   dayPhase: TimelineDayPhase;
   dayExpanded: boolean;
   dayTap: number;
-  chipBackground: string;
   overlineSize: number;
   overlineLineHeight: number;
   onToggleDay: (date: string) => void;
 }) {
-  const { spacing: rs } = useResponsive();
+  const theme = useTheme();
+  const { spacing: rs, s } = useResponsive();
+  const primaryInk = travelItineraryInk(theme);
+  const secondaryInk = travelItineraryInk(theme, 'secondary');
   const chipLabel = dayPhaseChipLabel(dayPhase, entryCount);
   const dayTitle = `Day ${dayNumber} · ${dateLabel} · ${chipLabel}`;
   const dayAgent = useAgentUiTarget(AgentUiIds.travel.timelineDay.toggle(date), {
@@ -141,22 +144,25 @@ export function TimelineDayHeader({
       onLayout={dayAgent.onLayout}
       accessibilityRole="button"
       accessibilityState={{ expanded: dayExpanded }}
-      accessibilityLabel={dayTitle}
       onPress={() => onToggleDay(date)}
       hitSlop={6}
+      accessibilityLabel={dayTitle}
       style={[styles.dayHeader, { minHeight: dayTap, gap: rs.xs }]}>
       <View style={styles.dayTitleBlock}>
-        <AppText variant="callout" fit style={styles.dayNumber}>
+        <AppText
+          variant="callout"
+          fit
+          style={[styles.dayNumber, { color: primaryInk }]}>
           Day {dayNumber}
         </AppText>
         <AppText
           variant="caption"
-          color="secondary"
           fit
           style={[
             travelOverlineStyle,
             styles.dayMeta,
             {
+              color: secondaryInk,
               fontSize: overlineSize,
               lineHeight: overlineLineHeight,
             },
@@ -164,24 +170,18 @@ export function TimelineDayHeader({
           {weekday} · {dateLabel}
         </AppText>
       </View>
-      <View
-        style={[
-          styles.countChip,
-          {
-            backgroundColor: chipBackground,
-            minHeight: Math.max(20, rs.sm + 4),
-            paddingHorizontal: rs.sm,
-            opacity: dayPhase === 'past' ? 0.72 : 1,
-          },
-        ]}>
+      <GlassMetaChip
+        accessibilityLabel={chipLabel}
+        style={{
+          opacity: dayPhase === 'past' ? 0.72 : 1,
+        }}>
         <AppText
           variant="caption"
-          color="accent"
           fit
-          style={{ fontSize: overlineSize }}>
+          style={{ fontSize: overlineSize, color: primaryInk }}>
           {chipLabel}
         </AppText>
-      </View>
+      </GlassMetaChip>
     </Pressable>
   );
 }
@@ -207,11 +207,5 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
     textTransform: 'none',
-  },
-  countChip: {
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
 });

@@ -17,6 +17,7 @@ import {
     Screen,
     ScreenHeader,
     SettingsActionRow,
+    SettingsGroup,
     SettingsToggleRow,
 } from '@/components/primitives';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -169,22 +170,24 @@ export function DeveloperHub() {
           title="Navigate"
           defaultExpanded
           testID={AgentUiIds.developer.section.navigate}>
-          <SettingsToggleRow
-            label="Dev Mode"
-            detail={
-              devModeEnabled
-                ? 'On: live data is snapshotted and cloud sync is paused. Travel demos load automatically; other Demo seeds below stay local too. Everything seeded here is removed when you turn this off (real trips you create or edit are kept).'
-                : 'Off by default (also clears on app restart). Turn on to sandbox your account — loads travel demos and shows Demo seeds. Agents also use this while seeding, then turn it off again.'
-            }
-            detailNumberOfLines={5}
-            value={devModeEnabled}
-            onValueChange={(next) => {
-              void toggleDevMode(next);
-            }}
-            testID={AgentUiIds.developer.devMode}
-          />
+          <SettingsGroup>
+            <SettingsToggleRow
+              label="Dev Mode"
+              detail={
+                devModeEnabled
+                  ? 'On: live data is snapshotted and cloud sync is paused. Travel demos load automatically; other Demo seeds below stay local too. Everything seeded here is removed when you turn this off (real trips you create or edit are kept).'
+                  : 'Off by default (also clears on app restart). Turn on to sandbox your account — loads travel demos and shows Demo seeds. Agents also use this while seeding, then turn it off again.'
+              }
+              detailNumberOfLines={5}
+              value={devModeEnabled}
+              onValueChange={(next) => {
+                void toggleDevMode(next);
+              }}
+              testID={AgentUiIds.developer.devMode}
+            />
+          </SettingsGroup>
           {devModeEnabled ? (
-            <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.seeds}>
+            <Card airy style={{ gap: spacing.sm }} testID={AgentUiIds.developer.seeds}>
               <PanelTitle>Demo seeds</PanelTitle>
               <AppText variant="caption" color="secondary">
                 Loads stable fixtures (same as agent-ui-seed). Restored when you leave Dev Mode.
@@ -204,25 +207,26 @@ export function DeveloperHub() {
               ) : null}
             </Card>
           ) : null}
-          <SettingsActionRow
-            label="Design System"
-            detail="Components, accents, icons"
-            testID={AgentUiIds.developer.designSystem}
-            onPress={() => router.push('/(tabs)/profile/design-system' as never)}
-          />
-          <SettingsActionRow
-            label="Integrations"
-            detail="Third-party health and quotas"
-            testID={AgentUiIds.developer.apiUsage}
-            onPress={() => router.push('/(tabs)/profile/integrations' as never)}
-          />
-
+          <SettingsGroup>
+            <SettingsActionRow
+              label="Design System"
+              detail="Components, accents, icons"
+              testID={AgentUiIds.developer.designSystem}
+              onPress={() => router.push('/(tabs)/profile/design-system' as never)}
+            />
+            <SettingsActionRow
+              label="Integrations"
+              detail="Third-party health and quotas"
+              testID={AgentUiIds.developer.apiUsage}
+              onPress={() => router.push('/(tabs)/profile/integrations' as never)}
+            />
+          </SettingsGroup>
         </CollapsibleSection>
 
         <DeveloperInsightsPanel />
 
         <CollapsibleSection title="Runtime" testID={AgentUiIds.developer.section.runtime}>
-          <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.env}>
+          <Card airy style={{ gap: spacing.sm }} testID={AgentUiIds.developer.env}>
             <PanelTitle>Environment</PanelTitle>
             <MetaList
               items={[
@@ -244,15 +248,17 @@ export function DeveloperHub() {
         <CollapsibleSection
           title="Diagnostics"
           testID={AgentUiIds.developer.section.diagnostics}>
-          <SettingsToggleRow
-            label="Overlay"
-            detail="Paint testID frames for screenshot triage. The floating button appears only while this is on — drag to move, tap to turn off, long-press to hide. With Dev Mode on, long-press anywhere to turn overlay back on."
-            detailNumberOfLines={4}
-            value={overlayOn}
-            onValueChange={setAgentUiOverlayEnabled}
-            testID={AgentUiIds.developer.overlay}
-          />
-          <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.sync}>
+          <SettingsGroup>
+            <SettingsToggleRow
+              label="Overlay"
+              detail="Paint testID frames for screenshot triage. The floating button appears only while this is on — drag to move, tap to turn off, long-press to hide. With Dev Mode on, long-press anywhere to turn overlay back on."
+              detailNumberOfLines={4}
+              value={overlayOn}
+              onValueChange={setAgentUiOverlayEnabled}
+              testID={AgentUiIds.developer.overlay}
+            />
+          </SettingsGroup>
+          <Card airy style={{ gap: spacing.sm }} testID={AgentUiIds.developer.sync}>
             <PanelTitle>Cloud sync</PanelTitle>
             <MetaList
               items={[
@@ -270,7 +276,7 @@ export function DeveloperHub() {
               ]}
             />
           </Card>
-          <Card style={{ gap: spacing.sm }} testID={AgentUiIds.developer.storage}>
+          <Card airy style={{ gap: spacing.sm }} testID={AgentUiIds.developer.storage}>
             <PanelTitle>Local storage</PanelTitle>
             {storageRows.length === 0 ? (
               <AppText variant="caption" color="secondary">
@@ -295,8 +301,10 @@ export function DeveloperHub() {
           </Card>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Tools" testID={AgentUiIds.developer.section.tools}>
-          <Card style={{ gap: spacing.sm }}>
+        <CollapsibleSection
+          title="Tools"
+          testID={AgentUiIds.developer.section.tools}>
+          <Card airy style={{ gap: spacing.sm }}>
             <FormSection title="Open route" description="Alias or path from agent-routes.">
               <Input
                 label="Alias or path"
@@ -318,7 +326,7 @@ export function DeveloperHub() {
             </FormSection>
           </Card>
 
-          <Card style={{ gap: spacing.sm }}>
+          <Card airy style={{ gap: spacing.sm }}>
             <PanelTitle>API rate limits</PanelTitle>
             <Button
               variant="secondary"

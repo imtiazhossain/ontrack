@@ -68,7 +68,7 @@ function NoteCard({
     : formatNoteTime(note.createdAt);
 
   return (
-    <Card variant={isEditing ? 'sunken' : 'elevated'} style={{ gap: spacing.sm }}>
+    <Card airy style={{ gap: spacing.sm }}>
       <View style={[styles.noteHeader, { gap: spacing.sm }]}>
         <ProfileAvatar
           displayName={displayName}
@@ -91,16 +91,12 @@ function NoteCard({
           <IconButton
             icon={isEditing ? 'close' : 'edit'}
             testID={AgentUiIds.travel.notes.edit(note.id)}
-            background={theme.backgroundSunken}
-            borderColor={theme.separator}
             accessibilityLabel={isEditing ? 'Cancel edit' : 'Edit note'}
             onPress={onEdit}
           />
           <IconButton
             icon="delete"
             testID={AgentUiIds.travel.notes.delete(note.id)}
-            background={theme.backgroundSunken}
-            borderColor={theme.separator}
             color={theme.danger}
             accessibilityLabel="Delete note"
             onPress={onDelete}
@@ -194,8 +190,6 @@ export function TravelItemNotesSheet({
         <IconButton
           icon="close"
           testID={AgentUiIds.travel.notes.cancelEdit}
-          background={theme.backgroundSunken}
-          borderColor={theme.separator}
           accessibilityLabel="Cancel edit"
           onPress={cancelEdit}
         />
@@ -213,8 +207,7 @@ export function TravelItemNotesSheet({
       <IconButton
         icon={isEditing ? 'check' : 'send'}
         testID={AgentUiIds.travel.notes.submit}
-        background={draft.trim() ? theme.accentPrimary : theme.backgroundSunken}
-        color={draft.trim() ? theme.textOnAccent : theme.textTertiary}
+        color={draft.trim() ? theme.accentPrimary : theme.textTertiary}
         disabled={!draft.trim()}
         accessibilityLabel={isEditing ? 'Save note' : 'Post note'}
         onPress={submit}
@@ -270,12 +263,15 @@ export function TravelItemNotesButton({
   iconSize = 'md',
   onPress,
   testID,
+  onGlass = false,
 }: {
   hasNotes: boolean;
   size: number;
   iconSize?: 'sm' | 'md' | 'lg' | 'xl' | number;
   onPress: () => void;
   testID: string;
+  /** Mist / black-glass toolbars — frost well + light glyph. */
+  onGlass?: boolean;
 }) {
   const theme = useTheme();
   return (
@@ -285,7 +281,7 @@ export function TravelItemNotesButton({
         size={size}
         iconSize={iconSize}
         testID={testID}
-        background={theme.backgroundSunken}
+        color={onGlass ? '#FFFFFF' : undefined}
         accessibilityLabel={hasNotes ? 'View notes' : 'Add notes'}
         onPress={onPress}
       />
@@ -293,7 +289,12 @@ export function TravelItemNotesButton({
         <View
           style={[
             styles.dot,
-            { backgroundColor: theme.accentPrimary, borderColor: theme.backgroundElevated },
+            {
+              backgroundColor: theme.accentPrimary,
+              borderColor: onGlass
+                ? 'rgba(255,255,255,0.35)'
+                : 'rgba(255,255,255,0.65)',
+            },
           ]}
           pointerEvents="none"
         />

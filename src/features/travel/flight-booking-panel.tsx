@@ -7,7 +7,7 @@ import {
     type ViewStyle,
 } from 'react-native';
 
-import { AppText, LoadingSpinner, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, LoadingSpinner, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -82,7 +82,7 @@ export function FlightBookingPanel({
   confirmationUris,
   passengerLabel,
   accent,
-  fill,
+  fill: _fill,
   style,
 }: {
   itemId: string;
@@ -90,7 +90,8 @@ export function FlightBookingPanel({
   confirmationUris?: string[];
   passengerLabel: string;
   accent: string;
-  fill: string;
+  /** @deprecated Solid paper fills — mist glass owns the shell. */
+  fill?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
@@ -167,12 +168,11 @@ export function FlightBookingPanel({
   })();
 
   return (
-    <View
+    <GlassPlate
+      mist
       style={[
         styles.panel,
         {
-          backgroundColor: fill,
-          borderColor: theme.separator,
           borderRadius: Math.max(radii.md, s(12)),
           paddingVertical: rs.sm,
         },
@@ -190,7 +190,7 @@ export function FlightBookingPanel({
         </AgentTestId>,
         { divider: true },
       )}
-    </View>
+    </GlassPlate>
   );
 }
 
@@ -198,7 +198,6 @@ const styles = StyleSheet.create({
   panel: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderCurve: 'continuous',
   },
   cell: { flexShrink: 1, minWidth: 0, flexBasis: 0 },

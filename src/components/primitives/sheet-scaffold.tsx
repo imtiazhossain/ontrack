@@ -92,6 +92,8 @@ export interface SheetScaffoldProps extends PropsWithChildren {
   minHeight?: number;
   lockHeight?: boolean;
   scrollKey?: string | number;
+  /** Disable body scroll while nested gestures (e.g. color picker) are active. */
+  scrollEnabled?: boolean;
   /** Backdrop dismissal is opt-in; the canonical dismiss action is the header X. */
   dismissOnBackdropPress?: boolean;
   backdropTestID?: string;
@@ -119,6 +121,7 @@ export function SheetScaffold({
   minHeight,
   lockHeight = false,
   scrollKey,
+  scrollEnabled = true,
   dismissOnBackdropPress = false,
   backdropTestID,
   surface = 'glass',
@@ -300,6 +303,7 @@ export function SheetScaffold({
             <ScrollView
               key={scrollKey ?? 'sheet'}
               ref={scrollRef}
+              scrollEnabled={scrollEnabled}
               automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
               contentInsetAdjustmentBehavior="never"
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}

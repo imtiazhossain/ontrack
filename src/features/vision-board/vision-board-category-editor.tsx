@@ -6,6 +6,7 @@ import {
     AppText,
     Button,
     ErrorMessage,
+    GlassPlate,
     IconButton,
     Input,
     Screen,
@@ -140,19 +141,22 @@ export function VisionBoardCategoryEditor() {
             accessibilityRole="radio"
             accessibilityState={{ checked: icon === option }}
             accessibilityLabel={`Use ${option} icon`}
-            onPress={() => setIcon(option)}
-            style={[
-              styles.iconChoice,
-              {
-                backgroundColor:
-                  icon === option ? theme.accentFaint : theme.backgroundSunken,
-                borderColor: icon === option ? theme.accentPrimary : 'transparent',
-              },
-            ]}>
-            <Symbol
-              name={option}
-              color={icon === option ? theme.accentPrimary : theme.textSecondary}
-            />
+            onPress={() => setIcon(option)}>
+            <GlassPlate
+              mist={icon === option}
+              airy={icon !== option}
+              style={[
+                styles.iconChoice,
+                {
+                  borderColor:
+                    icon === option ? theme.accentPrimary : 'transparent',
+                },
+              ]}>
+              <Symbol
+                name={option}
+                color={icon === option ? theme.accentPrimary : theme.textSecondary}
+              />
+            </GlassPlate>
           </Pressable>
         ))}
       </View>

@@ -29,9 +29,13 @@ export {
 } from './field-leading-icon';
 export { fieldTitleCase } from './field-title-case';
 export { FormSection } from './form-section';
+export { GlassIconWell } from './glass-icon-well';
+export { GlassMetaChip } from './glass-meta-chip';
 export { GlassPlate } from './glass-plate';
 export type { GlassPlateProps } from './glass-plate';
 export { GlassPrimaryAction } from './glass-primary-action';
+export { GlassSwitch } from './glass-switch';
+export { GlassTonePill } from './glass-tone-pill';
 export { Input } from './input';
 export { LoadingBlock } from './loading-block';
 export { LoadingSpinner } from './loading-spinner';

@@ -1,5 +1,8 @@
 import { Platform } from 'react-native';
 
+import { useUI } from '@/store/ui';
+import { todayKey } from '@/utils/date';
+
 import { dismissAgentUiOverlays } from './dismiss-overlays';
 import {
   formatAgentUiSeedDetail,
@@ -735,6 +738,11 @@ export async function handleAgentUiRequest(
         detail: 'Navigator not ready (wait for app mount).',
         route: getAgentUiRoute(),
       });
+    }
+    // Today keeps a local selectedDate — goto/reset `/` must snap back to today
+    // so next/prev day flows don’t walk past the weather window.
+    if (ok && destination === '/') {
+      useUI.getState().setSelectedDate(todayKey());
     }
     if (ok && refreshDump) {
       try {

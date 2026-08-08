@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassIconWell, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,7 +30,6 @@ export function FlightSearchErrorBanner({
   const iconSize = Math.max(36, s(36));
   const fill = light ? '#F8EBE6' : 'rgba(206, 108, 96, 0.16)';
   const border = light ? 'rgba(176, 74, 63, 0.18)' : 'rgba(206, 108, 96, 0.28)';
-  const iconBg = light ? '#F3D8D2' : 'rgba(206, 108, 96, 0.28)';
   const titleColor = light ? '#8F3A32' : '#E8A098';
   const detailColor = light ? '#6E4A44' : '#C9A8A2';
 
@@ -58,18 +57,9 @@ export function FlightSearchErrorBanner({
           gap: rs.sm,
         },
       ]}>
-      <View
-        style={[
-          styles.errorIcon,
-          {
-            width: iconSize,
-            height: iconSize,
-            borderRadius: radii.sm,
-            backgroundColor: iconBg,
-          },
-        ]}>
+      <GlassIconWell size={iconSize} borderRadius={radii.sm} style={styles.errorIcon}>
         <Symbol name="itinerary" size="sm" color={theme.danger} />
-      </View>
+      </GlassIconWell>
       <View style={styles.errorCopy}>
         <AppText
           fit

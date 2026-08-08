@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-import { AppText, StatusBadge, Symbol, fieldTitleCase } from '@/components/primitives';
+import {
+  AppText,
+  GlassIconWell,
+  GlassTonePill,
+  Symbol,
+  fieldTitleCase,
+  statusBadgeToneColor,
+  type StatusBadgeTone,
+} from '@/components/primitives';
+import { glassMaterials, radii } from '@/design-system';
+import { travelItineraryInk } from '@/features/travel/travel-surface';
 import type {
-    JourneyTraveler,
-    TimelineProgressSummary,
+  JourneyTraveler,
+  TimelineProgressSummary,
 } from '@/features/travel/travel-timeline-progress';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,12 +31,18 @@ export function TimelineProgressStrip({
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
-  const tone =
+  const secondaryInk = travelItineraryInk(theme, 'secondary');
+  const trackFill =
+    theme.name === 'dark'
+      ? glassMaterials.border.dark
+      : glassMaterials.border.mistLight;
+  const tone: StatusBadgeTone =
     summary.tripPhase === 'complete'
       ? 'success'
       : summary.tripPhase === 'in_progress'
         ? 'warning'
         : 'neutral';
+  const badgeColor = statusBadgeToneColor(tone, theme);
   const trackHeight = Math.max(4, s(4));
   const chipSize = Math.max(22, s(22));
   const daysDoneLabel = fieldTitleCase(
@@ -76,7 +92,11 @@ export function TimelineProgressStrip({
           <AgentTestId
             testID={AgentUiIds.travel.timeline.progressBadge}
             label={summary.label}>
-            <StatusBadge label={summary.label} tone={tone} />
+            <GlassTonePill
+              label={summary.label}
+              toneColor={badgeColor}
+              showDot
+            />
           </AgentTestId>
           <View style={styles.stripMeta}>
             <AgentTestId
@@ -84,10 +104,9 @@ export function TimelineProgressStrip({
               label={daysDoneLabel}>
               <AppText
                 variant="caption"
-                color="secondary"
                 fit
                 align="right"
-                style={styles.stripMetaText}>
+                style={[styles.stripMetaText, { color: secondaryInk }]}>
                 {daysDoneLabel}
               </AppText>
             </AgentTestId>
@@ -112,7 +131,7 @@ export function TimelineProgressStrip({
               {
                 height: trackHeight,
                 borderRadius: trackHeight,
-                backgroundColor: theme.separator,
+                backgroundColor: trackFill,
               },
             ]}>
             <Animated.View
@@ -132,27 +151,31 @@ export function TimelineProgressStrip({
                 width: chipSize,
                 height: chipSize,
                 borderRadius: chipSize / 2,
-                backgroundColor: theme.backgroundElevated,
-                borderColor: accent,
-                borderWidth: Math.max(1.5, s(1.5)),
                 left: chipLeft,
                 top: '50%',
                 marginTop: -chipSize / 2,
-                boxShadow: `0 1px 3px ${theme.name === 'dark' ? '#00000066' : '#00000022'}`,
               },
             ]}>
-            <AgentTestId
-              testID={AgentUiIds.travel.timeline.traveler}
-              label={traveler.accessibilityLabel}>
-              <View
-                style={[
-                  styles.travelerInner,
-                  { width: chipSize, height: chipSize },
-                ]}
-                accessibilityLabel={traveler.accessibilityLabel}>
-                <Symbol name={traveler.icon} size="sm" color={accent} />
-              </View>
-            </AgentTestId>
+            <GlassIconWell
+              size={chipSize}
+              borderRadius={chipSize / 2}
+              style={{
+                borderColor: accent,
+                borderWidth: Math.max(1.5, s(1.5)),
+              }}>
+              <AgentTestId
+                testID={AgentUiIds.travel.timeline.traveler}
+                label={traveler.accessibilityLabel}>
+                <View
+                  style={[
+                    styles.travelerInner,
+                    { width: chipSize, height: chipSize },
+                  ]}
+                  accessibilityLabel={traveler.accessibilityLabel}>
+                  <Symbol name={traveler.icon} size="sm" color={accent} />
+                </View>
+              </AgentTestId>
+            </GlassIconWell>
           </Animated.View>
         </View>
       </AgentTestId>
@@ -170,6 +193,9 @@ export function TimelineNowMarker({
 }) {
   const theme = useTheme();
   const { s, spacing: rs } = useResponsive();
+  const primaryInk = travelItineraryInk(theme);
+  const rim =
+    theme.name === 'dark' ? 'rgba(255,255,255,0.55)' : 'rgba(17, 74, 110, 0.22)';
   const dot = Math.max(8, s(8));
 
   return (
@@ -186,11 +212,14 @@ export function TimelineNowMarker({
                 borderRadius: dot / 2,
                 backgroundColor: accent,
                 borderWidth: Math.max(2, s(2)),
-                borderColor: theme.backgroundElevated,
+                borderColor: rim,
               }}
             />
           </View>
-          <AppText variant="caption" color="accent" fit style={styles.nowLabel}>
+          <AppText
+            variant="caption"
+            fit
+            style={[styles.nowLabel, { color: primaryInk }]}>
             Now
           </AppText>
         </View>

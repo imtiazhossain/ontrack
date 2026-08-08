@@ -7,7 +7,7 @@ import {
     type ViewStyle,
 } from 'react-native';
 
-import { AppText, Card, Symbol } from '@/components/primitives';
+import { AppText, Card, GlassTonePill, Symbol } from '@/components/primitives';
 import {
     darkTravelTheme,
     lightTravelTheme,
@@ -92,34 +92,38 @@ export function travelSafeAreaStyle(
   return { backgroundColor: travelSafeAreaBackground(theme) };
 }
 
-/** Elevated card fill — cream sheet in light, field panel in dark. */
-export function travelCardFill(theme: Theme): string {
-  return theme.backgroundElevated;
+/**
+ * Itinerary plan-detail shells: frosted airy glass in both themes.
+ * Sky atmosphere shows through — do not paint opaque paper fills over these.
+ */
+export function travelItineraryShellProps(theme: Theme): {
+  clear?: boolean;
+  airy?: boolean;
+  intensity?: number;
+} {
+  return theme.name === 'dark'
+    ? { airy: true, intensity: 40 }
+    : { airy: true, intensity: 48 };
 }
 
-/** White main cards on the light Travel wash; preserve dark-mode elevation. */
-export function travelMainCardFill(theme: Theme): string {
-  return theme.name === 'light' ? '#FFFFFF' : travelCardFill(theme);
+/** Primary / secondary / tertiary ink on itinerary glass or white shells. */
+export function travelItineraryInk(
+  theme: Theme,
+  role: 'primary' | 'secondary' | 'tertiary' = 'primary',
+): string {
+  if (theme.name === 'dark') {
+    if (role === 'secondary') return 'rgba(255,255,255,0.72)';
+    if (role === 'tertiary') return 'rgba(255,255,255,0.55)';
+    return '#FFFFFF';
+  }
+  if (role === 'secondary') return theme.textSecondary;
+  if (role === 'tertiary') return theme.textTertiary;
+  return theme.textPrimary;
 }
 
 /** Hairline card border from sheet chrome. */
 export function travelCardBorder(theme: Theme): string {
   return theme.separator;
-}
-
-/** Soft sunken / field panel tint (Add Stay input fill). */
-export function travelPanelTint(theme: Theme): string {
-  return theme.backgroundSunken;
-}
-
-/** Warm sand tint for secondary panels. */
-export function travelWarmTint(theme: Theme): string {
-  return theme.backgroundSunken;
-}
-
-/** Soft pill behind secondary labels — sheet field fill. */
-export function travelPillBg(theme: Theme): string {
-  return theme.backgroundSunken;
 }
 
 /** CTA / accent from sheet chrome (gradient start). */
@@ -139,9 +143,6 @@ export function travelWashColors(
 export function travelSkyColors(theme: Theme): [string, string, string] {
   return travelWashColors(theme);
 }
-
-/** @deprecated Cream-on-sky text; prefer sheet chrome title. */
-export const TRAVEL_ON_SKY = '#0B1C28';
 
 /** Blue-to-neutral page backdrop matching the Travel routes. */
 export function TravelSkyBackdrop(_props?: { variant?: 'wash' | 'sky' }) {
@@ -168,15 +169,13 @@ export function TravelSurfaceCard({
   padding?: number;
   onLayout?: (event: LayoutChangeEvent) => void;
 }>) {
-  const theme = useTheme();
   const { spacing: rs } = useResponsive();
   const pad = padding ?? rs.md;
   return (
-    <Card
-      padded={false}
-      onLayout={onLayout}
-      style={[{ backgroundColor: travelMainCardFill(theme) }, style]}>
-      <View style={[styles.cardBody, { padding: pad, gap: rs.md }, bodyStyle]}>{children}</View>
+    <Card airy padded={false} onLayout={onLayout} style={style}>
+      <View style={[styles.cardBody, { padding: pad, gap: rs.md }, bodyStyle]}>
+        {children}
+      </View>
     </Card>
   );
 }
@@ -194,7 +193,6 @@ export function TravelSectionLabel({
   const theme = useTheme();
   const accent = travelAccent(theme);
   const { spacing: rs, s } = useResponsive();
-  const badge = Math.max(22, s(24));
   return (
     <View
       style={[
@@ -215,25 +213,11 @@ export function TravelSectionLabel({
         {title}
       </AppText>
       {count !== undefined ? (
-        <View
-          style={[
-            styles.countBadge,
-            {
-              backgroundColor: theme.accentPrimary,
-              width: badge,
-              height: badge,
-              borderRadius: badge / 2,
-            },
-          ]}>
-          <AppText
-            variant="callout"
-            fit
-            fitMinimumScale={0.85}
-            color="onAccent"
-            bold>
-            {count}
-          </AppText>
-        </View>
+        <GlassTonePill
+          label={String(count)}
+          toneColor={theme.accentPrimary}
+          showDot={false}
+        />
       ) : null}
     </View>
   );
@@ -246,11 +230,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  countBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   flex: { flex: 1, flexShrink: 1, minWidth: 0 },
 });

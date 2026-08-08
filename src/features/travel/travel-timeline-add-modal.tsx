@@ -1,10 +1,15 @@
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
-import { AppText, Card, SheetScaffold, Symbol } from '@/components/primitives';
+import {
+    AppText,
+    Card,
+    GlassIconWell,
+    SheetScaffold,
+    Symbol,
+} from '@/components/primitives';
 import { springs } from '@/design-system';
 import { kindChrome, kindIcon } from '@/features/travel/travel-kind-chrome';
-import { travelMainCardFill } from '@/features/travel/travel-surface';
 import type { TravelItemKind } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,9 +28,9 @@ const TIMELINE_CHOICES: TimelineChoice[] = [
   { kind: 'moment', label: 'Moment', description: 'Capture a memory or trip highlight.' },
   { kind: 'activity', label: 'Activity', description: 'Add a tour or something you plan to do.' },
   { kind: 'flight', label: 'Flights', description: 'Add flight details and travel information.' },
-  { kind: 'transport', label: 'Transport', description: 'Add driving, rail, transit, taxi, or ferry travel.' },
   { kind: 'stay', label: 'Stays', description: 'Add a hotel, hostel, or accommodation.' },
   { kind: 'rental', label: 'Rental', description: 'Add a rental car or transportation details.' },
+  { kind: 'transport', label: 'Transit', description: 'Add driving, rail, transit, taxi, or ferry travel.' },
 ];
 
 function TimelineKindChoice({
@@ -50,6 +55,7 @@ function TimelineKindChoice({
         .mass(springs.bouncy.mass)
         .reduceMotion(ReduceMotion.System)}>
       <Card
+        airy
         onPress={() => onSelect(choice.kind)}
         testID={AgentUiIds.travel.timelineAdd.kind(choice.kind)}
         accessibilityLabel={choice.label}
@@ -57,23 +63,12 @@ function TimelineKindChoice({
           styles.choice,
           {
             gap: spacing.md,
-            backgroundColor:
-              theme.name === 'light' ? travelMainCardFill(theme) : theme.backgroundSunken,
             borderColor: theme.separator,
           },
         ]}>
-        <View
-          style={[
-            styles.choiceIcon,
-            {
-              width: iconSize,
-              height: iconSize,
-              borderRadius: iconSize / 2,
-              backgroundColor: colors.tint,
-            },
-          ]}>
+        <GlassIconWell size={iconSize} borderRadius={iconSize / 2}>
           <Symbol name={kindIcon(choice.kind)} size="lg" color={colors.accent} />
-        </View>
+        </GlassIconWell>
         <View style={[styles.choiceCopy, { gap: spacing.xxs }]}>
           <AppText variant="subheading" fit>{choice.label}</AppText>
           <AppText variant="caption" color="secondary" numberOfLines={2}>
@@ -127,6 +122,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
   },
-  choiceIcon: { flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   choiceCopy: { flex: 1, flexShrink: 1, minWidth: 0 },
 });

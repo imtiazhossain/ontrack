@@ -11,7 +11,13 @@ import {
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, ErrorMessage, Screen, useSafeAreaChrome } from '@/components/primitives';
+import {
+  AppText,
+  ErrorMessage,
+  GlassPlate,
+  Screen,
+  useSafeAreaChrome,
+} from '@/components/primitives';
 import { radii, shadows, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
@@ -93,18 +99,13 @@ export function AuthScreen({
           paddingHorizontal: width >= 720 ? spacing.xxl * 2 : spacing.xl,
         }}>
         <Animated.View style={[styles.hero, { opacity, transform: [{ translateY }] }]}>
-          <View
+          <GlassPlate
+            mist
             accessibilityElementsHidden
-            style={[
-              styles.orbit,
-              {
-                backgroundColor: theme.accentFaint,
-                borderColor: theme.accentSoft,
-              },
-            ]}>
+            style={styles.orbit}>
             <View style={[styles.orbitLine, { borderColor: theme.accentPrimary }]} />
             <View style={[styles.orbitDot, { backgroundColor: theme.accentPrimary }]} />
-          </View>
+          </GlassPlate>
           <AppText variant="overline" color="accent">
             onTrack
           </AppText>
@@ -119,16 +120,16 @@ export function AuthScreen({
         </Animated.View>
 
         <Animated.View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.backgroundElevated,
-              borderColor: theme.separator,
-              opacity,
-              transform: [{ translateY }],
-              maxWidth: 520,
-            },
-          ]}>
+          style={{
+            opacity,
+            transform: [{ translateY }],
+            maxWidth: 520,
+            width: '100%',
+            alignSelf: 'center',
+          }}>
+          <GlassPlate
+            airy
+            style={[styles.card, { borderColor: theme.separator }]}>
           <View style={styles.cardHeading}>
             <AppText variant="heading">
               {variant === 'welcome' ? 'Begin your day' : 'Create or Sign In'}
@@ -237,6 +238,7 @@ export function AuthScreen({
               Opening {workingProvider === 'apple' ? 'Apple' : 'Google'}…
             </AppText>
           ) : null}
+          </GlassPlate>
         </Animated.View>
       </Screen>
     </LinearGradient>

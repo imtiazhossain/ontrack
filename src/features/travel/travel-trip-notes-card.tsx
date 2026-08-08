@@ -2,24 +2,29 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
-  AppText,
-  CollapsibleBody,
-  DisclosureChevron,
-  Symbol,
+    AppText,
+    CollapsibleBody,
+    DisclosureChevron,
+    GlassIconWell,
+    Symbol,
 } from '@/components/primitives';
-import { radii } from '@/design-system';
+import { glassMaterials, radii } from '@/design-system';
 import {
-  TRAVEL_TITLE_ICON_GAP,
-  travelEditorialTextStyle,
+    TRAVEL_TITLE_ICON_GAP,
+    travelEditorialTextStyle,
 } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
+import {
+    travelItineraryInk,
+    travelItineraryShellProps,
+} from '@/features/travel/travel-surface';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
-const NOTES_CARD_SHADOW = '0 2px 8px rgba(17, 74, 110, 0.10)';
+const NOTES_CARD_SHADOW = '0 4px 14px rgba(0, 0, 0, 0.22)';
 
 /** Trip notes strip — glass card matching the dates row. */
 export function TravelTripNotesCard({
@@ -27,7 +32,7 @@ export function TravelTripNotesCard({
   toggleTestID,
   editTestID,
   onEdit,
-  defaultExpanded = true,
+  defaultExpanded = false,
   expanded: expandedProp,
   onExpandedChange,
 }: {
@@ -42,6 +47,13 @@ export function TravelTripNotesCard({
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
   const noteTone = chrome.icons.note;
+  const primaryInk = travelItineraryInk(theme);
+  const secondaryInk = travelItineraryInk(theme, 'secondary');
+  const tertiaryInk = travelItineraryInk(theme, 'tertiary');
+  const divider =
+    theme.name === 'dark'
+      ? glassMaterials.border.dark
+      : glassMaterials.clear.lightBorder;
   const { s, spacing: rs, typography } = useResponsive();
   const [uncontrolled, setUncontrolled] = useState(defaultExpanded);
   const expanded = expandedProp ?? uncontrolled;
@@ -49,9 +61,10 @@ export function TravelTripNotesCard({
   const canEdit = Boolean(onEdit);
   if (!trimmed && !canEdit) return null;
 
-  const iconBox = Math.max(26, s(28));
+  // Match Transportation compact card title scale (subheading), not caption.
+  const iconBox = Math.max(28, s(30));
   const titleIconGap = Math.max(TRAVEL_TITLE_ICON_GAP, s(TRAVEL_TITLE_ICON_GAP));
-  const tap = Math.max(44, s(44));
+  const tap = Math.max(40, s(40));
   const chevronBox = Math.max(24, s(24));
   const accessibilityLabel = expanded ? `Notes, expanded` : `Notes, collapsed`;
   const bodyLabel = trimmed
@@ -86,7 +99,7 @@ export function TravelTripNotesCard({
 
   return (
     <TravelHomeGlass
-      clear
+      {...travelItineraryShellProps(theme)}
       style={[
         styles.card,
         {
@@ -110,33 +123,22 @@ export function TravelTripNotesCard({
             minHeight: tap,
             gap: titleIconGap,
             paddingHorizontal: rs.md,
-            paddingVertical: rs.sm,
+            paddingVertical: rs.xs,
           },
           pressed && styles.pressed,
         ]}>
-        <View
-          style={[
-            styles.iconWell,
-            {
-              width: iconBox,
-              height: iconBox,
-              backgroundColor: noteTone.bg,
-              boxShadow: theme.name === 'light' ? NOTES_CARD_SHADOW : undefined,
-            },
-          ]}>
-          <Symbol name="note" size={18} color={noteTone.fg} />
-        </View>
+        <GlassIconWell size={iconBox} borderRadius={radii.sm}>
+          <Symbol name="note" size={16} color={noteTone.fg} />
+        </GlassIconWell>
         <AppText
-          variant="caption"
-          fit
+          variant="subheading"
           numberOfLines={1}
           style={[
             styles.label,
             styles.title,
             {
-              color: chrome.subtitle,
-              fontSize: Math.max(12, typography.caption.fontSize - 0.5),
-              lineHeight: Math.max(16, s(16)),
+              color: primaryInk,
+              letterSpacing: -0.1,
             },
           ]}>
           Notes
@@ -153,7 +155,7 @@ export function TravelTripNotesCard({
           <DisclosureChevron
             expanded={expanded}
             size="sm"
-            color={noteTone.fg}
+            color={primaryInk}
           />
         </View>
       </Pressable>
@@ -170,10 +172,7 @@ export function TravelTripNotesCard({
           style={({ pressed }) => [
             styles.bodyWrap,
             {
-              borderTopColor:
-                theme.name === 'dark'
-                  ? 'rgba(255,255,255,0.12)'
-                  : 'rgba(255,255,255,0.45)',
+              borderTopColor: divider,
               // Align note copy with the "Notes" title (after icon + gap).
               paddingLeft: rs.md + iconBox + titleIconGap,
               paddingRight: rs.md,
@@ -185,10 +184,10 @@ export function TravelTripNotesCard({
           ]}>
           <AppText
             variant="callout"
-            color={trimmed ? 'secondary' : 'tertiary'}
             style={[
               styles.body,
               {
+                color: trimmed ? secondaryInk : tertiaryInk,
                 fontSize: Math.max(14, typography.callout.fontSize),
                 lineHeight: Math.max(20, typography.callout.lineHeight + 1),
               },
@@ -208,13 +207,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconWell: {
-    borderRadius: radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   title: {
     flex: 1,

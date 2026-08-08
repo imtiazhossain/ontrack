@@ -10,12 +10,15 @@ import {
   FormSection,
   Input,
   PanelTitle,
+  SectionHeader,
   SegmentedControl,
   SettingsActionRow,
+  SettingsGroup,
   SettingsToggleRow,
   TimeField,
 } from '@/components/primitives';
 import { fieldLeadingIconRowStyle } from '@/components/primitives/field-leading-icon';
+import { glassFieldBackground, glassFieldBorder } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -44,11 +47,9 @@ export function DesignSystemFormsPanel() {
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <AppText variant="callout" color="secondary">
-        Form fields, selects, and settings rows. Labels stay Title Case through StackedFieldLabel.
-      </AppText>
+      <SectionHeader title="Forms & settings" flush />
 
-      <Card>
+      <Card airy>
         <FormSection
           title="Trip details"
           description="Labels, supporting copy, fields, and errors share one rhythm."
@@ -66,7 +67,7 @@ export function DesignSystemFormsPanel() {
         </FormSection>
       </Card>
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <PanelTitle>Date and time</PanelTitle>
         <AppText variant="caption" color="tertiary">
           DateField · {usedIn('dateField')}
@@ -88,7 +89,7 @@ export function DesignSystemFormsPanel() {
         />
       </Card>
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <PanelTitle>Choices</PanelTitle>
         <AppText variant="caption" color="tertiary">
           SegmentedControl · {usedIn('segmented')}
@@ -116,7 +117,7 @@ export function DesignSystemFormsPanel() {
         />
       </Card>
 
-      <Card style={{ gap: spacing.md }}>
+      <Card airy style={{ gap: spacing.md }}>
         <PanelTitle>Field leading icon</PanelTitle>
         <AppText variant="caption" color="tertiary">
           FieldLeadingIcon · {usedIn('fieldLeading')}
@@ -128,10 +129,10 @@ export function DesignSystemFormsPanel() {
             paddingHorizontal: spacing.md,
             borderRadius: s(14),
             borderWidth: 1,
-            borderColor: theme.separator,
-            backgroundColor: theme.backgroundSunken,
+            borderColor: glassFieldBorder(theme.name),
+            backgroundColor: glassFieldBackground(theme.name),
           })}>
-          <FieldLeadingIcon name="flight" backgroundColor={theme.accentFaint} color={theme.accentPrimary} />
+          <FieldLeadingIcon name="flight" backgroundColor="mist" color={theme.accentPrimary} />
           <View style={{ flex: 1, minWidth: 0, gap: spacing.xxs }}>
             <AppText variant="caption" color="secondary" fit>
               Flight
@@ -143,25 +144,27 @@ export function DesignSystemFormsPanel() {
         </View>
       </Card>
 
-      <Card style={{ gap: spacing.sm }}>
+      <Card airy style={{ gap: spacing.sm }}>
         <PanelTitle>Settings rows</PanelTitle>
         <AppText variant="caption" color="tertiary">
           SettingsRow family · {usedIn('settingsRow')}
         </AppText>
-        <SettingsToggleRow
-          label="Dev Overlay"
-          detail="Show agent-ui hit targets in the simulator."
-          value={toggle}
-          onValueChange={setToggle}
-          testID={AgentUiIds.designSystem.demo('settingsToggle')}
-        />
-        <SettingsActionRow
-          label="Open Colors"
-          detail="Jump to the accent token editor."
-          icon="background"
-          onPress={() => undefined}
-          testID={AgentUiIds.designSystem.demo('settingsAction')}
-        />
+        <SettingsGroup>
+          <SettingsToggleRow
+            label="Dev Overlay"
+            detail="Show agent-ui hit targets in the simulator."
+            value={toggle}
+            onValueChange={setToggle}
+            testID={AgentUiIds.designSystem.demo('settingsToggle')}
+          />
+          <SettingsActionRow
+            label="Open Colors"
+            detail="Jump to the accent token editor."
+            icon="background"
+            onPress={() => undefined}
+            testID={AgentUiIds.designSystem.demo('settingsAction')}
+          />
+        </SettingsGroup>
       </Card>
     </View>
   );

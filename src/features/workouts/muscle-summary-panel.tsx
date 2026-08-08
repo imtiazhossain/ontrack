@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, GlassPlate, Symbol } from '@/components/primitives';
+import { AppText, GlassIconWell, GlassPlate, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import type { resolveAtlasWorkoutSelection } from '@/features/workouts/atlas-workout-selection';
 import { formatMuscleLabel } from '@/features/workouts/format-muscle-label';
@@ -40,23 +40,23 @@ export function MuscleSummaryPanel({
           },
         ]}>
         <View style={[styles.summaryHeader, styles.glassContent]}>
-          <View style={[styles.focusIcon, { backgroundColor: gymColors.tint }]}>
+          <GlassIconWell size={50} borderRadius={radii.lg}>
             <Symbol name="scope" size="lg" color={gymColors.main} />
-          </View>
+          </GlassIconWell>
           <View style={styles.flex}>
             <AppText variant="overline" color="accent">Selected Muscle</AppText>
             <AppText variant="heading" numberOfLines={2}>
               {formatMuscleLabel(atlasMuscle.name)}
             </AppText>
           </View>
-          <GlassPlate clear wash style={styles.exerciseCount}>
+          <GlassPlate airy style={styles.exerciseCount}>
             <AppText variant="caption" color="secondary" style={styles.glassContent}>
               {focusExercises.length} Workout{focusExercises.length === 1 ? '' : 's'}
             </AppText>
           </GlassPlate>
         </View>
 
-        <View style={[styles.coachingCueAccent, styles.glassContent, { backgroundColor: gymColors.tint }]}>
+        <GlassPlate airy style={[styles.coachingCueAccent, styles.glassContent]}>
           <Symbol name="text.book.closed.fill" size="md" color={gymColors.main} />
           <View style={styles.flex}>
             <AppText variant="overline" color="accent">What It Does</AppText>
@@ -64,7 +64,7 @@ export function MuscleSummaryPanel({
               {atlasSelection.functionText}
             </AppText>
           </View>
-        </View>
+        </GlassPlate>
 
         <View style={styles.targetPickerHeader}>
           <AppText variant="overline" color="tertiary">
@@ -113,7 +113,7 @@ export function MuscleSummaryPanel({
         </View>
 
         {selectedTarget.cue ? (
-          <GlassPlate clear wash style={styles.coachingCue}>
+          <GlassPlate airy style={styles.coachingCue}>
             <View style={[styles.coachingCueInner, styles.glassContent]}>
               <Symbol name="lightbulb.max.fill" size="md" color={gymColors.main} />
               <View style={styles.flex}>
@@ -142,13 +142,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  focusIcon: {
-    width: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.lg,
   },
   exerciseCount: {
     minHeight: 30,

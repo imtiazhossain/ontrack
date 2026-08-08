@@ -1,4 +1,4 @@
-import { kindAccent, kindTint } from '@/features/travel/travel-kind-chrome';
+import { kindAccent } from '@/features/travel/travel-kind-chrome';
 import { useTheme } from '@/hooks/use-theme';
 
 import { FlightJourneyCard } from './flight-journey-card';
@@ -30,7 +30,6 @@ export function FlightDetailsSummary({
 }) {
   const theme = useTheme();
   const accent = kindAccent('flight', theme);
-  const tint = kindTint('flight', theme);
   const schedule = { details, date, startMinutes, durationMinutes };
   const journey = buildFlightJourneyViewModel(schedule);
   const statusRequests = resolveFlightLegs(schedule).map((leg) => {
@@ -47,7 +46,6 @@ export function FlightDetailsSummary({
       journey={journey}
       date={date}
       accentColor={accent}
-      tintColor={tint}
       confirmationCode={details.confirmationCode}
       confirmationUris={details.confirmationUris}
       passengerName={details.passengerName}

@@ -152,9 +152,21 @@ describe('agent-ui host scripts contract', () => {
     expect(pool).toContain('agent_ui_pool_try_claim_slot');
     expect(pool).toContain('devices already up — skipping');
     expect(pool).toContain('reclaiming slot');
+    expect(pool).toContain('reclaiming warm slot');
     expect(pool).toContain('ios_sim_shutdown_agent_named');
     expect(pool).toContain('android_emu_shutdown_named');
     expect(pool).toContain('AGENT_UI_KEEP_DEVICES');
+    expect(pool).toContain('AGENT_UI_KEEP_IOS');
+    expect(pool).toContain('AGENT_UI_KEEP_ANDROID');
+    expect(pool).toContain('agent_ui_pool_keep_ios');
+    expect(pool).toContain('agent_ui_pool_keep_android');
+    expect(pool).toContain('agent_ui_pool_gc_idle_ios');
+    expect(pool).toContain('agent_ui_pool_gc_idle_android');
+    expect(pool).toContain('agent_ui_pool_slot_ios_warm');
+    expect(pool).toContain('agent_ui_pool_slot_warm');
+    expect(pool).toContain('AGENT_UI_IOS_IDLE_SECS');
+    expect(pool).toContain('AGENT_UI_ANDROID_IDLE_SECS');
+    expect(pool).toContain('keeping');
     expect(pool).toContain('agent-ui-slots');
     expect(pool).toContain('AGENT_UI_POOL_MAX');
     expect(pool).toContain('onTrack Agent');
@@ -163,7 +175,7 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('AGENT_UI_LOCK_WAIT_SECS');
     expect(host).toContain('AGENT_UI_LOCK_DIR');
     expect(host).toMatch(
-      /if \[\[ "\$\{AGENT_UI_SKIP_LEASE:-0\}" != "1" \]\]; then\s*agent_ui_ensure_lease/,
+      /if \[\[ "\$\{AGENT_UI_SKIP_LEASE:-0\}" != "1" \]\]; then[\s\S]*?agent_ui_ensure_lease/,
     );
     // Fresh pool slots: heal may boot without install — fall through to clone.
     expect(host).toContain('agent_ui_pool_ensure_app_installed');
@@ -173,12 +185,19 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('agent_ui_restart_device');
     expect(host).toContain('AGENT_UI_DEVICE_RESPOND_SECS');
     expect(host).toContain('AGENT_UI_ANDROID_BRIDGE_WAIT_SECS');
+    expect(host).toContain('AGENT_UI_ANDROID_WARM_BRIDGE_WAIT_SECS');
+    expect(host).toContain('AGENT_UI_IOS_WARM_BRIDGE_WAIT_SECS');
     expect(host).toContain('Android app running but bridge quiet');
+    expect(host).toContain('iOS app running but bridge quiet');
+    expect(host).toContain('iOS bridge quiet but recently ok');
     expect(host).toContain('assuming down, restarting');
     expect(host).toContain('agent_ui_write_slot_pin');
     expect(host).toContain('agent_ui_pin_android_serial');
     expect(host).toContain('never talk to Galaxy_S26');
     expect(pool).toContain('agent_ui_pool_clone_ios_app');
+    // Untimed install wedges when orphaned simctl io owns CoreSimulator.
+    expect(pool).toContain('ios_simctl_timed 90 install');
+    expect(pool).not.toMatch(/^\s*xcrun simctl install /m);
     expect(pool).toContain('agent_ui_pool_clone_android_app');
     // ensure-packager sources pool.sh without host — clone must resolve ROOT alone.
     expect(pool).toContain('agent_ui_pool_repo_root');
@@ -191,7 +210,60 @@ describe('agent-ui host scripts contract', () => {
     // Android side must wait for a fully booted emulator before verify.
     expect(verifyBoth).toContain('android_emu_ensure_ready');
     expect(verifyBoth).toContain('ensuring Android emulator is up and ready');
+    expect(verifyBoth).toContain('soft reconnect');
+    expect(verifyBoth).toContain('iOS app up but bridge quiet');
     expect(verifyBoth).not.toMatch(/ensure-packager\.sh" --start --android \|\| true/);
+    // Headed Simulator open → handoff preferred Pro (not stale Agent N window).
+    expect(verifyBoth).toContain('agent_ui_headed_viewer_handoff');
+    // Dual-run children must not mid-handoff Galaxy (looks hung after iOS ok).
+    expect(verifyBoth).toContain('AGENT_UI_SKIP_HEADED_HANDOFF=1');
+    // Pool asserts ignore sticky android-headed.keep unless KEEP=1 explicit.
+    expect(verifyBoth).toContain('sticky headed keep ignored');
+    expect(verifyBoth).toContain('ONTRACK_ANDROID_KEEP_HEADED=0');
+    expect(host).toContain('agent_ui_headed_ios_handoff');
+    expect(host).toContain('headed viewer handoff');
+    expect(host).toContain('AGENT_UI_SKIP_HEADED_HANDOFF');
+    expect(host).toContain('Never re-run --flow here');
+    expect(host).toContain('not cold-booting');
+    expect(host).toContain('agents stay warm');
+    // Ready check BEFORE adopt — never "adopting" then "skipped".
+    expect(host).toMatch(
+      /agent_ui_headed_android_handoff\(\)[\s\S]*?android_emu_avd_is_ready_named[\s\S]*?android_emu_adopt_android_for_headed_host/,
+    );
+    // Android handoff must not SurfaceView-heal (≤25s) after verify already passed.
+    expect(host).toContain('Never call android_emu_ensure_app_surface here');
+    expect(host).toContain('AGENT_UI_HEADED_ANDROID_HANDOFF_SECS');
+    expect(host).not.toMatch(
+      /agent_ui_headed_android_handoff\(\)[\s\S]*?\bandroid_emu_ensure_app_surface\b(?! here)/,
+    );
+    // Lease sets ONTRACK_IOS_SIMULATOR=Agent N — handoff must use viewer name.
+    expect(host).toContain('ios_sim_viewer_name');
+    expect(host).toContain('ONTRACK_IOS_SIMULATOR_UDID=');
+    expect(host).not.toMatch(
+      /agent_ui_headed_ios_handoff\(\)[\s\S]*?name="\$\(ios_sim_preferred_name\)"/,
+    );
+    // Soft reconnect first — hard terminate races Fabric BlurView remounts.
+    expect(host).toContain('Prefer soft reconnect');
+    expect(host).toContain('app context has been lost');
+    expect(host).toMatch(
+      /agent_ui_headed_ios_handoff\(\)[\s\S]*?agent_ui_soft_reconnect_dev_client[\s\S]*?simctl terminate/,
+    );
+    // Headed WINDOW=1 still hard-fails alert OCR; headless Agent pool soft-continues.
+    expect(host).toContain(
+      'iOS system-alert clear failed while headed Simulator is required',
+    );
+    expect(host).toContain('ONTRACK_IOS_SIMULATOR_WINDOW');
+    expect(host).toContain('continuing (bridge is up)');
+    // Headed layout: Android left, iOS right.
+    expect(host).toContain('agent_ui_arrange_headed_device_windows');
+    expect(host).toContain('ios_sim_place_window_named');
+    expect(host).toContain('android_emu_place_window left');
+    const simLib = read('scripts/lib/ios-simulator.sh');
+    expect(simLib).toContain('ios_sim_focus_window_named');
+    expect(simLib).toContain('ios_sim_place_window_named');
+    expect(simLib).toContain('ios_sim_viewer_name');
+    expect(simLib).toContain('onTrack\\ Agent*|onTrack_Agent*');
+    expect(read('scripts/agent-ui-verify.sh')).toContain('agent_ui_headed_viewer_handoff');
 
     const emu = read('scripts/lib/android-emulator.sh');
     // Pool kills must be fast (no 20s snapshot save) and peers stay up.
@@ -200,12 +272,28 @@ describe('agent-ui host scripts contract', () => {
     expect(emu).toContain('Leaving unidentified emulator up (pool)');
     expect(emu).toContain('Shutting down non-agent emulator (pool)');
     expect(emu).toContain('android_emu_discard_default_snapshot');
+    expect(emu).toContain('android_emu_regenerate_default_snapshot');
     expect(emu).toContain('went offline before boot_completed');
+    expect(emu).toContain('hw.gpu.mode=host');
+    expect(emu).toContain('ONTRACK_ANDROID_AGENT_RAM_MB');
+    expect(emu).toContain('Shutting down agent emulator (headed');
+    expect(emu).toContain('headed ${headed_name} keep needs RAM/GPU');
+    expect(emu).toContain('Leaving headed emulator up (user window)');
+    expect(emu).toContain('ONTRACK_ANDROID_KEEP_HEADED=0 (pool verify-both)');
+    expect(emu).toContain('android-headed.keep');
+    expect(emu).toContain('clearing stale headed keep');
+    expect(emu).toContain('not running headed');
+    expect(emu).toContain('android_emu_adopt_android_for_headed_host');
+    expect(emu).toContain('adopting headed');
+    expect(emu).toContain('cannot run agent beside GUI');
+    expect(emu).toContain('NEVER run agents');
 
     // Galaxy must not spoof android bridge status for an Agent AVD.
     expect(host).toContain('agent_ui_app_process_running || return 1');
-    expect(verifyBoth).toContain('Android bridge quiet on');
+    expect(verifyBoth).toContain('Android still quiet');
     expect(verifyBoth).toContain('agent_ui_bridge_answers');
+    expect(verifyBoth).toContain('android_emu_adopt_android_for_headed_host');
+    expect(verifyBoth).toContain('ensuring Android emulator is up and ready');
 
     const bridge = read('scripts/lib/agent_ui_bridge.py');
     expect(bridge).toContain('has_flow_land');
@@ -382,19 +470,86 @@ grep -qE 'agent device slot|device slots are busy' /tmp/agent-ui-pool-wait.err
     expect(bridgePy).toContain('run_verify');
     expect(bridgePy).toContain('assert-color');
     expect(bridgePy).toContain('resolve_test_id');
+    const idsPy = read('scripts/lib/agent_ui_ids.py');
+    expect(idsPy).toContain('_canonicalize_travel_home_namespace');
+    expect(idsPy).toContain('travel.home.');
+    expect(idsPy).toContain('travel.list.');
+    // Colloquial Travel Home asserts must resolve to stamped list wire ids.
+    const resolveHome = [
+      'import importlib.util, sys',
+      `spec = importlib.util.spec_from_file_location("ids", ${JSON.stringify(
+        `${root}/scripts/lib/agent_ui_ids.py`,
+      )})`,
+      'm = importlib.util.module_from_spec(spec)',
+      'spec.loader.exec_module(m)',
+      `root = ${JSON.stringify(root)}`,
+      'from pathlib import Path',
+      'r = Path(root)',
+      'assert m.resolve_test_id("travel.home.section.yourTrips", root=r) == "ontrack.travel.list.section.yourTrips"',
+      'assert m.resolve_test_id("ontrack.travel.home.section.yourTrips", root=r) == "ontrack.travel.list.section.yourTrips"',
+      'assert m.resolve_test_id("travel.home.sectionYourTrips", root=r) == "ontrack.travel.list.section.yourTrips"',
+      'print("travel.home resolve ok")',
+    ].join('\n');
+    const resolveHomeOut = execFileSync('python3', ['-c', resolveHome], {
+      encoding: 'utf8',
+    }).trim();
+    expect(resolveHomeOut).toContain('travel.home resolve ok');
     // Android cold boot wakes on `/` — auto-land + one retry, never assert-only.
+    // Any platform on the wrong surface with bare --route also auto-gotos (no thrash).
     expect(bridgePy).toContain('_android_cold_root');
     expect(bridgePy).toContain('auto-landing via goto');
+    expect(bridgePy).toContain('auto-landed via goto');
+    expect(bridgePy).toContain('auto_land');
     expect(bridgePy).toContain('retrying land');
     expect(bridgePy).toContain('AGENT_UI_ANDROID_FORCE_LAND');
     expect(bridgePy).toContain('--wait-route');
     expect(bridgePy).toContain('normalize_route_path');
     expect(bridgePy).toContain('must NOT match');
+    expect(bridgePy).toMatch(
+      /No explicit land — skip only when already on the wanted surface/,
+    );
     const verifyBoth = read('scripts/agent-ui-verify-both.sh');
+    const hostSh = read('scripts/lib/agent-ui-host.sh');
+    const agentUiSh = read('scripts/agent-ui.sh');
     expect(verifyBoth).toContain('AGENT_UI_ANDROID_FORCE_LAND');
     expect(verifyBoth).toContain('Android on / (cold boot)');
+    // Soft-reconnect before peer emu kill; heartbeats on cold packager ensure.
+    expect(verifyBoth).toContain('Android still quiet');
+    expect(verifyBoth).toContain('still ensuring Android packager/app');
+    expect(verifyBoth).toContain('Android warm path ok');
+    // Epilogue parsed before long iOS/Android work (mid-edit offset safety).
+    expect(verifyBoth).toMatch(
+      /finish_verify_both\(\)[\s\S]*?set \+e[\s\S]*?run_ios[\s\S]*?finish_verify_both/,
+    );
+    // Default dual close-out is parallel (daemon platform:slot FIFOs); serial escape.
+    expect(verifyBoth).toContain('parallel iOS + Android');
+    expect(verifyBoth).toContain('AGENT_UI_VERIFY_SERIAL');
+    expect(verifyBoth).toMatch(/run_ios &\s*\n\s*ios_pid=/);
+    expect(verifyBoth).toMatch(/run_android &\s*\n\s*android_pid=/);
     expect(verifyBoth).toContain('do NOT pipe this script through `tail`');
-    expect(verifyBoth).toContain('piped through tail/head');
+    expect(verifyBoth).toContain('agent_ui_refuse_piped_head_tail');
+    expect(verifyBoth).toMatch(/-h\|--help\) usage/);
+    expect(hostSh).toContain('agent_ui_refuse_piped_head_tail');
+    expect(hostSh).toContain('AGENT_UI_ALLOW_PIPED_TAIL');
+    expect(hostSh).toContain('piped through head/tail');
+    // Per-entry-line match via $0; pipe must follow entry (`script | tail`),
+    // not a sibling `jest | tail && script` (false-positive abort).
+    expect(hostSh).toContain('entry_base');
+    expect(hostSh).toContain('basename "${0:-}"');
+    expect(hostSh).toContain('util_h');
+    expect(hostSh).toContain('Sibling `jest | tail && script`');
+    // bash: grep -Eq "${entry_base}"'.*\|[[:space:]]…'
+    expect(hostSh).toContain('"${entry_base}"' + "'.*\\|");
+    expect(hostSh).not.toMatch(/\*"\|"\*head\*/);
+    // Refuse pipes before auto-lease on source (silent hang root cause).
+    expect(hostSh).toMatch(
+      /agent_ui_refuse_piped_head_tail[\s\S]*?agent_ui_ensure_lease/,
+    );
+    // Help must run before sourcing host (source auto-leases).
+    expect(agentUiSh).toMatch(
+      /Help must run BEFORE sourcing host[\s\S]*?source[\s\S]*agent-ui-host\.sh/,
+    );
+    expect(agentUiSh).toContain('once" || "${1}" == "verify"');
 
     // /travel must not match trip detail (false skip → agent redo loops).
     const routeScript = [

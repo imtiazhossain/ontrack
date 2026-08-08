@@ -3,16 +3,24 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, EmptyState, Screen, Symbol } from '@/components/primitives';
 import {
-  vehicleDisplayTitle,
-  vehicleFitmentLabel,
-  type Vehicle,
-} from '@/features/vehicles/types';
+    AppText,
+    Button,
+    Card,
+    EmptyState,
+    GlassIconWell,
+    Screen,
+    Symbol,
+} from '@/components/primitives';
 import { isMaintenanceDue } from '@/features/vehicles/maintenance-due';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import {
+    vehicleDisplayTitle,
+    vehicleFitmentLabel,
+    type Vehicle,
+} from '@/features/vehicles/types';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useResponsive } from '@/hooks/use-responsive';
+import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
 import { useVehicles } from '@/store/vehicles';
 import { AgentUiIds } from '@/utils/agent-ui';
 import { todayKey } from '@/utils/date';
@@ -39,17 +47,9 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       accessibilityLabel={`${title}, ${miles}`}
       testID={AgentUiIds.vehicles.vehicle(vehicle.id)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: gap.md }}>
-        <View
-          style={{
-            width: s(48),
-            height: s(48),
-            borderRadius: s(14),
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.accentFaint,
-          }}>
+        <GlassIconWell size={s(48)} borderRadius={s(14)}>
           <Symbol name="vehicles" size={s(24)} color={theme.accentPrimary} />
-        </View>
+        </GlassIconWell>
         <View style={{ flex: 1, minWidth: 0, gap: gap.xs }}>
           <AppText variant="heading" fit numberOfLines={1}>
             {title}

@@ -152,13 +152,13 @@ describe('canonical design-system contract', () => {
     expect(grid).toContain('title="At Your Destination"');
     expect(grid).toContain('title="Travel Together"');
     expect(grid).toContain('showItineraryAction');
-    // Tools sit in a collapsible at the top of plan detail (after hero).
+    // Tools sit in a collapsible at the bottom of plan detail (after timeline).
     const tools = read('src/features/travel/travel-plan-trip-tools.tsx');
     expect(tools).toContain('title="Trip Tools"');
     expect(body).toContain("toggleSection('tools')");
     expect(body).toContain('TravelPlanTripTools');
-    expect(body.indexOf('<TravelPlanTripTools')).toBeLessThan(
-      body.indexOf('<TravelTransportSections'),
+    expect(body.indexOf('<TravelCollapsibleSection')).toBeLessThan(
+      body.indexOf('<TravelPlanTripTools'),
     );
   });
 
@@ -222,6 +222,20 @@ describe('canonical design-system contract', () => {
     expect(screen).not.toMatch(/\{useAtmosphere \? <ScreenAtmosphere/);
   });
 
+  it('keeps Privacy / Terms stack chrome transparent like Profile glass atmosphere', () => {
+    const rootLayout = read('src/app/_layout.tsx');
+    expect(rootLayout).toContain('legalDocumentScreenOptions');
+    expect(rootLayout).toContain("fallback=\"/(tabs)/profile\"");
+    expect(rootLayout).toMatch(/name="privacy"[^>]*legalDocumentScreenOptions\('Privacy Policy'\)/);
+    expect(rootLayout).toMatch(/name="terms"[^>]*legalDocumentScreenOptions\('Terms of Use'\)/);
+    const helper = rootLayout.match(
+      /function legalDocumentScreenOptions[\s\S]*?\n\}/,
+    )?.[0];
+    expect(helper).toBeTruthy();
+    expect(helper).toContain("contentStyle: { backgroundColor: 'transparent'");
+    expect(helper).toContain("headerStyle: { backgroundColor: 'transparent'");
+  });
+
   it('uses X dismissal instead of full-width Cancel actions on migrated surfaces', () => {
     const files = [
       'src/app/(tabs)/travel/index.tsx',
@@ -267,14 +281,21 @@ describe('canonical design-system contract', () => {
 
   it('ships a development-only gallery and canonical guide', () => {
     expect(read('src/app/(tabs)/profile/design-system.tsx')).toContain('DevAccessGate');
-    expect(read('src/features/design-system/design-system-gallery.tsx')).toContain(
-      'SheetScaffold',
+    const gallery = read('src/features/design-system/design-system-gallery.tsx');
+    expect(gallery).toContain('SheetScaffold');
+    expect(gallery).toContain("value: 'elements'");
+    expect(gallery).toContain("value: 'demos'");
+    expect(gallery).not.toContain("value: 'catalog'");
+    expect(gallery).not.toContain("value: 'components'");
+    expect(read('src/features/design-system/design-system-demos-panel.tsx')).toContain(
+      'DesignSystemComponentsPanel',
     );
     expect(read('src/features/account/developer-hub.tsx')).toContain(
       'AgentUiIds.developer.designSystem',
     );
     expect(read('docs/design-system.md')).toContain('Consistency wins');
     expect(read('docs/design-system.md')).toContain('## Intuitive path');
+    expect(read('docs/design-system.md')).toContain('browse → try → tune');
     expect(read('docs/design-system.md')).toContain('fieldTitleCase');
   });
 
