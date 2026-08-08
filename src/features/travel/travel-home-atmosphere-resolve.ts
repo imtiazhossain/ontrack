@@ -13,6 +13,8 @@ import {
   TRAVEL_HOME_CURATED_ATMOSPHERE,
   curatedAtmosphereKey,
   filterCuratedAtmosphere,
+  matchCuratedAtmosphereForPlace,
+  type TravelHomeCuratedAtmosphere,
 } from '@/features/travel/travel-home-atmosphere-catalog';
 import type { TravelAtmosphereHeaderInk } from '@/features/travel/travel-home-atmosphere-ink';
 import {
@@ -64,21 +66,9 @@ function resolveAtmospherePlace(
   return single && single.length >= 2 ? single : undefined;
 }
 
-export function pickCuratedTravelHomeAtmosphere(
-  timeOfDay: TravelTimeOfDay,
-  weatherCode: number | undefined,
-  recentKeys: readonly string[] = [],
-  salt = 0,
+function curatedImageFromItem(
+  item: TravelHomeCuratedAtmosphere,
 ): TravelHomeAtmosphereImage {
-  const mood = travelWeatherMood(weatherCode);
-  const pool = filterCuratedAtmosphere(
-    TRAVEL_HOME_CURATED_ATMOSPHERE,
-    timeOfDay,
-    mood,
-  );
-  const keys = pool.map(curatedAtmosphereKey);
-  const index = pickRotatingIndex(pool.length, recentKeys, keys, salt);
-  const item = pool[index] ?? TRAVEL_HOME_CURATED_ATMOSPHERE[0]!;
   return {
     key: curatedAtmosphereKey(item),
     source: item.source,
@@ -87,6 +77,43 @@ export function pickCuratedTravelHomeAtmosphere(
     averageColor: item.averageColor,
     curatedHeaderTone: item.headerTone,
   };
+}
+
+export function pickCuratedTravelHomeAtmosphere(
+  timeOfDay: TravelTimeOfDay,
+  weatherCode: number | undefined,
+  recentKeys: readonly string[] = [],
+  salt = 0,
+  catalog: readonly TravelHomeCuratedAtmosphere[] = TRAVEL_HOME_CURATED_ATMOSPHERE,
+): TravelHomeAtmosphereImage {
+  const mood = travelWeatherMood(weatherCode);
+  const pool = filterCuratedAtmosphere(catalog, timeOfDay, mood);
+  const keys = pool.map(curatedAtmosphereKey);
+  const index = pickRotatingIndex(pool.length, recentKeys, keys, salt);
+  const item = pool[index] ?? catalog[0] ?? TRAVEL_HOME_CURATED_ATMOSPHERE[0]!;
+  return curatedImageFromItem(item);
+}
+
+/**
+ * Prefer a people-vetted curated plate when the destination has one.
+ * Remote stock often returns tourist-in-frame aurora / street scenes.
+ */
+export function pickCuratedTravelHomeAtmosphereForPlace(
+  place: string,
+  timeOfDay: TravelTimeOfDay,
+  weatherCode: number | undefined,
+  recentKeys: readonly string[] = [],
+  salt = 0,
+): TravelHomeAtmosphereImage | undefined {
+  const matched = matchCuratedAtmosphereForPlace(place);
+  if (matched.length === 0) return undefined;
+  return pickCuratedTravelHomeAtmosphere(
+    timeOfDay,
+    weatherCode,
+    recentKeys,
+    salt,
+    matched,
+  );
 }
 
 /**
@@ -117,6 +144,26 @@ export async function resolveTravelHomeAtmosphereImage(
       fetchPlaceCoverUris(nextQueries, DESTINATION_COVER_POOL_MAX));
 
   const destinationKey = place ? atmosphereDestinationKey(place) : undefined;
+
+  // Labeled destinations → curated first (bundled plates are people-free).
+  if (place) {
+    const placeCurated = pickCuratedTravelHomeAtmosphereForPlace(
+      place,
+      options.timeOfDay,
+      options.weatherCode,
+      recentKeys,
+      salt,
+    );
+    if (placeCurated) {
+      return destinationKey
+        ? {
+            ...placeCurated,
+            destinationKey,
+            label: placeCurated.label ?? place,
+          }
+        : placeCurated;
+    }
+  }
 
   try {
     const pool = await fetchPool(queries);

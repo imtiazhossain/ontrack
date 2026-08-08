@@ -540,6 +540,8 @@ export const AgentUiIds = {
       sectionYourTrips: 'ontrack.travel.list.section.yourTrips',
       atmosphereLocation: 'ontrack.travel.list.section.atmosphereLocation',
       search: 'ontrack.travel.list.search',
+      searchMinimize: 'ontrack.travel.list.searchMinimize',
+      searchDismiss: 'ontrack.travel.list.searchDismiss',
       searchClear: 'ontrack.travel.list.searchClear',
       emptyCreate: 'ontrack.travel.list.empty.create',
       emptySearch: 'ontrack.travel.list.empty.search',

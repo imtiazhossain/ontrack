@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -27,7 +27,6 @@ import { validateTravelDateRange } from '@/features/travel/date-range';
 import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
 import { currencyFromLocale } from '@/features/travel/expenses/format-money';
 import { repairTravelPlansChatAccess } from '@/features/travel/travel-chat-roster';
-import { resolveTravelCoTravelerPeople } from '@/features/travel/travel-cotraveler-people';
 import { TravelFriendsSheet } from '@/features/travel/travel-friends-sheet';
 import { travelHomeAtmosphereHeaderScrimColors } from '@/features/travel/travel-home-atmosphere-ink';
 import {
@@ -40,12 +39,14 @@ import {
 } from '@/features/travel/travel-home-background';
 import { TravelHomeHeader } from '@/features/travel/travel-home-header';
 import { filterTravelPlansByQuery } from '@/features/travel/travel-home-plan-search';
-import { TravelHomeSectionHeader } from '@/features/travel/travel-home-section-header';
 import {
     travelHomeFontFamily,
     travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
-import { TravelHomeTripCard } from '@/features/travel/travel-home-trip-card';
+import {
+    isTravelHomeTripSearchActive,
+    TravelHomeYourTrips,
+} from '@/features/travel/travel-home-your-trips';
 import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
@@ -62,7 +63,7 @@ import {
     orderTravelPlansForLauncher,
     useTravel,
 } from '@/store/travel';
-import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
+import { AgentUiIds } from '@/utils/agent-ui';
 import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 import { toDateKey } from '@/utils/date';
 import { newId } from '@/utils/id';
@@ -91,7 +92,7 @@ function TravelScreenContent() {
     editCover?: string;
     tripId?: string;
   }>();
-  const { spacing: rs, s } = useResponsive();
+  const { spacing: rs } = useResponsive();
   const { user } = useAuthSession();
   const plans = useTravel((state) => state.plans);
   const recentPlanIds = useTravel((state) => state.recentPlanIds);
@@ -160,6 +161,15 @@ function TravelScreenContent() {
     [plans, recentPlanIds, today],
   );
   const [tripSearchQuery, setTripSearchQuery] = useState('');
+  const [tripSearchOpen, setTripSearchOpen] = useState(false);
+  // Close only — section header clears query + keyboard after collapse settles.
+  const collapseTripSearch = useCallback(() => {
+    setTripSearchOpen(false);
+  }, []);
+  const tripSearchActive = isTravelHomeTripSearchActive(
+    tripSearchOpen,
+    tripSearchQuery,
+  );
   const visibleLauncherPlans = useMemo(
     () => filterTravelPlansByQuery(launcherPlans, tripSearchQuery),
     [launcherPlans, tripSearchQuery],
@@ -588,6 +598,7 @@ function TravelScreenContent() {
           onAddTrip={!showForm ? openCreateTrip : undefined}
           locationLabel={atmosphereImage.label}
           headerInk={atmosphereImage.headerInk}
+          onPressAway={tripSearchActive ? collapseTripSearch : undefined}
         />
 
         {showForm ? (
@@ -615,31 +626,23 @@ function TravelScreenContent() {
         ) : null}
 
         {launcherPlans.length > 0 ? (
-          <View
-            style={{
-              // Screen `gap` already contributes cardGap; add the rest so the
-              // tagline→section band matches the reference atmosphere peek.
-              // Keep spacing on a real View — AgentTestId omits its wrapper
-              // when agent UI is disabled.
-              marginTop: Math.max(
-                0,
-                s(travelHomeTokens.spacing.headerToSection) -
-                  travelHomeTokens.spacing.cardGap,
-              ),
-              // May be negative so section→card can sit tighter than Screen cardGap.
-              marginBottom:
-                s(travelHomeTokens.spacing.sectionGap) -
-                travelHomeTokens.spacing.cardGap,
-            }}>
-            <AgentTestId testID={AgentUiIds.travel.list.sectionYourTrips}>
-              <TravelHomeSectionHeader
-                title="Your Trips"
-                count={visibleLauncherPlans.length}
-                searchQuery={tripSearchQuery}
-                onSearchQueryChange={setTripSearchQuery}
-              />
-            </AgentTestId>
-          </View>
+          <TravelHomeYourTrips
+            plans={visibleLauncherPlans}
+            searchQuery={tripSearchQuery}
+            onSearchQueryChange={setTripSearchQuery}
+            searchOpen={tripSearchOpen}
+            onSearchOpenChange={setTripSearchOpen}
+            onDismissSearch={collapseTripSearch}
+            selfDisplayName={selfDisplayName}
+            atmosphereAverageColor={atmosphereImage.averageColor}
+            onOpenTrip={openItinerary}
+            onEditTrip={(id) => {
+              const next = sortedPlans.find((item) => item.id === id);
+              if (next) beginEditingDetails(next);
+            }}
+            onViewTravelers={openFriends}
+            onLayoutY={rememberTripOffset}
+          />
         ) : !showForm ? (
           <EmptyState
             icon="flight"
@@ -652,39 +655,6 @@ function TravelScreenContent() {
             messageStyle={{ fontFamily: travelHomeFontFamily }}
           />
         ) : null}
-
-        {launcherPlans.length > 0 &&
-        visibleLauncherPlans.length === 0 &&
-        tripSearchQuery.trim() ? (
-          <AgentTestId testID={AgentUiIds.travel.list.emptySearch}>
-            <EmptyState
-              icon="search"
-              title="No matching trips"
-              message="Try a different title, destination, or note."
-              titleStyle={{ fontFamily: travelHomeFontFamily }}
-              messageStyle={{ fontFamily: travelHomeFontFamily }}
-            />
-          </AgentTestId>
-        ) : null}
-
-        {visibleLauncherPlans.map((plan, index) => (
-          <TravelHomeTripCard
-            key={plan.id}
-            plan={plan}
-            index={index}
-            soloAtmosphereShadow={visibleLauncherPlans.length === 1}
-            atmosphereAverageColor={atmosphereImage.averageColor}
-            travelers={resolveTravelCoTravelerPeople(plan, selfDisplayName)}
-            onOpenTrip={openItinerary}
-            onViewItinerary={openItinerary}
-            onEditTrip={(id) => {
-              const next = sortedPlans.find((item) => item.id === id);
-              if (next) beginEditingDetails(next);
-            }}
-            onViewTravelers={openFriends}
-            onLayoutY={rememberTripOffset}
-          />
-        ))}
 
         {friendsPlan ? (
           <TravelFriendsSheet

@@ -135,6 +135,16 @@ describe('destinationPhotoSuggestsPeople', () => {
       true,
     );
     expect(
+      destinationPhotoSuggestsPeople(
+        'person in black jacket standing under green aurora',
+      ),
+    ).toBe(true);
+    expect(
+      destinationPhotoSuggestsPeople(
+        'Photographing from Ulfarsfell around midnight',
+      ),
+    ).toBe(true);
+    expect(
       destinationPhotoSuggestsPeople('Aurora Borealis over Kirkjufell'),
     ).toBe(false);
   });

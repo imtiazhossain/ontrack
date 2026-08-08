@@ -78,7 +78,14 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const compact = layoutWidth < 360;
   const radius = travelHomeTokens.radius.tripCard;
   const heroHeight = travelHomeImageHeight(cardWidth);
-  const bodyOverlap = travelHomeTokens.spacing.bodyOverlap;
+  const minBodyOverlap: number = travelHomeTokens.spacing.bodyOverlap;
+  /**
+   * Frost title band — grows when the destination title wraps (up to 2 lines).
+   * Floor stays at `bodyOverlap` so avatars keep their photo bite.
+   */
+  const [titleBandHeight, setTitleBandHeight] = useState<number>(minBodyOverlap);
+  const titlePadTop = travelHomeTokens.spacing.bodyTop;
+  const titlePadBottom = Math.max(6, s(6));
   /**
    * Visual milk under the title into paper. Keep short — paper paints above
    * this bleed (zIndex) so footer never gets clipped by the scoop.
@@ -112,6 +119,9 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       (typeof plan.coverUri === 'string' && plan.coverUri.trim()) || plan.id,
     );
   }, [plan.id, plan.coverUri]);
+  useEffect(() => {
+    setTitleBandHeight(minBodyOverlap);
+  }, [plan.id, plan.title, minBodyOverlap]);
   const cardShadow = soloAtmosphereShadow
     ? travelHomeSoloTripCardShadow({
         averageColor: atmosphereAverageColor,
@@ -208,6 +218,18 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     </View>
   ) : null;
 
+  const avatarSize = Math.max(34, s(travelHomeTokens.sizes.avatar));
+  const syncTitleBandHeight = (titleContentHeight: number) => {
+    const rowH = Math.max(
+      titleContentHeight,
+      compact || travelers.length === 0 ? 0 : avatarSize,
+    );
+    const next = Math.max(
+      minBodyOverlap,
+      Math.ceil(rowH + titlePadTop + titlePadBottom),
+    );
+    setTitleBandHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev));
+  };
   const titleBlock = (
     <View style={styles.titleCluster}>
       <View style={[styles.titleRow, { gap: rs.sm }]}>
@@ -215,8 +237,11 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           <Text
             allowFontScaling
             maxFontSizeMultiplier={1.15}
-            numberOfLines={1}
+            numberOfLines={2}
             ellipsizeMode="tail"
+            onLayout={(event) => {
+              syncTitleBandHeight(event.nativeEvent.layout.height);
+            }}
             style={{
               color: titleInk,
               fontFamily: travelHomeFontFamily,
@@ -224,9 +249,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               lineHeight: titleSize * 1.1,
               fontWeight: '400',
               letterSpacing: -0.4,
-              textShadowColor: 'rgba(0,0,0,0.35)',
-              textShadowOffset: { width: 0, height: 1 },
-              textShadowRadius: 6,
             }}>
             {plan.title}
           </Text>
@@ -298,12 +320,12 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           style={[
             styles.frostBand,
             {
-              height: bodyOverlap + frostFadeBleed,
-              marginTop: -bodyOverlap,
+              height: titleBandHeight + frostFadeBleed,
+              marginTop: -titleBandHeight,
             },
           ]}>
           <TravelHomeTripFrostScoop
-            height={bodyOverlap}
+            height={titleBandHeight}
             fadeBleed={frostFadeBleed}
             paperColor={paper}
             blurKey={frostBlurKey}
@@ -330,8 +352,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   styles.frostTitle,
                   {
                     paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                    paddingTop: travelHomeTokens.spacing.bodyTop,
-                    paddingBottom: Math.max(6, s(6)),
+                    paddingTop: titlePadTop,
+                    paddingBottom: titlePadBottom,
                     opacity: pressed ? 0.92 : 1,
                   },
                 ]}>
@@ -506,7 +528,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
-    overflow: 'hidden',
   },
   locationChip: {
     flexDirection: 'row',

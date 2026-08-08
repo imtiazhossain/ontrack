@@ -122,6 +122,8 @@ export function mergeSandboxTravelPlansIntoLive(sandboxPlans: unknown): void {
   useTravel.getState().replacePlans([...byId.values()]);
 }
 
+const ENTER_DEV_MODE_FLUSH_MS = 3_000;
+
 /**
  * Enter Dev Mode: flush real account to cloud, snapshot local domains, pause pushes.
  * Demo seeds stay on-device until exit restores the snapshot (then purges reserved ids).
@@ -135,7 +137,13 @@ export async function enterDevMode(source: DevModeSource = 'user'): Promise<void
     return;
   }
 
-  await flushCloudSync().catch(() => undefined);
+  // Best-effort flush — never block sandbox entry if push stalls (hang ≠ reject).
+  await Promise.race([
+    flushCloudSync().catch(() => undefined),
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ENTER_DEV_MODE_FLUSH_MS);
+    }),
+  ]);
   activateSandbox(captureLiveSnapshot(), source);
 }
 

@@ -456,7 +456,9 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.chrome.skyDecor`                 | Layout anchor — weather sky + location ground (stars/moon, sun/clouds, town/trees) behind titles |
 | `ontrack.travel.list.section.yourTrips`          | Layout anchor — Your Trips section                        |
 | `ontrack.travel.list.section.atmosphereLocation` | Layout anchor — atmosphere photo place caption            |
-| `ontrack.travel.list.search`                     | Full-width Your Trips search (placeholder label)          |
+| `ontrack.travel.list.search`                     | Your Trips search — chip expands; field when open         |
+| `ontrack.travel.list.searchMinimize`             | Collapse expanded trip search (leading search icon)       |
+| `ontrack.travel.list.searchDismiss`              | Atmosphere/header band — dismiss expanded trip search      |
 | `ontrack.travel.list.searchClear`                | Clear trip list search                                    |
 | `ontrack.travel.list.empty.create`               | Empty-state Add Your First Trip                           |
 | `ontrack.travel.list.empty.search`               | No trips match the current search                         |
@@ -597,7 +599,7 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | ID | Control |
 |----|---------|
 | `ontrack.developer.back` | Back to profile |
-| `ontrack.developer.section.appUpdates` | Expand/collapse App Updates (top of hub) |
+| `ontrack.developer.section.appUpdates` | Expand/collapse App Updates (top of hub; collapsed by default) |
 | `ontrack.developer.section.navigate` | Expand/collapse Navigate |
 | `ontrack.developer.section.insights` | Expand/collapse Product insights |
 | `ontrack.developer.section.runtime` | Expand/collapse Runtime |
@@ -624,7 +626,7 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.developer.env` | Runtime env card |
 | `ontrack.developer.overlay` | Agent-ui overlay toggle |
 | `ontrack.developer.sync` | Cloud sync status |
-| `ontrack.developer.seeds` | Demo seed list |
+| `ontrack.developer.seeds` | Demo seed list (under Navigate, only while Dev Mode is on) |
 | `ontrack.developer.seed.<name>` | Seed fixture button |
 | `ontrack.developer.routeInput` | Route alias field |
 | `ontrack.developer.routeGo` | Open route |

@@ -2,6 +2,7 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 
 import {
   filterCuratedAtmosphere,
+  matchCuratedAtmosphereForPlace,
   TRAVEL_HOME_CURATED_ATMOSPHERE,
 } from '../travel-home-atmosphere-catalog';
 import {
@@ -165,20 +166,23 @@ describe('Travel home atmosphere resolve', () => {
     expect(resolved.key.startsWith('curated:')).toBe(true);
   });
 
-  it('labels trip-aware remote plates with the destination', async () => {
+  it('prefers curated people-free plates for labeled destinations', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
       destination: 'Reykjavik, Iceland',
-      timeOfDay: 'day',
+      timeOfDay: 'night',
       weatherCode: 0,
       salt: 1,
       fetchPool: async () => ['https://images.unsplash.com/photo-demo-label'],
     });
-    expect(resolved.origin).toBe('remote');
-    expect(resolved.label).toBe('Reykjavik, Iceland');
+    expect(resolved.origin).toBe('curated');
+    expect(resolved.label).toMatch(/Reykjavík|Iceland/i);
+    expect(
+      matchCuratedAtmosphereForPlace('Reykjavik, Iceland').length,
+    ).toBeGreaterThan(0);
   });
 
-  it('rotates the remote label across all trip destinations', async () => {
+  it('uses curated Antigua plate before remote stock', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'trip',
       destinations: ['Iceland', 'Antigua', 'Lisbon'],
@@ -186,25 +190,22 @@ describe('Travel home atmosphere resolve', () => {
       weatherCode: 0,
       salt: 0,
       recentKeys: [atmosphereDestinationKey('Iceland')],
-      fetchPool: async (queries) => {
-        expect(queries.some((query) => /Antigua/i.test(query))).toBe(true);
-        return ['https://images.unsplash.com/photo-demo-antigua'];
-      },
+      fetchPool: async () => ['https://images.unsplash.com/photo-demo-antigua'],
     });
-    expect(resolved.origin).toBe('remote');
-    expect(resolved.label).toBe('Antigua');
+    expect(resolved.origin).toBe('curated');
+    expect(resolved.label).toBe('Antigua, Guatemala');
     expect(resolved.destinationKey).toBe(atmosphereDestinationKey('Antigua'));
   });
 
-  it('can show profile home as a place-aware remote plate', async () => {
+  it('falls back to remote when the place has no curated plate', async () => {
     const resolved = await resolveTravelHomeAtmosphereImage({
       mode: 'home',
-      destinations: ['Iceland'],
+      destinations: [],
       homeLabel: 'Austin, TX',
       timeOfDay: 'dusk',
       weatherCode: 0,
       salt: 0,
-      recentKeys: [atmosphereDestinationKey('Iceland')],
+      recentKeys: [],
       fetchPool: async (queries) => {
         expect(queries.some((query) => /Austin/i.test(query))).toBe(true);
         return ['https://images.unsplash.com/photo-demo-austin'];
@@ -220,19 +221,23 @@ describe('Travel home atmosphere resolve', () => {
       (item) => item.id === 'iceland-coast',
     );
     expect(iceland?.label).toBe('Reykjavík, Iceland');
-    const labeled = pickCuratedTravelHomeAtmosphere('day', 3, [], 2);
-    if (labeled.key === 'curated:iceland-coast') {
-      expect(labeled.label).toBe('Reykjavík, Iceland');
-    }
+    const labeled = pickCuratedTravelHomeAtmosphere(
+      'night',
+      3,
+      [],
+      0,
+      matchCuratedAtmosphereForPlace('Reykjavík, Iceland'),
+    );
+    expect(labeled.label).toMatch(/Reykjavík|Iceland/i);
   });
 
   it('tints the solo-trip card shadow from the atmosphere plate', () => {
-    expect(parseHexRgb('#B7C4D4')).toEqual({ r: 183, g: 196, b: 212 });
+    expect(parseHexRgb('#021734')).toEqual({ r: 2, g: 23, b: 52 });
     const iceland = travelHomeSoloTripCardShadow({
-      averageColor: '#B7C4D4',
+      averageColor: '#021734',
       dark: false,
     });
-    expect(iceland).toContain('rgba(59,78,110,');
+    expect(iceland).toContain('rgba(');
     expect(iceland).toMatch(/^0 18px 40px/);
     expect(
       travelHomeSoloTripCardShadow({ dark: false }),

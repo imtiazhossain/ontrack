@@ -27,6 +27,8 @@ type TravelHomeHeaderProps = {
   locationLabel?: string;
   /** Plate-aware header ink (`light` = white over dark washes). */
   headerInk?: TravelAtmosphereHeaderInk;
+  /** Collapse expanded trip search when the user taps header chrome. */
+  onPressAway?: () => void;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -35,6 +37,7 @@ export function TravelHomeHeader({
   onAddTrip,
   locationLabel,
   headerInk = 'light',
+  onPressAway,
   style,
 }: TravelHomeHeaderProps) {
   const theme = useTheme();
@@ -76,18 +79,19 @@ export function TravelHomeHeader({
   const titleLineHeight = Math.round(titleSize * titleMaxMultiplier * 1.12);
   const [flourishWidth, setFlourishWidth] = useState(0);
 
-  return (
-    <View
-      style={[
-        styles.root,
-        {
-          gap: Math.max(2, rs.xs - 1),
-          // Keep the first ink/FAB below the ScrollView clip edge.
-          paddingTop: Math.max(4, rs.xs),
-          paddingBottom: travelHomeTokens.spacing.headerBottom,
-        },
-        style,
-      ]}>
+  const rootStyle = [
+    styles.root,
+    {
+      gap: Math.max(2, rs.xs - 1),
+      // Keep the first ink/FAB below the ScrollView clip edge.
+      paddingTop: Math.max(4, rs.xs),
+      paddingBottom: travelHomeTokens.spacing.headerBottom,
+    },
+    style,
+  ];
+
+  const content = (
+    <>
       <View style={styles.topRow}>
         <TravelHomeAtmosphereText
           allowFontScaling
@@ -230,8 +234,22 @@ export function TravelHomeHeader({
           </AgentTestId>
         ) : null}
       </View>
-    </View>
+    </>
   );
+
+  if (onPressAway) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss trip search"
+        onPress={onPressAway}
+        style={rootStyle}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={rootStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({

@@ -106,9 +106,9 @@ export const travelHomeTokens = {
     editInset: 14,
     headerBottom: 8,
     /**
-     * Pull the frosted title scoop up over the hero. Tall enough for black
-     * title on milk (+ travelers); destination sits on paper below. Keep in
-     * sync with `travelHomeImageHeight`.
+     * Minimum frosted title scoop height over the hero (1-line title +
+     * travelers). Trip cards grow the scoop when the title wraps — keep this
+     * floor in sync with `travelHomeImageHeight`.
      */
     bodyOverlap: 56,
     /** Title band top inset inside the frost scoop. */

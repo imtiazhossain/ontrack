@@ -13,7 +13,10 @@ import { useTheme } from '@/hooks/use-theme';
 
 type TravelHomeTripFrostScoopProps = ViewProps & {
   children?: React.ReactNode;
-  /** Title band height (`bodyOverlap`). */
+  /**
+   * Title band height — usually measured content (≥ `bodyOverlap`) so the
+   * swoop grows with wrapped trip titles.
+   */
   height: number;
   /**
    * Extra fade into the paper body so the photo→paper ramp finishes solid.
@@ -90,18 +93,23 @@ export function TravelHomeTripFrostScoop({
    * Wedge in viewBox units (x 0–100). Left stays near the top of the scoop;
    * right drops to just above the short join so avatars keep open photo.
    */
-  const leftTop = Math.max(2, Math.round(milkHeight * 0.04));
+  const leftTop = Math.max(1, Math.round(milkHeight * 0.02));
   const rightTop = Math.max(
     Math.round(milkHeight - joinHeight * 0.55),
     Math.round(milkHeight * 0.52),
   );
   const veilPath = [
     `M 0 ${leftTop}`,
-    `C 32 ${leftTop} 58 ${rightTop * 0.72} 100 ${rightTop}`,
+    `C 28 ${leftTop} 56 ${rightTop * 0.7} 100 ${rightTop}`,
     `L 100 ${milkHeight}`,
     `L 0 ${milkHeight}`,
     'Z',
   ].join(' ');
+  /**
+   * Extra left-side milk under the title — bright glacier/fog washes need a
+   * denser plate on the ink side; right stays open for avatars.
+   */
+  const sideBoost = dark ? 0.58 : 0.52;
 
   return (
     <View
@@ -173,7 +181,7 @@ export function TravelHomeTripFrostScoop({
       />
       {/*
         Title veil — high behind left title ink, tapers out toward the right
-        (avatars keep more open photo). Shape-led wedge, not a flat shelf.
+        (avatars keep more open photo). Vertical milk + left-side boost.
       */}
       <Svg
         pointerEvents="none"
@@ -185,12 +193,22 @@ export function TravelHomeTripFrostScoop({
         <Defs>
           <SvgLinearGradient id="titleMilk" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={milkFill} stopOpacity={0} />
-            <Stop offset="0.28" stopColor={milkFill} stopOpacity={0.42} />
-            <Stop offset="0.62" stopColor={milkFill} stopOpacity={0.84} />
+            <Stop offset="0.22" stopColor={milkFill} stopOpacity={0.58} />
+            <Stop offset="0.55" stopColor={milkFill} stopOpacity={0.92} />
             <Stop offset="1" stopColor={milkFill} stopOpacity={1} />
+          </SvgLinearGradient>
+          <SvgLinearGradient id="titleSide" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={milkFill} stopOpacity={sideBoost} />
+            <Stop
+              offset="0.38"
+              stopColor={milkFill}
+              stopOpacity={sideBoost * 0.55}
+            />
+            <Stop offset="0.7" stopColor={milkFill} stopOpacity={0} />
           </SvgLinearGradient>
         </Defs>
         <Path d={veilPath} fill="url(#titleMilk)" />
+        <Path d={veilPath} fill="url(#titleSide)" />
       </Svg>
       <View style={[styles.chrome, { height: Math.min(height, fadeHeight) }]}>
         {children}
