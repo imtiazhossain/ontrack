@@ -6,6 +6,7 @@ import {
     travelHomeTokenContract,
     travelHomeVisualScenarios,
 } from '@/features/travel/fixtures/travel-home';
+import { travelHomeAtmosphereHeight } from '@/features/travel/travel-home-background';
 import {
     TRAVEL_HOME_PLANE_ROTATION_DEG,
     travelHomePlaneRearAxisUnit,
@@ -13,7 +14,6 @@ import {
     travelHomePlaneTransformPoint,
     travelHomeTrailStartVb,
 } from '@/features/travel/travel-home-icons';
-import { travelHomeAtmosphereHeight } from '@/features/travel/travel-home-background';
 import { travelHomeTokens } from '@/features/travel/travel-home-tokens';
 
 describe('travel home kit contract', () => {
@@ -114,7 +114,7 @@ describe('travel home kit contract', () => {
     expect(scoop).toContain('fadeHeight = totalHeight');
     expect(scoop).toContain('milkHeight');
     expect(scoop).toContain('borderWidth: 0');
-    // Join milk + SVG soft-swoop title veil (high left → ease right) + left boost.
+    // Join milk + SVG continuous swoop (soft left lift → crest → ease right).
     expect(scoop.match(/<LinearGradient/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(scoop).not.toContain('rgba(0,0,0,');
     expect(scoop).toContain('joinHeight');
@@ -122,8 +122,14 @@ describe('travel home kit contract', () => {
     expect(scoop).toContain('titleSide');
     expect(scoop).toContain('sideBoost');
     expect(scoop).toContain('veilPath');
-    expect(scoop).toContain('drop = Math.max');
-    expect(scoop).toMatch(/C 22 \$\{leftTop\}/);
+    expect(scoop).toContain('valleyY');
+    expect(scoop).toContain('leftY');
+    expect(scoop).toContain('rightY');
+    expect(scoop).toContain('titleMidGlow');
+    expect(scoop).toContain('<Ellipse');
+    expect(scoop).not.toContain('midGlowPath');
+    expect(scoop).toMatch(/C 16 \$\{leftY\}/);
+    expect(scoop).not.toContain('leftTop');
     expect(scoop).toContain('preserveAspectRatio="none"');
     expect(scoop).toContain("from 'react-native-svg'");
     // Gradient-led milk-out — no Android expo-image blur plate.
@@ -150,7 +156,7 @@ describe('travel home kit contract', () => {
     expect(card).not.toContain('BlurTargetView');
     expect(glass).not.toContain('frost?:');
     expect(glass).not.toContain('TravelHomeGlassFrost');
-    expect(tokens).toMatch(/bodyOverlap:\s*56/);
+    expect(tokens).toMatch(/bodyOverlap:\s*66/);
     expect(card).toContain('locationChip');
     expect(card).toContain('titleCluster');
     // Title + destination sit on paper milk / paper (black/ink).

@@ -3,10 +3,10 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
-  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { useResponsive } from '@/hooks/use-responsive';
@@ -21,17 +21,22 @@ type TravelHomeCarouselStepperProps = {
 
 const MAX_SLOTS = 3;
 const SETTLE_MS = 220;
+const TICK_RADIUS = 1.5;
+const ACTIVE = '#FFFFFF';
+const INACTIVE = 'rgba(255,255,255,0.45)';
+
+/** Fabric-safe shell: never return null near BlurView / glass siblings. */
+const SHELL = {
+  collapsable: false,
+  pointerEvents: 'none',
+  accessibilityElementsHidden: true,
+  importantForAccessibility: 'no-hide-descendants',
+} as const;
 
 /**
- * Compact page ticks for Travel Home heroes — thin lines overlaid at the top
- * of the visible hero band (one per swipeable thumbnail).
- *
- * Active highlight tracks scroll progress for a smooth crossfade while swiping.
- * A dark capsule behind the ticks keeps them readable on bright sky / roofs
- * (white-on-pale ticks used to vanish until the user swiped to a darker plate).
- *
- * Always mount a shell (collapse when ≤1 page) so Fabric siblings of BlurView
- * / glass underlays don’t remount mid-frame.
+ * Compact page ticks for Travel Home heroes.
+ * Tracks scroll progress; dark plate keeps white ticks readable on pale sky.
+ * Collapse (don’t unmount) when ≤1 page — Fabric remount near BlurView SIGABRTs.
  */
 export function TravelHomeCarouselStepper({
   count,
@@ -44,21 +49,19 @@ export function TravelHomeCarouselStepper({
   const activeIndex = Math.max(0, Math.min(Math.max(pageCount - 1, 0), index));
   const visible = pageCount > 1;
 
-  const lineW = Math.max(6, s(7));
-  const lineH = Math.max(1.25, s(1.5));
-  const gap = Math.max(2, s(2.5));
-  const padY = Math.max(2, s(2));
-  const padX = Math.max(4, s(4.5));
-  const inactiveColor = 'rgba(255,255,255,0.45)';
-  const activeColor = '#FFFFFF';
+  const lineW = Math.max(8, s(8.5));
+  const lineH = Math.max(1.75, s(2));
+  const gap = Math.max(3, s(3.5));
+  const padY = Math.max(3, s(3));
+  const padX = Math.max(5, s(5.5));
+  const plateRadius = Math.max(6, s(7));
 
   const fallbackProgress = useSharedValue(activeIndex);
   const progress = progressProp ?? fallbackProgress;
 
-  // When the parent only passes discrete index (no scroll binding), ease over.
   useEffect(() => {
+    // Discrete index only, or non-gesture jumps (reload/clamp): ease settle.
     if (progressProp) {
-      // Keep shared scroll value in sync for non-gesture jumps (reload, clamp).
       if (Math.abs(progressProp.value - activeIndex) > 0.01) {
         progressProp.value = withTiming(activeIndex, { duration: SETTLE_MS });
       }
@@ -68,47 +71,28 @@ export function TravelHomeCarouselStepper({
   }, [activeIndex, fallbackProgress, progressProp]);
 
   if (!visible) {
-    return (
-      <View
-        collapsable={false}
-        pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[styles.wrapCollapsed, style]}
-      />
-    );
+    return <View {...SHELL} style={[styles.wrapCollapsed, style]} />;
   }
 
   return (
-    <View
-      collapsable={false}
-      pointerEvents="none"
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[styles.wrap, style]}>
-      {/*
-        Dark plate so white ticks stay legible on pale sky / snow / bright roofs
-        without waiting for a swipe onto a darker hero.
-      */}
+    <View {...SHELL} style={[styles.wrap, style]}>
       <View
         style={[
           styles.plate,
           {
             paddingHorizontal: padX,
             paddingVertical: padY,
-            borderRadius: Math.max(5, s(6)),
+            borderRadius: plateRadius,
             gap,
           },
         ]}>
         {Array.from({ length: pageCount }, (_, slot) => (
           <Tick
-            key={`tick-${slot}`}
+            key={slot}
             index={slot}
             progress={progress}
             width={lineW}
             height={lineH}
-            activeColor={activeColor}
-            inactiveColor={inactiveColor}
           />
         ))}
       </View>
@@ -121,15 +105,11 @@ function Tick({
   progress,
   width,
   height,
-  activeColor,
-  inactiveColor,
 }: {
   index: number;
   progress: SharedValue<number>;
   width: number;
   height: number;
-  activeColor: string;
-  inactiveColor: string;
 }) {
   const activeStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -140,21 +120,21 @@ function Tick({
     ),
   }));
 
+  // Static inactive fill first — animated opacity alone stayed blank until
+  // the first shared-value update (swipe).
   return (
-    // Static inactive fill paints on the first frame — animated styles alone
-    // used to stay blank until the first shared-value update (swipe).
     <View
       style={{
         width,
         height,
-        borderRadius: 1,
-        backgroundColor: inactiveColor,
+        borderRadius: TICK_RADIUS,
+        backgroundColor: INACTIVE,
         overflow: 'hidden',
       }}>
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: activeColor, borderRadius: 1 },
+          { backgroundColor: ACTIVE, borderRadius: TICK_RADIUS },
           activeStyle,
         ]}
       />
