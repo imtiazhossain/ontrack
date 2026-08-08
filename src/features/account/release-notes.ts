@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.15',
+    date: '2026-08-08',
+    notes: [
+      'Put bottom-nav recents left of center for browse-through, and only open the weather location sheet on Today.',
+    ],
+  },
+  {
     version: '1.0.14',
     date: '2026-08-08',
     notes: [
@@ -123,6 +130,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.15',
+    date: '2026-08-08',
+    notes: [
+      'Put bottom-nav recents left of center for browse-through, and only open the weather location sheet on Today.',
+      'Touched: features/daily-tracking.',
+    ],
+  },
   {
     version: '1.0.14',
     date: '2026-08-08',

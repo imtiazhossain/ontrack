@@ -219,7 +219,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | ----------------------------------- | ------------------------ |
 | `ontrack.today.prevDay`             | Previous day             |
 | `ontrack.today.nextDay`             | Next day                 |
-| `ontrack.today.weather`             | Home weather banner when data exists (H/L; tap → location sheet) |
+| `ontrack.today.weather`             | Home weather banner when data exists (H/L; tap → location sheet only on Today) |
 | `ontrack.today.progress`            | Day completion ring (hidden at 0%) |
 | `ontrack.today.addActivity`         | Add activity             |
 | `ontrack.today.emptyAddActivity`    | Empty-state add          |

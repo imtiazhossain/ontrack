@@ -56,12 +56,16 @@ export function DayHeader({
   const viewingToday = isToday(date);
   const { weather, icon, showWeather } = useHomeWeather(date);
   const [locationOpen, setLocationOpen] = useState(false);
-  const openWeather = () => setLocationOpen(true);
+  const openWeather = viewingToday ? () => setLocationOpen(true) : undefined;
   const primaryLabel = weather ? formatHomeWeatherPrimaryLabel(weather) : '';
   const rangeLabel = weather ? formatHomeWeatherRangeLabel(weather) : undefined;
   const weatherAccessibilityLabel = weather
-    ? `${formatHomeWeatherTemperatureLabel(weather)} in ${weather.locationLabel}. Edit home location.`
-    : 'Edit home location for weather';
+    ? viewingToday
+      ? `${formatHomeWeatherTemperatureLabel(weather)} in ${weather.locationLabel}. Edit home location.`
+      : `${formatHomeWeatherTemperatureLabel(weather)} in ${weather.locationLabel}.`
+    : viewingToday
+      ? 'Edit home location for weather'
+      : undefined;
   return (
     <View style={[styles.container, { paddingTop: topInset + spacing.md }]}>
       {/*
@@ -157,11 +161,13 @@ export function DayHeader({
               {weather.locationLabel}
             </AppText>
           </View>
-          <View
-            style={[styles.weatherChevron, { right: rs.md }]}
-            pointerEvents="none">
-            <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
-          </View>
+          {viewingToday ? (
+            <View
+              style={[styles.weatherChevron, { right: rs.md }]}
+              pointerEvents="none">
+              <Symbol name="chevron-right" size="sm" color={theme.textTertiary} />
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
