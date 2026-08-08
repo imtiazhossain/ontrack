@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText, LoadingBlock } from '@/components/primitives';
+import { AppText, GlassPlate, LoadingBlock } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { ANATOMY_BEIGE } from '@/features/workouts/anatomy-art';
 import { formatMuscleLabel } from '@/features/workouts/format-muscle-label';
@@ -78,48 +78,48 @@ export function MuscleExplorer({
         ]}>
         <View style={[styles.bodyChromeBar, { backgroundColor: ANATOMY_BEIGE }]}>
           <View style={styles.bodyChromeTopRow}>
-            <View
+            <GlassPlate
               style={[
                 styles.sexToggle,
                 {
-                  backgroundColor: theme.backgroundElevated,
                   borderColor: theme.separator,
                 },
               ]}>
-              {([
-                { id: 'male' as const, label: 'Male' },
-                { id: 'female' as const, label: 'Female' },
-              ]).map((option) => (
-                <AnatomySexTab
-                  key={option.id}
-                  id={option.id}
-                  label={option.label}
-                  selected={anatomySex === option.id}
-                  selectedBg={theme.backgroundSunken}
-                  onPress={() => onChangeAnatomySex(option.id)}
-                />
-              ))}
-            </View>
+              <View style={[styles.toggleRow, styles.glassContent]}>
+                {([
+                  { id: 'male' as const, label: 'Male' },
+                  { id: 'female' as const, label: 'Female' },
+                ]).map((option) => (
+                  <AnatomySexTab
+                    key={option.id}
+                    id={option.id}
+                    label={option.label}
+                    selected={anatomySex === option.id}
+                    onPress={() => onChangeAnatomySex(option.id)}
+                  />
+                ))}
+              </View>
+            </GlassPlate>
 
-            <View
+            <GlassPlate
               style={[
                 styles.bodyViewDock,
                 {
-                  backgroundColor: theme.backgroundElevated,
                   borderColor: theme.separator,
                 },
               ]}>
-              {BODY_VIEW_TABS.map((tab) => (
-                <BodyViewTab
-                  key={tab.view}
-                  view={tab.view}
-                  label={tab.label}
-                  selected={bodyView === tab.view}
-                  selectedBg={theme.backgroundSunken}
-                  onPress={() => onChangeBodyView(tab.view)}
-                />
-              ))}
-            </View>
+              <View style={[styles.toggleRow, styles.glassContent]}>
+                {BODY_VIEW_TABS.map((tab) => (
+                  <BodyViewTab
+                    key={tab.view}
+                    view={tab.view}
+                    label={tab.label}
+                    selected={bodyView === tab.view}
+                    onPress={() => onChangeBodyView(tab.view)}
+                  />
+                ))}
+              </View>
+            </GlassPlate>
           </View>
 
           <View style={styles.atlasControlsInline}>
@@ -145,15 +145,14 @@ export function MuscleExplorer({
           </Suspense>
         </View>
 
-        <View
+        <GlassPlate
           style={[
             styles.bodyCaption,
             {
-              backgroundColor: theme.backgroundElevated,
               borderTopColor: theme.separator,
             },
           ]}>
-          <View style={styles.bodyCaptionCopy}>
+          <View style={[styles.bodyCaptionCopy, styles.glassContent]}>
             <View style={styles.focusIndicator} />
             <View style={styles.flex}>
               <AppText variant="overline" color="tertiary">
@@ -164,11 +163,11 @@ export function MuscleExplorer({
               </AppText>
             </View>
           </View>
-          <AppText variant="caption" color="tertiary">
+          <AppText variant="caption" color="tertiary" style={styles.glassContent}>
             {bodyViewLabel(bodyView)} · {anatomySex === 'female' ? 'Female' : 'Male'}
             {atlasMuscle.visibility === 'deep' ? ' · Deep' : ''}
           </AppText>
-        </View>
+        </GlassPlate>
       </View>
 
       <ScrollView
@@ -183,7 +182,6 @@ export function MuscleExplorer({
             label={group.label}
             selected={group.key === selectedMuscle}
             selectedBg={gymColors.main}
-            idleBg={theme.backgroundElevated}
             borderColor={
               group.key === selectedMuscle ? gymColors.main : theme.separator
             }
@@ -199,13 +197,11 @@ function AnatomySexTab({
   id,
   label,
   selected,
-  selectedBg,
   onPress,
 }: {
   id: AnatomySex;
   label: string;
   selected: boolean;
-  selectedBg: string;
   onPress: () => void;
 }) {
   const accessibilityLabel = `${label} anatomy`;
@@ -223,8 +219,15 @@ function AnatomySexTab({
       accessibilityState={{ selected }}
       hitSlop={4}
       onPress={onPress}
-      style={[styles.sexToggleTab, selected && { backgroundColor: selectedBg }]}>
-      <AppText variant="caption" color={selected ? 'primary' : 'secondary'} fit>
+      style={[styles.sexToggleTab, selected && styles.selectedToggleTab]}>
+      {selected ? (
+        <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+      ) : null}
+      <AppText
+        variant="caption"
+        color={selected ? 'primary' : 'secondary'}
+        fit
+        style={styles.glassContent}>
         {label}
       </AppText>
     </Pressable>
@@ -235,13 +238,11 @@ function BodyViewTab({
   view,
   label,
   selected,
-  selectedBg,
   onPress,
 }: {
   view: BodyView;
   label: string;
   selected: boolean;
-  selectedBg: string;
   onPress: () => void;
 }) {
   const accessibilityLabel = `${label} body view`;
@@ -258,8 +259,15 @@ function BodyViewTab({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.bodyTab, selected && { backgroundColor: selectedBg }]}>
-      <AppText variant="caption" color={selected ? 'primary' : 'secondary'} fit>
+      style={[styles.bodyTab, selected && styles.selectedToggleTab]}>
+      {selected ? (
+        <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+      ) : null}
+      <AppText
+        variant="caption"
+        color={selected ? 'primary' : 'secondary'}
+        fit
+        style={styles.glassContent}>
         {label}
       </AppText>
     </Pressable>
@@ -271,7 +279,6 @@ function MuscleChip({
   label,
   selected,
   selectedBg,
-  idleBg,
   borderColor,
   onPress,
 }: {
@@ -279,7 +286,6 @@ function MuscleChip({
   label: string;
   selected: boolean;
   selectedBg: string;
-  idleBg: string;
   borderColor: string;
   onPress: () => void;
 }) {
@@ -299,11 +305,16 @@ function MuscleChip({
       style={[
         styles.muscleChip,
         {
-          backgroundColor: selected ? selectedBg : idleBg,
           borderColor,
+          overflow: 'hidden',
         },
       ]}>
-      <AppText variant="callout" color={selected ? 'onAccent' : 'secondary'}>
+      {selected ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: selectedBg }]} />
+      ) : (
+        <GlassPlate airy style={StyleSheet.absoluteFill} />
+      )}
+      <AppText variant="callout" color={selected ? 'onAccent' : 'secondary'} style={styles.glassContent}>
         {label}
       </AppText>
     </Pressable>
@@ -313,6 +324,7 @@ function MuscleChip({
 const styles = StyleSheet.create({
   root: { gap: spacing.md },
   flex: { flex: 1 },
+  glassContent: { zIndex: 1 },
   sectionIntro: { gap: spacing.xxs },
   bodyMapStage: {
     position: 'relative',
@@ -332,11 +344,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sexToggle: {
-    flexDirection: 'row',
-    gap: 2,
     borderWidth: 1,
     borderRadius: radii.pill,
     padding: 2,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  selectedToggleTab: {
+    overflow: 'hidden',
   },
   sexToggleTab: {
     minHeight: 30,
@@ -347,8 +364,6 @@ const styles = StyleSheet.create({
   },
   bodyViewDock: {
     flex: 1,
-    flexDirection: 'row',
-    gap: 2,
     borderWidth: 1,
     borderRadius: radii.pill,
     padding: 2,

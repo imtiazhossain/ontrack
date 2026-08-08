@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { appPrompt, AppText, Button, Card, Input, Screen, SectionHeader } from '@/components/primitives';
+import { appPrompt, AppText, Button, Card, GlassPlate, Input, Screen, SectionHeader } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { plantImageSource } from '@/features/plants/sample';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
@@ -149,16 +149,18 @@ function PlantDetailContent() {
       <SectionHeader title="Soil" detail={`pH ${soil.phMin.toFixed(1)}–${soil.phMax.toFixed(1)}`} />
       <Card style={styles.careCard}>
         <AppText variant="heading">{soil.soilType}</AppText>
-        <View style={[styles.soilMetrics, { backgroundColor: theme.backgroundSunken }]}>
-          <View style={styles.soilMetric}>
-            <AppText variant="overline" color="tertiary">Target pH</AppText>
-            <AppText variant="heading" color="accent">{soil.phMin.toFixed(1)}–{soil.phMax.toFixed(1)}</AppText>
+        <GlassPlate clear wash style={styles.soilMetrics}>
+          <View style={[styles.soilMetricsInner, styles.glassContent]}>
+            <View style={styles.soilMetric}>
+              <AppText variant="overline" color="tertiary">Target pH</AppText>
+              <AppText variant="heading" color="accent">{soil.phMin.toFixed(1)}–{soil.phMax.toFixed(1)}</AppText>
+            </View>
+            <View style={styles.soilMetric}>
+              <AppText variant="overline" color="tertiary">Mix style</AppText>
+              <AppText variant="callout">{soil.soilType}</AppText>
+            </View>
           </View>
-          <View style={styles.soilMetric}>
-            <AppText variant="overline" color="tertiary">Mix style</AppText>
-            <AppText variant="callout">{soil.soilType}</AppText>
-          </View>
-        </View>
+        </GlassPlate>
         <AppText>{soil.mixNotes}</AppText>
         <AppText color="secondary">{soil.drainageNotes}</AppText>
         {soil.amendments.length ? (
@@ -223,9 +225,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   italic: { fontStyle: 'italic' },
   careCard: { gap: spacing.sm },
+  glassContent: { zIndex: 1 },
   scheduleBadge: { borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
   actionsBlock: { gap: spacing.xs, marginTop: spacing.xs },
-  soilMetrics: { flexDirection: 'row', gap: spacing.md, borderRadius: radii.md, padding: spacing.md },
+  soilMetrics: { borderRadius: radii.md, overflow: 'hidden' },
+  soilMetricsInner: { flexDirection: 'row', gap: spacing.md, padding: spacing.md, zIndex: 1 },
   soilMetric: { flex: 1, gap: spacing.xs },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },

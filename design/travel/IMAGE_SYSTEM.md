@@ -34,7 +34,7 @@ Prefer:
 - No watermarks
 - No text-heavy promotional graphics
 - Safe general-audience imagery
-- **No people-forward stock** (tourists, portraits, crowds, selfies) — filter title/alt/tags/filename; search with `-people -portrait` bias
+- **No people-forward stock** (tourists, portraits, crowds, selfies, lifestyle/friend poses) — filter title/alt/tags/filename; search with `-people -portrait -lifestyle` bias; Unsplash landscape-only; prefer curated people-free atmosphere plates for labeled destinations (e.g. Lisbon bridge) before remote
 
 ## Caching
 Cache a destination landmark **pool** (up to ~12 URLs) keyed by destination identity. Each Travel focus rotates a fresh trio from that pool (skip recently shown URIs). Respect provider licensing and cache rules. Store only what the provider permits. Avoid repeat network searches on every render.

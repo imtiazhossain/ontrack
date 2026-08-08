@@ -15,10 +15,10 @@ import {
   ErrorMessage,
   IconButton,
   Input,
+  useScreenAtmosphereChrome,
 } from '@/components/primitives';
 import { getDestinationCurrentWeather } from '@/features/travel/weather';
 import { useResponsive } from '@/hooks/use-responsive';
-import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/store/preferences';
 import type { DateDisplayFormat } from '@/utils/date';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -36,12 +36,12 @@ export function HomeLocationSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { spacing, s } = useResponsive();
   const homeLocation = usePreferences((state) => state.homeLocation);
   const dateDisplayFormat = usePreferences((state) => state.dateDisplayFormat);
   const setHomeLocation = usePreferences((state) => state.setHomeLocation);
+  useScreenAtmosphereChrome(visible);
 
   const [draft, setDraft] = useState(homeLocation);
   const [saving, setSaving] = useState(false);
@@ -132,7 +132,7 @@ export function HomeLocationSheet({
       presentationStyle="pageSheet"
       onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={[styles.root, { backgroundColor: theme.backgroundPrimary }]}
+        style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View
           style={[
@@ -223,7 +223,7 @@ export function HomeLocationSheet({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: 'transparent' },
   headerPad: {},
   header: {
     flexDirection: 'row',

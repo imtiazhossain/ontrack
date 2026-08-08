@@ -7,9 +7,10 @@ import {
   Card,
   CollapsibleBody,
   DisclosureChevron,
+  GlassPlate,
   Symbol,
 } from '@/components/primitives';
-import { layout, radii, spacing, typography } from '@/design-system';
+import { glassMaterials, layout, radii, spacing, typography } from '@/design-system';
 import type { CombinedCompletion } from '@/features/todos/grocery-utils';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoRecipe, TodoTask } from '@/store/todos';
@@ -285,16 +286,20 @@ export function OtherItems({
   canComplete: (task: TodoTask) => boolean;
 }) {
   const theme = useTheme();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
   return (
     <View style={styles.otherSection}>
       <AppText variant="heading">Other items</AppText>
       {owner ? (
-        <View
+        <GlassPlate
           style={[
             styles.composer,
             {
-              backgroundColor: theme.backgroundSunken,
-              borderColor: draft.trim() ? theme.accentPrimary : theme.separator,
+              borderColor: draft.trim() ? theme.accentPrimary : plateBorder,
+              borderWidth: draft.trim() ? 1 : StyleSheet.hairlineWidth,
             },
           ]}>
           <TextInput
@@ -324,7 +329,7 @@ export function OtherItems({
             ]}>
             <Symbol name="add" size={18} color={theme.textOnAccent} />
           </Pressable>
-        </View>
+        </GlassPlate>
       ) : null}
       {tasks.length ? (
         <Card padded={false}>
@@ -410,7 +415,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
-    borderWidth: 1,
     borderRadius: radii.lg,
   },
   composerInput: {
@@ -418,6 +422,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 52,
     paddingVertical: spacing.md,
+    zIndex: 1,
   },
   addButton: {
     width: 40,

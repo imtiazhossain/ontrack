@@ -62,7 +62,7 @@ describe('travel header sky décor', () => {
       'utf8',
     );
     const travelHome = readFileSync(
-      join(process.cwd(), 'src/app/(tabs)/travel.tsx'),
+      join(process.cwd(), 'src/app/(tabs)/travel/index.tsx'),
       'utf8',
     );
     expect(night).toContain('PhaseMoon');

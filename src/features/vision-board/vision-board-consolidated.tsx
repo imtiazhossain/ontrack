@@ -14,9 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     AppText,
     EmptyState,
+    GlassPlate,
     IconButton,
     Symbol,
     appPrompt,
+    useScreenAtmosphereChrome,
 } from '@/components/primitives';
 import {
     fontFamilies,
@@ -28,8 +30,8 @@ import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { useUI } from '@/store/ui';
 import { useVisionBoard } from '@/store/vision-board';
-import { haptics } from '@/utils/haptics';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { haptics } from '@/utils/haptics';
 
 import { BoardCard, FilterChip } from './consolidated-card';
 import {
@@ -138,6 +140,8 @@ export function VisionBoardConsolidated() {
           : undefined
       : undefined;
 
+  useScreenAtmosphereChrome();
+
   const openCategory = (categoryId: string) => {
     router.push(`/vision-board/${categoryId}` as never);
   };
@@ -184,7 +188,7 @@ export function VisionBoardConsolidated() {
       router.push('/vision-board/category-editor' as never);
     const openCategories = () =>
       router.push('/(tabs)/vision-board/categories' as never);
-    const backToToday = () => router.replace('/(tabs)' as never);
+    const backToToday = () => router.replace('/' as never);
     if (Platform.OS === 'ios') {
       appPrompt.actionSheet(
         {
@@ -209,12 +213,7 @@ export function VisionBoardConsolidated() {
   };
 
   return (
-    <View
-      onTouchStart={notifyPageInteraction}
-      style={[
-        styles.root,
-        { backgroundColor: theme.backgroundPrimary },
-      ]}>
+    <View onTouchStart={notifyPageInteraction} style={styles.root}>
       <ScrollView
         contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
@@ -262,13 +261,11 @@ export function VisionBoardConsolidated() {
         </View>
 
         {searchVisible ? (
-          <View
+          <GlassPlate
             style={[
               styles.searchBar,
               {
                 width: boardWidth,
-                backgroundColor: theme.backgroundElevated,
-                borderColor: theme.separator,
               },
             ]}>
             <Symbol name="search" size={17} color={theme.textTertiary} />
@@ -292,7 +289,7 @@ export function VisionBoardConsolidated() {
                 <Symbol name="close" size={15} color={theme.textSecondary} />
               </Pressable>
             ) : null}
-          </View>
+          </GlassPlate>
         ) : null}
 
         <View style={{ width: boardWidth }}>
@@ -461,7 +458,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
   searchInput: {

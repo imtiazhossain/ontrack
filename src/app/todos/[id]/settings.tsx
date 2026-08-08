@@ -1,8 +1,7 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { TodoListSettingsScreen } from '@/features/todos/todo-list-settings-screen';
-
-export default function TodoListSettingsRoute() {
+/** Legacy `/todos/:id/settings` → tab stack (keeps bottom nav). */
+export default function TodoSettingsLegacyRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return <TodoListSettingsScreen listId={id} />;
+  return <Redirect href={`/(tabs)/to-do/${id}/settings` as never} />;
 }

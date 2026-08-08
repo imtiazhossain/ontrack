@@ -220,6 +220,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.today.prevDay`             | Previous day             |
 | `ontrack.today.nextDay`             | Next day                 |
 | `ontrack.today.weather`             | Home weather / location  |
+| `ontrack.today.progress`            | Day completion ring (hidden at 0%) |
 | `ontrack.today.addActivity`         | Add activity             |
 | `ontrack.today.emptyAddActivity`    | Empty-state add          |
 | `ontrack.today.activity.<id>`       | Activity card            |
@@ -234,7 +235,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 
 | testID                              | Control             |
 | ----------------------------------- | ------------------- |
-| `ontrack.calendar.jumpToday`        | Jump to today       |
+| `ontrack.calendar.jumpToday`        | Jump to Today       |
 | `ontrack.calendar.prevMonth`        | Previous month      |
 | `ontrack.calendar.nextMonth`        | Next month          |
 | `ontrack.calendar.openDay`          | Open selected day   |
@@ -503,14 +504,12 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 
 | testID                                            | Control                                            |
 | ------------------------------------------------- | -------------------------------------------------- |
-| `ontrack.travel.newTrip.open`                     | Open the new-trip form                             |
-| `ontrack.travel.newTrip.cancel`                   | Close the new-trip form                            |
-| `ontrack.travel.newTrip.importItinerary`          | Choose an import source for the editable trip draft |
-| `ontrack.travel.newTrip.importScreenshots`        | Choose itinerary screenshots from Photos            |
-| `ontrack.travel.newTrip.importFile`               | Choose an itinerary file or saved email              |
+| `ontrack.travel.newTrip.open`                     | Open the new-trip bottom sheet                     |
+| `ontrack.travel.newTrip.cancel`                   | Close the new-trip bottom sheet                    |
 | `ontrack.travel.newTrip.title`                    | New-trip title field                               |
-| `ontrack.travel.newTrip.origin`                   | New-trip starting point (address autocomplete)     |
 | `ontrack.travel.newTrip.destination`              | New-trip destination (address autocomplete)        |
+| `ontrack.travel.newTrip.destination.suggestionsDismiss` | Tap-outside dismiss for destination suggestions |
+| `ontrack.travel.newTrip.destination.suggestion.<i>` | Pick a destination address suggestion row        |
 | `ontrack.travel.newTrip.dates`                    | New-trip Dates field (opens range calendar)        |
 | `ontrack.travel.newTrip.datesClose`               | Close the new-trip dates calendar modal            |
 | `ontrack.travel.newTrip.datesSave`                | Save the new-trip date range                       |
@@ -771,8 +770,7 @@ Demo fixture: `factor-agent-ui-demo-work` / `mood-agent-ui-demo-calm` via `./scr
 | `ontrack.travel.itineraryAdd.returnLayoverDuration` | Roundtrip returning layover duration                                |
 | `ontrack.travel.itineraryAdd.returnConnectionAirport` | Roundtrip returning connection airport                            |
 | `ontrack.travel.itineraryAdd.submit`           | Save the itinerary item                                                  |
-| `ontrack.travel.tripMode.<mode>`               | Choose the trip's primary travel mode                                    |
-| `ontrack.travel.newTrip.origin`                | Optional new-trip starting point                                         |
+| `ontrack.travel.tripMode.<mode>`               | Choose primary travel mode on edit-trip details (not new-trip sheet)     |
 | `ontrack.travel.editTrip.origin`               | Optional edited-trip starting point                                      |
 | `ontrack.travel.list.addTransport.<tripId>`    | Add transport from a non-flight trip card                                |
 | `ontrack.travel.transport.mode.<mode>`         | Choose driving, rail, transit, rideshare, taxi, ferry, shuttle, or other |

@@ -45,7 +45,7 @@ FEATURE_ENTRIES: dict[str, dict[str, str]] = {
         "entry": "src/app/(tabs)/workouts.tsx",
         "skill": ".cursor/skills/workouts/SKILL.md",
     },
-    "plants": {"entry": "src/app/(tabs)/plants.tsx"},
+    "plants": {"entry": "src/app/(tabs)/plants/index.tsx"},
     "travel": {
         "entry": "src/app/(tabs)/travel.tsx",
         "skill": ".cursor/skills/travel/SKILL.md",
@@ -55,9 +55,9 @@ FEATURE_ENTRIES: dict[str, dict[str, str]] = {
         "skill": ".cursor/skills/vision-board/SKILL.md",
     },
     "games": {"entry": "src/app/(tabs)/games.tsx"},
-    "vehicles": {"entry": "src/app/(tabs)/vehicles.tsx"},
+    "vehicles": {"entry": "src/app/(tabs)/vehicles/index.tsx"},
     "health": {
-        "entry": "src/app/(tabs)/health.tsx",
+        "entry": "src/app/(tabs)/health/index.tsx",
         "skill": ".cursor/skills/health/SKILL.md",
     },
     "activity": {"entry": "src/app/activity-form.tsx"},

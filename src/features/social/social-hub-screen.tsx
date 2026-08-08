@@ -7,7 +7,6 @@ import { useAuthSession } from '@/features/auth/auth-provider';
 import { SocialActionModal } from '@/features/social/social-action-modal';
 import { SocialActivityFeed } from '@/features/social/social-feed';
 import { buildSocialFeedItems } from '@/features/social/social-feed-model';
-import { socialChrome } from '@/features/social/social-chrome';
 import {
   SocialFriendsCard,
   SocialHeader,
@@ -28,7 +27,6 @@ import { shareTravelPlan } from '@/features/travel/share';
 import type { TravelPlan } from '@/features/travel/types';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useFriendsRealtime } from '@/hooks/use-friends-realtime';
-import { useTheme } from '@/hooks/use-theme';
 import {
   createFriendInviteUrl,
   getMyFriendInvite,
@@ -47,8 +45,6 @@ import { newId } from '@/utils/id';
 /** Social hub backed by the existing friend, profile, and travel stores. */
 export function SocialHubScreen() {
   const router = useRouter();
-  const theme = useTheme();
-  const chrome = socialChrome(theme);
   const { spacing } = useResponsive();
   const { user, isGuest } = useAuthSession();
   const selfName = usePreferences((state) => state.name).trim() || 'You';
@@ -467,11 +463,7 @@ export function SocialHubScreen() {
 
   return (
     <>
-      <Screen
-        refresh={signedIn}
-        onRefresh={refreshSocial}
-        style={{ backgroundColor: chrome.background }}
-        contentStyle={{ gap: spacing.xl }}>
+      <Screen refresh={signedIn} onRefresh={refreshSocial} contentStyle={{ gap: spacing.xl }}>
         <SocialHeader
           pendingCount={incoming.length}
           onAddFriend={() => openFriends('add')}

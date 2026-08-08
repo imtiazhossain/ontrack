@@ -22,7 +22,7 @@ export default function OnboardingScreen() {
 
   const finish = () => {
     completeOnboarding({ name: name.trim() || 'You', goal: goal.trim() || 'Live intentionally' });
-    router.replace(returnTo === '/travel' ? ('/travel' as never) : '/(tabs)');
+    router.replace(returnTo === '/travel' ? ('/travel' as never) : '/');
   };
 
   const hour = new Date().getHours();

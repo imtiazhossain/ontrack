@@ -1,10 +1,11 @@
 import type { PropsWithChildren } from 'react';
 import {
-  Pressable,
-  View,
-  type LayoutChangeEvent,
-  type StyleProp,
-  type ViewStyle,
+    Pressable,
+    StyleSheet,
+    View,
+    type LayoutChangeEvent,
+    type StyleProp,
+    type ViewStyle,
 } from 'react-native';
 
 import { radii, shadows, spacing } from '@/design-system';
@@ -12,11 +13,19 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
+import { GlassPlate } from './glass-plate';
+
 interface CardProps extends PropsWithChildren {
   onPress?: () => void;
   onLongPress?: () => void;
-  /** elevated = white/raised, sunken = inset panel */
+  /** elevated = frosted raised plate, sunken = soft clear wash */
   variant?: 'elevated' | 'sunken';
+  /**
+   * `glass` = frosted plate (app default). `solid` = opaque elevated/sunken paper.
+   */
+  surface?: 'solid' | 'glass';
+  /** Lighter frost so scenic / gradient underlays stay visible. */
+  airy?: boolean;
   padded?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
@@ -29,6 +38,8 @@ export function Card({
   onPress,
   onLongPress,
   variant = 'elevated',
+  surface = 'glass',
+  airy = false,
   padded = true,
   style,
   accessibilityLabel,
@@ -46,24 +57,86 @@ export function Card({
     label: accessibilityLabel,
     onPress: handlePress,
   });
-  const base: ViewStyle = {
+  const glass = surface === 'glass';
+  const padStyle = padded ? { padding: spacing.lg } : { overflow: 'hidden' as const };
+  const radiusStyle = {
     borderRadius: radii.lg,
-    backgroundColor: variant === 'elevated' ? theme.backgroundElevated : theme.backgroundSunken,
-    ...(variant === 'elevated' ? shadows.card : null),
-    ...(padded ? { padding: spacing.lg } : { overflow: 'hidden' as const }),
+    borderCurve: 'continuous' as const,
   };
+
+  const solidBase: ViewStyle = {
+    ...radiusStyle,
+    backgroundColor:
+      variant === 'elevated' ? theme.backgroundElevated : theme.backgroundSunken,
+    ...(variant === 'elevated' ? shadows.card : null),
+    ...padStyle,
+  };
+
+  const content = children;
+  const layoutHandler = (event: LayoutChangeEvent) => {
+    agent.onLayout?.(event);
+    onLayout?.(event);
+  };
+
+  if (glass) {
+    const plate = (
+      <GlassPlate
+        clear={variant === 'sunken'}
+        wash={variant === 'sunken'}
+        airy={airy && variant === 'elevated'}
+        style={[
+          styles.glassCard,
+          radiusStyle,
+          variant === 'elevated' && !airy ? shadows.card : null,
+          padStyle,
+          style,
+        ]}>
+        {content}
+      </GlassPlate>
+    );
+
+    if (!onPress && !onLongPress) {
+      return (
+        <View
+          ref={agent.ref}
+          testID={testID}
+          onLayout={layoutHandler}
+          collapsable={false}>
+          {plate}
+        </View>
+      );
+    }
+
+    return (
+      <Pressable
+        ref={agent.ref}
+        testID={testID}
+        onLayout={layoutHandler}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        onPress={handlePress}
+        onLongPress={
+          onLongPress
+            ? () => {
+                haptics.tap();
+                onLongPress();
+              }
+            : undefined
+        }
+        style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>
+        {plate}
+      </Pressable>
+    );
+  }
 
   if (!onPress && !onLongPress) {
     return (
       <View
         ref={agent.ref}
         testID={testID}
-        onLayout={(event) => {
-          agent.onLayout?.(event);
-          onLayout?.(event);
-        }}
-        style={[base, style]}>
-        {children}
+        onLayout={layoutHandler}
+        style={[solidBase, style]}>
+        {content}
       </View>
     );
   }
@@ -72,10 +145,7 @@ export function Card({
     <Pressable
       ref={agent.ref}
       testID={testID}
-      onLayout={(event) => {
-        agent.onLayout?.(event);
-        onLayout?.(event);
-      }}
+      onLayout={layoutHandler}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={handlePress}
@@ -87,8 +157,14 @@ export function Card({
             }
           : undefined
       }
-      style={({ pressed }) => [base, { opacity: pressed ? 0.85 : 1 }, style]}>
-      {children}
+      style={({ pressed }) => [solidBase, { opacity: pressed ? 0.85 : 1 }, style]}>
+      {content}
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  glassCard: {
+    width: '100%',
+  },
+});

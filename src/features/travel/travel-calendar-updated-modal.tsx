@@ -34,7 +34,8 @@ export function TravelCalendarUpdatedModal({
       subtitle="Your latest trip changes are now reflected in your schedule."
       onClose={onBackToTravel}
       closeAccessibilityLabel="Back to Travel"
-      closeTestID={AgentUiIds.travel.calendarUpdated.dismiss}>
+      closeTestID={AgentUiIds.travel.calendarUpdated.dismiss}
+      surface="glass">
       {payload ? (
         <View style={{ gap: spacing.lg }}>
           <AppText color="secondary" align="center">

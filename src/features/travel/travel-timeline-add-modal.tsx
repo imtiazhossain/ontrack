@@ -104,7 +104,8 @@ export function TravelTimelineAddModal({
       subtitle="Choose what you’d like to add."
       onClose={onClose}
       closeAccessibilityLabel="Close add to timeline"
-      closeTestID={AgentUiIds.travel.timelineAdd.close}>
+      closeTestID={AgentUiIds.travel.timelineAdd.close}
+      surface="glass">
       <View style={{ gap: spacing.sm }}>
         {TIMELINE_CHOICES.map((choice, index) => (
           <TimelineKindChoice

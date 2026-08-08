@@ -61,13 +61,13 @@ Domain depth → `.cursor/skills/` (**travel**, **todos**, **workouts**, **visio
 | Today / day timeline | `features/daily-tracking/day-view.tsx` |
 | Activity add/edit | `app/activity-form.tsx` |
 | Meal photo / link analysis | `app/detail/food/[id].tsx`, `services/nutrition/` |
-| Plants | `app/(tabs)/plants.tsx`, `app/plants/`, `features/plants/` |
-| Travel | `app/(tabs)/travel.tsx`, `features/travel/travel-plan-detail.tsx` → **travel** |
+| Plants | `app/(tabs)/plants/index.tsx`, `app/(tabs)/plants/`, `features/plants/` |
+| Travel | `app/(tabs)/travel/` (home + itinerary stack), `features/travel/travel-plan-detail.tsx` → **travel** |
 | Social / friends | `app/(tabs)/social.tsx`, `features/social/`, `services/friends`, `store/friends` |
 | Vision board | `features/vision-board/` → **vision-board** |
 | Workouts | `app/(tabs)/workouts.tsx` → **workouts** |
-| Vehicles | `app/(tabs)/vehicles.tsx`, `features/vehicles/`, `store/vehicles.ts` |
-| Health | `app/(tabs)/health.tsx`, `features/health/`, `store/health.ts` → **health** |
+| Vehicles | `app/(tabs)/vehicles/index.tsx`, `features/vehicles/`, `store/vehicles.ts` |
+| Health | `app/(tabs)/health/index.tsx`, `features/health/`, `store/health.ts` → **health** |
 | Games | `app/(tabs)/games.tsx`, `features/games/` |
 | Auth / guest | `features/auth/` |
 | Profile avatar | `features/account/profile-avatar.tsx` |

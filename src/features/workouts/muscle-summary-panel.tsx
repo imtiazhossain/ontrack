@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import type { resolveAtlasWorkoutSelection } from '@/features/workouts/atlas-workout-selection';
 import { formatMuscleLabel } from '@/features/workouts/format-muscle-label';
@@ -32,15 +32,14 @@ export function MuscleSummaryPanel({
 
   return (
     <Animated.View key={atlasMuscle.id} entering={FadeInDown.duration(260)}>
-      <View
+      <GlassPlate
         style={[
           styles.muscleSummary,
           {
-            backgroundColor: theme.backgroundElevated,
             borderColor: theme.separator,
           },
         ]}>
-        <View style={styles.summaryHeader}>
+        <View style={[styles.summaryHeader, styles.glassContent]}>
           <View style={[styles.focusIcon, { backgroundColor: gymColors.tint }]}>
             <Symbol name="scope" size="lg" color={gymColors.main} />
           </View>
@@ -50,14 +49,14 @@ export function MuscleSummaryPanel({
               {formatMuscleLabel(atlasMuscle.name)}
             </AppText>
           </View>
-          <View style={[styles.exerciseCount, { backgroundColor: theme.backgroundSunken }]}>
-            <AppText variant="caption" color="secondary">
+          <GlassPlate clear wash style={styles.exerciseCount}>
+            <AppText variant="caption" color="secondary" style={styles.glassContent}>
               {focusExercises.length} Workout{focusExercises.length === 1 ? '' : 's'}
             </AppText>
-          </View>
+          </GlassPlate>
         </View>
 
-        <View style={[styles.coachingCue, { backgroundColor: gymColors.tint }]}>
+        <View style={[styles.coachingCueAccent, styles.glassContent, { backgroundColor: gymColors.tint }]}>
           <Symbol name="text.book.closed.fill" size="md" color={gymColors.main} />
           <View style={styles.flex}>
             <AppText variant="overline" color="accent">What It Does</AppText>
@@ -72,7 +71,7 @@ export function MuscleSummaryPanel({
             Related Training Targets
           </AppText>
         </View>
-        <View style={styles.anatomyTags}>
+        <View style={[styles.anatomyTags, styles.glassContent]}>
           {muscleTargets.map((target) => {
             const selected = target.id === selectedTarget.id;
             return (
@@ -114,21 +113,24 @@ export function MuscleSummaryPanel({
         </View>
 
         {selectedTarget.cue ? (
-          <View style={[styles.coachingCue, { backgroundColor: theme.backgroundSunken }]}>
-            <Symbol name="lightbulb.max.fill" size="md" color={gymColors.main} />
-            <View style={styles.flex}>
-              <AppText variant="overline" color="accent">Coach’s Cue</AppText>
-              <AppText variant="callout" color="secondary">{selectedTarget.cue}</AppText>
+          <GlassPlate clear wash style={styles.coachingCue}>
+            <View style={[styles.coachingCueInner, styles.glassContent]}>
+              <Symbol name="lightbulb.max.fill" size="md" color={gymColors.main} />
+              <View style={styles.flex}>
+                <AppText variant="overline" color="accent">Coach’s Cue</AppText>
+                <AppText variant="callout" color="secondary">{selectedTarget.cue}</AppText>
+              </View>
             </View>
-          </View>
+          </GlassPlate>
         ) : null}
-      </View>
+      </GlassPlate>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  glassContent: { zIndex: 1 },
   muscleSummary: {
     gap: spacing.lg,
     borderWidth: 1,
@@ -185,10 +187,20 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   coachingCue: {
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  coachingCueAccent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
     borderRadius: radii.lg,
+    padding: spacing.md,
+  },
+  coachingCueInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
     padding: spacing.md,
   },
 });

@@ -82,7 +82,7 @@ export function TravelPlanDetailsEditor({
 }: TravelPlanDetailsEditorProps) {
   const theme = useTheme();
   const chrome = itinerarySheetChrome(theme);
-  const { s, spacing: rs } = useResponsive();
+  const { spacing: rs } = useResponsive();
   const [removeConfirm, setRemoveConfirm] =
     useState<TravelRemoveConfirmPayload | null>(null);
   const openDeleteTrip = () => {
@@ -203,8 +203,6 @@ export function TravelPlanDetailsEditor({
               stackedLabel="Notes"
               placeholder="Ideas, budgets, must-dos…"
               multiline
-              textAlignVertical="top"
-              style={{ minHeight: Math.max(32, s(36)) }}
               accessibilityLabel="Notes"
               {...field('note')}
             />

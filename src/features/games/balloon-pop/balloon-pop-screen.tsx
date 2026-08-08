@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppText, Button } from '@/components/primitives';
+import { AppText, Button, GlassPlate } from '@/components/primitives';
 import { layout, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/utils/haptics';
@@ -127,19 +127,21 @@ export function BalloonPopScreen() {
 
         {phase === 'ready' ? (
           <View style={[styles.overlay, { backgroundColor: theme.overlayScrim }]}>
-            <View style={[styles.panel, { backgroundColor: theme.backgroundElevated }]}>
-              <AppText variant="heading" align="center">
-                Balloon Pop
-              </AppText>
-              <AppText variant="body" color="secondary" align="center" style={styles.blurb}>
-                Pop every {balloonColor(level.targetColorId).label.toLowerCase()} balloon before
-                time runs out. Wrong colors cost time. Fans push balloons harder as you climb
-                levels.
-              </AppText>
-              <Button testID={AgentUiIds.games.balloonPopPlay} onPress={() => startLevel(1, false)}>
-                Play
-              </Button>
-            </View>
+            <GlassPlate style={styles.panel}>
+              <View style={styles.panelInner}>
+                <AppText variant="heading" align="center">
+                  Balloon Pop
+                </AppText>
+                <AppText variant="body" color="secondary" align="center" style={styles.blurb}>
+                  Pop every {balloonColor(level.targetColorId).label.toLowerCase()} balloon before
+                  time runs out. Wrong colors cost time. Fans push balloons harder as you climb
+                  levels.
+                </AppText>
+                <Button testID={AgentUiIds.games.balloonPopPlay} onPress={() => startLevel(1, false)}>
+                  Play
+                </Button>
+              </View>
+            </GlassPlate>
           </View>
         ) : null}
 
@@ -153,27 +155,29 @@ export function BalloonPopScreen() {
 
         {phase === 'lost' ? (
           <View style={[styles.overlay, { backgroundColor: theme.overlayScrim }]}>
-            <View style={[styles.panel, { backgroundColor: theme.backgroundElevated }]}>
-              <AppText variant="heading" align="center">
-                Time’s up
-              </AppText>
-              <AppText variant="body" color="secondary" align="center" style={styles.blurb}>
-                Score {score} · reached level {level.level}
-              </AppText>
-              <View style={styles.actions}>
-                <Button
-                  testID={AgentUiIds.games.balloonPopRetry}
-                  onPress={() => startLevel(level.level, false)}>
-                  Retry
-                </Button>
-                <Button
-                  variant="secondary"
-                  testID={AgentUiIds.games.balloonPopBack}
-                  onPress={leave}>
-                  Back to Games
-                </Button>
+            <GlassPlate style={styles.panel}>
+              <View style={styles.panelInner}>
+                <AppText variant="heading" align="center">
+                  Time’s up
+                </AppText>
+                <AppText variant="body" color="secondary" align="center" style={styles.blurb}>
+                  Score {score} · reached level {level.level}
+                </AppText>
+                <View style={styles.actions}>
+                  <Button
+                    testID={AgentUiIds.games.balloonPopRetry}
+                    onPress={() => startLevel(level.level, false)}>
+                    Retry
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    testID={AgentUiIds.games.balloonPopBack}
+                    onPress={leave}>
+                    Back to Games
+                  </Button>
+                </View>
               </View>
-            </View>
+            </GlassPlate>
           </View>
         ) : null}
       </View>
@@ -207,9 +211,13 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderRadius: 20,
+    overflow: 'hidden',
+  },
+  panelInner: {
     padding: spacing.xl,
     gap: spacing.md,
     alignItems: 'center',
+    zIndex: 1,
   },
   blurb: {
     maxWidth: 320,

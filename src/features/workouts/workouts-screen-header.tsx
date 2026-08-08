@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { ChallengeFriendButton } from '@/features/workouts/challenge-friend-button';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 
 export function WorkoutsScreenHeader({
   todaysCount,
@@ -68,18 +68,26 @@ export function WorkoutsScreenHeader({
               accessibilityLabel="Plan a custom workout"
               hitSlop={8}
               onPress={onOpenCustomPlanner}
-              style={({ pressed }) => [
-                styles.headerAction,
-                {
-                  width: titleControlSize,
-                  height: titleControlSize,
-                  borderRadius: titleControlSize / 2,
-                  backgroundColor: theme.backgroundElevated,
-                  borderColor: theme.separator,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}>
-              <Symbol name="slider.horizontal.3" size="sm" color={theme.textPrimary} />
+              style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}>
+              <GlassPlate
+                airy
+                style={[
+                  styles.headerAction,
+                  {
+                    width: titleControlSize,
+                    height: titleControlSize,
+                    borderRadius: titleControlSize / 2,
+                    borderColor: theme.separator,
+                  },
+                ]}>
+                <View style={styles.glassContent}>
+                  <Symbol
+                    name="slider.horizontal.3"
+                    size="sm"
+                    color={theme.textPrimary}
+                  />
+                </View>
+              </GlassPlate>
             </Pressable>
           </View>
         </View>
@@ -162,6 +170,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     alignSelf: 'flex-start',
   },
+  glassContent: { zIndex: 1 },
   headerAction: {
     flexShrink: 0,
     alignItems: 'center',

@@ -8,11 +8,11 @@ export { Button, IconButton } from './button';
 export { Card } from './card';
 export { CollapsibleBody } from './collapsible-body';
 export { CollapsibleSection } from './collapsible-section';
-export { DisclosureChevron } from './disclosure-chevron';
 export { DangerZone } from './danger-zone';
 export { DateField } from './date-field';
 export { DateFieldCalendar } from './date-field-calendar';
 export { DestructiveSection } from './destructive-section';
+export { DisclosureChevron } from './disclosure-chevron';
 export { DragHandle } from './drag-handle';
 export { Dropdown } from './dropdown';
 export type {
@@ -24,10 +24,14 @@ export { EmptyState } from './empty-state';
 export { ErrorMessage } from './error-message';
 export {
     FieldLeadingIcon,
+    fieldLeadingIconPlateSize,
     fieldLeadingIconRowStyle
 } from './field-leading-icon';
 export { fieldTitleCase } from './field-title-case';
 export { FormSection } from './form-section';
+export { GlassPlate } from './glass-plate';
+export type { GlassPlateProps } from './glass-plate';
+export { GlassPrimaryAction } from './glass-primary-action';
 export { Input } from './input';
 export { LoadingBlock } from './loading-block';
 export { LoadingSpinner } from './loading-spinner';
@@ -37,13 +41,19 @@ export { PanelTitle } from './panel-title';
 export { ProgressRing } from './progress-ring';
 export { RouteErrorBoundary } from './route-error-boundary';
 export {
-  SafeAreaChrome,
-  usePageSurfaceBackground,
-  usePageSurfaceBackgroundColor,
-  useSafeAreaChrome,
-  useSafeAreaChromeOverlay,
+    SafeAreaChrome,
+    usePageSurfaceBackground,
+    usePageSurfaceBackgroundColor,
+    useSafeAreaChrome,
+    useSafeAreaChromeOverlay
 } from './safe-area-chrome';
 export { Screen } from './screen';
+export {
+    ScreenAtmosphere,
+    screenAtmosphereBottomColor,
+    screenAtmosphereTopColor,
+    useScreenAtmosphereChrome
+} from './screen-atmosphere';
 export { ScreenHeader, type ScreenHeaderProps } from './screen-header';
 export { SectionHeader } from './section-header';
 export { SegmentedControl } from './segmented-control';
@@ -51,6 +61,13 @@ export { SettingsGroup } from './settings-group';
 export { SettingsActionRow, SettingsRow, SettingsToggleRow } from './settings-row';
 export { SheetHeader, SheetScaffold } from './sheet-scaffold';
 export { StackedFieldLabel } from './stacked-field-label';
+export {
+    StackedIconField,
+    stackedIconFieldLayout,
+    stackedIconFieldPlateSize,
+    stackedIconFieldShouldExpand
+} from './stacked-icon-field';
+export type { StackedIconFieldProps } from './stacked-icon-field';
 export { StatusBadge, statusBadgeToneColor } from './status-badge';
 export type { StatusBadgeTone } from './status-badge';
 export { ToolbarRow } from './toolbar-row';

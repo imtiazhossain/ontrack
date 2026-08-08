@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { borders, radii } from '@/design-system';
+import { glassMaterials, radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -8,6 +8,7 @@ import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
 import { fieldTitleCase } from './field-title-case';
+import { GlassPlate } from './glass-plate';
 
 export type ActionChipItem = {
   id: string;
@@ -16,7 +17,7 @@ export type ActionChipItem = {
   onPress: () => void;
 };
 
-/** Compact secondary action chip (demo seeds, quick tools). */
+/** Compact secondary action chip (demo seeds, quick tools) — frosted glass. */
 export function ActionChip({
   label,
   onPress,
@@ -50,22 +51,36 @@ export function ActionChip({
       accessibilityState={{ selected }}
       onPress={handlePress}
       style={({ pressed }) => [
-        styles.chip,
         {
-          minHeight: layout.minTapTarget,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          borderRadius: radii.pill,
-          borderWidth: borders.thin,
-          backgroundColor: selected ? theme.accentFaint : theme.backgroundSunken,
-          borderColor: selected ? theme.accentPrimary : 'transparent',
           opacity: pressed ? 0.86 : 1,
           maxWidth: s(160),
+          flexShrink: 1,
+          minWidth: 0,
         },
       ]}>
-      <AppText variant="callout" color={selected ? 'accent' : 'secondary'} fit numberOfLines={1}>
-        {title}
-      </AppText>
+      <GlassPlate
+        style={[
+          styles.chip,
+          {
+            minHeight: layout.minTapTarget,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: radii.pill,
+            borderColor: selected
+              ? theme.accentPrimary
+              : theme.name === 'dark'
+                ? glassMaterials.border.darkStrong
+                : glassMaterials.border.light,
+          },
+        ]}>
+        <AppText
+          variant="callout"
+          color={selected ? 'accent' : 'secondary'}
+          fit
+          numberOfLines={1}>
+          {title}
+        </AppText>
+      </GlassPlate>
     </Pressable>
   );
 }

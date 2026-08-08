@@ -54,7 +54,8 @@ export function travelHomeSoloTripCardShadow(options: {
   dark: boolean;
 }): string {
   if (options.dark) {
-    return '0 18px 42px rgba(0,0,0,0.55), 0 6px 16px rgba(0,0,0,0.38)';
+    // Longer bottom cast — solo launcher has empty paper under the card.
+    return '0 36px 72px rgba(0,0,0,0.58), 0 16px 36px rgba(0,0,0,0.48), 0 6px 14px rgba(0,0,0,0.36)';
   }
   const sampled = options.averageColor
     ? parseHexRgb(options.averageColor)
@@ -68,7 +69,9 @@ export function travelHomeSoloTripCardShadow(options: {
         b: Math.round(sampled.b * 0.52),
       }
     : SOLO_SHADOW_FALLBACK_RGB;
-  return `0 18px 40px rgba(${rgb.r},${rgb.g},${rgb.b},0.3), 0 6px 14px rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`;
+  // Soft far glow + mid lift + near contact — bias down so empty paper
+  // under a single trip still feels grounded.
+  return `0 36px 70px rgba(${rgb.r},${rgb.g},${rgb.b},0.34), 0 16px 34px rgba(${rgb.r},${rgb.g},${rgb.b},0.28), 0 6px 14px rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`;
 }
 
 /**
@@ -155,11 +158,13 @@ export function travelHomeAtmosphereHeaderScrimColors(
     if (luma !== undefined && luma < 0.1) return null;
     const need =
       luma === undefined
-        ? 0.75
-        : Math.min(1, Math.max(0.45, (luma - 0.1) / 0.55));
-    const top = 0.4 + need * 0.28;
-    const mid = 0.26 + need * 0.22;
-    const low = 0.12 + need * 0.14;
+        ? 0.82
+        : Math.min(1, Math.max(0.55, (luma - 0.1) / 0.55));
+    // Top-weighted: darkest at status bar / title, still present through
+    // the location caption, then soft-clear before Your Trips.
+    const top = 0.58 + need * 0.3;
+    const mid = 0.34 + need * 0.24;
+    const low = 0.14 + need * 0.14;
     return [
       `rgba(0,0,0,${top.toFixed(2)})`,
       `rgba(0,0,0,${mid.toFixed(2)})`,
@@ -168,15 +173,15 @@ export function travelHomeAtmosphereHeaderScrimColors(
     ] as const;
   }
 
-  // Black ink: soft light veil on bright plates only.
-  if (luma !== undefined && luma < 0.55) return null;
+  // Black ink → white top veil (midtone skies / busy plates included —
+  // ink choice already decided the glyphs need opposing wash).
   const need =
     luma === undefined
-      ? 0.7
-      : Math.min(1, Math.max(0.4, (luma - 0.45) / 0.4));
-  const top = 0.24 + need * 0.24;
-  const mid = 0.14 + need * 0.16;
-  const low = 0.06 + need * 0.1;
+      ? 0.78
+      : Math.min(1, Math.max(0.5, (luma - 0.2) / 0.55));
+  const top = 0.48 + need * 0.34;
+  const mid = 0.28 + need * 0.26;
+  const low = 0.12 + need * 0.14;
   return [
     `rgba(255,255,255,${top.toFixed(2)})`,
     `rgba(255,255,255,${mid.toFixed(2)})`,

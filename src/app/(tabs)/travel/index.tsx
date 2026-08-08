@@ -21,7 +21,6 @@ import {
 import { spacing } from '@/design-system';
 import { resolveSelfDisplayName } from '@/features/account/self-display-name';
 import { useAuthSession } from '@/features/auth/auth-provider';
-import { applyImportedFlightsToPlan } from '@/features/travel/apply-imported-flights';
 import { isTravelPlanOnCalendar, travelCalendarDrafts } from '@/features/travel/calendar';
 import { validateTravelDateRange } from '@/features/travel/date-range';
 import { persistTravelCoverPhoto } from '@/features/travel/destination-cover';
@@ -44,15 +43,14 @@ import {
     travelHomeTokens,
 } from '@/features/travel/travel-home-tokens';
 import {
-    isTravelHomeTripSearchActive,
     TravelHomeYourTrips,
+    isTravelHomeTripSearchActive,
 } from '@/features/travel/travel-home-your-trips';
-import { TravelNewTripCard } from '@/features/travel/travel-new-trip-card';
+import { TravelNewTripSheet } from '@/features/travel/travel-new-trip-sheet';
 import { validateTravelPlanDetails } from '@/features/travel/travel-plan-details';
 import { TravelPlanDetailsEditor } from '@/features/travel/travel-plan-details-editor';
 import { useTravelPageStyle } from '@/features/travel/travel-surface';
 import type { TravelPlan, TravelPlanMode } from '@/features/travel/types';
-import { useNewTripFlightImport } from '@/features/travel/use-new-trip-flight-import';
 import { useTravelHomeAtmosphereImage } from '@/features/travel/use-travel-home-atmosphere-image';
 import { useResponsive } from '@/hooks/use-responsive';
 import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
@@ -64,8 +62,8 @@ import {
     useTravel,
 } from '@/store/travel';
 import { AgentUiIds } from '@/utils/agent-ui';
-import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 import { toDateKey } from '@/utils/date';
+import { deferAfterPageTransition } from '@/utils/defer-after-page-transition';
 import { newId } from '@/utils/id';
 import { warmHrefsAfterTransition } from '@/utils/warm-navigation';
 
@@ -111,20 +109,11 @@ function TravelScreenContent() {
   const [showForm, setShowForm] = useState(plans.length === 0);
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState<TravelPlanMode>('flight');
-  const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string>();
-  const flightImport = useNewTripFlightImport({
-    setMode,
-    setOrigin,
-    setDestination,
-    setStartDate,
-    setEndDate,
-    setError,
-  });
   const [editingDetailsPlanId, setEditingDetailsPlanId] = useState<string>();
   const [editTitle, setEditTitle] = useState('');
   const [editMode, setEditMode] = useState<TravelPlanMode>('flight');
@@ -376,7 +365,6 @@ function TravelScreenContent() {
       id: planId,
       ...detailsValidation.value,
       mode,
-      origin: origin.trim() || undefined,
       startDate,
       endDate,
       itinerary: [],
@@ -386,14 +374,7 @@ function TravelScreenContent() {
       createdAt: now,
       updatedAt: now,
     };
-    const withFlights = flightImport.pendingImport
-      ? applyImportedFlightsToPlan({
-          plan: basePlan,
-          imported: flightImport.pendingImport,
-          createId: () => newId('trip-item'),
-        })
-      : basePlan;
-    const saved = savePlan(withFlights);
+    const saved = savePlan(basePlan);
     if (!saved) {
       creatingPlanRef.current = false;
       setError(
@@ -404,12 +385,10 @@ function TravelScreenContent() {
     recordPlanInteraction(planId);
     setTitle('');
     setMode('flight');
-    setOrigin('');
     setDestination('');
     setStartDate('');
     setEndDate('');
     setNotes('');
-    flightImport.clearPendingImport();
     setPendingCreatedTripId(planId);
     setShowForm(false);
     creatingPlanRef.current = false;
@@ -494,6 +473,11 @@ function TravelScreenContent() {
     setShowForm(true);
   };
 
+  const closeCreateTrip = () => {
+    setError(undefined);
+    setShowForm(false);
+  };
+
   const atmosphereDestinations = useMemo(
     () =>
       sortedPlans
@@ -532,10 +516,13 @@ function TravelScreenContent() {
   // Paint atmosphere on the app-shell chrome so it fills the status-bar band
   // (in-screen absolute layers are clipped by SafeAreaView and can't).
   // Hero band only — mock fades into paper before Your Trips (not full-page).
+  // priority: 1 — nested travel stack layout also registers chrome at 0 and
+  // would otherwise stomp this image after the child focus effect.
   useSafeAreaChrome(atmosphereImage.skyColor, {
     backgroundImage: atmosphereImage.source,
     backgroundImageHeight: atmosphereHeight,
     backgroundImageBlurRadius: travelHomeTokens.sizes.heroBlurRadius,
+    priority: 1,
   });
   // Soft contrast veil behind status-bar chrome + Travel title/tagline.
   useSafeAreaChromeOverlay(atmosphereScrim, atmosphereScrimHeight, {
@@ -601,30 +588,6 @@ function TravelScreenContent() {
           onPressAway={tripSearchActive ? collapseTripSearch : undefined}
         />
 
-        {showForm ? (
-          <TravelNewTripCard
-            title={title}
-            mode={mode}
-            origin={origin}
-            destination={destination}
-            startDate={startDate}
-            endDate={endDate}
-            notes={notes}
-            error={error}
-            importingItinerary={flightImport.importing}
-            onTitleChange={setTitle}
-            onModeChange={setMode}
-            onOriginChange={setOrigin}
-            onDestinationChange={setDestination}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onNotesChange={setNotes}
-            onImportItinerary={() => void flightImport.importItinerary()}
-            onCreate={createPlan}
-            onClose={plans.length > 0 ? () => setShowForm(false) : undefined}
-          />
-        ) : null}
-
         {launcherPlans.length > 0 ? (
           <TravelHomeYourTrips
             plans={visibleLauncherPlans}
@@ -643,7 +606,7 @@ function TravelScreenContent() {
             onViewTravelers={openFriends}
             onLayoutY={rememberTripOffset}
           />
-        ) : !showForm ? (
+        ) : (
           <EmptyState
             icon="flight"
             title="Your next adventure starts here."
@@ -654,7 +617,7 @@ function TravelScreenContent() {
             titleStyle={{ fontFamily: travelHomeFontFamily }}
             messageStyle={{ fontFamily: travelHomeFontFamily }}
           />
-        ) : null}
+        )}
 
         {friendsPlan ? (
           <TravelFriendsSheet
@@ -665,6 +628,23 @@ function TravelScreenContent() {
           />
         ) : null}
       </Screen>
+
+      <TravelNewTripSheet
+        visible={showForm}
+        title={title}
+        destination={destination}
+        startDate={startDate}
+        endDate={endDate}
+        notes={notes}
+        error={error}
+        onTitleChange={setTitle}
+        onDestinationChange={setDestination}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onNotesChange={setNotes}
+        onCreate={createPlan}
+        onClose={closeCreateTrip}
+      />
     </View>
   );
 }

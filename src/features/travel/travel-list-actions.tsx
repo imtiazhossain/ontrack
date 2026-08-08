@@ -1,12 +1,19 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, IconButton, Symbol } from '@/components/primitives';
-import type { AppIconName } from '@/design-system';
+import {
+    AppText,
+    Button,
+    GlassPrimaryAction,
+    IconButton,
+    Symbol,
+    fieldTitleCase,
+} from '@/components/primitives';
+import { type AppIconName } from '@/design-system';
 import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import {
-  itinerarySheetChrome,
-  type SheetIconTone,
+    itinerarySheetChrome,
+    type SheetIconTone,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -41,6 +48,8 @@ export function TravelSheetAction({
   const iconBox = Math.max(22, s(24));
   const badgeSize = Math.max(11, s(12));
   const radius = Math.max(10, s(11));
+  const title = fieldTitleCase(label);
+  const a11yLabel = fieldTitleCase(accessibilityLabel);
   const handlePress = () => {
     haptics.tap();
     onPress();
@@ -49,13 +58,13 @@ export function TravelSheetAction({
   return (
     <AgentTestId
       testID={testID}
-      label={accessibilityLabel}
+      label={a11yLabel}
       onPress={handlePress}
       // Flex lives on the registry wrapper so the 2-col grid fills the row.
       style={[styles.action, wide ? styles.actionWide : undefined]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
+        accessibilityLabel={a11yLabel}
         onPress={handlePress}
         style={({ pressed }) => [
           styles.actionPressable,
@@ -102,7 +111,7 @@ export function TravelSheetAction({
               ) : null}
             </View>
             <AppText variant="caption" fit style={styles.actionLabel}>
-              {label}
+              {title}
             </AppText>
           </View>
         </TravelHomeGlass>
@@ -111,10 +120,12 @@ export function TravelSheetAction({
   );
 }
 
+/** Wide sheet footer CTA — frosted sage glass (same material as View Itinerary). */
 export function TravelSheetPrimaryAction({
   label,
   icon,
   onPress,
+  disabled = false,
   editorialGold: _editorialGold = true,
   flat: _flat = false,
   flatColor: _flatColor,
@@ -123,20 +134,23 @@ export function TravelSheetPrimaryAction({
   label: string;
   icon?: AppIconName;
   onPress: () => void;
+  disabled?: boolean;
+  /** @deprecated Kept for call-site compatibility. */
   editorialGold?: boolean;
+  /** @deprecated Kept for call-site compatibility. */
   flat?: boolean;
+  /** @deprecated Kept for call-site compatibility. */
   flatColor?: string;
   testID?: string;
 }) {
   return (
-    <Button
-      variant="primary"
+    <GlassPrimaryAction
+      label={label}
       icon={icon}
+      onPress={onPress}
+      disabled={disabled}
       testID={testID}
-      accessibilityLabel={label}
-      onPress={onPress}>
-      {label}
-    </Button>
+    />
   );
 }
 

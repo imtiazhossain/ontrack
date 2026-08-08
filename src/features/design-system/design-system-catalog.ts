@@ -124,7 +124,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'card',
     name: 'Card',
     group: 'Layout',
-    description: 'Raised or sunken surface for grouped content.',
+    description: 'Frosted glass plate (elevated) or soft wash (sunken); solid escape hatch.',
     demo: 'components',
     usedBy: [
       'account',
@@ -159,9 +159,17 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'sheetScaffold',
     name: 'SheetScaffold',
     group: 'Layout',
-    description: 'Modal sheet frame; dismiss with top-right X only.',
+    description: 'Frosted modal sheet (glass default); dismiss with top-right X only.',
     demo: 'components',
-    usedBy: ['travel'],
+    usedBy: ['travel', 'account'],
+  },
+  {
+    id: 'glassPlate',
+    name: 'GlassPlate',
+    group: 'Layout',
+    description: 'Shared frosted glass underlay for chips, cards, and CTAs.',
+    demo: 'components',
+    usedBy: ['travel', 'account', 'daily-tracking'],
   },
   {
     id: 'panelTitle',
@@ -176,7 +184,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'button',
     name: 'Button',
     group: 'Actions',
-    description: 'primary · secondary · ghost · danger (+ loading/disabled).',
+    description: 'primary · secondary · ghost · danger (+ loading/disabled; auto title case).',
     demo: 'components',
     usedBy: [
       'account',
@@ -200,7 +208,7 @@ export const DESIGN_CATALOG: readonly DesignCatalogElement[] = [
     id: 'iconButton',
     name: 'IconButton',
     group: 'Actions',
-    description: 'Icon-only control (≥44pt) with label + testID.',
+    description: 'Icon-only control (≥44pt); frosted glass disc by default.',
     demo: 'components',
     usedBy: [
       'account',

@@ -14,15 +14,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BlurView } from 'expo-blur';
 import { radii } from '@/design-system';
 import {
     ITEM_KINDS,
     TravelItineraryForm,
 } from '@/features/travel/travel-itinerary-form';
-import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { ItinerarySheetSubmitButton } from '@/features/travel/travel-itinerary-sheet-fields';
 import { TravelSheetHeader } from '@/features/travel/travel-sheet';
 import type { TravelItemKind } from '@/features/travel/types';
+import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -64,11 +65,12 @@ export function TravelItineraryAddSheet({
   onClose: () => void;
 } & FormProps) {
   const theme = useTheme();
-  const chrome = itinerarySheetChrome(theme);
+  const { allowsBlur } = usePerformanceTier();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const { spacing: rs } = useResponsive();
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const dark = theme.name === 'dark';
   const kindLabel =
     ITEM_KINDS.find((entry) => entry.value === kind)?.label ?? 'Item';
   const title =
@@ -138,13 +140,49 @@ export function TravelItineraryAddSheet({
           style={[
             styles.sheet,
             {
-              backgroundColor: chrome.sheetBg,
+              backgroundColor: 'transparent',
+              borderColor: dark
+                ? 'rgba(255,255,255,0.22)'
+                : 'rgba(255,255,255,0.7)',
               maxHeight: sheetMaxHeight,
               paddingBottom: Math.max(insets.bottom, rs.sm),
               // Lift the whole sheet above the soft keyboard (chat composer pattern).
               marginBottom: keyboardInset,
             },
           ]}>
+          {Platform.OS === 'android' ? (
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                dark ? styles.androidGlassDark : styles.androidGlassLight,
+              ]}
+            />
+          ) : (
+            <>
+              <BlurView
+                intensity={allowsBlur ? 56 : 0}
+                tint={dark ? 'dark' : 'light'}
+                pointerEvents="none"
+                style={StyleSheet.absoluteFill}
+              />
+              <View
+                pointerEvents="none"
+                style={[
+                  StyleSheet.absoluteFill,
+                  {
+                    backgroundColor: dark
+                      ? allowsBlur
+                        ? 'rgba(12, 16, 24, 0.55)'
+                        : 'rgba(12, 16, 24, 0.82)'
+                      : allowsBlur
+                        ? 'rgba(255, 255, 255, 0.62)'
+                        : 'rgba(255, 255, 255, 0.9)',
+                  },
+                ]}
+              />
+            </>
+          )}
           <View
             style={[
               styles.header,
@@ -225,9 +263,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
     borderCurve: 'continuous',
     overflow: 'hidden',
     width: '100%',
+  },
+  androidGlassLight: {
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+    experimental_backgroundImage:
+      'linear-gradient(165deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.64) 48%, rgba(255,255,255,0.8) 100%)',
+  },
+  androidGlassDark: {
+    backgroundColor: 'rgba(12, 16, 24, 0.72)',
+    experimental_backgroundImage:
+      'linear-gradient(165deg, rgba(36,42,54,0.78) 0%, rgba(12,16,24,0.62) 50%, rgba(8,12,18,0.76) 100%)',
   },
   header: {},
   scroll: {

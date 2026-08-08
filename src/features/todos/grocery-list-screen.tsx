@@ -13,12 +13,13 @@ import {
     Button,
     Card,
     ErrorMessage,
+    GlassPlate,
     IconButton,
     ProgressRing,
     Screen,
     Symbol,
 } from '@/components/primitives';
-import { fontFamilies, layout, radii, spacing } from '@/design-system';
+import { fontFamilies, glassMaterials, layout, radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import {
     buildCombinedIngredients,
@@ -64,6 +65,10 @@ export function GroceryListScreen({ listId }: { listId: string }) {
   const router = useRouter();
   const theme = useTheme();
   const { s } = useResponsive();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
   const insets = useSafeAreaInsets();
   const { refreshControl } = usePullToRefresh();
   const measuredTabBarHeight = useUI((state) => state.tabBarHeight);
@@ -487,11 +492,19 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 accessibilityLabel="Grocery list settings"
                 accessibilityRole="button"
                 onPress={() => router.push(`/todos/${listId}/settings` as never)}
-                style={[
-                  styles.iconButton,
-                  { backgroundColor: theme.backgroundSunken },
+                style={({ pressed }) => [
+                  styles.iconButtonWrap,
+                  { opacity: pressed ? 0.72 : 1 },
                 ]}>
-                <Symbol name="settings" size={20} color={theme.textSecondary} />
+                <GlassPlate airy style={styles.iconButton}>
+                  <View style={styles.iconGlyph}>
+                    <Symbol
+                      name="settings"
+                      size={20}
+                      color={theme.textSecondary}
+                    />
+                  </View>
+                </GlassPlate>
               </Pressable>
               <Pressable
                 ref={shareAgent.ref}
@@ -502,11 +515,15 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                 onPress={() =>
                   void shareTodoListText(list, tasks, members, recipes)
                 }
-                style={[
-                  styles.iconButton,
-                  { backgroundColor: theme.backgroundSunken },
+                style={({ pressed }) => [
+                  styles.iconButtonWrap,
+                  { opacity: pressed ? 0.72 : 1 },
                 ]}>
-                <Symbol name="share" size={20} color={theme.textSecondary} />
+                <GlassPlate airy style={styles.iconButton}>
+                  <View style={styles.iconGlyph}>
+                    <Symbol name="share" size={20} color={theme.textSecondary} />
+                  </View>
+                </GlassPlate>
               </Pressable>
             </View>
 
@@ -516,12 +533,11 @@ export function GroceryListScreen({ listId }: { listId: string }) {
               </Pressable>
             ) : null}
 
-            <View
+            <GlassPlate
+              clear
+              wash
               accessibilityRole="tablist"
-              style={[
-                styles.segmented,
-                { backgroundColor: theme.backgroundSunken },
-              ]}>
+              style={styles.segmented}>
               {([
                 ['meal', 'By meal', mealViewAgent] as const,
                 ['combined', 'Combined', combinedViewAgent] as const,
@@ -539,19 +555,25 @@ export function GroceryListScreen({ listId }: { listId: string }) {
                       setView(id);
                       haptics.select();
                     }}
-                    style={[
-                      styles.segment,
-                      selected && { backgroundColor: theme.backgroundElevated },
-                    ]}>
+                    style={styles.segmentPressable}>
+                    {selected ? (
+                      <GlassPlate
+                        style={[
+                          styles.segmentSelected,
+                          { borderColor: plateBorder },
+                        ]}
+                      />
+                    ) : null}
                     <AppText
                       variant="callout"
-                      color={selected ? 'accent' : 'secondary'}>
+                      color={selected ? 'accent' : 'secondary'}
+                      style={styles.segmentLabel}>
                       {label}
                     </AppText>
                   </Pressable>
                 );
               })}
-            </View>
+            </GlassPlate>
           </View>
         }
         renderItem={renderItem}
@@ -593,6 +615,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   memberNotice: { flex: 1 },
+  iconButtonWrap: {
+    borderRadius: radii.pill,
+  },
   iconButton: {
     width: layout.minTapTarget,
     height: layout.minTapTarget,
@@ -605,13 +630,19 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
     borderRadius: radii.pill,
   },
-  segment: {
+  segmentPressable: {
     flex: 1,
     minHeight: layout.minTapTarget,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
   },
+  segmentSelected: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radii.pill,
+  },
+  segmentLabel: { zIndex: 1 },
+  iconGlyph: { zIndex: 1 },
   row: { marginBottom: spacing.lg },
   sectionHeading: {
     flexDirection: 'row',

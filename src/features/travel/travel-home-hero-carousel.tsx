@@ -16,12 +16,14 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { fetchDestinationHeroUris } from '@/features/travel/destination-cover';
+import { peekUnsplashCoverColor } from '@/features/travel/destination-cover-lookup';
 import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
 import {
     travelHomeAtmosphereSource,
 } from '@/features/travel/travel-home-background';
 import { TravelHomeCarouselStepper } from '@/features/travel/travel-home-carousel-stepper';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
+import { travelHomeHeroContentPosition } from '@/features/travel/travel-home-hero-focus';
 import { TravelHomeEditIcon } from '@/features/travel/travel-home-icons';
 import {
     travelHomeImageHeight,
@@ -212,7 +214,7 @@ export function TravelHomeHeroCarousel({
             { width: heroWidth, height },
           ]}
           contentFit="cover"
-          contentPosition={{ top: '35%', left: '50%' }}
+          contentPosition={travelHomeHeroContentPosition()}
           pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
@@ -266,6 +268,11 @@ export function TravelHomeHeroCarousel({
                     },
                   ]}
                   contentFit="cover"
+                  // Short hero crops empty into sky unless we bias downward;
+                  // bright Unsplash averages escalate the pull-up.
+                  contentPosition={travelHomeHeroContentPosition(
+                    uri ? peekUnsplashCoverColor(uri) : undefined,
+                  )}
                   transition={uri ? 180 : 0}
                   recyclingKey={uri ?? `hero-page-empty-${pageIndex}`}
                   accessible={false}
@@ -298,6 +305,7 @@ export function TravelHomeHeroCarousel({
             },
           ]}
           contentFit="cover"
+          contentPosition={travelHomeHeroContentPosition()}
           transition={180}
           pointerEvents="none"
           accessible={false}

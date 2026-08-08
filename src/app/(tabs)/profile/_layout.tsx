@@ -1,25 +1,22 @@
 import { Stack } from 'expo-router';
 
 import { motion } from '@/design-system';
-import { FeatureThemeProvider, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 
-export default function PlantsLayout() {
-  return (
-    <FeatureThemeProvider feature="plants">
-      <PlantsStack />
-    </FeatureThemeProvider>
-  );
-}
+export const unstable_settings = {
+  anchor: 'index',
+};
 
-function PlantsStack() {
+export default function ProfileTabLayout() {
   const theme = useTheme();
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         animation: process.env.EXPO_OS === 'android' ? 'fade_from_bottom' : 'default',
         animationDuration: motion.page,
-        contentStyle: { backgroundColor: theme.backgroundPrimary },
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     />
   );

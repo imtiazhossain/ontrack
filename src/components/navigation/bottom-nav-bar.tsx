@@ -3,6 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
+    Platform,
     Pressable,
     StyleSheet,
     useWindowDimensions,
@@ -21,11 +22,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
-  Symbol,
-  usePageSurfaceBackgroundColor,
+    Symbol,
+    usePageSurfaceBackgroundColor,
 } from '@/components/primitives';
 import type { AppIconName } from '@/design-system';
-import { motion, radii } from '@/design-system';
+import { glassMaterials, motion, radii } from '@/design-system';
 import { palette } from '@/design-system/colors';
 import { useHomeWeather } from '@/features/daily-tracking/use-home-weather';
 import { usePerformanceTier } from '@/hooks/use-performance-tier';
@@ -36,20 +37,20 @@ import { useTabRecency } from '@/store/tab-recency';
 import { useTodos } from '@/store/todos';
 import { useUI } from '@/store/ui';
 import {
-  AgentTestId,
-  AgentUiIds,
-  isAgentUiEnabled,
-  registerAgentUiTarget,
-  tabTestIdForRoute,
-  unregisterAgentUiTarget,
+    AgentTestId,
+    AgentUiIds,
+    isAgentUiEnabled,
+    registerAgentUiTarget,
+    tabTestIdForRoute,
+    unregisterAgentUiTarget,
 } from '@/utils/agent-ui';
 import { deferAfterPageLoad } from '@/utils/defer-after-page-load';
 
 import {
-  canonicalPositionForRoute,
-  centerIndexForRail,
-  rebasePosition,
-  routeIndexForPosition,
+    canonicalPositionForRoute,
+    centerIndexForRail,
+    rebasePosition,
+    routeIndexForPosition,
 } from './bottom-nav-bar-motion';
 import { BottomNavTabItem } from './bottom-nav-tab-item';
 import { TAB_META } from './bottom-nav-tab-meta';
@@ -82,7 +83,18 @@ export function BottomNavBar({
   const theme = useTheme();
   const { allowsBlur } = usePerformanceTier();
   const pageSurface = usePageSurfaceBackgroundColor();
-  const barBackground = pageSurface ?? theme.backgroundPrimary;
+  const darkBar = theme.name === 'dark';
+  const barWash = darkBar
+    ? allowsBlur
+      ? glassMaterials.nav.darkFillBlur
+      : glassMaterials.nav.darkFillSolid
+    : allowsBlur
+      ? glassMaterials.nav.lightFillBlur
+      : glassMaterials.nav.lightFillSolid;
+  // Prefer frosted glass; fall back to page surface only when blur is off
+  // and a feature registered an opaque underlay (Travel paper continuity).
+  const barBackground =
+    !allowsBlur && pageSurface ? pageSurface : 'transparent';
   const router = useRouter();
   const { weather: homeWeather, icon: homeWeatherIcon } = useHomeWeather();
   const todayTabIcon: AppIconName = homeWeatherIcon ?? 'today';
@@ -484,14 +496,12 @@ export function BottomNavBar({
                 overflow: 'hidden',
               },
             ]}>
-            {allowsBlur ? (
-              <BlurView
-                intensity={dark ? 40 : 52}
-                tint={dark ? 'dark' : 'light'}
-                pointerEvents="none"
-                style={StyleSheet.absoluteFill}
-              />
-            ) : null}
+            <BlurView
+              intensity={allowsBlur ? (dark ? 40 : 52) : 0}
+              tint={dark ? 'dark' : 'light'}
+              pointerEvents="none"
+              style={StyleSheet.absoluteFill}
+            />
             <Symbol
               name={isPrev ? 'chevron-left' : 'chevron-right'}
               size={arrowIconSize}
@@ -503,9 +513,8 @@ export function BottomNavBar({
     );
   };
 
-  // Bar paints the focused page fill so the rail reads as continuous
-  // surface — not a cooler frosted plate. Blur stays on rail arrows only
-  // (never nest remounting chrome inside BlurView — Fabric crash).
+  // Frosted dock over page atmosphere (sibling BlurView — never nest
+  // remounting chrome inside BlurView). Android uses a translucent wash.
   return (
     <AgentTestId testID={AgentUiIds.tabs.dock}>
       <View
@@ -522,13 +531,46 @@ export function BottomNavBar({
             paddingTop: spacing.xxs,
             paddingBottom: bottomLabelPad,
             backgroundColor: barBackground,
+            overflow: 'hidden',
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: darkBar
+              ? glassMaterials.border.darkStrong
+              : glassMaterials.border.light,
           },
         ]}>
+        {Platform.OS === 'android' ? (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: barWash,
+                experimental_backgroundImage: darkBar
+                  ? 'linear-gradient(180deg, rgba(36,42,54,0.55) 0%, rgba(12,16,24,0.72) 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(247,244,238,0.78) 100%)',
+              },
+            ]}
+          />
+        ) : (
+          <>
+            <BlurView
+              intensity={allowsBlur ? 48 : 0}
+              tint={darkBar ? 'dark' : 'light'}
+              pointerEvents="none"
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: barWash }]}
+            />
+          </>
+        )}
         <View
           style={[
             styles.capsule,
             {
               backgroundColor: 'transparent',
+              zIndex: 1,
             },
           ]}>
         <View
@@ -560,10 +602,10 @@ export function BottomNavBar({
           const badge = route.name === 'to-do' ? openTaskCount : 0;
 
           const tabIcon: AppIconName =
-            route.name === 'index' ? todayTabIcon : meta.icon;
+            route.name === '(today)' ? todayTabIcon : meta.icon;
           const accessibilityLabel =
             descriptors[route.key].options.tabBarAccessibilityLabel ??
-            (route.name === 'index'
+            (route.name === '(today)'
               ? `${meta.label}${todayAccessibilityExtra}`
               : route.name === 'vision-board'
                 ? 'Vision Board'

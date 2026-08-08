@@ -31,7 +31,6 @@ describe('authentication navigation invariants', () => {
       'onboarding',
       'agents',
       'nutrition-profile',
-      'travel',
     ]) {
       expect(appGroup).toContain(`name="${route}"`);
     }

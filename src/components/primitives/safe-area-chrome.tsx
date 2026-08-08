@@ -21,6 +21,8 @@ type SafeAreaChromeOptions = {
   backgroundImageHeight?: number;
   /** Soften scenic chrome to match in-screen atmosphere treatments. */
   backgroundImageBlurRadius?: number;
+  /** Remote chrome failed to decode/paint — caller may swap to a fallback source. */
+  onBackgroundImageError?: () => void;
   /**
    * Higher wins when a layout and a nested screen both register chrome.
    * React runs child focus effects before parents, so without priority the
@@ -36,6 +38,7 @@ type SafeAreaChromeState = {
   backgroundImage: ImageSource | undefined;
   backgroundImageHeight: number | undefined;
   backgroundImageBlurRadius: number | undefined;
+  onBackgroundImageError: (() => void) | undefined;
 };
 
 type SafeAreaChromeEntry = SafeAreaChromeState & {
@@ -87,6 +90,7 @@ const EMPTY_CHROME: SafeAreaChromeState = {
   backgroundImage: undefined,
   backgroundImageHeight: undefined,
   backgroundImageBlurRadius: undefined,
+  onBackgroundImageError: undefined,
 };
 
 const EMPTY_OVERLAY: SafeAreaChromeOverlayState = {
@@ -123,6 +127,7 @@ function pickActiveChrome(entries: SafeAreaChromeEntry[]): SafeAreaChromeState {
     backgroundImage: best.backgroundImage,
     backgroundImageHeight: best.backgroundImageHeight,
     backgroundImageBlurRadius: best.backgroundImageBlurRadius,
+    onBackgroundImageError: best.onBackgroundImageError,
   };
 }
 
@@ -258,16 +263,27 @@ export function useSafeAreaChromeBackground(): {
   image: ImageSource | undefined;
   height: number | undefined;
   blurRadius: number | undefined;
+  onError: (() => void) | undefined;
 } {
-  const { backgroundImage, backgroundImageHeight, backgroundImageBlurRadius } =
-    useContext(SafeAreaChromeStateContext);
+  const {
+    backgroundImage,
+    backgroundImageHeight,
+    backgroundImageBlurRadius,
+    onBackgroundImageError,
+  } = useContext(SafeAreaChromeStateContext);
   return useMemo(
     () => ({
       image: backgroundImage,
       height: backgroundImageHeight,
       blurRadius: backgroundImageBlurRadius,
+      onError: onBackgroundImageError,
     }),
-    [backgroundImage, backgroundImageBlurRadius, backgroundImageHeight],
+    [
+      backgroundImage,
+      backgroundImageBlurRadius,
+      backgroundImageHeight,
+      onBackgroundImageError,
+    ],
   );
 }
 
@@ -321,6 +337,7 @@ export function useSafeAreaChrome(
   const backgroundImage = options?.backgroundImage;
   const backgroundImageHeight = options?.backgroundImageHeight;
   const backgroundImageBlurRadius = options?.backgroundImageBlurRadius;
+  const onBackgroundImageError = options?.onBackgroundImageError;
   const priority = options?.priority ?? 0;
 
   useFocusEffect(
@@ -332,6 +349,7 @@ export function useSafeAreaChrome(
         backgroundImage,
         backgroundImageHeight,
         backgroundImageBlurRadius,
+        onBackgroundImageError,
         priority,
       });
       return () => registry.remove(id);
@@ -341,6 +359,7 @@ export function useSafeAreaChrome(
       backgroundImageHeight,
       color,
       id,
+      onBackgroundImageError,
       priority,
       registry,
     ]),
@@ -378,18 +397,21 @@ export function SafeAreaChrome({
   backgroundImage,
   backgroundImageHeight,
   backgroundImageBlurRadius,
+  onBackgroundImageError,
   priority,
 }: {
   color: string;
   backgroundImage?: ImageSource;
   backgroundImageHeight?: number;
   backgroundImageBlurRadius?: number;
+  onBackgroundImageError?: () => void;
   priority?: number;
 }) {
   useSafeAreaChrome(color, {
     backgroundImage,
     backgroundImageHeight,
     backgroundImageBlurRadius,
+    onBackgroundImageError,
     priority,
   });
   return null;

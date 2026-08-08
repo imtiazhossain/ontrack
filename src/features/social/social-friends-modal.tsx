@@ -8,10 +8,12 @@ import {
   Button,
   EmptyState,
   ErrorMessage,
+  GlassPlate,
   IconButton,
   Input,
   LoadingBlock,
   Symbol,
+  useScreenAtmosphereChrome,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
@@ -58,6 +60,7 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
   const insets = useSafeAreaInsets();
   const { spacing, s } = useResponsive();
   const title = props.mode === 'trip' ? 'Invite to a Trip' : props.mode === 'all' ? 'Your Friends' : 'Add Friends';
+  useScreenAtmosphereChrome(props.visible);
 
   return (
     <Modal
@@ -69,7 +72,6 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
         style={[
           styles.root,
           {
-            backgroundColor: chrome.background,
             paddingTop: insets.top + spacing.sm,
             paddingBottom: insets.bottom + spacing.sm,
           },
@@ -139,12 +141,10 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
               </View>
             ) : null}
 
-            <View
+            <GlassPlate
               style={[
                 styles.addCard,
                 {
-                  backgroundColor: chrome.surface,
-                  borderColor: chrome.border,
                   padding: spacing.lg,
                   gap: spacing.md,
                   ...socialShadow(chrome.shadow, 'raised'),
@@ -183,7 +183,7 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
                 style={{ backgroundColor: chrome.primary }}>
                 Send Request
               </Button>
-            </View>
+            </GlassPlate>
 
             <View
               style={[
@@ -263,13 +263,11 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
               <View style={{ gap: spacing.sm }}>
                 <SocialModalSectionTitle title="Friend Requests" count={props.incoming.length} />
                 {props.incoming.map((request) => (
-                  <View
+                  <GlassPlate
                     key={request.id}
                     style={[
                       styles.requestCard,
                       {
-                        backgroundColor: chrome.surface,
-                        borderColor: chrome.border,
                         padding: spacing.md,
                         gap: spacing.md,
                       },
@@ -299,7 +297,7 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
                         Decline
                       </Button>
                     </View>
-                  </View>
+                  </GlassPlate>
                 ))}
               </View>
             ) : null}
@@ -308,14 +306,12 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
               <View style={{ gap: spacing.sm }}>
                 <SocialModalSectionTitle title="Pending" count={props.outgoing.length} />
                 {props.outgoing.map((request) => (
-                  <View
+                  <GlassPlate
                     key={request.id}
                     style={[
                       styles.friendRow,
                       {
                         minHeight: Math.max(62, s(66)),
-                        backgroundColor: chrome.surface,
-                        borderColor: chrome.border,
                         paddingHorizontal: spacing.md,
                         gap: spacing.md,
                       },
@@ -335,7 +331,7 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
                       onPress={() => props.onCancel(request)}>
                       Cancel
                     </Button>
-                  </View>
+                  </GlassPlate>
                 ))}
               </View>
             ) : null}
@@ -345,27 +341,24 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
               {props.loading && props.friends.length === 0 ? (
                 <LoadingBlock label="Loading friends…" />
               ) : props.friends.length === 0 ? (
-                <View
+                <GlassPlate
                   style={[
                     styles.emptyFriends,
-                    { backgroundColor: chrome.surface, borderColor: chrome.border },
                   ]}>
                   <EmptyState
                     icon="people"
                     title="No friends yet"
                     message="Send a request or share your personal invite link above."
                   />
-                </View>
+                </GlassPlate>
               ) : (
                 props.friends.map((friend) => (
-                  <View
+                  <GlassPlate
                     key={friend.userId}
                     style={[
                       styles.friendRow,
                       {
                         minHeight: Math.max(74, s(80)),
-                        backgroundColor: chrome.surface,
-                        borderColor: chrome.border,
                         paddingHorizontal: spacing.md,
                         gap: spacing.md,
                       },
@@ -400,7 +393,7 @@ export function SocialFriendsModal(props: SocialFriendsModalProps) {
                       disabled={Boolean(props.working)}
                       onPress={() => props.onRemove(friend)}
                     />
-                  </View>
+                  </GlassPlate>
                 ))
               )}
             </View>
@@ -458,7 +451,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   addCard: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
   },
@@ -510,7 +502,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   requestCard: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
@@ -543,7 +534,6 @@ const styles = StyleSheet.create({
   friendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.lg,
     borderCurve: 'continuous',
   },
@@ -558,7 +548,6 @@ const styles = StyleSheet.create({
   },
   emptyFriends: {
     minHeight: 180,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
   },

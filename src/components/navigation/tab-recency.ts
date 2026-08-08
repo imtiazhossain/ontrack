@@ -2,7 +2,7 @@
 
 /** Cold-start / never-visited fallback — matches `(tabs)/_layout` screen order. */
 export const DEFAULT_TAB_ORDER = [
-  'index',
+  '(today)',
   'calendar',
   'to-do',
   'social',

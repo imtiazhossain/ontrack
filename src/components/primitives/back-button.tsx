@@ -13,7 +13,7 @@ import { Symbol } from './symbol';
 
 export function BackButton({
   accessibilityLabel = 'Go Back',
-  fallback = '/(tabs)',
+  fallback = '/',
   testID = AgentUiIds.chrome.back,
 }: {
   accessibilityLabel?: string;
@@ -38,7 +38,7 @@ export function BackButton({
 /** Back control used by the shared native stack header on every non-root route. */
 export function HeaderBackButton({
   accessibilityLabel = 'Go Back',
-  fallback = '/(tabs)',
+  fallback = '/',
   alwaysNavigateTo,
   onPress,
   testID = AgentUiIds.chrome.headerBack,

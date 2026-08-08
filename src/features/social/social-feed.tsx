@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, EmptyState, Symbol } from '@/components/primitives';
+import { AppText, Button, EmptyState, GlassPlate, Symbol } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { ProfileAvatar } from '@/features/account/profile-avatar';
 import { formatSocialActivityTime } from '@/features/social/social-feed-model';
@@ -75,12 +75,10 @@ export function SocialActivityFeed({
       </View>
 
       {visible.length === 0 ? (
-        <View
+        <GlassPlate
           style={[
             styles.empty,
             {
-              backgroundColor: chrome.surface,
-              borderColor: chrome.border,
               padding: spacing.lg,
             },
           ]}>
@@ -89,7 +87,7 @@ export function SocialActivityFeed({
             title={filter === 'all' ? 'Your feed is ready' : `No ${filter} updates yet`}
             message="Trips, shared photos, workouts, polls, and stories from your circle will appear here."
           />
-        </View>
+        </GlassPlate>
       ) : (
         <View style={{ gap: spacing.sm }}>
           {visible.map((item) => (
@@ -116,11 +114,9 @@ function SocialFeedCard({ item, onOpen }: { item: SocialFeedItem; onOpen: () => 
   const { spacing, s } = useResponsive();
   const [pollChoice, setPollChoice] = useState<string>();
   const avatarSize = Math.max(42, s(46));
-  const cardStyle = [
+  const cardShellStyle = [
     styles.card,
     {
-      backgroundColor: chrome.surface,
-      borderColor: chrome.border,
       padding: spacing.md,
       gap: spacing.md,
       ...socialShadow(chrome.shadow, 'raised'),
@@ -150,7 +146,7 @@ function SocialFeedCard({ item, onOpen }: { item: SocialFeedItem; onOpen: () => 
   if (item.kind === 'poll') {
     const total = item.choices.reduce((sum, choice) => sum + choice.votes, 0) + (pollChoice ? 1 : 0);
     return (
-      <View style={cardStyle}>
+      <GlassPlate style={cardShellStyle}>
         {header}
         <AppText variant="caption" color="secondary" fit>
           Poll in {item.groupName}
@@ -188,7 +184,7 @@ function SocialFeedCard({ item, onOpen }: { item: SocialFeedItem; onOpen: () => 
             );
           })}
         </View>
-      </View>
+      </GlassPlate>
     );
   }
 
@@ -197,9 +193,11 @@ function SocialFeedCard({ item, onOpen }: { item: SocialFeedItem; onOpen: () => 
       testID={AgentUiIds.social.feedItem(item.id)}
       accessibilityLabel={feedItemLabel(item)}
       onPress={onOpen}
-      style={cardStyle}>
+      style={styles.cardWrap}>
+      <GlassPlate style={cardShellStyle}>
       {header}
       <FeedCardBody item={item} />
+      </GlassPlate>
     </SocialPressable>
   );
 }
@@ -335,12 +333,13 @@ const styles = StyleSheet.create({
   },
   empty: {
     minHeight: 190,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
   },
+  cardWrap: {
+    width: '100%',
+  },
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.xl,
     borderCurve: 'continuous',
   },

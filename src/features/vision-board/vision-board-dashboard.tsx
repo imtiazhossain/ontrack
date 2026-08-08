@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     AppText,
     EmptyState,
+    GlassPlate,
     IconButton,
     Screen,
     Symbol,
@@ -343,13 +344,14 @@ export function VisionBoardDashboard() {
                 disabled={editing}
                 onPress={() => router.push(`/vision-board/${category.id}` as never)}
                 style={({ pressed }) => [
-                  styles.categoryCard,
-                  editing && styles.categoryCardEditing,
-                  {
-                    backgroundColor: theme.backgroundElevated,
-                    opacity: pressed ? 0.78 : 1,
-                  },
+                  styles.categoryCardWrap,
+                  { opacity: pressed ? 0.78 : 1 },
                 ]}>
+                <GlassPlate
+                  style={[
+                    styles.categoryCard,
+                    editing && styles.categoryCardEditing,
+                  ]}>
                 <View style={styles.cover}>
                   <View
                     style={[
@@ -453,6 +455,7 @@ export function VisionBoardDashboard() {
                     </View>
                   ) : null}
                 </View>
+                </GlassPlate>
               </Pressable>
             );
           })}
@@ -610,6 +613,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   categories: { gap: spacing.sm },
+  categoryCardWrap: {
+    width: '100%',
+  },
   categoryCard: {
     minHeight: 88,
     overflow: 'hidden',

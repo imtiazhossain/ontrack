@@ -24,7 +24,7 @@ describe('Token budget enforcement', () => {
 
   // Whitelist known large travel files
   const largeFileWhitelist = [
-    '/src/app/(tabs)/travel.tsx',
+    '/src/app/(tabs)/travel/index.tsx',
     '/src/features/travel/flights/flight-search-screen.tsx',
     '/src/features/travel/share.ts',
     '/src/features/travel/travel-friends-sheet.tsx',

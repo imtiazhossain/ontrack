@@ -8,10 +8,11 @@ import {
   Button,
   Card,
   ErrorMessage,
+  GlassPlate,
   Screen,
   Symbol,
 } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { glassMaterials, radii, spacing } from '@/design-system';
 import { useAuthSession } from '@/features/auth/auth-provider';
 import { PeoplePicker } from '@/features/social/people-picker';
 import { shareTodoCollaboratorInvite } from '@/features/todos/share';
@@ -27,6 +28,10 @@ import { useTodos } from '@/store/todos';
 export function TodoCollaboratorsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
   const { user } = useAuthSession();
   const lists = useTodos((state) => state.lists);
   const ownedLists = useMemo(
@@ -162,13 +167,18 @@ export function TodoCollaboratorsScreen() {
               accessibilityLabel={`Share ${list.name}`}
               onPress={() => toggle(list.id)}
               style={({ pressed }) => [
-                styles.listRow,
-                {
-                  backgroundColor: theme.backgroundElevated,
-                  borderColor: selected ? theme.accentPrimary : theme.separator,
-                  opacity: pressed ? 0.72 : 1,
-                },
+                styles.listRowWrap,
+                { opacity: pressed ? 0.72 : 1 },
               ]}>
+              <GlassPlate
+                style={[
+                  styles.listRow,
+                  {
+                    borderColor: selected ? theme.accentPrimary : plateBorder,
+                    borderWidth: selected ? 1 : StyleSheet.hairlineWidth,
+                  },
+                ]}>
+              <View style={styles.listRowInner}>
               <View
                 style={[
                   styles.checkbox,
@@ -186,6 +196,8 @@ export function TodoCollaboratorsScreen() {
                 </AppText>
               </View>
               <Symbol name="tasks" size={20} color={theme.textTertiary} />
+              </View>
+              </GlassPlate>
             </Pressable>
           );
         })}
@@ -259,15 +271,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   list: { gap: spacing.sm },
+  listRowWrap: {
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+  },
   listRow: {
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+  },
+  listRowInner: {
     minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
+    zIndex: 1,
   },
   checkbox: {
     width: 24,

@@ -76,6 +76,8 @@ interface DateFieldCalendarProps {
   maximumDate?: Date;
   onCursorChange: (value: Date) => void;
   onValueChange: (value: Date) => void;
+  /** Frosted month chevrons on glass sheets; solid elevated elsewhere. */
+  controlAppearance?: 'solid' | 'glass';
   testID?: string;
 }
 
@@ -101,6 +103,7 @@ export function DateFieldCalendar({
   maximumDate,
   onCursorChange,
   onValueChange,
+  controlAppearance = 'glass',
   testID,
 }: DateFieldCalendarProps) {
   const theme = useTheme();
@@ -120,6 +123,7 @@ export function DateFieldCalendar({
   const weekCount = Math.ceil((lastMonthCell + 1) / 7);
   const previousMonthEnabled = monthCanContainDate(year, month - 1, minimumDate, maximumDate);
   const nextMonthEnabled = monthCanContainDate(year, month + 1, minimumDate, maximumDate);
+  const glassControls = controlAppearance === 'glass';
 
   const shiftMonth = (delta: number) => {
     haptics.select();
@@ -136,8 +140,9 @@ export function DateFieldCalendar({
           <IconButton
             icon="chevron-left"
             testID={testID ? `${testID}.previousMonth` : undefined}
-            background={theme.backgroundElevated}
-            borderColor={theme.separator}
+            appearance={controlAppearance}
+            background={glassControls ? undefined : theme.backgroundElevated}
+            borderColor={glassControls ? undefined : theme.separator}
             disabled={!previousMonthEnabled}
             accessibilityLabel="Previous month"
             onPress={() => shiftMonth(-1)}
@@ -145,8 +150,9 @@ export function DateFieldCalendar({
           <IconButton
             icon="chevron-right"
             testID={testID ? `${testID}.nextMonth` : undefined}
-            background={theme.backgroundElevated}
-            borderColor={theme.separator}
+            appearance={controlAppearance}
+            background={glassControls ? undefined : theme.backgroundElevated}
+            borderColor={glassControls ? undefined : theme.separator}
             disabled={!nextMonthEnabled}
             accessibilityLabel="Next month"
             onPress={() => shiftMonth(1)}

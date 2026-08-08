@@ -1,6 +1,6 @@
+import type { ImperativeRouter } from 'expo-router';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ImperativeRouter } from 'expo-router';
 
 import { goBackOrReplace } from '@/utils/navigation';
 
@@ -53,11 +53,9 @@ describe('feature route ownership', () => {
           ? join(appDirectory, feature, 'index.tsx')
           : join(appDirectory, `${feature}.tsx`);
       expect(existsSync(rootRoute)).toBe(false);
-      const tabRoute =
-        feature === 'vision-board'
-          ? join(appDirectory, '(tabs)', feature, 'index.tsx')
-          : join(appDirectory, '(tabs)', `${feature}.tsx`);
-      expect(existsSync(tabRoute)).toBe(true);
+      const tabFlat = join(appDirectory, '(tabs)', `${feature}.tsx`);
+      const tabNested = join(appDirectory, '(tabs)', feature, 'index.tsx');
+      expect(existsSync(tabFlat) || existsSync(tabNested)).toBe(true);
     },
   );
 
@@ -79,7 +77,7 @@ describe('feature route ownership', () => {
     );
 
     expect(existsSync(join(appDirectory, 'day', '[date].tsx'))).toBe(false);
-    expect(calendarRoute).toContain("router.navigate('/(tabs)')");
+    expect(calendarRoute).toContain("router.navigate('/')");
     expect(calendarRoute).not.toContain("router.push({ pathname: '/day/[date]'");
     expect(tabsLayout).toContain(
       "listeners={{ tabPress: () => setSelectedDate(todayKey()) }}",

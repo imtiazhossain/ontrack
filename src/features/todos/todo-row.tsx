@@ -7,8 +7,8 @@ import {
   View,
 } from 'react-native';
 
-import { AppText, DragHandle, Symbol } from '@/components/primitives';
-import { layout, radii, spacing, typography } from '@/design-system';
+import { AppText, DragHandle, GlassPlate, Symbol } from '@/components/primitives';
+import { glassMaterials, layout, radii, spacing, typography } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoMember, TodoTask } from '@/store/todos';
 import { AgentTestId } from '@/utils/agent-ui';
@@ -58,6 +58,7 @@ export function TodoRow({
   testID?: string;
 }) {
   const theme = useTheme();
+  const dark = theme.name === 'dark';
   const [draft, setDraft] = useState(task.title);
   const [lineCount, setLineCount] = useState(0);
   const [measuredWhileExpanded, setMeasuredWhileExpanded] = useState(false);
@@ -138,6 +139,18 @@ export function TodoRow({
       label={task.title}
       onPress={pressRow}
       style={styles.taskRowAgent}>
+      <GlassPlate
+        style={[
+          styles.taskRow,
+          {
+            borderColor:
+              task.important && !task.completed
+                ? theme.accentSoft
+                : dark
+                  ? glassMaterials.border.dark
+                  : glassMaterials.border.light,
+          },
+        ]}>
       <Pressable
         accessible={false}
         accessibilityActions={
@@ -155,16 +168,7 @@ export function TodoRow({
           }
         }}
         onPress={pressRow}
-        style={[
-          styles.taskRow,
-          {
-            backgroundColor: theme.backgroundElevated,
-            borderColor:
-              task.important && !task.completed
-                ? theme.accentSoft
-                : theme.separator,
-          },
-        ]}
+        style={styles.taskRowInner}
       >
       {editMode && listOwner ? (
         <Pressable
@@ -320,6 +324,7 @@ export function TodoRow({
         )
       ) : null}
       </Pressable>
+      </GlassPlate>
     </AgentTestId>
   );
 }
@@ -341,6 +346,10 @@ export function ChecklistItemSeparator({
 const styles = StyleSheet.create({
   taskRowAgent: { width: '100%' },
   taskRow: {
+    borderRadius: radii.lg,
+    borderCurve: 'continuous',
+  },
+  taskRowInner: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,9 +357,7 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
     paddingVertical: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.lg,
-    borderCurve: 'continuous',
+    zIndex: 1,
   },
   checkButton: {
     width: 27,

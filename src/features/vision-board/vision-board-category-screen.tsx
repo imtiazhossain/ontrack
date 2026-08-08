@@ -15,6 +15,7 @@ import {
     Button,
     EmptyState,
     ErrorMessage,
+    GlassPlate,
     IconButton,
     Screen,
     Symbol,
@@ -378,10 +379,10 @@ export function VisionBoardCategoryScreen() {
           {error ? <ErrorMessage message={error} /> : null}
 
           {selected ? (
-            <View
+            <GlassPlate
               accessibilityLiveRegion="polite"
-              style={[styles.selectionPanel, { backgroundColor: theme.backgroundElevated }]}>
-              <View style={styles.selectionHeading}>
+              style={styles.selectionPanel}>
+              <View style={[styles.selectionHeading, { zIndex: 1 }]}>
                 <View style={styles.flex}>
                   <AppText variant="subheading">Selected {selected.kind}</AppText>
                   <AppText variant="caption" color="secondary" numberOfLines={1}>
@@ -395,7 +396,7 @@ export function VisionBoardCategoryScreen() {
                   onPress={() => setSelectedId(undefined)}
                 />
               </View>
-              <View style={styles.toolRow}>
+              <View style={[styles.toolRow, { zIndex: 1 }]}>
                 <IconButton
                   icon="edit"
                   testID={AgentUiIds.vision.selectionEdit}
@@ -422,7 +423,7 @@ export function VisionBoardCategoryScreen() {
                   onPress={() => confirmDelete(selected)}
                 />
               </View>
-              <View style={styles.adjustments}>
+              <View style={[styles.adjustments, { zIndex: 1 }]}>
                 {[
                   ['←', 'left', 'Move selected item left'],
                   ['↑', 'up', 'Move selected item up'],
@@ -439,17 +440,15 @@ export function VisionBoardCategoryScreen() {
                     accessibilityLabel={accessibilityLabel}
                     onPress={() => adjustSelected(action as Parameters<typeof adjustSelected>[0])}
                     style={({ pressed }) => [
-                      styles.adjustButton,
-                      {
-                        backgroundColor: theme.backgroundSunken,
-                        opacity: pressed ? 0.65 : 1,
-                      },
+                      { opacity: pressed ? 0.65 : 1 },
                     ]}>
-                    <AppText variant="subheading">{label}</AppText>
+                    <GlassPlate airy style={styles.adjustButton}>
+                      <AppText variant="subheading">{label}</AppText>
+                    </GlassPlate>
                   </Pressable>
                 ))}
               </View>
-            </View>
+            </GlassPlate>
           ) : null}
 
           <View style={styles.backgroundSection}>

@@ -40,19 +40,64 @@ describe('canonical travel sheet design', () => {
     }
   });
 
+  it('keeps Travel modal sheets on frosted glass surfaces', () => {
+    const sheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-sheet.tsx'),
+      'utf8',
+    );
+    const scaffold = readFileSync(
+      join(process.cwd(), 'src/components/primitives/sheet-scaffold.tsx'),
+      'utf8',
+    );
+    const addSheet = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-itinerary-add-sheet.tsx'),
+      'utf8',
+    );
+    const directGlass = [
+      'travel-remove-confirm-modal.tsx',
+      'travel-timeline-add-modal.tsx',
+      'travel-add-photos-modal.tsx',
+      'travel-calendar-updated-modal.tsx',
+      'travel-import-result-modal.tsx',
+      'travel-item-notes-sheet.tsx',
+    ];
+
+    expect(sheet).toContain('surface="glass"');
+    expect(sheet).toContain('closeAppearance="glass"');
+    expect(scaffold).toContain("surface?: 'solid' | 'glass'");
+    expect(scaffold).toContain("closeAppearance={glass ? 'glass' : 'solid'}");
+    expect(scaffold).toContain('<BlurView');
+    expect(addSheet).toContain('<BlurView');
+    expect(addSheet).not.toContain('chrome.sheetBg');
+    for (const name of directGlass) {
+      const source = readFileSync(
+        join(process.cwd(), 'src/features/travel', name),
+        'utf8',
+      );
+      expect({ name, source }).toEqual(
+        expect.objectContaining({
+          source: expect.stringContaining('surface="glass"'),
+        }),
+      );
+    }
+  });
+
   it('uses the travel sheet header for chat instead of the default stack bar', () => {
     const chat = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-chat-screen.tsx'),
       'utf8',
     );
-    const layout = readFileSync(join(process.cwd(), 'src/app/_layout.tsx'), 'utf8');
+    const travelLayout = readFileSync(
+      join(process.cwd(), 'src/app/(tabs)/travel/_layout.tsx'),
+      'utf8',
+    );
 
     expect(chat).toContain('<TravelSheetHeader');
     expect(chat).toContain('goBackOrReplace');
     expect(chat).not.toContain('router.back()');
-    expect(layout).toMatch(
-      /name="travel"[\s\S]*?headerShown: false/,
-    );
+    // Nested under (tabs)/travel so the bottom nav stays on itinerary + tools.
+    expect(travelLayout).toContain("anchor: 'index'");
+    expect(travelLayout).toContain('headerShown: false');
 
     const planHero = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
@@ -88,6 +133,18 @@ describe('canonical travel sheet design', () => {
     expect(actions).toContain('TravelHomeGlass');
     expect(actions).toContain('clear');
     expect(actions).toContain('backgroundColor: iconTone.bg');
+    // Primary sheet footer CTA = shared sage GlassPrimaryAction (not solid Button).
+    expect(actions).toMatch(
+      /function TravelSheetPrimaryAction[\s\S]*?<GlassPrimaryAction[\s\S]*?function TravelSheetSecondaryAction/,
+    );
+    expect(actions).not.toMatch(
+      /function TravelSheetPrimaryAction[\s\S]*?<Button\b[\s\S]*?function TravelSheetSecondaryAction/,
+    );
+    const primary = readFileSync(
+      join(process.cwd(), 'src/components/primitives/glass-primary-action.tsx'),
+      'utf8',
+    );
+    expect(primary).toContain('accent="green"');
     // Grid tiles left-align icon+label; wide CTA centers via glass justifyContent.
     expect(actions).toMatch(
       /actionGlass:\s*\{[^}]*justifyContent:\s*['"]flex-start['"]/s,

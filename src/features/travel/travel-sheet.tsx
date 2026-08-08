@@ -7,7 +7,7 @@ import type { ItinerarySheetChrome } from '@/features/travel/travel-itinerary-sh
 import { useResponsive } from '@/hooks/use-responsive';
 
 type TravelSheetHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   subtitleIcon?: AppIconName;
@@ -40,6 +40,7 @@ export function TravelSheetHeader({
       onClose={onClose}
       closeAccessibilityLabel={closeAccessibilityLabel}
       closeTestID={closeTestID}
+      closeAppearance="glass"
       style={[
         { paddingTop: paddingTop ?? spacing.md, paddingBottom: spacing.xl },
       ]}
@@ -49,7 +50,7 @@ export function TravelSheetHeader({
 
 type TravelSheetModalProps = PropsWithChildren<{
   visible: boolean;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   subtitleIcon?: AppIconName;
@@ -99,7 +100,8 @@ export function TravelSheetModal({
       maxHeight={maxHeight}
       minHeight={minHeight}
       lockHeight={lockHeight}
-      scrollKey={scrollKey}>
+      scrollKey={scrollKey}
+      surface="glass">
       {children}
     </SheetScaffold>
   );

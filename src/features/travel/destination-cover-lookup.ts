@@ -125,6 +125,8 @@ const DESTINATION_PEOPLE_PHOTO_TERMS = [
   'face',
   'faces',
   'smiling',
+  'smiles',
+  'laughing',
   'pose',
   'posing',
   'adults?',
@@ -145,6 +147,20 @@ const DESTINATION_PEOPLE_PHOTO_TERMS = [
   'from behind',
   'rear view',
   'back view',
+  // Lifestyle / friend-portrait stock often omits “people” in the title.
+  'friend',
+  'friends',
+  'guy',
+  'guys',
+  'duo',
+  'mates?',
+  'buddy',
+  'buddies',
+  'lifestyle',
+  'fashion',
+  'street style',
+  'looking at',
+  'together',
 ] as const;
 
 const DESTINATION_PEOPLE_PHOTO_RE = new RegExp(
@@ -165,6 +181,11 @@ const PHOTO_SEARCH_PEOPLE_EXCLUDES = [
   'hiker',
   'standing',
   'wearing',
+  'friend',
+  'friends',
+  'couple',
+  'lifestyle',
+  'fashion',
 ] as const;
 
 const COMMONS_PEOPLE_INTITLE_EXCLUDES = [
@@ -178,6 +199,10 @@ const COMMONS_PEOPLE_INTITLE_EXCLUDES = [
   'man',
   'woman',
   'hiker',
+  'friend',
+  'friends',
+  'couple',
+  'crowd',
 ] as const;
 
 const OPENVERSE_PEOPLE_EXCLUDED_KEYWORDS = [
@@ -191,6 +216,10 @@ const OPENVERSE_PEOPLE_EXCLUDED_KEYWORDS = [
   'hiker',
   'crowd',
   'couple',
+  'friend',
+  'friends',
+  'lifestyle',
+  'fashion',
 ].join(',');
 
 /** True when title/alt/URL text suggests a people-forward stock photo. */
@@ -279,12 +308,14 @@ export function pickPeopleFreeDestinationPhotoUrl(
   return pickDestinationPhotoUrl(...candidates);
 }
 
-/** Unsplash / Openverse: push landscape, exclude common people tags. */
+/** Unsplash / Openverse: push landscape landmarks, exclude people/lifestyle tags. */
 function photoSearchQuery(place: string): string {
   const trimmed = place.trim();
+  // Bias unknown places toward architecture/skyline — lifestyle portraits often
+  // rank for bare city + “iconic” alone.
   const base = hasDestinationLandmarkIntent(trimmed)
     ? trimmed
-    : `${trimmed} iconic`;
+    : `${trimmed} architecture landmark`;
   const excludes = PHOTO_SEARCH_PEOPLE_EXCLUDES.map((term) => `-${term}`).join(
     ' ',
   );
@@ -350,7 +381,7 @@ function commonsLandmarkSearch(place: string): string {
   // Keep the place token first — loose OR queries drift to unrelated places.
   const base = hasDestinationLandmarkIntent(trimmed)
     ? trimmed
-    : `${trimmed} iconic`;
+    : `${trimmed} architecture landmark`;
   // CirrusSearch: prefer landscape files, drop obvious people titles.
   const excludes = COMMONS_PEOPLE_INTITLE_EXCLUDES.map(
     (term) => `-intitle:${term}`,
@@ -466,12 +497,15 @@ async function fetchUnsplashCovers(
   const url = `https://unsplash.com/napi/search/photos?${new URLSearchParams({
     query: photoSearchQuery(place),
     per_page: String(Math.max(10, limit * 4)),
+    orientation: 'landscape',
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
     | {
         results?: Array<{
           plus?: boolean;
           premium?: boolean;
+          width?: number;
+          height?: number;
           color?: string;
           description?: string | null;
           alt_description?: string | null;
@@ -485,6 +519,14 @@ async function fetchUnsplashCovers(
   for (const hit of body.results ?? []) {
     if (out.length >= limit) break;
     if (hit.plus || hit.premium) continue;
+    // Portrait lifestyle shots slip past keyword filters — require landscape.
+    if (
+      typeof hit.width === 'number' &&
+      typeof hit.height === 'number' &&
+      hit.height > hit.width
+    ) {
+      continue;
+    }
     const tagText = (hit.tags ?? [])
       .map((tag) => tag.title)
       .filter(Boolean)

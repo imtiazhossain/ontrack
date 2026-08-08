@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
 import { fontFamilies, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -49,23 +49,28 @@ export function VisionBoardItemCard({
 
   if (item.kind === 'affirmation') {
     return (
-      <View style={[styles.textCard, { backgroundColor: theme.backgroundElevated }]}>
-        <AppText style={[styles.quoteMark, { color: accent }]}>“</AppText>
+      <GlassPlate style={styles.textCard}>
+        <AppText style={[styles.quoteMark, { color: accent, zIndex: 1 }]}>“</AppText>
         <AppText
           style={[
             gallery ? styles.galleryAffirmation : styles.canvasAffirmation,
-            { fontFamily: fontFamilies.serif },
+            { fontFamily: fontFamilies.serif, zIndex: 1 },
           ]}
           numberOfLines={gallery ? undefined : 6}
           align="center">
           {item.text}
         </AppText>
         {item.attribution ? (
-          <AppText variant="caption" color="secondary" align="center" numberOfLines={2}>
+          <AppText
+            variant="caption"
+            color="secondary"
+            align="center"
+            numberOfLines={2}
+            style={{ zIndex: 1 }}>
             — {item.attribution}
           </AppText>
         ) : null}
-      </View>
+      </GlassPlate>
     );
   }
 

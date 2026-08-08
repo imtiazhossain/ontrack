@@ -12,7 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppText,
   Button,
+  GlassPlate,
   IconButton,
+  useScreenAtmosphereChrome,
 } from '@/components/primitives';
 import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -89,6 +91,7 @@ export function PeoplePicker({
   const searchAgent = useAgentUiTarget(AgentUiIds.peoplePicker.search, {
     label: 'Search name or email',
   });
+  useScreenAtmosphereChrome(visible);
 
   return (
     <Modal
@@ -100,7 +103,6 @@ export function PeoplePicker({
         style={[
           styles.root,
           {
-            backgroundColor: theme.backgroundPrimary,
             paddingTop: insets.top + spacing.sm,
             paddingBottom: insets.bottom + spacing.lg,
             paddingHorizontal: spacing.lg,
@@ -120,29 +122,36 @@ export function PeoplePicker({
           />
         </View>
 
-        <TextInput
-          ref={searchAgent.ref as never}
-          testID={searchAgent.testID}
-          onLayout={searchAgent.onLayout}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search name or email"
-          placeholderTextColor={theme.textTertiary}
-          autoCapitalize="none"
-          autoCorrect={false}
+        <GlassPlate
+          clear
+          wash
           style={[
             styles.search,
             {
               minHeight: Math.max(44, s(48)),
-              borderColor: theme.separator,
-              backgroundColor: theme.backgroundSecondary,
-              color: theme.textPrimary,
-              fontSize: typography.callout.fontSize,
               paddingHorizontal: spacing.md,
               marginBottom: spacing.md,
             },
-          ]}
-        />
+          ]}>
+          <TextInput
+            ref={searchAgent.ref as never}
+            testID={searchAgent.testID}
+            onLayout={searchAgent.onLayout}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search name or email"
+            placeholderTextColor={theme.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={[
+              styles.searchInput,
+              {
+                color: theme.textPrimary,
+                fontSize: typography.callout.fontSize,
+              },
+            ]}
+          />
+        </GlassPlate>
 
         <ScrollView
           style={styles.list}
@@ -163,7 +172,6 @@ export function PeoplePicker({
                 accentBorder={theme.accentPrimary}
                 idleBorder={theme.separator}
                 selectedBg={theme.accentFaint}
-                idleBg={theme.backgroundSecondary}
                 minHeight={Math.max(52, s(56))}
                 paddingHorizontal={spacing.md}
                 marginBottom={spacing.sm}
@@ -192,7 +200,6 @@ function PeoplePickerFriendRow({
   accentBorder,
   idleBorder,
   selectedBg,
-  idleBg,
   minHeight,
   paddingHorizontal,
   marginBottom,
@@ -204,7 +211,6 @@ function PeoplePickerFriendRow({
   accentBorder: string;
   idleBorder: string;
   selectedBg: string;
-  idleBg: string;
   minHeight: number;
   paddingHorizontal: number;
   marginBottom: number;
@@ -225,16 +231,24 @@ function PeoplePickerFriendRow({
       accessibilityState={{ selected }}
       onPress={onPress}
       style={[
-        styles.row,
+        styles.rowWrap,
         {
-          minHeight,
-          borderColor: selected ? accentBorder : idleBorder,
-          backgroundColor: selected ? selectedBg : idleBg,
-          paddingHorizontal,
           marginBottom,
-          gap,
         },
       ]}>
+      <GlassPlate
+        clear={!selected}
+        wash={!selected}
+        style={[
+          styles.row,
+          {
+            minHeight,
+            borderColor: selected ? accentBorder : idleBorder,
+            backgroundColor: selected ? selectedBg : undefined,
+            paddingHorizontal,
+            gap,
+          },
+        ]}>
       <View style={styles.rowCopy}>
         <AppText variant="callout" fit>
           {friend.displayName}
@@ -246,6 +260,7 @@ function PeoplePickerFriendRow({
       <AppText variant="caption" color={selected ? 'accent' : 'tertiary'} fit>
         {selected ? 'Selected' : 'Select'}
       </AppText>
+      </GlassPlate>
     </Pressable>
   );
 }
@@ -263,14 +278,20 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   search: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
   },
+  searchInput: {
+    minWidth: 0,
+    flex: 1,
+    paddingVertical: 0,
+  },
   list: { flex: 1 },
+  rowWrap: {
+    width: '100%',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.md,
   },
   rowCopy: {

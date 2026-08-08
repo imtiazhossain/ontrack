@@ -1,7 +1,7 @@
 import {
-  Children,
-  type PropsWithChildren,
-  type ReactNode,
+    Children,
+    type PropsWithChildren,
+    type ReactNode,
 } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
@@ -44,6 +44,7 @@ export function DangerZone({
           styles.panel,
           {
             borderColor: theme.danger,
+            // Opaque paper — high-contrast destructive escape hatch (not glass).
             backgroundColor: theme.backgroundElevated,
             padding: spacing.md,
             gap: spacing.md,

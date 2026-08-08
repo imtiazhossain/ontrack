@@ -139,7 +139,7 @@ export function flightConfirmationSchedule(
 ): ImportedFlightSchedule {
   const segments = imported.segments;
   // Round-trips: review/edit the outbound direction only (may include layovers).
-  // Trip-level end dates use the return separately (newTripDraftFromFlightConfirmation).
+  // Trip end dates for round-trips come from the return leg when creating/editing the plan.
   if (segments.length > 0 && !isConnectingSegmentGroup(segments)) {
     const directions = splitRoundTripDirections(segments);
     return flightDirectionSchedule(

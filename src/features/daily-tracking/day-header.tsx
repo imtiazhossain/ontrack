@@ -2,17 +2,30 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Card, IconButton, ProgressRing, Symbol, useSafeAreaChrome } from '@/components/primitives';
-import { layout, spacing, timeOfDayGradient, timeOfDaySafeAreaBackground } from '@/design-system';
+import {
+    AppText,
+    Card,
+    IconButton,
+    ProgressRing,
+    Symbol,
+    useSafeAreaChrome,
+} from '@/components/primitives';
+import {
+    layout,
+    radii,
+    spacing,
+    timeOfDayGradient,
+    timeOfDaySafeAreaBackground,
+} from '@/design-system';
 import { HomeLocationSheet } from '@/features/daily-tracking/home-location-sheet';
 import {
-  unitSymbol,
-  useHomeWeather,
+    unitSymbol,
+    useHomeWeather,
 } from '@/features/daily-tracking/use-home-weather';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
+import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { addDays, formatDateLong, formatWeekday, isToday } from '@/utils/date';
-import { AgentUiIds } from '@/utils/agent-ui';
 
 interface DayHeaderProps {
   date: string;
@@ -38,7 +51,8 @@ export function DayHeader({
   const gradient = timeOfDayGradient(theme, hour);
   useSafeAreaChrome(timeOfDaySafeAreaBackground(theme, hour));
   const viewingToday = isToday(date);
-  const { hasLocation, weather, icon, loading, detectingLocation, error } = useHomeWeather();
+  const { hasLocation, weather, icon, loading, detectingLocation, error } =
+    useHomeWeather();
   const [locationOpen, setLocationOpen] = useState(false);
   const openWeather = () => setLocationOpen(true);
   const weatherAccessibilityLabel = weather
@@ -47,14 +61,23 @@ export function DayHeader({
       ? 'Edit home location for weather'
       : 'Set location for weather';
   return (
-    <LinearGradient colors={gradient} style={[styles.container, { paddingTop: topInset + spacing.md }]}>
+    <View style={[styles.container, { paddingTop: topInset + spacing.md }]}>
+      {/*
+        Fade time-of-day wash into transparent so ScreenAtmosphere orbs
+        show through — opaque paper stops kill frost readability.
+      */}
+      <LinearGradient
+        colors={[gradient[0], `${gradient[0]}99`, 'transparent']}
+        locations={[0, 0.55, 1]}
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.topRow}>
         <IconButton
           icon="chevron-left"
           accessibilityLabel="Previous day"
           testID={AgentUiIds.today.prevDay}
           onPress={() => onChangeDate(addDays(date, -1))}
-          background="transparent"
         />
         <View style={styles.titleBlock}>
           <AppText variant="overline" color="tertiary" align="center">
@@ -69,12 +92,12 @@ export function DayHeader({
           accessibilityLabel="Next day"
           testID={AgentUiIds.today.nextDay}
           onPress={() => onChangeDate(addDays(date, 1))}
-          background="transparent"
         />
       </View>
 
       {viewingToday ? (
         <Card
+          airy
           padded={false}
           testID={AgentUiIds.today.weather}
           accessibilityLabel={weatherAccessibilityLabel}
@@ -86,6 +109,7 @@ export function DayHeader({
               paddingHorizontal: rs.md,
               paddingVertical: rs.sm,
               gap: rs.sm,
+              borderRadius: radii.lg,
             },
           ]}>
           <Symbol
@@ -99,13 +123,19 @@ export function DayHeader({
                 <AppText variant="callout" color="accent" fit numberOfLines={1}>
                   {`${weather.temperature}${unitSymbol(weather.temperatureUnit)} · ${weather.condition}`}
                 </AppText>
-                <AppText variant="caption" color="secondary" fit numberOfLines={1}>
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  fit
+                  numberOfLines={1}>
                   {weather.locationLabel}
                 </AppText>
               </>
             ) : loading || detectingLocation ? (
               <AppText variant="callout" color="secondary" fit numberOfLines={1}>
-                {detectingLocation ? 'Finding your location…' : 'Checking weather…'}
+                {detectingLocation
+                  ? 'Finding your location…'
+                  : 'Checking weather…'}
               </AppText>
             ) : error && hasLocation ? (
               <AppText variant="callout" color="secondary" fit numberOfLines={1}>
@@ -121,29 +151,40 @@ export function DayHeader({
         </Card>
       ) : null}
 
-      <View style={styles.progressRow}>
-        <ProgressRing
-          progress={completion}
-          size={92}
-          label={`${Math.round(completion * 100)}%`}
-          sublabel="complete"
-        />
-        <View style={styles.progressText}>
-          {nowLine ? (
-            <AppText variant="callout" color="accent" numberOfLines={1}>
-              {nowLine}
-            </AppText>
+      {completion > 0 || nowLine || summaryLine ? (
+        <View style={styles.progressRow}>
+          {completion > 0 ? (
+            <AgentTestId testID={AgentUiIds.today.progress}>
+              <ProgressRing
+                progress={completion}
+                size={92}
+                label={`${Math.round(completion * 100)}%`}
+                sublabel="complete"
+              />
+            </AgentTestId>
           ) : null}
-          {summaryLine ? (
-            <AppText variant="callout" color="secondary" numberOfLines={3}>
-              {summaryLine}
-            </AppText>
+          {nowLine || summaryLine ? (
+            <View style={styles.progressText}>
+              {nowLine ? (
+                <AppText variant="callout" color="accent" numberOfLines={1}>
+                  {nowLine}
+                </AppText>
+              ) : null}
+              {summaryLine ? (
+                <AppText variant="callout" color="secondary" numberOfLines={3}>
+                  {summaryLine}
+                </AppText>
+              ) : null}
+            </View>
           ) : null}
         </View>
-      </View>
+      ) : null}
 
-      <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
-    </LinearGradient>
+      <HomeLocationSheet
+        visible={locationOpen}
+        onClose={() => setLocationOpen(false)}
+      />
+    </View>
   );
 }
 
@@ -152,6 +193,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingBottom: spacing.lg,
     gap: spacing.md,
+    overflow: 'hidden',
   },
   topRow: {
     flexDirection: 'row',

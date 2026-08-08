@@ -5,25 +5,37 @@ import { radii } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 
+import { fieldLeadingIconPlateSize } from './field-leading-icon-style';
 import { Symbol } from './symbol';
 
-export { fieldLeadingIconRowStyle } from './field-leading-icon-style';
+export {
+  fieldLeadingIconPlateSize,
+  fieldLeadingIconRowStyle,
+} from './field-leading-icon-style';
 
 /** Shared leading-icon column so Input / DateField / TimeField placeholders share one x-origin. */
 export function FieldLeadingIcon({
   name,
   backgroundColor,
   color,
+  size,
 }: {
   name: AppIconName | (string & {});
   /** When set, renders a rounded square plate behind the glyph (sheet chrome). */
   backgroundColor?: string;
   color?: string;
+  /** Override plate edge length (e.g. StackedIconField matching label+value). */
+  size?: number;
 }) {
   const theme = useTheme();
   const { iconSizes, s } = useResponsive();
-  const slot = iconSizes.sm;
-  const plate = backgroundColor ? Math.max(slot + 10, s(32)) : slot;
+  const plate =
+    size
+    ?? fieldLeadingIconPlateSize({
+      iconSize: iconSizes.sm,
+      s,
+      withPlate: Boolean(backgroundColor),
+    });
 
   return (
     <View

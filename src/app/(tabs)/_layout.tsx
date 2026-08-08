@@ -38,7 +38,7 @@ export default function TabsLayout() {
         tabBarBackground: () => null,
       }}>
       <Tabs.Screen
-        name="index"
+        name="(today)"
         listeners={{ tabPress: () => setSelectedDate(todayKey()) }}
       />
       <Tabs.Screen name="calendar" />

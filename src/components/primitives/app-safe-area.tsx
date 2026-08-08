@@ -48,6 +48,7 @@ function AppSafeAreaFrame({
     image: chromeImage,
     height: chromeImageHeight,
     blurRadius: chromeImageBlurRadius,
+    onError: chromeImageOnError,
   } = useSafeAreaChromeBackground();
   const { overlay: chromeOverlay, height: chromeOverlayHeight } =
     useSafeAreaChromeOverlayLayer();
@@ -60,6 +61,8 @@ function AppSafeAreaFrame({
   const imageSource = chromeImage ?? lastImageRef.current;
   const showImage = Boolean(chromeImage && imageSource);
   const showOverlay = Boolean(chromeOverlay);
+  const onImageErrorRef = useRef(chromeImageOnError);
+  onImageErrorRef.current = chromeImageOnError;
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(backgroundColor).catch(() => undefined);
@@ -89,6 +92,9 @@ function AppSafeAreaFrame({
             blurRadius={chromeImageBlurRadius}
             // Soften source swaps (Travel home atmosphere rotation).
             transition={350}
+            onError={() => {
+              onImageErrorRef.current?.();
+            }}
           />
         ) : null}
       </View>

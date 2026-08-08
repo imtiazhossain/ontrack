@@ -33,7 +33,7 @@ export default function AgentUiRoute() {
   }, [params, router]);
 
   if (!isAgentUiEnabled()) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/" />;
   }
 
   return (

@@ -1,8 +1,8 @@
 import type { ImageSource } from 'expo-image';
 
 import type {
-  TravelTimeOfDay,
-  TravelWeatherMood,
+    TravelTimeOfDay,
+    TravelWeatherMood,
 } from '@/features/travel/travel-atmosphere-model';
 import type { TravelAtmosphereHeaderInk } from '@/features/travel/travel-home-atmosphere-ink';
 
@@ -60,6 +60,17 @@ export const TRAVEL_HOME_CURATED_ATMOSPHERE: readonly TravelHomeCuratedAtmospher
     headerTone: 'dark',
     // Header-band sample (title sits on pale sky) — not whole-plate lake/volcano.
     averageColor: '#9AABCB',
+  },
+  {
+    id: 'lisbon-bridge',
+    // People-free 25 de Abril span — never street-portrait stock.
+    source: require('../../../assets/images/travel/fixtures/lisbon-hero.jpg'),
+    timeOfDay: ['dawn', 'day', 'dusk'],
+    weatherMood: ['clear', 'cloudy', 'mixed', 'fog', 'rain'],
+    // City label only — “Portugal” alone must not steal this plate for Porto.
+    label: 'Lisbon',
+    headerTone: 'dark',
+    averageColor: '#ABB5D8',
   },
   {
     id: 'third-wander',

@@ -15,6 +15,7 @@ import {
     Button,
     EmptyState,
     ErrorMessage,
+    GlassPlate,
     IconButton,
     Input,
     LoadingBlock,
@@ -648,41 +649,43 @@ export function TravelChatScreen({ planId }: { planId: string }) {
             zIndex: 2,
           },
         ]}>
-        <View
+        <GlassPlate
           style={[
             styles.composerDock,
             {
               minHeight: Math.max(56, s(58)),
               padding: rs.xs,
               gap: rs.xs,
-              backgroundColor: theme.backgroundElevated,
               borderColor: theme.separator,
             },
           ]}>
-          <Input
-            testID={AgentUiIds.travel.chat.composer}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Message the Trip…"
-            multiline
-            maxLength={2000}
-            accessibilityLabel="Trip Message"
-            containerStyle={styles.composerInput}
-            fieldBackground="transparent"
-            style={[styles.input, { paddingVertical: rs.sm }]}
-          />
-          <IconButton
-            icon="arrow-up"
-            accessibilityLabel="Send message"
-            testID={AgentUiIds.travel.chat.send}
-            loading={sending}
-            disabled={!draft.trim() || !deviceId}
-            color={theme.textOnAccent}
-            background={theme.accentPrimary}
-            size={sendSize}
-            onPress={() => void send()}
-          />
-        </View>
+          <View style={[styles.composerDockInner, { gap: rs.xs, zIndex: 1 }]}>
+            <Input
+              testID={AgentUiIds.travel.chat.composer}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Message the Trip…"
+              multiline
+              maxLength={2000}
+              accessibilityLabel="Trip Message"
+              containerStyle={styles.composerInput}
+              fieldBackground="transparent"
+              style={[styles.input, { paddingVertical: rs.sm }]}
+            />
+            <IconButton
+              icon="arrow-up"
+              accessibilityLabel="Send message"
+              testID={AgentUiIds.travel.chat.send}
+              loading={sending}
+              disabled={!draft.trim() || !deviceId}
+              color={theme.textOnAccent}
+              background={theme.accentPrimary}
+              appearance="solid"
+              size={sendSize}
+              onPress={() => void send()}
+            />
+          </View>
+        </GlassPlate>
       </View>
     </View>
   );
@@ -727,12 +730,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   composerDock: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
     borderCurve: 'continuous',
     boxShadow: '0 4px 18px rgba(17, 74, 110, 0.16)',
+    overflow: 'hidden',
+  },
+  composerDockInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   composerInput: {
     flex: 1,

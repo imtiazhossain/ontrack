@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.10',
+    date: '2026-08-08',
+    notes: [
+      'Ship app-wide glass UI and nest feature stacks under tabs so bottom nav stays on full pages.',
+    ],
+  },
+  {
     version: '1.0.9',
     date: '2026-08-08',
     notes: [
@@ -88,6 +95,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.10',
+    date: '2026-08-08',
+    notes: [
+      'Ship app-wide glass UI and nest feature stacks under tabs so bottom nav stays on full pages.',
+      'Touched: design, app routes.',
+    ],
+  },
   {
     version: '1.0.9',
     date: '2026-08-08',

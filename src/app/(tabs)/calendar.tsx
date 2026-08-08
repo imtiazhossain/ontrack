@@ -2,20 +2,26 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, IconButton, Screen } from '@/components/primitives';
 import { isActivityEnabled } from '@/addons/registry';
+import {
+    AppText,
+    Button,
+    GlassPlate,
+    IconButton,
+    Screen,
+} from '@/components/primitives';
+import { layout, radii, spacing } from '@/design-system';
 import { MonthGrid } from '@/features/calendar/month-grid';
-import { layout, spacing } from '@/design-system';
-import { useTheme } from '@/hooks/use-theme';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useAddons } from '@/store/addons';
 import { useSchedule } from '@/store/schedule';
 import { useUI } from '@/store/ui';
-import { formatMonthTitle, fromDateKey, toDateKey, todayKey } from '@/utils/date';
 import { AgentUiIds } from '@/utils/agent-ui';
+import { formatMonthTitle, fromDateKey, toDateKey, todayKey } from '@/utils/date';
 
 export default function CalendarScreen() {
-  const theme = useTheme();
   const router = useRouter();
+  const { spacing: rs } = useResponsive();
   const activities = useSchedule((state) => state.activities);
   const enabledAddons = useAddons((state) => state.enabled);
   const selectedDate = useUI((state) => state.selectedDate);
@@ -48,7 +54,7 @@ export default function CalendarScreen() {
 
   const openDay = () => {
     setSelectedDate(selected);
-    router.navigate('/(tabs)');
+    router.navigate('/');
   };
 
   return (
@@ -59,38 +65,57 @@ export default function CalendarScreen() {
           variant="ghost"
           onPress={() => setSelectedDate(today)}
           testID={AgentUiIds.calendar.jumpToday}
-          accessibilityLabel="Jump to today">
+          accessibilityLabel="Jump to Today">
           Today
         </Button>
       </View>
 
-      <View style={styles.monthRow}>
-        <IconButton
-          icon="chevron-left"
-          accessibilityLabel="Previous month"
-          testID={AgentUiIds.calendar.prevMonth}
-          background="transparent"
-          onPress={() => shiftMonth(-1)}
-        />
-        <AppText variant="subheading">{formatMonthTitle(year, month)}</AppText>
-        <IconButton
-          icon="chevron-right"
-          accessibilityLabel="Next month"
-          testID={AgentUiIds.calendar.nextMonth}
-          background="transparent"
-          onPress={() => shiftMonth(1)}
-        />
-      </View>
+      <GlassPlate
+        style={[
+          styles.monthGlass,
+          {
+            padding: rs.md,
+            borderRadius: radii.lg,
+            gap: rs.sm,
+          },
+        ]}>
+        <View style={styles.monthRow}>
+          <IconButton
+            icon="chevron-left"
+            accessibilityLabel="Previous month"
+            testID={AgentUiIds.calendar.prevMonth}
+            onPress={() => shiftMonth(-1)}
+          />
+          <AppText variant="subheading" fit style={styles.monthTitle}>
+            {formatMonthTitle(year, month)}
+          </AppText>
+          <IconButton
+            icon="chevron-right"
+            accessibilityLabel="Next month"
+            testID={AgentUiIds.calendar.nextMonth}
+            onPress={() => shiftMonth(1)}
+          />
+        </View>
 
-      <MonthGrid
-        year={year}
-        month={month}
-        selected={selected}
-        activitiesByDate={activitiesByDate}
-        onSelect={setSelectedDate}
-      />
+        <MonthGrid
+          year={year}
+          month={month}
+          selected={selected}
+          activitiesByDate={activitiesByDate}
+          onSelect={setSelectedDate}
+        />
+      </GlassPlate>
 
-      <View style={[styles.summary, { backgroundColor: theme.backgroundSunken }]}>
+      <GlassPlate
+        style={[
+          styles.summary,
+          {
+            marginTop: rs.xl,
+            padding: layout.screenPadding,
+            borderRadius: radii.lg,
+            gap: rs.md,
+          },
+        ]}>
         <AppText variant="callout" color="secondary">
           {dayCount === 0
             ? 'No activities planned for this day.'
@@ -99,10 +124,10 @@ export default function CalendarScreen() {
         <Button
           onPress={openDay}
           testID={AgentUiIds.calendar.openDay}
-          accessibilityLabel="Open day">
-          Open day
+          accessibilityLabel="Open Day">
+          Open Day
         </Button>
-      </View>
+      </GlassPlate>
     </Screen>
   );
 }
@@ -114,17 +139,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
+  monthGlass: {
+    width: '100%',
+  },
   monthRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
     paddingHorizontal: spacing.xs,
   },
+  monthTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    marginHorizontal: spacing.sm,
+  },
   summary: {
-    marginTop: spacing.xl,
-    padding: layout.screenPadding,
-    borderRadius: 16,
-    gap: spacing.md,
+    width: '100%',
   },
 });

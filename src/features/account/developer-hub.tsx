@@ -208,14 +208,15 @@ export function DeveloperHub() {
             label="Design System"
             detail="Components, accents, icons"
             testID={AgentUiIds.developer.designSystem}
-            onPress={() => router.push('/design-system' as never)}
+            onPress={() => router.push('/(tabs)/profile/design-system' as never)}
           />
           <SettingsActionRow
             label="Integrations"
             detail="Third-party health and quotas"
             testID={AgentUiIds.developer.apiUsage}
-            onPress={() => router.push('/integrations' as never)}
+            onPress={() => router.push('/(tabs)/profile/integrations' as never)}
           />
+
         </CollapsibleSection>
 
         <DeveloperInsightsPanel />

@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { AppText } from '@/components/primitives';
+import { AppText, GlassPlate } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { usePerformanceTier } from '@/hooks/use-performance-tier';
 import { useTheme } from '@/hooks/use-theme';
@@ -67,20 +67,19 @@ export function EdgeFan({ side, strength }: FanProps) {
 
   return (
     <View pointerEvents="none" style={[styles.fan, positionStyle]}>
-      <Animated.View
-        style={[
-          styles.housing,
-          { backgroundColor: theme.backgroundElevated, borderColor: theme.separator },
-          bladeStyle,
-        ]}>
-        <View style={[styles.blade, { backgroundColor: theme.accentPrimary }]} />
-        <View
-          style={[
-            styles.blade,
-            styles.bladeCross,
-            { backgroundColor: theme.accentSoft },
-          ]}
-        />
+      <Animated.View style={[styles.housingWrap, bladeStyle]}>
+        <GlassPlate airy style={styles.housing}>
+          <View style={styles.housingInner}>
+            <View style={[styles.blade, { backgroundColor: theme.accentPrimary }]} />
+            <View
+              style={[
+                styles.blade,
+                styles.bladeCross,
+                { backgroundColor: theme.accentSoft },
+              ]}
+            />
+          </View>
+        </GlassPlate>
       </Animated.View>
       <AppText variant="caption" color="secondary" style={styles.hint}>
         {windHint}
@@ -96,13 +95,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 2,
   },
+  housingWrap: {
+    width: FAN_SIZE,
+    height: FAN_SIZE,
+  },
   housing: {
     width: FAN_SIZE,
     height: FAN_SIZE,
     borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  housingInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   blade: {
     position: 'absolute',

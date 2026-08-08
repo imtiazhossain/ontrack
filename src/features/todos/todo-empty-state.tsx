@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Symbol } from '@/components/primitives';
-import { radii, spacing, layout } from '@/design-system';
+import { AppText, GlassPlate, Symbol } from '@/components/primitives';
+import { glassMaterials, layout, radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import type { TodoFilter } from './todo-sort';
@@ -27,22 +27,23 @@ export function TodoEmptyState({
 }) {
   const theme = useTheme();
   const { s } = useResponsive();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
 
   if (filter === 'completed') {
     return (
       <View style={styles.empty}>
-        <View
-          style={[
-            styles.emptyIcon,
-            { backgroundColor: theme.backgroundSunken },
-          ]}
-        >
+        <GlassPlate
+          airy
+          style={[styles.emptyIcon, { borderColor: plateBorder }]}>
           <Symbol
             name="status-completed"
             size={24}
             color={theme.textTertiary}
           />
-        </View>
+        </GlassPlate>
         <AppText
           variant="heading"
           style={{ fontSize: s(21), lineHeight: s(26) }}>
@@ -65,11 +66,14 @@ export function TodoEmptyState({
   if (hasTasks) {
     return (
       <View style={styles.empty}>
-        <View
-          style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}
-        >
+        <GlassPlate
+          airy
+          style={[
+            styles.emptyIcon,
+            { borderColor: `${theme.accentPrimary}55` },
+          ]}>
           <Symbol name="status-completed" size={24} color={theme.success} />
-        </View>
+        </GlassPlate>
         <AppText
           variant="heading"
           style={{ fontSize: s(21), lineHeight: s(26) }}>
@@ -90,13 +94,14 @@ export function TodoEmptyState({
             accessibilityRole="button"
             hitSlop={2}
             onPress={onShowCompleted}
-            style={({ pressed }) => [
-              styles.emptyAction,
-              { backgroundColor: theme.backgroundSunken },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText variant="callout">View completed</AppText>
+            style={({ pressed }) => [pressed && styles.pressed]}>
+            <GlassPlate
+              airy
+              style={[styles.emptyAction, { borderColor: plateBorder }]}>
+              <AppText variant="callout" style={styles.plateContent}>
+                View completed
+              </AppText>
+            </GlassPlate>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -119,9 +124,14 @@ export function TodoEmptyState({
 
   return (
     <View style={styles.empty}>
-      <View style={[styles.emptyIcon, { backgroundColor: theme.accentFaint }]}>
+      <GlassPlate
+        airy
+        style={[
+          styles.emptyIcon,
+          { borderColor: `${theme.accentPrimary}55` },
+        ]}>
         <Symbol name="tasks" size={24} color={theme.accentPrimary} />
-      </View>
+      </GlassPlate>
       <AppText
         variant="heading"
         style={{ fontSize: s(21), lineHeight: s(26) }}>
@@ -144,17 +154,19 @@ export function TodoEmptyState({
             accessibilityRole="button"
             accessibilityLabel={`Add ${suggestion}`}
             onPress={() => onAddSuggestion(suggestion)}
-            style={({ pressed }) => [
-              styles.suggestion,
-              {
-                backgroundColor: theme.backgroundSunken,
-                borderColor: theme.separator,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Symbol name="add" size={15} color={theme.accentPrimary} />
-            <AppText variant="caption">{suggestion}</AppText>
+            style={({ pressed }) => [pressed && styles.pressed]}>
+            <GlassPlate
+              airy
+              style={[styles.suggestion, { borderColor: plateBorder }]}>
+              <Symbol
+                name="add"
+                size={15}
+                color={theme.accentPrimary}
+              />
+              <AppText variant="caption" style={styles.plateContent}>
+                {suggestion}
+              </AppText>
+            </GlassPlate>
           </Pressable>
         ))}
       </View>
@@ -209,8 +221,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
+  plateContent: { zIndex: 1 },
   pressed: { opacity: 0.62 },
 });

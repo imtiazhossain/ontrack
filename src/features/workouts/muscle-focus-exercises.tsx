@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, SectionHeader, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, SectionHeader, Symbol } from '@/components/primitives';
 import { layout, radii, spacing } from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
@@ -59,52 +59,56 @@ export function MuscleFocusExercises({
       <SectionHeader title={`Workouts for ${muscleLabel}`} />
 
       {exercises.length > 0 ? (
-        <View
+        <GlassPlate
           style={[
             styles.loadToggle,
             {
-              backgroundColor: theme.backgroundElevated,
               borderColor: theme.separator,
               marginBottom: rs.md,
             },
           ]}>
-          {LOAD_TABS.map((tab) => {
-            const selected = loadKind === tab.id;
-            const count = tab.id === 'bodyweight' ? bodyweightCount : weightedCount;
-            return (
-              <Pressable
-                key={tab.id}
-                accessibilityRole="tab"
-                accessibilityLabel={`${tab.label} workouts`}
-                accessibilityState={{ selected }}
-                onPress={() => changeLoadKind(tab.id)}
-                style={[
-                  styles.loadTab,
-                  {
-                    minHeight: tabMinHeight,
-                    paddingHorizontal: rs.md,
-                  },
-                  selected && { backgroundColor: theme.backgroundSunken },
-                ]}>
-                <View style={styles.loadTabLabel}>
-                  <AppText
-                    variant="caption"
-                    color={selected ? 'primary' : 'secondary'}
-                    fit
-                    style={styles.loadTabText}>
-                    {tab.label}
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    color={selected ? 'accent' : 'tertiary'}
-                    fit>
-                    {count}
-                  </AppText>
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+          <View style={[styles.loadToggleRow, styles.glassContent]}>
+            {LOAD_TABS.map((tab) => {
+              const selected = loadKind === tab.id;
+              const count = tab.id === 'bodyweight' ? bodyweightCount : weightedCount;
+              return (
+                <Pressable
+                  key={tab.id}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`${tab.label} workouts`}
+                  accessibilityState={{ selected }}
+                  onPress={() => changeLoadKind(tab.id)}
+                  style={[
+                    styles.loadTab,
+                    {
+                      minHeight: tabMinHeight,
+                      paddingHorizontal: rs.md,
+                    },
+                    selected && styles.selectedLoadTab,
+                  ]}>
+                  {selected ? (
+                    <GlassPlate clear wash style={StyleSheet.absoluteFill} />
+                  ) : null}
+                  <View style={[styles.loadTabLabel, styles.glassContent]}>
+                    <AppText
+                      variant="caption"
+                      color={selected ? 'primary' : 'secondary'}
+                      fit
+                      style={styles.loadTabText}>
+                      {tab.label}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      color={selected ? 'accent' : 'tertiary'}
+                      fit>
+                      {count}
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </GlassPlate>
       ) : null}
 
       <View style={styles.exerciseList}>
@@ -169,15 +173,18 @@ function MuscleFocusExerciseCard({
   });
 
   return (
-    <View
+    <GlassPlate
       style={[
         styles.exerciseCard,
         {
-          backgroundColor: selected ? accentTint : theme.backgroundElevated,
           borderColor: selected ? accentMain : theme.separator,
+          overflow: selected ? 'hidden' : undefined,
         },
       ]}>
-      <View style={styles.exerciseTopRow}>
+      {selected ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: accentTint, zIndex: 0 }]} />
+      ) : null}
+      <View style={[styles.exerciseTopRow, styles.glassContent]}>
         <Pressable
           ref={previewAgent.ref}
           testID={previewAgent.testID}
@@ -189,28 +196,32 @@ function MuscleFocusExerciseCard({
             styles.exercisePreviewButton,
             { opacity: pressed ? 0.72 : 1 },
           ]}>
-          <View
-            style={[
-              styles.exerciseIndex,
-              { backgroundColor: selected ? accentMain : theme.backgroundSunken },
-            ]}>
-            {selected ? (
+          {selected ? (
+            <View
+              style={[
+                styles.exerciseIndex,
+                { backgroundColor: accentMain },
+              ]}>
               <Symbol name="checkmark" size="sm" color={theme.textOnAccent} />
-            ) : (
-              <AppText variant="caption" color="secondary" fit>
+            </View>
+          ) : (
+            <GlassPlate clear wash style={styles.exerciseIndex}>
+              <AppText variant="caption" color="secondary" fit style={styles.glassContent}>
                 0{index + 1}
               </AppText>
-            )}
-          </View>
+            </GlassPlate>
+          )}
           <View style={styles.flex}>
             <AppText variant="subheading">{exercise.name}</AppText>
             <AppText variant="caption" color="secondary">
               {exercise.equipment}
             </AppText>
           </View>
-          <View style={[styles.previewControl, { backgroundColor: theme.backgroundSunken }]}>
-            <Symbol name="play.fill" size={10} color={accentMain} />
-          </View>
+          <GlassPlate clear wash style={styles.previewControl}>
+            <View style={[styles.previewControlInner, styles.glassContent]}>
+              <Symbol name="play.fill" size={10} color={accentMain} />
+            </View>
+          </GlassPlate>
         </Pressable>
         <Pressable
           ref={addAgent.ref}
@@ -242,6 +253,7 @@ function MuscleFocusExerciseCard({
         onPress={() => onPreview(exercise)}
         style={({ pressed }) => [
           styles.exerciseMeta,
+          styles.glassContent,
           { borderTopColor: theme.separator, opacity: pressed ? 0.72 : 1 },
         ]}>
         <View style={styles.metaItem}>
@@ -269,7 +281,7 @@ function MuscleFocusExerciseCard({
           <Symbol name="chevron.right" size={10} color={accentMain} />
         </View>
       </Pressable>
-    </View>
+    </GlassPlate>
   );
 }
 
@@ -278,12 +290,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
+  glassContent: { zIndex: 1 },
   loadToggle: {
-    flexDirection: 'row',
-    gap: 2,
     borderWidth: 1,
     borderRadius: radii.pill,
     padding: 2,
+  },
+  loadToggleRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  selectedLoadTab: {
+    overflow: 'hidden',
   },
   loadTab: {
     flex: 1,
@@ -335,6 +353,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.md,
+    overflow: 'hidden',
   },
   addControl: {
     width: 40,
@@ -347,9 +366,13 @@ const styles = StyleSheet.create({
   previewControl: {
     width: 28,
     height: 28,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  previewControlInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
   },
   exerciseMeta: {
     minHeight: layout.minTapTarget,

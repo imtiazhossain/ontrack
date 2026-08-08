@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, ErrorMessage, IconButton, Input, LoadingBlock, SectionHeader, SegmentedControl } from '@/components/primitives';
+import { AppText, Button, ErrorMessage, GlassPlate, IconButton, Input, LoadingBlock, SectionHeader, SegmentedControl } from '@/components/primitives';
 import { radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import { getMovieDetails, searchMovies, type MovieSearchResult } from '@/services/movies';
@@ -200,16 +200,16 @@ export function MovieEditor({ movie, onSelect, guided = false }: { movie?: Movie
     <View>
       {!guided ? <SectionHeader title="Movie Details" /> : null}
       {movie ? (
-        <View style={[styles.movieSelected, { backgroundColor: theme.backgroundSunken, borderColor: theme.separator }]}>
+        <GlassPlate style={styles.movieSelected}>
           {movie.posterUrl ? <Image source={movie.posterUrl} style={styles.moviePoster} contentFit="cover" /> : null}
-          <View style={styles.flex}>
+          <View style={[styles.flex, { zIndex: 1 }]}>
             <AppText variant="bodyMedium">{movie.title}</AppText>
             <AppText variant="caption" color="secondary">
               {[movie.mediaType === 'tv' ? 'TV show' : 'Movie', movie.releaseDate?.slice(0, 4), movie.runtimeMinutes ? `${movie.runtimeMinutes} min` : undefined, movie.genres.join(', ') || undefined].filter(Boolean).join(' · ')}
             </AppText>
             {movie.overview ? <AppText variant="caption" color="secondary" numberOfLines={3}>{movie.overview}</AppText> : null}
           </View>
-        </View>
+        </GlassPlate>
       ) : null}
       <Input
         label={movie ? 'Find Something Else' : guided ? 'Movie or TV Show' : 'Search Movies & TV'}
@@ -270,7 +270,13 @@ const styles = StyleSheet.create({
   setRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   setInput: { flex: 1 },
   loader: { padding: spacing.md },
-  movieSelected: { flexDirection: 'row', gap: spacing.md, padding: spacing.md, borderRadius: radii.lg, borderWidth: 1, marginBottom: spacing.md },
+  movieSelected: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+  },
   moviePoster: { width: 88, height: 132, borderRadius: radii.md },
   movieResult: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1 },
   resultPoster: { width: 50, height: 75, borderRadius: radii.sm },

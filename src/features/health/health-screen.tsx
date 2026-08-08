@@ -254,7 +254,7 @@ export function HealthScreen() {
         </>
       ) : (
         <>
-          <Card style={[styles.card, { backgroundColor: theme.accentFaint }]}>
+          <Card style={styles.card}>
             <AppText variant="heading">How are you feeling?</AppText>
             <AppText color="secondary">Mixed emotions are welcome. A check-in can include several feelings and what may be affecting them.</AppText>
             <Button icon="add" testID={AgentUiIds.health.checkIn} onPress={() => router.push('/health/mood-check-in' as never)} accessibilityLabel="Add mood check-in">

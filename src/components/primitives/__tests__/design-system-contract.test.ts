@@ -31,7 +31,7 @@ describe('canonical design-system contract', () => {
     }
   });
 
-  it('title-cases chrome titles in shared header primitives', () => {
+  it('title-cases chrome titles in shared header and button primitives', () => {
     for (const relative of [
       'src/components/primitives/screen-header.tsx',
       'src/components/primitives/section-header.tsx',
@@ -39,12 +39,19 @@ describe('canonical design-system contract', () => {
       'src/components/primitives/panel-title.tsx',
       'src/components/primitives/stacked-field-label.tsx',
       'src/components/primitives/settings-row.tsx',
+      'src/components/primitives/button.tsx',
+      'src/components/primitives/glass-primary-action.tsx',
+      'src/components/primitives/action-chip.tsx',
+      'src/components/primitives/app-prompt.tsx',
     ]) {
       expect(read(relative)).toContain('fieldTitleCase');
     }
   });
 
-  it('routes stacked field titles through StackedFieldLabel', () => {
+  it('routes stacked icon fields through StackedIconField / StackedFieldLabel', () => {
+    expect(read('src/components/primitives/stacked-icon-field.tsx')).toContain(
+      'StackedFieldLabel',
+    );
     for (const relative of [
       'src/components/primitives/input.tsx',
       'src/components/primitives/date-field.tsx',
@@ -52,7 +59,7 @@ describe('canonical design-system contract', () => {
       'src/components/android/material-time-field.tsx',
     ]) {
       const source = read(relative);
-      expect(source).toContain('StackedFieldLabel');
+      expect(source).toContain('StackedIconField');
       expect(source).not.toMatch(
         /variant="caption"[\s\S]{0,120}\{stackedLabel\}/,
       );
@@ -90,6 +97,19 @@ describe('canonical design-system contract', () => {
     expect(scaffold).not.toContain('FadeOut');
     expect(scaffold).not.toContain('SlideOutDown');
     expect(scaffold).not.toContain('presented');
+    // Glass is the app-wide sheet default; solid remains an escape hatch.
+    expect(scaffold).toContain("surface?: 'solid' | 'glass'");
+    expect(scaffold).toContain("surface = 'glass'");
+    expect(scaffold).toContain('<BlurView');
+  });
+
+  it('exports shared glass plate and primary action', () => {
+    const barrel = read('src/components/primitives/index.ts');
+    expect(barrel).toContain('GlassPlate');
+    expect(barrel).toContain('GlassPrimaryAction');
+    const glass = read('src/design-system/glass.ts');
+    expect(glass).toContain('glassMaterials');
+    expect(glass).toContain('atmosphere');
   });
 
   it('routes Travel sheets and actions through shared primitives', () => {
@@ -135,8 +155,8 @@ describe('canonical design-system contract', () => {
 
   it('uses a single blue-to-neutral background across Travel routes', () => {
     const surface = read('src/features/travel/travel-surface.tsx');
-    const travelTab = read('src/app/(tabs)/travel.tsx');
-    const travelLayout = read('src/app/travel/_layout.tsx');
+    const travelTab = read('src/app/(tabs)/travel/index.tsx');
+    const travelLayout = read('src/app/(tabs)/travel/_layout.tsx');
     const rootLayout = read('src/app/_layout.tsx');
     const safeAreaChrome = read('src/components/primitives/safe-area-chrome.tsx');
     expect(surface).toContain('travelSafeAreaBackground');
@@ -150,13 +170,20 @@ describe('canonical design-system contract', () => {
     expect(travelTab).toContain('useSafeAreaChrome(');
     expect(travelTab).toContain('useSafeAreaChromeOverlay(');
     expect(travelTab).toContain('TravelHomeAtmosphereScrim');
+    expect(travelTab).toContain('TravelHomeBackground');
     expect(travelTab).toContain('atmosphereImage.skyColor');
     expect(travelTab).toContain('backgroundImage: atmosphereImage.source');
+    // Leaf atmosphere must outrank the travel stack layout wash.
+    expect(travelTab).toContain('priority: 1');
     expect(travelLayout).toContain('useSafeAreaChrome(travelSafeAreaBackground(theme))');
+    // Stack must stay clear of travelPageStyle's opaque CSS gradient wash.
+    expect(travelLayout).toContain("contentStyle: { backgroundColor: 'transparent' }");
+    expect(travelLayout).not.toContain('...travelStyle');
+    expect(travelLayout).toContain("anchor: 'index'");
     expect(safeAreaChrome).toContain('useSafeAreaChrome');
-    expect(rootLayout).toMatch(
-      /name="travel"[\s\S]*?headerShown: false/,
-    );
+    // Travel UI lives under (tabs)/travel so the bottom nav persists; API-only
+    // routes may remain at app/travel/flights/*+api.ts.
+    expect(rootLayout).not.toMatch(/name="travel"/);
     expect(rootLayout).toContain('<AppSafeArea>');
     expect(rootLayout).not.toContain('travelRoute ? travelSafeAreaStyle');
   });
@@ -170,18 +197,25 @@ describe('canonical design-system contract', () => {
 
   it('extends Screen page fill into the status-bar shell and tab dock', () => {
     const screen = read('src/components/primitives/screen.tsx');
+    const atmosphere = read('src/components/primitives/screen-atmosphere.tsx');
     const chrome = read('src/components/primitives/safe-area-chrome.tsx');
     const dayView = read('src/features/daily-tracking/day-view.tsx');
+    // Glass atmosphere paints on AppSafeArea chrome (y=0) — not clipped by SafeAreaView.
+    expect(screen).toContain('useScreenAtmosphereChrome(');
+    expect(atmosphere).toContain('useSafeAreaChromeOverlay(');
+    expect(atmosphere).toContain('priority: -1');
     expect(screen).toContain('useSafeAreaChrome(');
     expect(screen).toContain('priority: -1');
     expect(screen).toContain('usePageSurfaceBackground(');
     expect(chrome).toContain('usePageSurfaceBackgroundColor');
-    expect(dayView).toContain('usePageSurfaceBackground(theme.backgroundPrimary)');
+    expect(dayView).toContain('usePageSurfaceBackground(screenAtmosphereBottomColor(theme.name))');
+    // In-tree wash would stop at the safe-area edge and reintroduce the seam.
+    expect(screen).not.toMatch(/\{useAtmosphere \? <ScreenAtmosphere/);
   });
 
   it('uses X dismissal instead of full-width Cancel actions on migrated surfaces', () => {
     const files = [
-      'src/app/(tabs)/travel.tsx',
+      'src/app/(tabs)/travel/index.tsx',
       'src/features/travel/travel-plan-details-editor.tsx',
       'src/features/travel/travel-details-card-actions.tsx',
       'src/features/travel/travel-add-photos-modal.tsx',
@@ -208,8 +242,8 @@ describe('canonical design-system contract', () => {
       'DestructiveSection',
     );
     expect(read('src/components/primitives/index.ts')).toContain('DangerZone');
-    expect(read('src/app/(tabs)/profile.tsx')).toContain('DangerZone');
-    expect(read('src/app/(tabs)/profile.tsx')).toContain('flush');
+    expect(read('src/app/(tabs)/profile/index.tsx')).toContain('DangerZone');
+    expect(read('src/app/(tabs)/profile/index.tsx')).toContain('flush');
   });
 
   it('keeps the Travel chat composer cohesive and full width', () => {
@@ -223,7 +257,7 @@ describe('canonical design-system contract', () => {
   });
 
   it('ships a development-only gallery and canonical guide', () => {
-    expect(read('src/app/design-system.tsx')).toContain('DevAccessGate');
+    expect(read('src/app/(tabs)/profile/design-system.tsx')).toContain('DevAccessGate');
     expect(read('src/features/design-system/design-system-gallery.tsx')).toContain(
       'SheetScaffold',
     );

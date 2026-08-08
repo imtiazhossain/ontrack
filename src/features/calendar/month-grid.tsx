@@ -1,12 +1,12 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
-import { radii, spacing } from '@/design-system';
+import { glassMaterials, radii, spacing } from '@/design-system';
 import { useTheme } from '@/hooks/use-theme';
 import type { Activity } from '@/types/models';
+import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { dayIndicator } from '@/utils/completion';
 import { isToday, monthGrid } from '@/utils/date';
-import { AgentUiIds, useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -57,8 +57,22 @@ function MonthDayCell({
       style={[
         styles.cell,
         styles.dayCell,
-        isSelected && { backgroundColor: theme.accentFaint },
-        today && !isSelected && { borderWidth: 1, borderColor: theme.accentPrimary },
+        isSelected && {
+          backgroundColor:
+            theme.name === 'dark'
+              ? 'rgba(255, 255, 255, 0.14)'
+              : 'rgba(255, 255, 255, 0.55)',
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor:
+            theme.name === 'dark'
+              ? glassMaterials.border.darkStrong
+              : glassMaterials.border.light,
+        },
+        today &&
+          !isSelected && {
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: theme.accentPrimary,
+          },
       ]}>
       <AppText
         variant="callout"

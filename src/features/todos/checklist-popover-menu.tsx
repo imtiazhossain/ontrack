@@ -9,9 +9,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOutUp, ReduceMotion } from 'react-native-reanimated';
 
-import { AppText, IconButton, Symbol } from '@/components/primitives';
+import { AppText, GlassPlate, IconButton, Symbol } from '@/components/primitives';
 import {
   fontFamilies,
+  glassMaterials,
   motion,
   radii,
   shadows,
@@ -68,6 +69,10 @@ export function ChecklistPopoverMenu({
 }: ChecklistPopoverMenuProps) {
   const theme = useTheme();
   const { s } = useResponsive();
+  const dark = theme.name === 'dark';
+  const plateBorder = dark
+    ? glassMaterials.border.dark
+    : glassMaterials.border.light;
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [anchor, setAnchor] = useState<Anchor>();
@@ -133,16 +138,23 @@ export function ChecklistPopoverMenu({
         hitSlop={4}
         onPress={open}
         style={({ pressed }) => [
-          styles.trigger,
-          {
-            backgroundColor: visible
-              ? theme.accentFaint
-              : theme.backgroundSunken,
-            borderColor: visible ? theme.accentSoft : 'transparent',
-            opacity: pressed ? 0.72 : 1,
-          },
+          styles.triggerWrap,
+          { opacity: pressed ? 0.72 : 1 },
         ]}>
-        <Symbol name={triggerIcon} size={16} color={theme.accentPrimary} />
+        <GlassPlate
+          airy
+          style={[
+            styles.trigger,
+            {
+              borderColor: visible ? theme.accentSoft : plateBorder,
+            },
+          ]}>
+          <Symbol
+            name={triggerIcon}
+            size={16}
+            color={theme.accentPrimary}
+          />
+        </GlassPlate>
       </Pressable>
 
       <Modal
@@ -181,16 +193,20 @@ export function ChecklistPopoverMenu({
               ReduceMotion.System,
             )}
             style={[
-              styles.panel,
+              styles.panelShell,
               shadows.overlay,
               {
                 width: panelWidth,
                 left: panelLeft,
                 top: panelTop,
-                backgroundColor: theme.backgroundElevated,
-                borderColor: theme.separator,
               },
             ]}>
+            <GlassPlate
+              style={[
+                styles.panel,
+                { borderColor: plateBorder },
+              ]}>
+            <View style={styles.panelContent}>
             <View style={styles.panelHeader}>
               <View style={styles.panelCopy}>
                 <AppText variant="overline" color="accent">
@@ -209,7 +225,6 @@ export function ChecklistPopoverMenu({
                 icon="close"
                 size={36}
                 accessibilityLabel="Close menu"
-                background={theme.backgroundSunken}
                 onPress={close}
               />
             </View>
@@ -251,19 +266,39 @@ export function ChecklistPopoverMenu({
                           opacity: pressed ? 0.76 : 1,
                         },
                       ]}>
-                      <View
-                        style={[
-                          styles.itemIcon,
-                          {
-                            backgroundColor: item.destructive
-                              ? `${theme.danger}18`
-                              : item.selected
-                                ? theme.accentPrimary
-                                : theme.backgroundSunken,
-                          },
-                        ]}>
-                        <Symbol name={item.icon} size={17} color={itemColor} />
-                      </View>
+                      {item.destructive ? (
+                        <View
+                          style={[
+                            styles.itemIcon,
+                            { backgroundColor: `${theme.danger}18` },
+                          ]}>
+                          <Symbol
+                            name={item.icon}
+                            size={17}
+                            color={itemColor}
+                          />
+                        </View>
+                      ) : item.selected ? (
+                        <View
+                          style={[
+                            styles.itemIcon,
+                            { backgroundColor: theme.accentPrimary },
+                          ]}>
+                          <Symbol
+                            name={item.icon}
+                            size={17}
+                            color={itemColor}
+                          />
+                        </View>
+                      ) : (
+                        <GlassPlate airy style={styles.itemIcon}>
+                          <Symbol
+                            name={item.icon}
+                            size={17}
+                            color={itemColor}
+                          />
+                        </GlassPlate>
+                      )}
                       <View style={styles.itemCopy}>
                         <AppText
                           variant="callout"
@@ -297,6 +332,8 @@ export function ChecklistPopoverMenu({
                 );
               })}
             </View>
+            </View>
+            </GlassPlate>
           </Animated.View>
         </View>
       </Modal>
@@ -305,23 +342,30 @@ export function ChecklistPopoverMenu({
 }
 
 const styles = StyleSheet.create({
+  triggerWrap: {
+    borderRadius: radii.pill,
+  },
   trigger: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
   },
   modalRoot: {
     flex: 1,
   },
-  panel: {
+  panelShell: {
     position: 'absolute',
-    padding: PANEL_PADDING,
-    borderWidth: StyleSheet.hairlineWidth,
+  },
+  panel: {
+    width: '100%',
     borderRadius: radii.xl,
     borderCurve: 'continuous',
+  },
+  panelContent: {
+    zIndex: 1,
+    padding: PANEL_PADDING,
   },
   panelHeader: {
     minHeight: PANEL_HEADER_HEIGHT,
