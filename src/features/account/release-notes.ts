@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.6',
+    date: '2026-08-08',
+    notes: [
+      'Instant Dev Mode toggle (background snapshot backup) and denser single-line travel trip-card frost scoop.',
+    ],
+  },
+  {
     version: '1.0.5',
     date: '2026-08-07',
     notes: [
@@ -60,6 +67,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.6',
+    date: '2026-08-08',
+    notes: [
+      'Instant Dev Mode toggle (background snapshot backup) and denser single-line travel trip-card frost scoop.',
+      'Touched: features/account, features/travel.',
+    ],
+  },
   {
     version: '1.0.5',
     date: '2026-08-07',

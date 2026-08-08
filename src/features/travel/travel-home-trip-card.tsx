@@ -81,8 +81,9 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   const heroHeight = travelHomeImageHeight(cardWidth);
   const minBodyOverlap: number = travelHomeTokens.spacing.bodyOverlap;
   /**
-   * Frost title band — grows when the destination title wraps (up to 2 lines).
+   * Frost title band — sized to the single-line title (+ travelers).
    * Floor stays at `bodyOverlap` so avatars keep their photo bite.
+   * Longer names ellipsize — they must not wrap into the open photo.
    */
   const [titleBandHeight, setTitleBandHeight] = useState<number>(minBodyOverlap);
   const titlePadTop = travelHomeTokens.spacing.bodyTop;
@@ -235,7 +236,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           <Text
             allowFontScaling
             maxFontSizeMultiplier={1.15}
-            numberOfLines={2}
+            numberOfLines={1}
             ellipsizeMode="tail"
             onLayout={(event) => {
               syncTitleBandHeight(event.nativeEvent.layout.height);

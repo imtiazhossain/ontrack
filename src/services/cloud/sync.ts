@@ -717,6 +717,54 @@ export async function flushCloudSync() {
   }
 }
 
+/**
+ * Push fixed domain payloads (e.g. a Dev Mode live snapshot) even while
+ * automatic push is paused — so sandbox entry can flip the UI immediately
+ * without racing demo seeds into a live-state flush.
+ */
+export async function flushCloudSyncPayloads(
+  payloads: Partial<Record<SyncDomainName, JsonObject>>,
+): Promise<void> {
+  if (!activeUserId) return;
+  const client = getSupabaseClient();
+  if (!client) return;
+  const userId = activeUserId;
+  const selected = domains.filter((domain) => payloads[domain.name] != null);
+  if (selected.length === 0) return;
+
+  useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
+  try {
+    const rows = await Promise.all(
+      selected.map(async (domain) => ({
+        user_id: userId,
+        domain: domain.name,
+        payload: await prepareCloudMedia(userId, domain.name, payloads[domain.name]!),
+      })),
+    );
+    for (let start = 0; start < rows.length; start += CLOUD_WRITE_BATCH_SIZE) {
+      const { error } = await client.from('app_state').upsert(
+        rows.slice(start, start + CLOUD_WRITE_BATCH_SIZE),
+        { onConflict: 'user_id,domain' },
+      );
+      if (error) throw error;
+    }
+    if (activeUserId !== userId) return;
+    useCloudSyncStatus.setState({
+      state: 'synced',
+      email: activeEmail,
+      lastSyncedAt: new Date().toISOString(),
+      message: undefined,
+    });
+  } catch (error) {
+    if (activeUserId !== userId) return;
+    useCloudSyncStatus.setState({
+      state: 'error',
+      email: activeEmail,
+      message: errorMessage(error),
+    });
+  }
+}
+
 /** Cap pull-to-refresh cloud work so a stalled request cannot hang forever. */
 export const REFRESH_APP_DATA_TIMEOUT_MS = 12_000;
 
