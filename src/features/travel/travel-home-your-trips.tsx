@@ -1,3 +1,5 @@
+import { useIsFocused } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { EmptyState } from '@/components/primitives';
@@ -54,6 +56,17 @@ export function TravelHomeYourTrips({
   onLayoutY,
 }: TravelHomeYourTripsProps) {
   const { s } = useResponsive();
+  const isFocused = useIsFocused();
+  /**
+   * Bottom-nav neighbor `preload` mounts Travel off-screen. Trip-card
+   * `FadeInDown` only runs on mount — gate the list until first focus so the
+   * spring entrance plays when the user can see it (same idea as plan-detail
+   * waiting for focus before mounting the heavy itinerary body).
+   */
+  const [entranceReady, setEntranceReady] = useState(isFocused);
+  useEffect(() => {
+    if (isFocused) setEntranceReady(true);
+  }, [isFocused]);
   const searchActive = isTravelHomeTripSearchActive(searchOpen, searchQuery);
   const peekHeight = Math.max(
     0,
@@ -111,25 +124,27 @@ export function TravelHomeYourTrips({
         </AgentTestId>
       ) : null}
 
-      <View
-        style={{ gap: travelHomeTokens.spacing.cardGap }}
-        onTouchStart={searchActive ? onDismissSearch : undefined}>
-        {plans.map((plan, index) => (
-          <TravelHomeTripCard
-            key={plan.id}
-            plan={plan}
-            index={index}
-            soloAtmosphereShadow={plans.length === 1}
-            atmosphereAverageColor={atmosphereAverageColor}
-            travelers={resolveTravelCoTravelerPeople(plan, selfDisplayName)}
-            onOpenTrip={onOpenTrip}
-            onViewItinerary={onOpenTrip}
-            onEditTrip={onEditTrip}
-            onViewTravelers={onViewTravelers}
-            onLayoutY={onLayoutY}
-          />
-        ))}
-      </View>
+      {entranceReady ? (
+        <View
+          style={{ gap: travelHomeTokens.spacing.cardGap }}
+          onTouchStart={searchActive ? onDismissSearch : undefined}>
+          {plans.map((plan, index) => (
+            <TravelHomeTripCard
+              key={plan.id}
+              plan={plan}
+              index={index}
+              soloAtmosphereShadow={plans.length === 1}
+              atmosphereAverageColor={atmosphereAverageColor}
+              travelers={resolveTravelCoTravelerPeople(plan, selfDisplayName)}
+              onOpenTrip={onOpenTrip}
+              onViewItinerary={onOpenTrip}
+              onEditTrip={onEditTrip}
+              onViewTravelers={onViewTravelers}
+              onLayoutY={onLayoutY}
+            />
+          ))}
+        </View>
+      ) : null}
     </>
   );
 }

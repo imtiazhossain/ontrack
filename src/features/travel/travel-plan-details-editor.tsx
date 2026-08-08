@@ -9,6 +9,7 @@ import {
     HeaderBackButton,
     Input,
 } from '@/components/primitives';
+import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import {
     itinerarySheetChrome,
 } from '@/features/travel/travel-itinerary-sheet-chrome';
@@ -149,20 +150,20 @@ export function TravelPlanDetailsEditor({
               {...field('flight')}
             />
             <TravelPlanModePicker value={mode} onChange={onModeChange} />
-            <Input
+            <AddressAutofindField
               testID={AgentUiIds.travel.editTrip.origin}
               value={origin}
-              onChangeText={onOriginChange}
+              onChange={onOriginChange}
               icon="route"
               stackedLabel="Starting Point"
               placeholder="e.g. New York, NY (optional)"
               accessibilityLabel="Starting Point, optional"
               {...field('location')}
             />
-            <Input
+            <AddressAutofindField
               testID={AgentUiIds.travel.editTrip.destination}
               value={destination}
-              onChangeText={onDestinationChange}
+              onChange={onDestinationChange}
               icon="location"
               stackedLabel="Destination"
               placeholder="e.g. Lisbon, Portugal"

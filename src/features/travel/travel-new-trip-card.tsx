@@ -3,6 +3,7 @@ import {
     ErrorMessage,
     Input,
 } from '@/components/primitives';
+import { AddressAutofindField } from '@/features/travel/address-autofind-field';
 import { TravelDateRangeEditor } from '@/features/travel/travel-date-range-editor';
 import {
     itinerarySheetChrome,
@@ -94,22 +95,22 @@ export function TravelNewTripCard({
         onPress={onImportItinerary}>
         {importingItinerary ? 'Reading Itinerary…' : 'Import Flight Itinerary'}
       </Button>
-      <Input
+      <AddressAutofindField
         testID={AgentUiIds.travel.newTrip.origin}
         icon="route"
         stackedLabel="Starting Point"
         value={origin}
-        onChangeText={onOriginChange}
+        onChange={onOriginChange}
         placeholder="New York, NY (optional)"
         accessibilityLabel="Starting Point, optional"
         {...itinerarySheetFieldProps(chrome, 'location')}
       />
-      <Input
+      <AddressAutofindField
         testID={AgentUiIds.travel.newTrip.destination}
         icon="location"
         stackedLabel="Destination"
         value={destination}
-        onChangeText={onDestinationChange}
+        onChange={onDestinationChange}
         placeholder="Lisbon, Portugal"
         accessibilityLabel="Destination"
         {...itinerarySheetFieldProps(chrome, 'location')}

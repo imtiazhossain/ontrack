@@ -91,11 +91,14 @@ export function TravelHeaderSkyDecor({
         {plan.quality === 'static' ? (
           <TravelSkyStaticDestination
             destination={destination}
+            dateKey={dateKey}
             latitude={latitude}
+            longitude={longitude}
+            statusBand={statusBand}
+            condition={condition}
             timeOfDay={condition.timeOfDay}
             weatherCode={weatherCode}
             chrome={chrome}
-            look={condition.look}
             night={night}
             fadeTo={horizon}
             onAverageColor={onPlateAverageColor}

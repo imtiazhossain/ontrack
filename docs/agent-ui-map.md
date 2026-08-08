@@ -509,8 +509,8 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.newTrip.importScreenshots`        | Choose itinerary screenshots from Photos            |
 | `ontrack.travel.newTrip.importFile`               | Choose an itinerary file or saved email              |
 | `ontrack.travel.newTrip.title`                    | New-trip title field                               |
-| `ontrack.travel.newTrip.origin`                   | New-trip starting point field                      |
-| `ontrack.travel.newTrip.destination`              | New-trip destination field                         |
+| `ontrack.travel.newTrip.origin`                   | New-trip starting point (address autocomplete)     |
+| `ontrack.travel.newTrip.destination`              | New-trip destination (address autocomplete)        |
 | `ontrack.travel.newTrip.dates`                    | New-trip Dates field (opens range calendar)        |
 | `ontrack.travel.newTrip.datesClose`               | Close the new-trip dates calendar modal            |
 | `ontrack.travel.newTrip.datesSave`                | Save the new-trip date range                       |
@@ -522,7 +522,8 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.newTrip.create`                   | Create the trip                                    |
 | `ontrack.travel.editTrip.title`                   | Edit-trip title field                              |
 | `ontrack.travel.editTrip.cover`                   | Change the edit-trip cover photo                   |
-| `ontrack.travel.editTrip.destination`             | Edit-trip destination field                        |
+| `ontrack.travel.editTrip.origin`                  | Edit-trip starting point (address autocomplete)    |
+| `ontrack.travel.editTrip.destination`             | Edit-trip destination (address autocomplete)       |
 | `ontrack.travel.editTrip.startDate`               | Edit-trip departure date                           |
 | `ontrack.travel.editTrip.endDate`                 | Edit-trip return date                              |
 | `ontrack.travel.editTrip.notes`                   | Edit-trip notes field                              |

@@ -58,15 +58,17 @@ export const TRAVEL_HOME_CURATED_ATMOSPHERE: readonly TravelHomeCuratedAtmospher
     weatherMood: ['clear', 'cloudy', 'mixed', 'rain', 'storm'],
     label: 'Antigua, Guatemala',
     headerTone: 'dark',
-    averageColor: '#7FA3C4',
+    // Header-band sample (title sits on pale sky) — not whole-plate lake/volcano.
+    averageColor: '#9AABCB',
   },
   {
     id: 'third-wander',
     source: require('../../../assets/images/travel/fixtures/third-hero.jpg'),
     timeOfDay: ['dawn', 'day', 'dusk', 'night'],
     weatherMood: ['clear', 'cloudy', 'fog', 'rain', 'snow', 'mixed'],
-    headerTone: 'dark',
-    averageColor: '#5A7A8C',
+    // Dark title band — white ink; average stays below the dark threshold.
+    headerTone: 'light',
+    averageColor: '#5C5B5C',
   },
 ] as const;
 

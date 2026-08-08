@@ -18,6 +18,7 @@ const DEBOUNCE_MS = 320;
 interface AddressAutofindFieldProps {
   value: string;
   onChange: (value: string) => void;
+  testID?: string;
   placeholder?: string;
   stackedLabel?: string;
   icon?: AppIconName;
@@ -38,6 +39,7 @@ function approxHeightForText(text: string, minHeight: number, lineHeight: number
 export function AddressAutofindField({
   value,
   onChange,
+  testID,
   placeholder = 'Address',
   stackedLabel,
   icon = 'location',
@@ -127,6 +129,7 @@ export function AddressAutofindField({
   return (
     <View style={styles.wrap}>
       <Input
+        testID={testID}
         value={value}
         placeholder={placeholder}
         accessibilityLabel={accessibilityLabel}

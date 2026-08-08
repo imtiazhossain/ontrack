@@ -74,9 +74,9 @@ describe('travel home kit contract', () => {
     expect(card).toContain('locationChip');
     expect(card).toContain('locationChipBorder');
     expect(card).not.toContain('styles.divider');
-    // Light View Itinerary = solid ink black (not translucent glass grey).
-    expect(card).toContain('travelHomeTokens.colors.ink');
-    expect(card).not.toContain('TravelHomeGlass');
+    // View Itinerary = frosted sage glass (both themes); not solid ink/brand.
+    expect(card).toContain('TravelHomeGlass');
+    expect(card).toContain('accent="green"');
   });
 
   it('frosts trip-card scoops with BlurView over the live hero', () => {
@@ -202,6 +202,23 @@ describe('travel home kit contract', () => {
     expect(screen).toContain(
       'atmosphereAverageColor={atmosphereImage.averageColor}',
     );
+  });
+
+  it('defers trip-card mount until Travel is focused (preload entrance)', () => {
+    // Neighbor-tab preload mounts Travel off-screen; FadeInDown only runs on
+    // mount — cards must wait for first focus so the spring plays on-screen.
+    const yourTrips = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-your-trips.tsx'),
+      'utf8',
+    );
+    const card = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-trip-card.tsx'),
+      'utf8',
+    );
+    expect(yourTrips).toContain('useIsFocused');
+    expect(yourTrips).toContain('entranceReady');
+    expect(card).toContain('FadeInDown');
+    expect(card).toContain('springify()');
   });
 
   it('keeps atmosphere as a top hero band (not full-page)', () => {

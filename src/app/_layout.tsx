@@ -192,6 +192,9 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
           name="(tabs)"
           options={{
             headerShown: false,
+            // Tab carousel is the app root — iOS edge-swipe must not dispatch
+            // GO_BACK (empty stack → LogBox toast on Travel / other tabs).
+            gestureEnabled: false,
             // Transparent so Travel’s AppSafeArea chrome atmosphere can paint
             // continuously under the status bar without a seam at the inset.
             // Tab screens still fill with their own Screen backgrounds.

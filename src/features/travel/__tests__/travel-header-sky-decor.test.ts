@@ -111,7 +111,10 @@ describe('travel header sky décor', () => {
     );
     expect(staticDestination).toContain('resolveTravelHomeAtmosphereImage');
     expect(staticDestination).toContain('TravelSkyStaticWash');
+    expect(staticDestination).toContain('TravelSkyNight');
+    expect(staticDestination).toContain('TravelSkyDay');
     expect(staticDestination).toContain('TravelSkyGround');
+    expect(staticDestination).toContain("planTravelSkyFx('minimal')");
     expect(staticDestination).toContain('Ken Burns');
     expect(staticDestination).toContain('contentPosition');
     expect(staticDestination).toContain('topVeil');

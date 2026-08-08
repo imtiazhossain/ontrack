@@ -22,9 +22,12 @@ describe('travel sky static destination plate', () => {
     expect(src).toContain('scale: 1.1');
   });
 
-  it('falls back to wash + ground silhouette while the still loads', () => {
+  it('falls back to minimal SVG celestial + ground while the still loads', () => {
     expect(src).toContain('TravelSkyStaticWash');
+    expect(src).toContain('TravelSkyNight');
+    expect(src).toContain('TravelSkyDay');
     expect(src).toContain('TravelSkyGround');
+    expect(src).toContain("planTravelSkyFx('minimal')");
     expect(src).toContain('resolveTravelSkyGroundKind');
     expect(src).toContain('useTiltSkyMotion(false)');
   });
