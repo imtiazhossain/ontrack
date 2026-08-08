@@ -291,7 +291,7 @@ export function BottomNavBar({
   };
   // Clear optimistic selection only after navigation has focused the tab.
   // Stay at canonical 0 — do not chase the tapped route’s pre-reshuffle side
-  // index (that scrolls Profile→Today). Fan-out runs after the page settles.
+  // index (that scrolls Profile→Today). Recency rearrange runs after settle.
   useLayoutEffect(() => {
     if (!pendingRouteName) return;
     if (selectedRoute?.name !== pendingRouteName) return;
@@ -411,8 +411,8 @@ export function BottomNavBar({
     if (pendingRouteName) return;
     if (carouselBrowse?.anchorRouteName === selectedRoute.name) return;
     if (routeCount <= 0) return;
-    // Focused tab is index 0 after fan-out. Before that records, stay at 0 —
-    // chasing the pre-reshuffle side index slides the rail again.
+    // Focused tab is index 0 after recency arrange. Before that records, stay
+    // at 0 — chasing the pre-reshuffle side index slides the rail again.
     const target = canonicalPositionForRoute(0, routeCount);
     if (Math.round(positionItems.value) === Math.round(target)) {
       positionItems.value = target;

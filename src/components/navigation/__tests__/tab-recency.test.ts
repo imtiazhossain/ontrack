@@ -1,7 +1,7 @@
 import {
+    arrangeRecentsLeftRestRight,
     compareTabsByRecency,
     DEFAULT_TAB_ORDER,
-    fanOutAroundMostRecent,
     orderRoutesByRecency,
 } from '../tab-recency';
 
@@ -24,18 +24,17 @@ describe('tab-recency', () => {
     ]);
   });
 
-  it('fans never-focused tabs around Today so Health is not beside center', () => {
+  it('puts never-focused catalog on the right of Today (browse-through)', () => {
     const routes = DEFAULT_TAB_ORDER.map((name) => ({ name }));
     const ordered = orderRoutesByRecency(routes, {}).map((r) => r.name);
     expect(ordered[0]).toBe('(today)');
-    // Left of center = [n-1], right = [1]
-    expect(ordered[ordered.length - 1]).toBe('calendar');
-    expect(ordered[1]).toBe('to-do');
-    expect(ordered[1]).not.toBe('health');
-    expect(ordered[ordered.length - 1]).not.toBe('health');
+    // No recents → right walks DEFAULT order; left wraps to last catalog tab.
+    expect(ordered[1]).toBe('calendar');
+    expect(ordered[2]).toBe('to-do');
+    expect(ordered[ordered.length - 1]).toBe('health');
   });
 
-  it('puts previous tab on the left and second-prior on the right of the active tab', () => {
+  it('puts prior tabs on the left (most recent closest) and the rest on the right', () => {
     const lastFocusedAt = {
       'to-do': 400,
       travel: 300,
@@ -44,21 +43,21 @@ describe('tab-recency', () => {
     const routes = DEFAULT_TAB_ORDER.map((name) => ({ name }));
     const ordered = orderRoutesByRecency(routes, lastFocusedAt).map((r) => r.name);
     expect(ordered[0]).toBe('to-do');
-    // Left = most recent prior (travel); right = second-to-last (calendar)
+    // Left = most recent prior (travel), then older (calendar)
     expect(ordered[ordered.length - 1]).toBe('travel');
-    expect(ordered[1]).toBe('calendar');
+    expect(ordered[ordered.length - 2]).toBe('calendar');
+    // Right = never-focused catalog starting at Today
+    expect(ordered[1]).toBe('(today)');
+    expect(ordered[2]).toBe('social');
     expect(ordered[1]).not.toBe('health');
-    expect(ordered[ordered.length - 1]).not.toBe('health');
   });
 
-  it('fanOutAroundMostRecent alternates left then right from rank order', () => {
-    expect(fanOutAroundMostRecent(['a', 'b', 'c', 'd', 'e'])).toEqual([
-      'a',
-      'c',
-      'e',
-      'd',
-      'b',
-    ]);
+  it('arrangeRecentsLeftRestRight keeps most-recent prior closest left of center', () => {
+    const ranked = ['a', 'b', 'c', 'd', 'e'].map((name) => ({ name }));
+    const lastFocusedAt = { a: 5, b: 4, c: 3 };
+    expect(
+      arrangeRecentsLeftRestRight(ranked, lastFocusedAt).map((r) => r.name),
+    ).toEqual(['a', 'd', 'e', 'c', 'b']);
   });
 
   it('places never-focused tabs after focused ones, still in default relative order', () => {
