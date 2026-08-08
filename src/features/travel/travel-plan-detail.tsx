@@ -179,7 +179,8 @@ function TravelPlanDetailEntrance({ plan }: { plan: TravelPlan }) {
           refresh={false}>
           <TravelPlanHero
             plan={plan}
-            enableSkyDecor={false}
+            // Paint sky/destination still during push — solid chrome alone
+            // reads as an empty wash (esp. warm Android day / Guatemala).
             notesExpanded={notesExpanded}
           />
         </Screen>

@@ -10,7 +10,12 @@ import {
     type ViewStyle,
 } from 'react-native';
 
-import { glassFieldBackground, radii, type AppIconName } from '@/design-system';
+import {
+    glassFieldBackground,
+    glassFieldBorder,
+    radii,
+    type AppIconName,
+} from '@/design-system';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/hooks/use-theme';
 import { useAgentUiTarget } from '@/utils/agent-ui';
@@ -420,10 +425,12 @@ export function Input({
           onBlur={handleBlur}
           style={[
             {
-              borderRadius: radii.md,
+              borderRadius: fieldBorderRadius ?? radii.md,
               paddingHorizontal: spacing.lg,
               paddingVertical: spacing.md,
               minHeight,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: fieldBorderColor ?? glassFieldBorder(theme.name),
             },
             trailing ? { paddingRight: s(56) } : null,
             typography.body,

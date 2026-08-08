@@ -71,7 +71,7 @@ export function useHydrated(): boolean {
       rehydrateStore(() => useHealth.persist.rehydrate()),
       rehydrateStore(() => useDevMode.persist.rehydrate()),
     ]).then(async () => {
-      // Agent sandboxes must not stick across cold start (Dev Mode off by default).
+      // Dev Mode must not stick across cold start (off by default for testers).
       await settleDevModeAfterRehydrate();
       release();
     });

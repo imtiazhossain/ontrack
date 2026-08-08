@@ -33,8 +33,12 @@ export const DESTINATION_ICONIC_COVER_QUERIES: readonly DestinationIconicCoverEn
       queries: [
         'Antigua Guatemala Santa Catalina Arch',
         'Volcan de Agua Antigua Guatemala',
-        'Antigua Guatemala colonial volcano',
+        'Lake Atitlan Guatemala volcano',
+        'Tikal Mayan temples Guatemala',
+        'Semuc Champey Guatemala pools',
         'Acatenango volcano Guatemala',
+        'Antigua Guatemala colonial volcano',
+        'Pacaya volcano Guatemala lava',
       ],
     },
     {

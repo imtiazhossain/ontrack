@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.13',
+    date: '2026-08-08',
+    notes: [
+      'Harden agent Android pool (GPU + fast kill), polish travel covers/hero, and split activity-form sections.',
+    ],
+  },
+  {
     version: '1.0.12',
     date: '2026-08-08',
     notes: [
@@ -109,6 +116,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.13',
+    date: '2026-08-08',
+    notes: [
+      'Harden agent Android pool (GPU + fast kill), polish travel covers/hero, and split activity-form sections.',
+      'Touched: app routes, features/account.',
+    ],
+  },
   {
     version: '1.0.12',
     date: '2026-08-08',

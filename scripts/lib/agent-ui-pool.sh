@@ -5,9 +5,10 @@
 #   iOS:     "onTrack Agent N"  (simctl device, headless by default)
 #   Android: onTrack_Agent_N    (AVD cloned from Galaxy_S26 profile)
 #
-# Claim a free slot (create devices as needed). If all slots are busy, wait
-# until one finishes (AGENT_UI_LOCK_WAIT_SECS). Nested children inherit
-# AGENT_UI_SLOT + AGENT_UI_LOCK_HELD.
+# Claim a free cold slot (create devices as needed). Already-booted agent
+# sims/AVDs are treated as in-use — pick a different slot. If all slots are
+# busy, wait until one finishes (AGENT_UI_LOCK_WAIT_SECS). Nested children
+# inherit AGENT_UI_SLOT + AGENT_UI_LOCK_HELD.
 #
 # Opt out: AGENT_UI_SKIP_LEASE=1 or AGENT_UI_USE_POOL=0 (legacy single device /
 # explicit ONTRACK_* pins without pool naming).
@@ -222,6 +223,82 @@ agent_ui_pool_slot_lockdir() {
   printf '%s/%s.lockdir' "$(agent_ui_pool_root)" "$1"
 }
 
+# True when this slot's iOS agent sim is Booted and/or its Android AVD is on adb.
+# Already-up pool devices are treated as in-use (even without a lockdir) so a
+# new agent claims a different cold slot instead of hijacking a running one.
+# BIND_DEVICES=0 (unit tests) → always "not up".
+agent_ui_pool_slot_devices_up() {
+  local slot="$1" ios_name android_name root serial
+  case "${AGENT_UI_POOL_BIND_DEVICES:-1}" in
+    0|false|FALSE|no|NO) return 1 ;;
+  esac
+  [[ -n "$slot" && "$slot" =~ ^[1-9][0-9]*$ ]] || return 1
+
+  ios_name="$(agent_ui_pool_ios_name "$slot")"
+  if xcrun simctl list devices booted -j 2>/dev/null | python3 -c '
+import json, sys
+name = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for devices in data.get("devices", {}).values():
+    for d in devices:
+        if d.get("name") == name and d.get("state") == "Booted":
+            raise SystemExit(0)
+raise SystemExit(1)
+' "$ios_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  android_name="$(agent_ui_pool_android_name "$slot")"
+  root="$(agent_ui_pool_repo_root)"
+  # shellcheck disable=SC1091
+  source "${root}/scripts/lib/android-emulator.sh"
+  serial="$(
+    ONTRACK_ANDROID_AVD="$android_name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+  )"
+  [[ -n "${serial:-}" ]]
+}
+
+# Try to exclusive-claim slot's lockdir. When allow_busy_devices=0 (default),
+# release immediately if the slot's sim/AVD is already running.
+# Returns 0 and sets AGENT_UI_POOL_CLAIM_SLOT / AGENT_UI_POOL_CLAIM_LOCKDIR.
+agent_ui_pool_try_claim_slot() {
+  local want="$1"
+  local allow_busy="${2:-0}"
+  local lockdir owner
+  lockdir="$(agent_ui_pool_slot_lockdir "$want")"
+
+  if mkdir "${lockdir}" 2>/dev/null; then
+    :
+  elif [[ "$(cat "${lockdir}/pid" 2>/dev/null || true)" == "$$" ]]; then
+    # Already ours (nested / re-entry) — devices may be Booted; keep the claim.
+    AGENT_UI_POOL_CLAIM_SLOT="$want"
+    AGENT_UI_POOL_CLAIM_LOCKDIR="$lockdir"
+    return 0
+  else
+    owner="$(cat "${lockdir}/pid" 2>/dev/null || true)"
+    if [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2>/dev/null; then
+      echo "agent-ui: clearing stale pool slot ${want} (pid ${owner} gone)" >&2
+      rm -rf "${lockdir}"
+      mkdir "${lockdir}" 2>/dev/null || return 1
+    else
+      return 1
+    fi
+  fi
+
+  if [[ "$allow_busy" != "1" ]] && agent_ui_pool_slot_devices_up "$want"; then
+    echo "agent-ui: slot ${want} devices already up — skipping (likely in use)" >&2
+    rm -rf "${lockdir}" 2>/dev/null || true
+    return 1
+  fi
+
+  AGENT_UI_POOL_CLAIM_SLOT="$want"
+  AGENT_UI_POOL_CLAIM_LOCKDIR="$lockdir"
+  return 0
+}
+
 # Shut down this slot's iOS sim + Android AVD when the lease ends.
 # Escape: AGENT_UI_KEEP_DEVICES=1 (debug). Skipped when BIND_DEVICES=0 (unit tests).
 agent_ui_pool_shutdown_slot() {
@@ -301,46 +378,53 @@ agent_ui_ensure_lease() {
     return $?
   fi
 
-  local max wait_secs deadline last_msg slot lockdir owner claimed=0
+  local max wait_secs deadline last_msg slot lockdir owner claimed=0 orphan=""
   max="$(agent_ui_pool_max)"
   mkdir -p "$(agent_ui_pool_root)"
   wait_secs="${AGENT_UI_LOCK_WAIT_SECS:-300}"
   deadline=$((SECONDS + wait_secs))
   last_msg=-999
+  unset AGENT_UI_POOL_CLAIM_SLOT AGENT_UI_POOL_CLAIM_LOCKDIR
 
-  # Preferred slot pin (parent / explicit).
+  # Preferred slot pin (parent / explicit) — still skip if devices already up.
   if [[ -n "${AGENT_UI_SLOT:-}" && "${AGENT_UI_SLOT}" =~ ^[1-9][0-9]*$ ]] && (( AGENT_UI_SLOT <= max )); then
-    lockdir="$(agent_ui_pool_slot_lockdir "$AGENT_UI_SLOT")"
-    if mkdir "${lockdir}" 2>/dev/null; then
+    if agent_ui_pool_try_claim_slot "$AGENT_UI_SLOT" 0; then
       claimed=1
-      slot="$AGENT_UI_SLOT"
-    elif [[ "$(cat "${lockdir}/pid" 2>/dev/null || true)" == "$$" ]]; then
-      claimed=1
-      slot="$AGENT_UI_SLOT"
+      slot="$AGENT_UI_POOL_CLAIM_SLOT"
+      lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
     fi
   fi
 
   while (( claimed == 0 && SECONDS < deadline )); do
+    orphan=""
+    # Prefer cold free slots (lock free + devices not running).
     for ((slot = 1; slot <= max; slot++)); do
-      lockdir="$(agent_ui_pool_slot_lockdir "$slot")"
-      if mkdir "${lockdir}" 2>/dev/null; then
+      if agent_ui_pool_try_claim_slot "$slot" 0; then
         claimed=1
+        slot="$AGENT_UI_POOL_CLAIM_SLOT"
+        lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
         break
       fi
-      owner="$(cat "${lockdir}/pid" 2>/dev/null || true)"
-      if [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2>/dev/null; then
-        echo "agent-ui: clearing stale pool slot ${slot} (pid ${owner} gone)" >&2
-        rm -rf "${lockdir}"
-        if mkdir "${lockdir}" 2>/dev/null; then
-          claimed=1
-          break
+      # Remember first lock-free orphan (devices up, no live holder) for fallback.
+      if [[ -z "$orphan" ]]; then
+        lockdir="$(agent_ui_pool_slot_lockdir "$slot")"
+        owner="$(cat "${lockdir}/pid" 2>/dev/null || true)"
+        if [[ ! -d "$lockdir" ]] || { [[ -n "${owner}" ]] && ! kill -0 "${owner}" 2>/dev/null; }; then
+          if agent_ui_pool_slot_devices_up "$slot"; then
+            orphan="$slot"
+          fi
         fi
       fi
-      if [[ "${owner}" == "$$" ]]; then
-        claimed=1
-        break
-      fi
     done
+    # No cold slot: reclaim an orphaned already-up device rather than stall.
+    if (( claimed == 0 )) && [[ -n "$orphan" ]]; then
+      if agent_ui_pool_try_claim_slot "$orphan" 1; then
+        echo "agent-ui: reclaiming slot ${orphan} (devices already up; no cold free slot)" >&2
+        claimed=1
+        slot="$AGENT_UI_POOL_CLAIM_SLOT"
+        lockdir="$AGENT_UI_POOL_CLAIM_LOCKDIR"
+      fi
+    fi
     if (( claimed == 1 )); then
       break
     fi

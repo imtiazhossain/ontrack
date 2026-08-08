@@ -13,6 +13,7 @@ import { useAgentUiTarget } from '@/utils/agent-ui';
 import { haptics } from '@/utils/haptics';
 
 import { AppText } from './app-text';
+import { fieldTitleCase } from './field-title-case';
 import { GlassPlate } from './glass-plate';
 import { Symbol } from './symbol';
 
@@ -39,14 +40,15 @@ export function EmptyState({
 }: EmptyStateProps) {
   const theme = useTheme();
   const { spacing, layout } = useResponsive();
+  const actionTitle = actionLabel ? fieldTitleCase(actionLabel) : undefined;
   const handleAction = () => {
     if (!onAction) return;
     haptics.tap();
     onAction();
   };
   const agent = useAgentUiTarget(actionTestID, {
-    label: actionLabel,
-    onPress: actionLabel && onAction ? handleAction : undefined,
+    label: actionTitle,
+    onPress: actionTitle && onAction ? handleAction : undefined,
   });
 
   return (
@@ -76,13 +78,13 @@ export function EmptyState({
         style={messageStyle}>
         {message}
       </AppText>
-      {actionLabel && onAction ? (
+      {actionTitle && onAction ? (
         <Pressable
           ref={agent.ref}
           testID={actionTestID}
           onLayout={agent.onLayout}
           accessibilityRole="button"
-          accessibilityLabel={actionLabel}
+          accessibilityLabel={actionTitle}
           onPress={handleAction}
           style={({ pressed }) => [
             styles.actionHit,
@@ -99,8 +101,9 @@ export function EmptyState({
                 gap: spacing.sm,
               },
             ]}>
-            <AppText variant="callout" fit numberOfLines={1}>
-              {actionLabel}
+            {/* Self-sized pill: never AppText fit — Android truncates/left-packs (e.g. "Add Activity"). */}
+            <AppText variant="callout" align="center" numberOfLines={1}>
+              {actionTitle}
             </AppText>
           </GlassPlate>
         </Pressable>

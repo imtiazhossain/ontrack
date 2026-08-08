@@ -1,17 +1,29 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, appPrompt, Button, DateField, ErrorMessage, GlassPlate, Input, Screen, SectionHeader, TimeField } from '@/components/primitives';
+import {
+  AppText,
+  appPrompt,
+  Button,
+  ErrorMessage,
+  GlassPlate,
+  GlassPrimaryAction,
+  HeaderBackButton,
+  Input,
+  Screen,
+  ScreenAtmosphere,
+  screenAtmosphereBottomColor,
+} from '@/components/primitives';
 import { CategoryBadge } from '@/components/shared';
 import { isCategoryEnabled } from '@/addons/registry';
-import { glassMaterials, radii, spacing } from '@/design-system';
+import {
+  glassFieldBackground,
+  glassFieldBorder,
+  glassMaterials,
+  radii,
+  spacing,
+} from '@/design-system';
 import { usePendingImagePickerResult } from '@/hooks/use-pending-image-picker';
 import { useTheme } from '@/hooks/use-theme';
 import { analyzeMealPhoto, NutritionServiceError, persistMealPhoto } from '@/services/nutrition';
@@ -21,14 +33,8 @@ import { newId, useSchedule } from '@/store/schedule';
 import type {
   ActivityStatus,
   FoodItem,
-  Meal,
-  MealType,
-  Movie,
-  Workout,
   WorkoutExercise,
   WorkoutSet,
-  WorkoutType,
-  WorkSession,
   WorkTask,
 } from '@/types/models';
 import {
@@ -41,6 +47,11 @@ import {
   cloneWorkSession,
   cloneWorkout,
 } from '@/app/activity-form-editors';
+import {
+  ActivityFormPhotoCard,
+  ActivityFormScheduleCard,
+  activityFormGlassCardStyle,
+} from '@/app/activity-form-sections';
 import { pickLibraryImage } from '@/utils/pick-image';
 import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
 import { confirmDestructiveAction } from '@/utils/confirm-destructive';
@@ -106,8 +117,6 @@ export default function ActivityFormScreen() {
   const isEditing = Boolean(editId && existing);
   const missingActivity = Boolean(editId && !existing);
   const allowLeave = useRef(false);
-  const close = () => goBackOrReplace(router, '/(tabs)/calendar');
-
   const signature = JSON.stringify({
     title,
     categoryId,
@@ -124,21 +133,32 @@ export default function ActivityFormScreen() {
   const [initialSignature] = useState(signature);
   const dirty = signature !== initialSignature;
 
+  const leave = () => {
+    allowLeave.current = true;
+    goBackOrReplace(router, '/(tabs)/calendar');
+  };
+  const confirmDiscard = (onDiscard: () => void) => {
+    appPrompt.alert('Discard Changes?', 'Your unsaved changes will be lost.', [
+      { text: 'Keep Editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: onDiscard },
+    ]);
+  };
+  const close = () => {
+    if (allowLeave.current || !dirty) {
+      leave();
+      return;
+    }
+    confirmDiscard(leave);
+  };
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       if (allowLeave.current || !dirty) return;
       event.preventDefault();
-      appPrompt.alert('Discard Changes?', 'Your unsaved changes will be lost.', [
-        { text: 'Keep Editing', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => {
-            allowLeave.current = true;
-            navigation.dispatch(event.data.action);
-          },
-        },
-      ]);
+      confirmDiscard(() => {
+        allowLeave.current = true;
+        navigation.dispatch(event.data.action);
+      });
     });
     return unsubscribe;
   }, [dirty, navigation]);
@@ -378,317 +398,271 @@ export default function ActivityFormScreen() {
     });
   };
 
+  const fieldFill = glassFieldBackground(theme.name);
+  const fieldBorder = glassFieldBorder(theme.name);
+
+  // Opaque atmosphere floor so BlurView frost can't see through the
+  // transparent modal card into the Today tab underneath (ghosting).
+  const atmosphereFloor = screenAtmosphereBottomColor(theme.name);
+
   if (missingActivity) {
     return (
-      <Screen refresh={false}>
-        <AppText variant="title">Event Not Found</AppText>
-        <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
-      </Screen>
+      <View style={[styles.root, { backgroundColor: atmosphereFloor }]}>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <ScreenAtmosphere />
+        </View>
+        <Screen refresh={false}>
+          <View style={styles.header}>
+            <HeaderBackButton
+              accessibilityLabel="Close"
+              fallback="/(tabs)/calendar"
+              onPress={leave}
+              testID={AgentUiIds.activityForm.back}
+            />
+            <AppText variant="title" style={styles.headerTitle} fit>
+              Event Not Found
+            </AppText>
+          </View>
+          <AppText variant="body" color="secondary">This event may have been deleted.</AppText>
+        </Screen>
+      </View>
     );
   }
 
   return (
-    <Screen contentStyle={styles.screen} refresh={false}>
-      <View style={styles.header}>
-        <AppText variant="title">{isEditing ? editorTitle : 'Add Event'}</AppText>
+    <View style={[styles.root, { backgroundColor: atmosphereFloor }]}>
+      {/*
+        Modal cards sit above AppSafeArea chrome — paint atmosphere locally so
+        frosted plates/fields have chroma to blur (same idea as SheetScaffold).
+      */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <ScreenAtmosphere />
       </View>
+      <Screen contentStyle={styles.screen} refresh={false}>
+        <View style={styles.header}>
+          <HeaderBackButton
+            accessibilityLabel="Close"
+            fallback="/(tabs)/calendar"
+            onPress={close}
+            testID={AgentUiIds.activityForm.back}
+          />
+          <AppText variant="title" style={styles.headerTitle} fit>
+            {isEditing ? editorTitle : 'Add Event'}
+          </AppText>
+        </View>
 
-      {!isEditing ? (
-        <GlassPlate style={styles.assistantCard}>
-          <View style={[styles.assistantHeading, { zIndex: 1 }]}>
-            <View style={[styles.assistantDot, { backgroundColor: theme.accentPrimary }]} />
-            <AppText variant="overline" color="accent">onTrack assistant</AppText>
-          </View>
-          <AppText variant="title" style={{ zIndex: 1 }}>
-            What are we getting into?
-          </AppText>
-          <AppText variant="body" color="secondary" style={{ zIndex: 1 }}>
-            Pick a vibe and I’ll help with the rest.
-          </AppText>
-          <View style={[styles.wrap, { zIndex: 1 }]}>
-            {availableCategories.map((item) => {
-              const selectCategory = () => {
-                setCategoryId(item.id);
-                setTitle('');
-                setMovie(undefined);
-                setError(undefined);
-              };
-              const selected = item.id === categoryId;
-              return (
-                <AgentTestId
-                  key={item.id}
-                  testID={AgentUiIds.activityForm.category(item.id)}
-                  label={item.name}
-                  onPress={selectCategory}>
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
+        {!isEditing ? (
+          <GlassPlate airy style={activityFormGlassCardStyle}>
+            <View style={[styles.assistantHeading, { zIndex: 1 }]}>
+              <View style={[styles.assistantDot, { backgroundColor: theme.accentPrimary }]} />
+              <AppText variant="overline" color="accent">onTrack assistant</AppText>
+            </View>
+            <AppText variant="title" style={{ zIndex: 1 }}>
+              What are we getting into?
+            </AppText>
+            <AppText variant="body" color="secondary" style={{ zIndex: 1 }}>
+              Pick a vibe and I’ll help with the rest.
+            </AppText>
+            <View style={[styles.wrap, { zIndex: 1 }]}>
+              {availableCategories.map((item) => {
+                const selectCategory = () => {
+                  setCategoryId(item.id);
+                  setTitle('');
+                  setMovie(undefined);
+                  setError(undefined);
+                };
+                const selected = item.id === categoryId;
+                return (
+                  <AgentTestId
+                    key={item.id}
+                    testID={AgentUiIds.activityForm.category(item.id)}
+                    label={item.name}
                     onPress={selectCategory}>
-                    <GlassPlate
-                      airy={!selected}
-                      style={[
-                        styles.chip,
-                        {
-                          borderColor: selected
-                            ? theme.accentPrimary
-                            : theme.name === 'dark'
-                              ? glassMaterials.border.dark
-                              : glassMaterials.border.light,
-                          borderWidth: selected ? 1 : StyleSheet.hairlineWidth,
-                        },
-                      ]}>
-                      <CategoryBadge category={item} />
-                    </GlassPlate>
-                  </Pressable>
-                </AgentTestId>
-              );
-            })}
-          </View>
-          {category ? (
-            <View style={[styles.followUp, { borderTopColor: theme.separator, zIndex: 1 }]}>
-              <AppText variant="bodyMedium">
-                {category.detailKind === 'movie'
-                  ? 'Ooh, screen time. What are we watching? 🍿'
-                  : ASSISTANT_COPY[category.id]?.question ?? 'What should we call it?'}
-              </AppText>
-              {category.detailKind === 'movie' ? (
-                <MovieEditor
-                  movie={movie}
-                  guided
-                  onSelect={(selected) => {
-                    setMovie({ ...selected, activityId: editId ?? savedDraftId });
-                    setTitle(selected.title);
-                    if (selected.runtimeMinutes) setDuration(String(selected.runtimeMinutes));
-                  }}
-                />
-              ) : (
-                <Input
-                  key={category.id}
-                  label={ASSISTANT_COPY[category.id]?.label ?? 'Event'}
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder={ASSISTANT_COPY[category.id]?.placeholder ?? 'What’s happening?'}
-                  autoFocus
-                  returnKeyType="next"
-                  testID={AgentUiIds.activityForm.guidedTitle}
-                />
-              )}
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      onPress={selectCategory}>
+                      <GlassPlate
+                        airy={!selected}
+                        style={[
+                          styles.chip,
+                          {
+                            borderColor: selected
+                              ? theme.accentPrimary
+                              : theme.name === 'dark'
+                                ? glassMaterials.border.dark
+                                : glassMaterials.border.light,
+                            borderWidth: selected ? 1 : StyleSheet.hairlineWidth,
+                          },
+                        ]}>
+                        <CategoryBadge category={item} />
+                      </GlassPlate>
+                    </Pressable>
+                  </AgentTestId>
+                );
+              })}
             </View>
-          ) : null}
-        </GlassPlate>
-      ) : null}
-
-      {isEditing && category ? (
-        <>
-          <CategoryBadge category={category} />
-          <Input
-            label="Title"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Event title"
-            testID={AgentUiIds.activityForm.title}
-          />
-        </>
-      ) : null}
-
-      {category ? (
-      <>
-      <SectionHeader title="Schedule" />
-      <View style={styles.twoColumns}>
-        <View style={styles.flex}>
-          <DateField
-            label="Date"
-            value={date}
-            onChange={setDate}
-            testID={AgentUiIds.activityForm.date}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Input
-            label="Duration (min)"
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="number-pad"
-            testID={AgentUiIds.activityForm.duration}
-          />
-        </View>
-      </View>
-      <TimeField
-        label="Start Time"
-        value={startMinutes}
-        onChange={setStartMinutes}
-        testID={AgentUiIds.activityForm.startTime}
-      />
-
-      <Input
-        label="Notes"
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Optional context"
-        multiline
-        style={styles.multiline}
-        testID={AgentUiIds.activityForm.notes}
-      />
-
-      {category?.supportsPhotos && category.detailKind === 'food' ? (
-        <>
-          <SectionHeader title="Meal Photo Analysis" />
-          <AppText variant="body" color="secondary">
-            Upload a clear photo to identify foods and estimate portions and nutrients. You can edit every result before saving.
-          </AppText>
-          {photo ? <Image source={photo} style={styles.photo} contentFit={meal.photoProcessingVersion ? 'contain' : 'cover'} transition={160} /> : null}
-          <View style={styles.twoColumns}>
-            <Button
-              onPress={() => void pickPhoto(aiEnabled)}
-              disabled={analyzing}
-              style={styles.flex}
-              accessibilityLabel={photo ? 'Replace and analyze meal photo' : 'Upload and analyze meal photo'}
-              testID={AgentUiIds.activityForm.pickPhoto}>
-              {analyzing ? 'Analyzing meal…' : photo ? 'Replace & analyze' : 'Upload & analyze'}
-            </Button>
-            {photo ? (
-              <Button
-                variant="secondary"
-                onPress={() => void analyzePhoto()}
-                disabled={analyzing || !aiEnabled}
-                style={styles.flex}
-                accessibilityLabel="Analyze meal photo again"
-                testID={AgentUiIds.activityForm.analyzePhoto}>
-                Analyze again
-              </Button>
+            {category ? (
+              <View style={[styles.followUp, { borderTopColor: theme.separator, zIndex: 1 }]}>
+                <AppText variant="bodyMedium">
+                  {category.detailKind === 'movie'
+                    ? 'Ooh, screen time. What are we watching? 🍿'
+                    : ASSISTANT_COPY[category.id]?.question ?? 'What should we call it?'}
+                </AppText>
+                {category.detailKind === 'movie' ? (
+                  <MovieEditor
+                    movie={movie}
+                    guided
+                    onSelect={(selected) => {
+                      setMovie({ ...selected, activityId: editId ?? savedDraftId });
+                      setTitle(selected.title);
+                      if (selected.runtimeMinutes) setDuration(String(selected.runtimeMinutes));
+                    }}
+                  />
+                ) : (
+                  <Input
+                    key={category.id}
+                    label={ASSISTANT_COPY[category.id]?.label ?? 'Event'}
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder={ASSISTANT_COPY[category.id]?.placeholder ?? 'What’s happening?'}
+                    autoFocus
+                    returnKeyType="next"
+                    fieldBackground={fieldFill}
+                    fieldBorderColor={fieldBorder}
+                    testID={AgentUiIds.activityForm.guidedTitle}
+                  />
+                )}
+              </View>
             ) : null}
-          </View>
-          {analyzing ? <ActivityIndicator style={styles.loader} /> : null}
-          {!aiEnabled ? (
-            <AppText variant="caption" color="secondary">AI summaries are disabled in Profile. The image will be attached without analysis.</AppText>
-          ) : null}
-          {analysisError ? <ErrorMessage message={analysisError} /> : null}
-          {meal.aiAnalysis ? (
-            <View style={[styles.analysisReady, { backgroundColor: theme.accentFaint, borderColor: theme.accentPrimary }]}>
-              <AppText variant="bodyMedium">Analysis Ready</AppText>
-              <AppText variant="caption" color="secondary">
-                {meal.items.length} food item{meal.items.length === 1 ? '' : 's'} identified
-                {meal.aiAnalysis.overallConfidence === undefined ? '' : ` · ${Math.round(meal.aiAnalysis.overallConfidence * 100)}% confidence`}. Review the values below before saving.
-              </AppText>
-            </View>
-          ) : null}
-          {photo ? (
-            <Button
-              variant="ghost"
-              onPress={() => {
-                setPhoto(undefined);
-                setAnalysisError(undefined);
-                setMeal((current) => ({
-                  ...current,
-                  photo: undefined,
-                  originalPhoto: undefined,
-                  photoProcessingVersion: undefined,
-                  aiAnalysis: undefined,
-                }));
-              }}
-              accessibilityLabel="Remove meal photo"
-              testID={AgentUiIds.activityForm.removePhoto}>
-              Remove photo
-            </Button>
-          ) : null}
-        </>
-      ) : category?.supportsPhotos ? (
-        <>
-          <SectionHeader title="Photo" />
-          {photo ? <Image source={photo} style={styles.photo} contentFit="cover" /> : null}
-          <View style={styles.twoColumns}>
-            <Button
-              variant="secondary"
-              onPress={() => void pickPhoto()}
-              style={styles.flex}
-              accessibilityLabel="Choose photo"
-              testID={AgentUiIds.activityForm.pickPhoto}>
-              {photo ? 'Replace Photo' : 'Choose Photo'}
-            </Button>
-            {photo ? (
-              <Button
-                variant="ghost"
-                onPress={() => setPhoto(undefined)}
-                style={styles.flex}
-                accessibilityLabel="Remove photo"
-                testID={AgentUiIds.activityForm.removePhoto}>
-                Remove
-              </Button>
-            ) : null}
-          </View>
-        </>
-      ) : null}
-
-      {category?.detailKind === 'food' ? (
-        <FoodEditor
-          meal={meal}
-          setMeal={setMeal}
-          updateItem={updateFoodItem}
-          addItem={addFoodItem}
-          removeItem={(id) => setMeal((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }))}
-        />
-      ) : null}
-      {category?.detailKind === 'gym' ? (
-        <WorkoutEditor
-          workout={workout}
-          setWorkout={setWorkout}
-          updateExercise={updateExercise}
-          addExercise={addExercise}
-          addSet={addSet}
-          updateSet={updateSet}
-          removeSet={removeSet}
-        />
-      ) : null}
-      {category?.detailKind === 'work' ? (
-        <WorkEditor session={workSession} setSession={setWorkSession} updateTask={updateTask} addTask={addTask} />
-      ) : null}
-      {isEditing && category?.detailKind === 'movie' ? (
-        <MovieEditor
-          movie={movie}
-          onSelect={(selected) => {
-            setMovie({ ...selected, activityId: editId ?? savedDraftId });
-            setTitle(selected.title);
-            if (selected.runtimeMinutes) setDuration(String(selected.runtimeMinutes));
-          }}
-        />
-      ) : null}
-
-      {error ? <ErrorMessage message={error} /> : null}
-      <View style={styles.actions}>
-        <Button
-          onPress={save}
-          disabled={!title.trim()}
-          accessibilityLabel="Save event"
-          testID={AgentUiIds.activityForm.save}>
-          Save
-        </Button>
-        <Button
-          variant="ghost"
-          onPress={close}
-          accessibilityLabel="Cancel"
-          testID={AgentUiIds.activityForm.cancel}>
-          Cancel
-        </Button>
-        {isEditing ? (
-          <Button
-            variant="danger"
-            onPress={confirmDelete}
-            accessibilityLabel="Delete event"
-            testID={AgentUiIds.activityForm.delete}>
-            Delete Event
-          </Button>
+          </GlassPlate>
         ) : null}
-      </View>
-      </>
-      ) : null}
-    </Screen>
+
+        {isEditing && category ? (
+          <GlassPlate airy style={activityFormGlassCardStyle}>
+            <CategoryBadge category={category} />
+            <Input
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Event title"
+              fieldBackground={fieldFill}
+              fieldBorderColor={fieldBorder}
+              testID={AgentUiIds.activityForm.title}
+            />
+          </GlassPlate>
+        ) : null}
+
+        {category ? (
+        <>
+        <ActivityFormScheduleCard
+          date={date}
+          onDateChange={setDate}
+          duration={duration}
+          onDurationChange={setDuration}
+          startMinutes={startMinutes}
+          onStartMinutesChange={setStartMinutes}
+          notes={notes}
+          onNotesChange={setNotes}
+          fieldFill={fieldFill}
+          fieldBorder={fieldBorder}
+        />
+
+        {category.supportsPhotos ? (
+          <ActivityFormPhotoCard
+            kind={category.detailKind === 'food' ? 'food' : 'generic'}
+            photo={photo}
+            meal={meal}
+            analyzing={analyzing}
+            aiEnabled={aiEnabled}
+            analysisError={analysisError}
+            onPickPhoto={(analyzeAfterPick) => void pickPhoto(analyzeAfterPick)}
+            onAnalyze={() => void analyzePhoto()}
+            onRemovePhoto={() => {
+              setPhoto(undefined);
+              setAnalysisError(undefined);
+              setMeal((current) => ({
+                ...current,
+                photo: undefined,
+                originalPhoto: undefined,
+                photoProcessingVersion: undefined,
+                aiAnalysis: undefined,
+              }));
+            }}
+          />
+        ) : null}
+
+        {category?.detailKind === 'food' ? (
+          <FoodEditor
+            meal={meal}
+            setMeal={setMeal}
+            updateItem={updateFoodItem}
+            addItem={addFoodItem}
+            removeItem={(id) => setMeal((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }))}
+          />
+        ) : null}
+        {category?.detailKind === 'gym' ? (
+          <WorkoutEditor
+            workout={workout}
+            setWorkout={setWorkout}
+            updateExercise={updateExercise}
+            addExercise={addExercise}
+            addSet={addSet}
+            updateSet={updateSet}
+            removeSet={removeSet}
+          />
+        ) : null}
+        {category?.detailKind === 'work' ? (
+          <WorkEditor session={workSession} setSession={setWorkSession} updateTask={updateTask} addTask={addTask} />
+        ) : null}
+        {isEditing && category?.detailKind === 'movie' ? (
+          <MovieEditor
+            movie={movie}
+            onSelect={(selected) => {
+              setMovie({ ...selected, activityId: editId ?? savedDraftId });
+              setTitle(selected.title);
+              if (selected.runtimeMinutes) setDuration(String(selected.runtimeMinutes));
+            }}
+          />
+        ) : null}
+
+        {error ? <ErrorMessage message={error} /> : null}
+        <View style={styles.actions}>
+          <GlassPrimaryAction
+            label="Save"
+            onPress={save}
+            disabled={!title.trim()}
+            testID={AgentUiIds.activityForm.save}
+          />
+          <Button
+            variant="ghost"
+            onPress={close}
+            accessibilityLabel="Cancel"
+            testID={AgentUiIds.activityForm.cancel}>
+            Cancel
+          </Button>
+          {isEditing ? (
+            <Button
+              variant="danger"
+              onPress={confirmDelete}
+              accessibilityLabel="Delete event"
+              testID={AgentUiIds.activityForm.delete}>
+              Delete Event
+            </Button>
+          ) : null}
+        </View>
+        </>
+        ) : null}
+      </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   screen: { gap: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  flex: { flex: 1 },
+  headerTitle: { flex: 1, minWidth: 0 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderRadius: radii.pill,
@@ -696,13 +670,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     zIndex: 1,
   },
-  twoColumns: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  multiline: { minHeight: 96, textAlignVertical: 'top' },
-  photo: { width: '100%', height: 220, borderRadius: radii.lg },
-  analysisReady: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
-  loader: { padding: spacing.md },
   actions: { gap: spacing.sm, paddingTop: spacing.md },
-  assistantCard: { gap: spacing.md, padding: spacing.lg, borderRadius: radii.lg },
   assistantHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   assistantDot: { width: 8, height: 8, borderRadius: radii.pill },
   followUp: { gap: spacing.md, borderTopWidth: 1, paddingTop: spacing.lg, marginTop: spacing.xs },

@@ -229,8 +229,10 @@ agent_ui_restart_device() {
 
 agent_ui_simulator_booted() {
   if agent_ui_is_android; then
+    agent_ui_android_lib
     agent_ui_pin_android_serial || return 1
-    agent_ui_device_host_responds
+    # Require sys.boot_completed — adb "device" alone is mid-boot and flaky.
+    android_emu_is_ready
     return $?
   fi
   agent_ui_ios_lib
@@ -306,23 +308,32 @@ agent_ui_pin_slot() {
 }
 
 # Cheap bridge liveness (route status). Skips nested app-up / heal recursion.
+# Requires ok=true + non-empty route (agent-ui-route.sh exits 1 on allow_fail timeouts).
 agent_ui_bridge_answers() {
-  local root wait_secs=1.5
+  local root wait_secs=1.5 route
   root="$(agent_ui_repo_root)" || return 1
   if agent_ui_is_android; then
     wait_secs=3
+    # HTTP status can come from any android client (e.g. Galaxy while the
+    # pool targets onTrack_Agent_N). Require the pinned AVD actually runs the app.
+    agent_ui_android_lib
+    agent_ui_pin_android_serial || return 1
+    agent_ui_app_process_running || return 1
   fi
-  AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 AGENT_UI_PLATFORM="$(agent_ui_platform)" \
-    AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-0}" \
-    AGENT_UI_LOCK_ACQUIRED=0 \
-    AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
-    AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
-    ONTRACK_IOS_SIMULATOR="${ONTRACK_IOS_SIMULATOR:-}" \
-    ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
-    ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
-    ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
-    WAIT_SECS="${wait_secs}" \
-    "${root}/scripts/agent-ui-route.sh" >/dev/null 2>&1
+  route="$(
+    AGENT_UI_SKIP_APP_UP=1 AGENT_UI_SKIP_HEAL=1 AGENT_UI_PLATFORM="$(agent_ui_platform)" \
+      AGENT_UI_LOCK_HELD="${AGENT_UI_LOCK_HELD:-0}" \
+      AGENT_UI_LOCK_ACQUIRED=0 \
+      AGENT_UI_SLOT="${AGENT_UI_SLOT:-}" \
+      AGENT_UI_POOL_MODE="${AGENT_UI_POOL_MODE:-}" \
+      ONTRACK_IOS_SIMULATOR="${ONTRACK_IOS_SIMULATOR:-}" \
+      ONTRACK_IOS_SIMULATOR_UDID="${ONTRACK_IOS_SIMULATOR_UDID:-}" \
+      ONTRACK_ANDROID_AVD="${ONTRACK_ANDROID_AVD:-}" \
+      ONTRACK_ANDROID_SERIAL="${ONTRACK_ANDROID_SERIAL:-}" \
+      WAIT_SECS="${wait_secs}" \
+      "${root}/scripts/agent-ui-route.sh" 2>/dev/null
+  )" || return 1
+  [[ -n "${route}" ]]
 }
 
 # True when a successful agent-ui op landed recently (avoids heal churn).
@@ -468,6 +479,16 @@ agent_ui_finish_app_up() {
     agent_ui_write_slot_pin
     agent_ui_pin_slot "${AGENT_UI_SLOT}" || true
   fi
+  # Headed Android: bridge-ok can still be a blank SurfaceView after window restart.
+  if agent_ui_is_android; then
+    agent_ui_android_lib
+    if android_emu_want_app_surface; then
+      if ! android_emu_ensure_app_surface 0; then
+        echo "error: Android app surface still blank/white after handoff heal" >&2
+        return 1
+      fi
+    fi
+  fi
   # Alert OCR needs a screen surface; never tear down a healthy bridge on OCR fail.
   agent_ui_ensure_ios_system_alerts_clear || {
     echo "agent-ui: iOS system-alert clear failed — continuing (bridge is up)" >&2
@@ -483,13 +504,25 @@ agent_ui_ensure_app_up() {
     return 0
   fi
 
-  # Android pool: pin serial before any probe so we never talk to Galaxy_S26
+  # Android: emulator must be fully booted before any bridge/test work.
+  # Mid-boot adb "device" + allow_fail route timeouts used to look "up" and
+  # produce verify failed route=?. Pin serial before any probe so we never talk to Galaxy_S26
   # while ONTRACK_ANDROID_AVD=onTrack_Agent_N.
   if agent_ui_is_android; then
-    agent_ui_pin_android_serial || true
+    agent_ui_android_lib
+    if ! android_emu_is_ready; then
+      echo "agent-ui: Android emulator not ready — ensuring boot…" >&2
+      if ! android_emu_ensure_ready; then
+        echo "error: Android emulator is not up and ready" >&2
+        return 1
+      fi
+    else
+      agent_ui_pin_android_serial || true
+      android_emu_ensure_adb_reverse >/dev/null 2>&1 || true
+    fi
   fi
 
-  # Definitive liveness: JS bridge answered a route probe.
+  # Definitive liveness: JS bridge answered a route probe (ok + route path).
   if agent_ui_bridge_answers; then
     agent_ui_finish_app_up
     return $?
@@ -587,14 +620,38 @@ agent_ui_ensure_app_up() {
     fi
   fi
 
-  # Device/app must answer within AGENT_UI_DEVICE_RESPOND_SECS or we restart.
-  if agent_ui_wait_for_bridge "$respond_secs"; then
+  # After launch/reconnect, wait for the JS bridge. Android cold bundles often
+  # need far longer than AGENT_UI_DEVICE_RESPOND_SECS (default 10) — restarting
+  # qemu here was the main Android verify flake (kill mid-bundle → minutes lost).
+  local bridge_wait="$respond_secs"
+  if agent_ui_is_android; then
+    bridge_wait="${AGENT_UI_ANDROID_BRIDGE_WAIT_SECS:-60}"
+  fi
+  if agent_ui_wait_for_bridge "$bridge_wait"; then
     agent_ui_finish_app_up
     return $?
   fi
 
+  # App process alive ⇒ emulator is fine. Soft-reconnect / heal only — never
+  # qemu-restart a booting Android JS client.
+  if agent_ui_is_android && agent_ui_app_process_running; then
+    echo "agent-ui: Android app running but bridge quiet — soft reconnect + wait…" >&2
+    agent_ui_soft_reconnect_dev_client
+    if agent_ui_wait_for_bridge "${AGENT_UI_ANDROID_BRIDGE_WAIT_SECS:-60}"; then
+      agent_ui_finish_app_up
+      return $?
+    fi
+    echo "agent-ui: app bridge not answering — healing packager…" >&2
+    if agent_ui_heal_packager && agent_ui_bridge_answers; then
+      agent_ui_finish_app_up
+      return $?
+    fi
+    echo "error: ${BUNDLE_ID} is not up on the emulator (bridge not answering)" >&2
+    return 1
+  fi
+
   if (( device_restarted == 0 )); then
-    echo "agent-ui: ${device_label} not responding within ${respond_secs}s — assuming down, restarting…" >&2
+    echo "agent-ui: ${device_label} not responding within ${bridge_wait}s — assuming down, restarting…" >&2
     if agent_ui_restart_device; then
       device_restarted=1
       if ! agent_ui_app_installed; then
@@ -609,7 +666,7 @@ agent_ui_ensure_app_up() {
       agent_ui_soft_reconnect_dev_client
       local post_wait="${AGENT_UI_DEVICE_POST_RESTART_WAIT_SECS:-30}"
       if agent_ui_is_android; then
-        post_wait="${AGENT_UI_ANDROID_POST_RESTART_WAIT_SECS:-45}"
+        post_wait="${AGENT_UI_ANDROID_POST_RESTART_WAIT_SECS:-60}"
       fi
       if agent_ui_wait_for_bridge "$post_wait"; then
         agent_ui_finish_app_up

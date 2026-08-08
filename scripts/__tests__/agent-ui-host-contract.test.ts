@@ -148,6 +148,10 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('agent_ui_ensure_lease');
     expect(pool).toContain('agent_ui_release_lease');
     expect(pool).toContain('agent_ui_pool_shutdown_slot');
+    expect(pool).toContain('agent_ui_pool_slot_devices_up');
+    expect(pool).toContain('agent_ui_pool_try_claim_slot');
+    expect(pool).toContain('devices already up — skipping');
+    expect(pool).toContain('reclaiming slot');
     expect(pool).toContain('ios_sim_shutdown_agent_named');
     expect(pool).toContain('android_emu_shutdown_named');
     expect(pool).toContain('AGENT_UI_KEEP_DEVICES');
@@ -168,6 +172,8 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('agent_ui_device_host_responds');
     expect(host).toContain('agent_ui_restart_device');
     expect(host).toContain('AGENT_UI_DEVICE_RESPOND_SECS');
+    expect(host).toContain('AGENT_UI_ANDROID_BRIDGE_WAIT_SECS');
+    expect(host).toContain('Android app running but bridge quiet');
     expect(host).toContain('assuming down, restarting');
     expect(host).toContain('agent_ui_write_slot_pin');
     expect(host).toContain('agent_ui_pin_android_serial');
@@ -182,17 +188,37 @@ describe('agent-ui host scripts contract', () => {
     expect(verifyBoth).toContain('AGENT_UI_LOCK_HELD');
     expect(verifyBoth).toContain('AGENT_UI_SLOT');
     expect(verifyBoth).toContain('AGENT_UI_SKIP_LEASE');
+    // Android side must wait for a fully booted emulator before verify.
+    expect(verifyBoth).toContain('android_emu_ensure_ready');
+    expect(verifyBoth).toContain('ensuring Android emulator is up and ready');
+    expect(verifyBoth).not.toMatch(/ensure-packager\.sh" --start --android \|\| true/);
+
+    const emu = read('scripts/lib/android-emulator.sh');
+    // Pool kills must be fast (no 20s snapshot save) and peers stay up.
+    expect(emu).toContain('ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0');
+    expect(emu).toContain('Leaving agent emulator up');
+    expect(emu).toContain('Leaving unidentified emulator up (pool)');
+    expect(emu).toContain('Shutting down non-agent emulator (pool)');
+    expect(emu).toContain('android_emu_discard_default_snapshot');
+    expect(emu).toContain('went offline before boot_completed');
+
+    // Galaxy must not spoof android bridge status for an Agent AVD.
+    expect(host).toContain('agent_ui_app_process_running || return 1');
+    expect(verifyBoth).toContain('Android bridge quiet on');
+    expect(verifyBoth).toContain('agent_ui_bridge_answers');
+
+    const bridge = read('scripts/lib/agent_ui_bridge.py');
+    expect(bridge).toContain('has_flow_land');
+    expect(bridge).toContain('and not has_flow_land');
+    expect(bridge).toContain('write_android_slot_pin_file');
+    expect(bridge).toContain('write-slot-pin');
+    expect(bridge).toContain('files/agent-ui-pin.json');
 
     const ensure = read('scripts/ensure-packager.sh');
     expect(ensure).toContain('AGENT_UI_SKIP_LEASE=1');
     expect(ensure).toContain('packager_pool_clone_app_if_needed');
     expect(ensure).toContain('Installed ${BUNDLE_ID} onto pool');
     expect(ensure).toContain('packager_write_slot_pin');
-
-    const bridge = read('scripts/lib/agent_ui_bridge.py');
-    expect(bridge).toContain('write_android_slot_pin_file');
-    expect(bridge).toContain('write-slot-pin');
-    expect(bridge).toContain('files/agent-ui-pin.json');
 
     const daemon = read('scripts/lib/agent_ui_daemon.py');
     expect(daemon).toContain('queue_key');
@@ -272,6 +298,60 @@ grep -qE 'agent device slot|device slots are busy' /tmp/agent-ui-pool-wait.err
     }
   });
 
+  it('Android readiness requires boot_completed and a real route (not allow_fail timeout)', () => {
+    const emu = read('scripts/lib/android-emulator.sh');
+    const host = read('scripts/lib/agent-ui-host.sh');
+    const route = read('scripts/agent-ui-route.sh');
+    const packager = read('scripts/ensure-packager.sh');
+    expect(emu).toContain('android_emu_is_ready');
+    expect(emu).toContain('android_emu_ensure_ready');
+    expect(emu).toContain('sys.boot_completed');
+    expect(host).toContain('android_emu_is_ready');
+    expect(host).toContain('android_emu_ensure_ready');
+    expect(host).toContain('Android emulator not ready');
+    expect(host).toContain('Requires ok=true + non-empty route');
+    expect(route).toContain('d.get("ok") and route');
+    expect(route).toContain('allow_fail');
+    expect(packager).toContain('android_emu_is_ready');
+  });
+
+  it('headed Android handoff heals blank SurfaceView before finish_app_up', () => {
+    const emu = read('scripts/lib/android-emulator.sh');
+    const host = read('scripts/lib/agent-ui-host.sh');
+    const surface = read('scripts/lib/android_emu_surface.py');
+    expect(emu).toContain('android_emu_ensure_app_surface');
+    expect(emu).toContain('android_emu_mark_ready');
+    expect(emu).toContain('Relaunching');
+    expect(emu).toContain('blank/white SurfaceView');
+    expect(host).toContain('android_emu_want_app_surface');
+    expect(host).toContain('android_emu_ensure_app_surface');
+    expect(host).toContain('app surface still blank/white');
+    expect(surface).toContain('near_white_pct');
+    expect(surface).toContain('is-blank');
+
+    // Functional: pure white PNG is blank; cream travel-home tone is not.
+    const surfacePy = join(root, 'scripts/lib/android_emu_surface.py');
+    const script = [
+      'from pathlib import Path',
+      'import tempfile',
+      'from PIL import Image',
+      'import importlib.util',
+      'spec = importlib.util.spec_from_file_location("android_emu_surface", ' +
+        JSON.stringify(surfacePy) +
+        ')',
+      'mod = importlib.util.module_from_spec(spec)',
+      'spec.loader.exec_module(mod)',
+      'td = tempfile.mkdtemp()',
+      'white = Path(td) / "white.png"',
+      'cream = Path(td) / "cream.png"',
+      'Image.new("RGB", (64, 64), (255, 255, 255)).save(white)',
+      'Image.new("RGB", (64, 64), (231, 220, 204)).save(cream)',
+      'assert mod.near_white_pct(white.read_bytes()) >= 85',
+      'assert mod.near_white_pct(cream.read_bytes()) < 85',
+    ].join('\n');
+    execFileSync('python3', ['-c', script], { encoding: 'utf8', timeout: 15_000 });
+  });
+
   it('batch/flow/seed/assert/once scripts support fixtures and asserts', () => {
     const batch = read('scripts/agent-ui-batch.sh');
     const flow = read('scripts/agent-ui-flow.sh');
@@ -302,5 +382,45 @@ grep -qE 'agent device slot|device slots are busy' /tmp/agent-ui-pool-wait.err
     expect(bridgePy).toContain('run_verify');
     expect(bridgePy).toContain('assert-color');
     expect(bridgePy).toContain('resolve_test_id');
+    // Android cold boot wakes on `/` — auto-land + one retry, never assert-only.
+    expect(bridgePy).toContain('_android_cold_root');
+    expect(bridgePy).toContain('auto-landing via goto');
+    expect(bridgePy).toContain('retrying land');
+    expect(bridgePy).toContain('AGENT_UI_ANDROID_FORCE_LAND');
+    expect(bridgePy).toContain('--wait-route');
+    expect(bridgePy).toContain('normalize_route_path');
+    expect(bridgePy).toContain('must NOT match');
+    const verifyBoth = read('scripts/agent-ui-verify-both.sh');
+    expect(verifyBoth).toContain('AGENT_UI_ANDROID_FORCE_LAND');
+    expect(verifyBoth).toContain('Android on / (cold boot)');
+    expect(verifyBoth).toContain('do NOT pipe this script through `tail`');
+    expect(verifyBoth).toContain('piped through tail/head');
+
+    // /travel must not match trip detail (false skip → agent redo loops).
+    const routeScript = [
+      'import importlib.util, sys',
+      `spec = importlib.util.spec_from_file_location("bridge", ${JSON.stringify(
+        `${root}/scripts/lib/agent_ui_bridge.py`,
+      )})`,
+      'm = importlib.util.module_from_spec(spec)',
+      'spec.loader.exec_module(m)',
+      'assert m.route_matches("/travel", "/travel")',
+      'assert m.route_matches("/(tabs)/travel", "/travel")',
+      'assert m.route_matches("/travel/", "/travel")',
+      'assert not m.route_matches("/travel/trip-agent-ui-demo", "/travel")',
+      'assert not m.route_matches("/travel", "/travel/trip-agent-ui-demo")',
+      'assert m.route_matches("/travel/trip-x", "/travel/trip-x")',
+      'print("route_matches ok")',
+    ].join('\n');
+    const routeOut = execFileSync('python3', ['-c', routeScript], {
+      encoding: 'utf8',
+      timeout: 15_000,
+    });
+    expect(routeOut).toContain('route_matches ok');
+
+    const skill = read('.cursor/skills/agent-ui/SKILL.md');
+    expect(skill).toMatch(/Never `\| tail`/);
+    expect(skill).toContain('open-new-trip');
+    expect(skill).toContain('mass-kill emulators');
   });
 });

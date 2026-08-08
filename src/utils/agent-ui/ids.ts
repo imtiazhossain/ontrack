@@ -351,6 +351,7 @@ export const AgentUiIds = {
     analyzePhoto: 'ontrack.activityForm.analyzePhoto',
     removePhoto: 'ontrack.activityForm.removePhoto',
     save: 'ontrack.activityForm.save',
+    back: 'ontrack.activityForm.back',
     cancel: 'ontrack.activityForm.cancel',
     delete: 'ontrack.activityForm.delete',
   },

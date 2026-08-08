@@ -145,8 +145,8 @@ export function TravelItineraryAddSheet({
                 ? 'rgba(255,255,255,0.22)'
                 : 'rgba(255,255,255,0.7)',
               maxHeight: sheetMaxHeight,
-              paddingBottom: Math.max(insets.bottom, rs.sm),
               // Lift the whole sheet above the soft keyboard (chat composer pattern).
+              // Safe-area pad stays on the footer so glass paints flush to the floor.
               marginBottom: keyboardInset,
             },
           ]}>
@@ -228,7 +228,7 @@ export function TravelItineraryAddSheet({
               {
                 paddingHorizontal: rs.lg,
                 paddingTop: rs.sm,
-                paddingBottom: rs.xs,
+                paddingBottom: Math.max(insets.bottom, rs.sm),
               },
             ]}>
             <ItinerarySheetSubmitButton

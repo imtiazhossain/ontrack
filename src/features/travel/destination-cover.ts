@@ -60,8 +60,8 @@ export type FetchDestinationHeroOptions = {
 
 /**
  * Pick `count` URIs from a landmark pool, preferring ones not shown recently.
- * Salt rotates the start so the same destination does not always open on the
- * same trio.
+ * Unseen URIs always lead; salt only rotates within the unseen band (or within
+ * the full pool once everything has been shown).
  */
 export function pickRotatingHeroUris(
   pool: readonly string[],
@@ -88,14 +88,25 @@ export function pickRotatingHeroUris(
         recent.indexOf(b.toLowerCase()) - recent.indexOf(a.toLowerCase())
       );
     });
-  const ordered = fresh.length > 0 ? [...fresh, ...seen] : seen;
-  if (ordered.length === 0) return [];
 
-  const band = fresh.length >= want ? fresh.length : ordered.length;
-  const start = Math.abs(salt) % Math.max(band, 1);
   const out: string[] = [];
-  for (let i = 0; i < ordered.length && out.length < want; i += 1) {
-    pushUniqueUri(out, ordered[(start + i) % ordered.length]);
+  if (fresh.length > 0) {
+    // Rotate only inside the unseen band so salt never skips a fresh plate.
+    const start = Math.abs(salt) % fresh.length;
+    for (let i = 0; i < fresh.length && out.length < want; i += 1) {
+      pushUniqueUri(out, fresh[(start + i) % fresh.length]);
+    }
+    for (const uri of seen) {
+      if (out.length >= want) break;
+      pushUniqueUri(out, uri);
+    }
+    return out;
+  }
+
+  if (seen.length === 0) return [];
+  const start = Math.abs(salt) % seen.length;
+  for (let i = 0; i < seen.length && out.length < want; i += 1) {
+    pushUniqueUri(out, seen[(start + i) % seen.length]);
   }
   return out;
 }
@@ -485,7 +496,7 @@ export async function fetchDestinationCoverUri(
 async function resolveDestinationHeroPool(
   places: string[],
 ): Promise<string[]> {
-  const key = `hero-pool-v11|${places.join('|').toLowerCase()}`;
+  const key = `hero-pool-v12|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
   if (cached?.kind === 'hit') return cached.uris;
   if (cached?.kind === 'miss') {
@@ -562,7 +573,7 @@ export async function fetchDestinationHeroUris(
 
   const pool = await resolveDestinationHeroPool(places);
   if (pool.length === 0) {
-    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
+    return out.map(toClientDisplayCoverUri);
   }
 
   const recentKeys =
@@ -580,5 +591,8 @@ export async function fetchDestinationHeroUris(
     void saveHeroRecentKeys(nextRecent);
   }
 
-  return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
+  // Keep rotation order. Promoting Unsplash ahead of Wikimedia undoes salt /
+  // recent picks (Guatemala kept opening on the same direct-load plate).
+  // Failed proxied loads drop via the carousel onError path.
+  return out.map(toClientDisplayCoverUri);
 }

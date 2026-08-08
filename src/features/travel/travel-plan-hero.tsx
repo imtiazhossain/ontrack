@@ -23,6 +23,7 @@ import {
   TRAVEL_HEADER_SKY_CONTENT_BAND,
   TRAVEL_HEADER_SKY_FADE_TAIL,
 } from '@/features/travel/travel-header-sky-height';
+import { matchCuratedAtmosphereForPlace } from '@/features/travel/travel-home-atmosphere-catalog';
 import {
     atmosphereHeaderInkColors,
     resolveAtmosphereHeaderInk,
@@ -166,10 +167,14 @@ export function TravelPlanHero({
     string | undefined
   >();
   // Same luminance ink as Travel Home — white over night/aurora, black over bright day.
+  // Curated midtones (e.g. Guatemala header-band sample) pin dark ink when set.
+  const curatedTone = matchCuratedAtmosphereForPlace(skyDestination)[0]
+    ?.headerTone;
   const { ink: skyInk, muted: skyInkMuted } = atmosphereHeaderInkColors(
     resolveAtmosphereHeaderInk({
       themeDark,
       averageColor: plateAverageColor ?? skyChrome,
+      curatedTone,
     }),
   );
   // Theme paper — sky horizon dissolves into this just below the dates card.

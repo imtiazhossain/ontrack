@@ -21,7 +21,7 @@ type TravelHomeDateBlockProps = {
 };
 
 /**
- * Footer date half — flex:1 peer of View Itinerary (invisible 50/50 split).
+ * Footer date half — flex:1 peer of View Itinerary (Android CTA slightly wider).
  *
  * Calendar range on top; soft duration pill + weekday rule under — matches
  * the trip-card mock. Height is content-sized (do not stretch to CTA height

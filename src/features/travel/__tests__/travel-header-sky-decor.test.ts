@@ -175,7 +175,7 @@ describe('travel header sky décor', () => {
       'utf8',
     );
     const glass = readFileSync(
-      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+      join(process.cwd(), 'src/components/primitives/glass-plate.tsx'),
       'utf8',
     );
     // Single plate from window y=0 — aurora/day washes stay live behind the clock.
@@ -212,10 +212,13 @@ describe('travel header sky décor', () => {
     // Location ground band (trees / town / city) under celestial art.
     expect(sky).toContain('TravelSkyGround');
     expect(sky).toContain('resolveTravelSkyGroundKind');
-    // Static tier: destination still into status bar, not a bare wash.
+    // Static tier + curated places: destination still into status bar.
     expect(sky).toContain('TravelSkyStaticDestination');
+    expect(sky).toContain('preferDestinationStill');
+    expect(sky).toContain('matchCuratedAtmosphereForPlace');
     expect(hero).toContain('onPlateAverageColor');
     expect(hero).toContain('plateAverageColor');
+    expect(hero).toContain('curatedTone');
     // Sky chrome controls: airy frost + ink glyphs (not opaque clear discs).
     expect(hero).toContain('TravelHeroGlassIconButton');
     expect(hero).toContain('travelHomeTokens.colors.ink');
@@ -251,7 +254,7 @@ describe('safe-area chrome overlay', () => {
     expect(appSafe).not.toContain('{chromeOverlay ? (');
   });
 
-  it('gates itinerary sky decor until after the stack push settles', () => {
+  it('keeps entrance hero sky mounted so the plate fills during push', () => {
     const hero = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-plan-hero.tsx'),
       'utf8',
@@ -264,7 +267,8 @@ describe('safe-area chrome overlay', () => {
     expect(hero).toContain('TravelHeaderSkyDecor');
     expect(detail).toContain('TravelPlanDetailEntrance');
     expect(detail).toContain('deferAfterPageTransition');
-    expect(detail).toContain('enableSkyDecor={false}');
+    // Solid chrome-only entrance left Android day washes empty.
+    expect(detail).not.toContain('enableSkyDecor={false}');
     expect(hero).not.toContain('skyFxOpacity');
     expect(hero).not.toContain('deferUntilIdle');
   });

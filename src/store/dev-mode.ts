@@ -18,7 +18,7 @@ export type DevModeLiveSnapshot = {
 interface DevModeState {
   /** Sandbox active — live account data is snapshotted; cloud push paused. */
   enabled: boolean;
-  /** `agent` = seed/verify sandbox (auto-exit on cold start); `user` = Developer Hub toggle. */
+  /** `agent` = seed/verify sandbox; `user` = Developer Hub toggle. Both exit on cold start. */
   source: DevModeSource | null;
   liveSnapshot: DevModeLiveSnapshot | null;
   setEnabledFlag: (enabled: boolean) => void;

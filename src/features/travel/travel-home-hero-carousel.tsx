@@ -65,17 +65,25 @@ export function TravelHomeHeroCarousel({
    * Bump when cover display pipeline changes (e.g. Wikimedia proxy) so Fast
    * Refresh / warm screens refetch instead of keeping failed remote URIs.
    */
-  const destinationKey = `cover-v10:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
+  const destinationKey = `cover-v11:${plan.id}:${plan.destination}:${plan.title}:${plan.coverUri ?? ''}`;
   const fixtureSource =
     __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
   const fallbackSource = travelHomeAtmosphereSource(theme.name);
   const [uris, setUris] = useState<string[]>([]);
   const [failedUris, setFailedUris] = useState<Record<string, true>>({});
+  /** URI that has fired expo-image `onLoad` — not merely been requested. */
+  const [paintedRemoteUri, setPaintedRemoteUri] = useState<string | undefined>();
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const destinationLabel = plan.destination.trim() || plan.title;
   const visibleUris = uris.filter((uri) => !failedUris[uri]);
   const pageWidth = heroWidth;
+  // Hide fixture/fallback only after a remote plate actually paints. URI
+  // presence alone left Android on brandBlueSoft while proxies were mid-load
+  // or silent-failed without onError.
+  const hasPaintedRemote = Boolean(
+    paintedRemoteUri && visibleUris.includes(paintedRemoteUri),
+  );
 
   // Clear only when the trip/cover identity changes — keep the prior trio
   // painted while focus re-picks a rotated set from the landmark pool.
@@ -83,6 +91,7 @@ export function TravelHomeHeroCarousel({
     setIndex(0);
     setUris([]);
     setFailedUris({});
+    setPaintedRemoteUri(undefined);
     scrollRef.current?.scrollTo({ x: 0, animated: false });
   }, [destinationKey, fixtureSource]);
 
@@ -177,11 +186,11 @@ export function TravelHomeHeroCarousel({
     borderTopRightRadius: heroTopRadius,
   } as const;
 
-  const hasRemoteHeroes = visibleUris.length > 0;
-  const scrollInteractive = hasRemoteHeroes && visibleUris.length > 1;
+  const scrollInteractive = hasPaintedRemote && visibleUris.length > 1;
   // Keep ScrollView mounted with stable index-keyed page shells. Slot count
   // tracks visible URIs (min 1 placeholder) so users can't page into blanks.
   const heroPageSlots = Math.max(1, visibleUris.length);
+  const scenicUnderlay = fixtureSource ?? fallbackSource;
 
   return (
     <View
@@ -205,16 +214,27 @@ export function TravelHomeHeroCarousel({
         collapsable={false}
         pointerEvents="box-none"
         style={[StyleSheet.absoluteFill, imageRadiusStyle, { backgroundColor: heroSurface }]}>
-        {/* Scenic plate while remote heroes load / fail. */}
+        {/*
+          Scenic underlay (fixture or atmosphere) until a remote plate paints.
+          Never key visibility off URI presence alone — Android often sits on
+          brandBlueSoft while proxy covers are still loading / silent-fail.
+        */}
         <Image
-          source={fallbackSource}
+          source={scenicUnderlay}
           style={[
+            StyleSheet.absoluteFill,
             styles.fallback,
             imageRadiusStyle,
-            { width: heroWidth, height },
+            {
+              width: heroWidth,
+              height,
+              backgroundColor: heroSurface,
+              opacity: hasPaintedRemote ? 0 : 1,
+            },
           ]}
           contentFit="cover"
           contentPosition={travelHomeHeroContentPosition()}
+          transition={180}
           pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
@@ -231,12 +251,12 @@ export function TravelHomeHeroCarousel({
           style={[
             StyleSheet.absoluteFill,
             imageRadiusStyle,
-            { opacity: hasRemoteHeroes ? 1 : 0 },
+            { opacity: hasPaintedRemote ? 1 : 0 },
           ]}
-          pointerEvents={hasRemoteHeroes ? 'auto' : 'none'}
-          accessibilityElementsHidden={!hasRemoteHeroes}
+          pointerEvents={hasPaintedRemote ? 'auto' : 'none'}
+          accessibilityElementsHidden={!hasPaintedRemote}
           importantForAccessibility={
-            hasRemoteHeroes ? 'yes' : 'no-hide-descendants'
+            hasPaintedRemote ? 'yes' : 'no-hide-descendants'
           }
           accessibilityRole="adjustable"
           accessibilityLabel={`${destinationLabel} destination photos`}
@@ -277,10 +297,17 @@ export function TravelHomeHeroCarousel({
                   recyclingKey={uri ?? `hero-page-empty-${pageIndex}`}
                   accessible={false}
                   importantForAccessibility="no"
+                  onLoad={() => {
+                    if (!uri) return;
+                    setPaintedRemoteUri((previous) => previous ?? uri);
+                  }}
                   onError={() => {
                     if (!uri) return;
                     setFailedUris((previous) =>
                       previous[uri] ? previous : { ...previous, [uri]: true },
+                    );
+                    setPaintedRemoteUri((previous) =>
+                      previous === uri ? undefined : previous,
                     );
                   }}
                 />
@@ -288,29 +315,6 @@ export function TravelHomeHeroCarousel({
             );
           })}
         </Animated.ScrollView>
-        {/*
-          Dev fixture plate is opacity-toggled — never swaps ScrollView out.
-        */}
-        <Image
-          source={fixtureSource ?? fallbackSource}
-          style={[
-            StyleSheet.absoluteFill,
-            imageRadiusStyle,
-            {
-              width: heroWidth,
-              height,
-              backgroundColor: heroSurface,
-              // Hide once remotes paint — otherwise the fixture plate masks paging.
-              opacity: fixtureSource && !hasRemoteHeroes ? 1 : 0,
-            },
-          ]}
-          contentFit="cover"
-          contentPosition={travelHomeHeroContentPosition()}
-          transition={180}
-          pointerEvents="none"
-          accessible={false}
-          importantForAccessibility="no"
-        />
       </View>
 
       {/*

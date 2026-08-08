@@ -189,20 +189,15 @@ export function ensureDevModeSandboxSync(): void {
 }
 
 /**
- * After persist rehydrate: keep user sandboxes paused; agent leftovers exit so
- * Dev Mode stays off by default when agents forget to turn it off.
- * Re-apply travel-home when the flag survived but fixtures were wiped (cloud
- * pull / Fast Refresh) so the toggle and seed data stay in sync.
+ * After persist rehydrate (cold start): always exit so Dev Mode stays off by
+ * default for testers and live devices. In-session hub toggles and agent seeds
+ * still work; Fast Refresh skips this path via `sessionHydrated`.
+ * Use `reaffirmUserDevModeSandbox` to heal an active in-session user sandbox.
  */
 export async function settleDevModeAfterRehydrate(): Promise<void> {
   const state = useDevMode.getState();
   if (!state.enabled) return;
-  // Missing source = pre-migration leftover (almost always agent seed) → exit.
-  if (state.source !== 'user') {
-    await exitDevMode();
-    return;
-  }
-  reaffirmUserDevModeSandbox();
+  await exitDevMode();
 }
 
 /**

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -928,21 +929,48 @@ def run_once(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
     return data
 
 
+def normalize_route_path(path: str) -> str:
+    """Canonicalize pathname for equality checks (query/groups/trailing slash)."""
+    # Drop query/hash, Expo group segments like /(tabs), trailing slash.
+    p = path.split("?", 1)[0].split("#", 1)[0].strip()
+    p = re.sub(r"/\([^/]+\)", "", p)
+    p = p.rstrip("/") or "/"
+    if not p.startswith("/"):
+        p = f"/{p}"
+    return p
+
+
 def route_matches(current: str | None, target: str) -> bool:
+    """True only when paths are the same surface (not a parent/child prefix).
+
+    `/travel` must NOT match `/travel/trip-…` — that false positive skipped land
+    (or skipped Android cold retry) and forced agents into redo loops.
+    """
     if not current:
         return False
-    want = target.split("?")[0]
-    if current == want:
-        return True
-    if current.endswith(want):
-        return True
-    if want != "/" and want in current:
-        return True
-    return False
+    return normalize_route_path(current) == normalize_route_path(target)
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _android_cold_root(current: str | None, route_want: str | None) -> bool:
+    """True when Android is on `/` (or unknown) but verify wants another surface."""
+    if agent_ui_platform() != "android":
+        return False
+    if not route_want or route_want in {"/", ""}:
+        return False
+    return not current or current == "/"
 
 
 def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
-    """Skip flow/open when already on --route; then assert (+ optional color/shot)."""
+    """Skip flow/open when already on --route; then assert (+ optional color/shot).
+
+    Android cold boot / reconnect always wakes on `/`. In that case we never
+    skip land: auto-goto the wanted route when --flow/--open was omitted, wait
+    for the route, and retry land once if the first pass races JS mount.
+    """
     args = list(argv)
     route_want: str | None = None
     land_ops: list[dict[str, Any]] = []
@@ -969,21 +997,36 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
 
     already = False
     current: str | None = None
+    cold_root = False
+    force_land = _env_flag("AGENT_UI_ANDROID_FORCE_LAND")
     if route_want:
         probe = send({"op": "route"}, wait_secs=min(2.5, wait_secs), allow_fail=True)
         current = probe.get("route") if isinstance(probe.get("route"), str) else None
+        cold_root = _android_cold_root(current, route_want)
+        # Named flows seed fixtures — never skip them just because the route
+        # already matches (stale /travel without travel-home seed → assert miss).
+        has_flow_land = any(op.get("op") == "flow" for op in land_ops)
         if land_ops:
-            already = route_matches(current, route_want)
-        # Android reconnect often wakes on `/` — refuse silent assert-only verify.
-        if (
-            agent_ui_platform() == "android"
-            and not land_ops
-            and route_want not in {"/", ""}
-            and (not current or current == "/")
-        ):
-            raise SystemExit(
-                "verify: Android is on / — pass --flow or --open/--goto to land "
-                f"(wanted {route_want})"
+            already = (
+                route_matches(current, route_want)
+                and not cold_root
+                and not force_land
+                and not has_flow_land
+            )
+        # Android reconnect wakes on `/` — auto-land instead of failing assert-only.
+        if cold_root and not land_ops:
+            print(
+                f"verify: Android on {current or '?'} after cold boot — "
+                f"auto-landing via goto {route_want}",
+                file=sys.stderr,
+            )
+            land_ops.append({"op": "goto", "to": route_want})
+            already = False
+        elif force_land and land_ops:
+            already = False
+            print(
+                "verify: Android force-land (post reconnect) — not skipping flow/open",
+                file=sys.stderr,
             )
 
     chain: list[str] = []
@@ -993,6 +1036,9 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
                 chain.extend(["--flow", str(lop["to"])])
             else:
                 chain.extend(["--open", str(lop["to"])])
+        # Cold Android: wait for navigation before asserts race the mount.
+        if route_want and (cold_root or force_land or agent_ui_platform() == "android"):
+            chain.extend(["--wait-route", route_want])
     elif already:
         # Cheap settle — no flow/seed.
         pass
@@ -1001,8 +1047,39 @@ def run_verify(argv: list[str], *, wait_secs: float) -> dict[str, Any]:
         raise SystemExit("verify requires --route and/or asserts")
 
     data = run_once(chain, wait_secs=wait_secs)
+
+    # Cold boot land often races JS mount (batch allow_fail → assert on route=/).
+    # Retry land+assert once with the Android cold-flow budget.
+    if (
+        land_ops
+        and not already
+        and route_want
+        and agent_ui_platform() == "android"
+        and not route_matches(
+            data.get("route") if isinstance(data.get("route"), str) else None,
+            route_want,
+        )
+    ):
+        retry_wait = max(
+            wait_secs,
+            float(os.environ.get("AGENT_UI_ANDROID_COLD_FLOW_WAIT_SECS", "20")),
+        )
+        print(
+            f"verify: Android land missed (route={data.get('route') or '?'}) — "
+            f"retrying land (wait={retry_wait}s)…",
+            file=sys.stderr,
+        )
+        time.sleep(1.5)
+        data = run_once(chain, wait_secs=retry_wait)
+
     if already:
         data = {**data, "skippedLand": True, "detail": data.get("detail") or "already on route"}
+    elif cold_root or force_land:
+        data = {
+            **data,
+            "coldLand": True,
+            "detail": data.get("detail") or "landed after Android cold boot",
+        }
     return data
 
 
