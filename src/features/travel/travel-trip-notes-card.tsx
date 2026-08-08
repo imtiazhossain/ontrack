@@ -7,8 +7,11 @@ import {
   DisclosureChevron,
   Symbol,
 } from '@/components/primitives';
-import { fontFamilies, radii } from '@/design-system';
-import { TRAVEL_TITLE_ICON_GAP } from '@/features/travel/travel-chrome';
+import { radii } from '@/design-system';
+import {
+  TRAVEL_TITLE_ICON_GAP,
+  travelEditorialTextStyle,
+} from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -229,11 +232,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
   },
   body: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
     letterSpacing: -0.15,
   },

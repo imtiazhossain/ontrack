@@ -169,7 +169,7 @@ for devices in data.get("devices", {}).values():
         try:
             proc = subprocess.run(
                 ["xcrun", "simctl", "get_app_container", udid, bundle, "app"],
-                capture_output=True, text=True, timeout=8,
+                capture_output=True, text=True, timeout=10,
             )
         except Exception:
             continue

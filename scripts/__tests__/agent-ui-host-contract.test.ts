@@ -165,6 +165,10 @@ describe('agent-ui host scripts contract', () => {
     expect(host).toContain('agent_ui_pool_ensure_app_installed');
     expect(host).toContain('Fall through to clone/launch');
     expect(host).toContain('agent_ui_soft_reconnect_dev_client');
+    expect(host).toContain('agent_ui_device_host_responds');
+    expect(host).toContain('agent_ui_restart_device');
+    expect(host).toContain('AGENT_UI_DEVICE_RESPOND_SECS');
+    expect(host).toContain('assuming down, restarting');
     expect(host).toContain('agent_ui_write_slot_pin');
     expect(host).toContain('agent_ui_pin_android_serial');
     expect(host).toContain('never talk to Galaxy_S26');

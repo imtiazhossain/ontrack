@@ -11,6 +11,7 @@ import type { AppIconName, TypeVariant } from '@/design-system';
 import { radii } from '@/design-system';
 import {
   TRAVEL_TITLE_ICON_GAP,
+  travelEditorialTextStyle,
   travelOverlineStyle,
 } from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
@@ -294,6 +295,7 @@ const styles = StyleSheet.create({
   },
   toggleWrapper: { flex: 1, minWidth: 0 },
   title: {
+    ...travelEditorialTextStyle,
     flex: 1,
     flexShrink: 1,
     minWidth: 0,

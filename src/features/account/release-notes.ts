@@ -19,6 +19,13 @@ export type VersionNotesEntry = {
 /** User-facing; plain language — what’s new for people using the app. */
 export const RELEASE_NOTES: VersionNotesEntry[] = [
   {
+    version: '1.0.9',
+    date: '2026-08-08',
+    notes: [
+      'Polish itinerary sky-to-dates and editorial type; restart quiet agent devices; reaffirm Dev Mode travel-home seeds.',
+    ],
+  },
+  {
     version: '1.0.8',
     date: '2026-08-08',
     notes: [
@@ -81,6 +88,14 @@ export const RELEASE_NOTES: VersionNotesEntry[] = [
 
 /** Technical; modules, migrations, OTA/runtime, agent-ui, known constraints. */
 export const CHANGELOG: VersionNotesEntry[] = [
+  {
+    version: '1.0.9',
+    date: '2026-08-08',
+    notes: [
+      'Polish itinerary sky-to-dates and editorial type; restart quiet agent devices; reaffirm Dev Mode travel-home seeds.',
+      'Touched: features/account, features/travel.',
+    ],
+  },
   {
     version: '1.0.8',
     date: '2026-08-08',

@@ -21,6 +21,7 @@ import { loadAllSharedVehicles } from '@/services/vehicles/collaboration';
 import { useAccountFlags } from '@/store/account-flags';
 import { useAddons } from '@/store/addons';
 import { useAgents } from '@/store/agents';
+import { isDevModeEnabled } from '@/store/dev-mode';
 import { useFriends } from '@/store/friends';
 import { useHealth } from '@/store/health';
 import { useNutrition } from '@/store/nutrition';
@@ -292,8 +293,13 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Sync failed.';
 }
 
+/**
+ * Sandbox gate for cloud sync. Honors the in-memory flag and the persisted
+ * Dev Mode store so Fast Refresh cannot resume pull/push while the toggle
+ * still shows On (module vars reset; Zustand often survives).
+ */
 export function isCloudSyncPushPaused() {
-  return cloudSyncPushPaused;
+  return cloudSyncPushPaused || isDevModeEnabled();
 }
 
 /** Pause/resume automatic cloud pushes without tearing down the session. */
@@ -377,7 +383,7 @@ function enqueueDomainPush(userId: string, domain: (typeof domains)[number]) {
  * Use after destructive local edits so a reload cannot restore stale cloud rows.
  */
 export function flushCloudDomain(domainName: SyncDomainName): Promise<void> {
-  if (!activeUserId || cloudSyncPushPaused) return Promise.resolve();
+  if (!activeUserId || isCloudSyncPushPaused()) return Promise.resolve();
   const domain = domains.find((item) => item.name === domainName);
   if (!domain) return Promise.resolve();
   return enqueueDomainPush(activeUserId, domain);
@@ -392,14 +398,14 @@ function startSubscriptions(userId: string, email?: string) {
   const timers = new Map<SyncDomainName, ReturnType<typeof setTimeout>>();
 
   const armPush = (domain: (typeof domains)[number]) => {
-    if (cloudSyncPushPaused) return;
+    if (isCloudSyncPushPaused()) return;
     const current = timers.get(domain.name);
     if (current) clearTimeout(current);
     timers.set(
       domain.name,
       setTimeout(() => {
         timers.delete(domain.name);
-        if (cloudSyncPushPaused) return;
+        if (isCloudSyncPushPaused()) return;
         const lastInteraction = useUI.getState().lastPageInteractionAt;
         if (
           lastInteraction > 0 &&
@@ -566,6 +572,30 @@ export async function prepareAccountSync(
   activeEmail = email;
   useCloudSyncStatus.setState({ state: 'syncing', email, message: undefined });
 
+  // Dev Mode / agent sandbox: keep local fixtures. Live account was snapshotted
+  // (and backed up) on enter — never pull cloud over the sandbox or upload it.
+  if (isCloudSyncPushPaused()) {
+    if (!isCurrent()) {
+      cancelAccountSync();
+      throw new Error('Sign-in was cancelled.');
+    }
+    // Heal toggle-on vs empty fixtures after Fast Refresh / a prior wipe.
+    // Lazy require avoids a sync↔controller cycle at module load.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { reaffirmUserDevModeSandbox } =
+      require('@/features/account/dev-mode-controller') as typeof import('@/features/account/dev-mode-controller');
+    reaffirmUserDevModeSandbox();
+    await loadEntitlements(userId);
+    startSubscriptions(userId, email);
+    useCloudSyncStatus.setState({
+      state: 'synced',
+      email,
+      lastSyncedAt: new Date().toISOString(),
+      message: undefined,
+    });
+    return 'ready';
+  }
+
   const { data, error } = await client
     .from('app_state')
     .select('domain,payload')
@@ -693,7 +723,7 @@ export function cancelAccountSync() {
 
 export async function flushCloudSync() {
   if (!activeUserId) return;
-  if (cloudSyncPushPaused) return;
+  if (isCloudSyncPushPaused()) return;
   stopSubscriptions?.();
   stopSubscriptions = undefined;
   useCloudSyncStatus.setState({ state: 'syncing', email: activeEmail, message: undefined });
@@ -825,7 +855,7 @@ export async function refreshAppData() {
           }
         }
 
-        if (remote.size > 0) {
+        if (remote.size > 0 && !isCloudSyncPushPaused()) {
           const retained = await applyRemote(remote, stillActive);
           if (!stillActive()) return;
           if (retained.length > 0) {
@@ -834,6 +864,9 @@ export async function refreshAppData() {
           if (stillActive()) {
             startSubscriptions(userId, email);
           }
+        } else if (stillActive() && isCloudSyncPushPaused()) {
+          // Sandbox: keep local fixtures; still refresh collaboration below.
+          startSubscriptions(userId, email);
         }
 
         if (!stillActive()) return;

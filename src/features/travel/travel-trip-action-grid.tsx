@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/primitives';
 import { spacing } from '@/design-system';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { promotesFlightSearch } from '@/features/travel/travel-mode';
 import type { TravelPlanMode } from '@/features/travel/types';
 import { AgentUiIds } from '@/utils/agent-ui';
@@ -199,6 +200,7 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   groupTitle: {
+    ...travelEditorialTextStyle,
     alignSelf: 'stretch',
     width: '100%',
     textAlign: 'center',

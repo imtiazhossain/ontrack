@@ -26,7 +26,7 @@
 # Hard cap for simctl RPCs. A wedged CoreSimulator otherwise hangs forever and
 # freezes Simulator.app (common when overlapping agents call get_app_container /
 # terminate / launch concurrently).
-: "${ONTRACK_SIMCTL_TIMEOUT_SECS:=8}"
+: "${ONTRACK_SIMCTL_TIMEOUT_SECS:=10}"
 
 # Run `xcrun simctl …` with a hard alarm so agents fail fast instead of wedging.
 # Usage: ios_simctl_timed [secs] <simctl-args…>

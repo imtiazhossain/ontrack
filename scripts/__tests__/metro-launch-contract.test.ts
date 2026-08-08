@@ -249,7 +249,7 @@ describe('metro launch command contract', () => {
     // freezes Simulator.app when overlapping agents pile up.
     const sim = read('scripts/lib/ios-simulator.sh');
     expect(sim).toContain('ios_simctl_timed');
-    expect(sim).toContain('ONTRACK_SIMCTL_TIMEOUT_SECS');
+    expect(sim).toContain('ONTRACK_SIMCTL_TIMEOUT_SECS:=10');
     expect(sim).toContain('alarm shift @ARGV');
 
     const ensure = read('scripts/ensure-packager.sh');
@@ -318,8 +318,12 @@ describe('metro launch command contract', () => {
     expect(host).toContain('agent_ui_bridge_recently_ok');
     expect(host).toContain('soft reconnecting dev client');
     expect(host).toContain('agent_ui_soft_reconnect_dev_client');
+    expect(host).toContain('agent_ui_restart_device');
+    expect(host).toContain('AGENT_UI_DEVICE_RESPOND_SECS:=10');
     expect(host).toContain('android_emu_ensure_adb_reverse');
     expect(host).toContain('reverse_was_missing');
+    const sim = read('scripts/lib/ios-simulator.sh');
+    expect(sim).toContain('ONTRACK_SIMCTL_TIMEOUT_SECS:=10');
     const packager = read('scripts/ensure-packager.sh');
     expect(packager).toContain('--android');
     expect(packager).toContain('ensure_preferred_android_emulator');

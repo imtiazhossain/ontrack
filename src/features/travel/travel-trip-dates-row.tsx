@@ -1,9 +1,12 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Symbol } from '@/components/primitives';
-import { fontFamilies, radii } from '@/design-system';
+import { radii } from '@/design-system';
 import { tripDatesBadge } from '@/features/travel/date-range';
-import { TRAVEL_TITLE_ICON_GAP } from '@/features/travel/travel-chrome';
+import {
+  TRAVEL_TITLE_ICON_GAP,
+  travelEditorialTextStyle,
+} from '@/features/travel/travel-chrome';
 import { TravelHomeGlass } from '@/features/travel/travel-home-glass';
 import { itinerarySheetChrome } from '@/features/travel/travel-itinerary-sheet-chrome';
 import { travelPillBg } from '@/features/travel/travel-surface';
@@ -255,15 +258,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
   },
   dates: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
     letterSpacing: -0.2,
   },
   datesCompact: {
+    ...travelEditorialTextStyle,
     fontWeight: '500',
     letterSpacing: -0.2,
   },
@@ -281,10 +285,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   badgeLabel: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '500',
   },
   badgeLabelCompact: {
+    ...travelEditorialTextStyle,
     fontWeight: '500',
   },
   pressed: { opacity: 0.72 },

@@ -35,7 +35,7 @@
 #   ONTRACK_IOS_SIMULATOR=onTrack iPhone 17 Pro  # default simulator device name
 #   ONTRACK_IOS_SIMULATOR_UDID=<udid>            # optional exact device
 #   ONTRACK_IOS_SIMULATOR_WINDOW=1               # open Simulator.app (default: headless)
-#   ONTRACK_SIMCTL_TIMEOUT_SECS=8               # hard cap for simctl RPCs (anti-wedge)
+#   ONTRACK_SIMCTL_TIMEOUT_SECS=10              # hard cap for simctl RPCs (anti-wedge)
 #   ONTRACK_ANDROID_AVD=Galaxy_S26
 #   ONTRACK_ANDROID_EMULATOR_WINDOW=1
 

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
-import { fontFamilies } from '@/design-system';
+import { travelEditorialTextStyle } from '@/features/travel/travel-chrome';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   title: {
-    fontFamily: fontFamilies.serif,
+    ...travelEditorialTextStyle,
     fontWeight: '400',
     width: '100%',
   },

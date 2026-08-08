@@ -204,11 +204,11 @@ export function TravelSkyStaticDestination({
         style={styles.topVeil}
       />
 
-      {/* Horizon dissolve — ground foot eases into theme paper. */}
+      {/* Horizon dissolve — ground foot eases into theme paper at the date card. */}
       <LinearGradient
         pointerEvents="none"
         colors={['transparent', 'transparent', fadeTo]}
-        locations={[0.52, 0.78, 1]}
+        locations={[0.82, 0.94, 1]}
         style={styles.bottomFade}
       />
     </View>
@@ -231,6 +231,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '42%',
+    height: '16%',
   },
 });

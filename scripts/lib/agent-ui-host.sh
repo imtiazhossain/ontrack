@@ -23,6 +23,11 @@
 : "${AGENT_UI_ANDROID_COLD_FLOW_WAIT_SECS:=20}"
 : "${AGENT_UI_WAIT_TIMEOUT_MS:=2000}"
 : "${AGENT_UI_ANDROID_WAIT_TIMEOUT_MS:=4000}"
+# If the device/bridge stays quiet this long, assume it went down and restart once.
+: "${AGENT_UI_DEVICE_RESPOND_SECS:=10}"
+# After an intentional device restart, allow more settle time for boot + JS mount.
+: "${AGENT_UI_DEVICE_POST_RESTART_WAIT_SECS:=30}"
+: "${AGENT_UI_ANDROID_POST_RESTART_WAIT_SECS:=45}"
 # Device pool lease — up to AGENT_UI_POOL_MAX concurrent dedicated agent devices.
 : "${AGENT_UI_LOCK_WAIT_SECS:=300}"
 : "${AGENT_UI_POOL_MAX:=5}"
@@ -152,18 +157,92 @@ agent_ui_pin_android_serial() {
   return 0
 }
 
-agent_ui_simulator_booted() {
+# True when the host device answers a cheap RPC within AGENT_UI_DEVICE_RESPOND_SECS.
+# Timed so a wedged CoreSimulator / dead qemu cannot hang the agent forever.
+agent_ui_device_host_responds() {
+  local secs="${AGENT_UI_DEVICE_RESPOND_SECS:-10}"
   if agent_ui_is_android; then
+    agent_ui_android_lib
     agent_ui_pin_android_serial || return 1
-    android_emu_adb get-state >/dev/null 2>&1
+    local adb_bin
+    adb_bin="$(android_emu_sdk_bin adb)"
+    [[ -n "$adb_bin" ]] || return 1
+    local -a adb_cmd=("$adb_bin")
+    if [[ -n "${ONTRACK_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}" ]]; then
+      adb_cmd+=(-s "${ONTRACK_ANDROID_SERIAL:-${ANDROID_SERIAL}}")
+    fi
+    adb_cmd+=(get-state)
+    perl -e 'alarm shift @ARGV; exec @ARGV' "$secs" "${adb_cmd[@]}" >/dev/null 2>&1
     return $?
   fi
   agent_ui_ios_lib
-  if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
-    xcrun simctl list devices booted 2>/dev/null | grep -q "${ONTRACK_IOS_SIMULATOR_UDID}"
+  ios_simctl_timed "$secs" list devices booted >/dev/null 2>&1
+}
+
+# Shut down + reboot the preferred sim/emu for this platform (once per call site).
+# Escape: AGENT_UI_SKIP_DEVICE_RESTART=1.
+agent_ui_restart_device() {
+  if [[ "${AGENT_UI_SKIP_DEVICE_RESTART:-0}" == "1" ]]; then
+    return 1
+  fi
+  if agent_ui_is_android; then
+    agent_ui_android_lib
+    local name serial
+    name="$(android_emu_preferred_name)"
+    serial="$(android_emu_preferred_serial || true)"
+    echo "agent-ui: ${name} not responding — restarting emulator…" >&2
+    if [[ -n "$serial" ]]; then
+      android_emu_adb emu kill >/dev/null 2>&1 || true
+      local kill_deadline=$((SECONDS + 20))
+      while (( SECONDS < kill_deadline )); do
+        serial="$(android_emu_preferred_serial || true)"
+        [[ -z "$serial" ]] && break
+        sleep 0.5
+      done
+    fi
+    unset ONTRACK_ANDROID_SERIAL ANDROID_SERIAL
+    ensure_preferred_android_emulator || return 1
+    agent_ui_pin_android_serial || true
+    return 0
+  fi
+  agent_ui_ios_lib
+  local name udid root
+  name="$(ios_sim_preferred_name)"
+  udid="${ONTRACK_IOS_SIMULATOR_UDID:-}"
+  if [[ -z "$udid" || "$udid" == "booted" ]]; then
+    udid="$(ios_sim_resolve_udid 2>/dev/null || true)"
+  fi
+  echo "agent-ui: ${name} not responding — restarting simulator…" >&2
+  if [[ -n "$udid" ]]; then
+    xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
+  fi
+  # Container path can change after reboot — drop stale caches.
+  root="$(agent_ui_repo_root)"
+  rm -f "${root}/.cursor/agent-ui-data-dir" 2>/dev/null || true
+  if [[ -n "$udid" ]]; then
+    rm -f "${root}/.cursor/agent-ui-data-dir-${udid}" 2>/dev/null || true
+  fi
+  unset AGENT_UI_DATA_DIR
+  ensure_preferred_ios_simulator || return 1
+  return 0
+}
+
+agent_ui_simulator_booted() {
+  if agent_ui_is_android; then
+    agent_ui_pin_android_serial || return 1
+    agent_ui_device_host_responds
     return $?
   fi
-  xcrun simctl list devices booted 2>/dev/null | grep -q Booted
+  agent_ui_ios_lib
+  local secs="${AGENT_UI_DEVICE_RESPOND_SECS:-10}"
+  local listed
+  listed="$(ios_simctl_timed "$secs" list devices booted 2>/dev/null || true)"
+  [[ -n "$listed" ]] || return 1
+  if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
+    printf '%s\n' "$listed" | grep -q "${ONTRACK_IOS_SIMULATOR_UDID}"
+    return $?
+  fi
+  printf '%s\n' "$listed" | grep -q Booted
 }
 
 agent_ui_app_installed() {
@@ -418,6 +497,8 @@ agent_ui_ensure_app_up() {
 
   local device_label="simulator"
   local reverse_was_missing=0
+  local respond_secs="${AGENT_UI_DEVICE_RESPOND_SECS:-10}"
+  local device_restarted=0
   if agent_ui_is_android; then
     device_label="emulator"
     # Cheap fix first: missing adb reverse breaks 127.0.0.1 Metro + daemon.
@@ -437,9 +518,17 @@ agent_ui_ensure_app_up() {
   # Android: prefer soft wait over reconnect — heal drops the app onto `/`.
   if agent_ui_is_android && agent_ui_app_process_running && agent_ui_bridge_recently_ok; then
     echo "agent-ui: Android bridge quiet but recently ok — soft wait…" >&2
-    if agent_ui_wait_for_bridge 6; then
+    if agent_ui_wait_for_bridge "$respond_secs"; then
       agent_ui_finish_app_up
       return $?
+    fi
+  fi
+
+  # Host RPC dead within the respond window → assume device went down.
+  if ! agent_ui_device_host_responds; then
+    echo "agent-ui: ${device_label} host not responding within ${respond_secs}s — restarting…" >&2
+    if agent_ui_restart_device; then
+      device_restarted=1
     fi
   fi
 
@@ -453,8 +542,16 @@ agent_ui_ensure_app_up() {
     # missing on a fresh pool slot). Fall through to clone/launch instead of
     # mis-reporting "not booted".
     if ! agent_ui_simulator_booted; then
-      echo "error: ${device_label} is not booted (and heal failed)" >&2
-      return 1
+      if (( device_restarted == 0 )); then
+        echo "agent-ui: ${device_label} still down — restarting once…" >&2
+        if agent_ui_restart_device; then
+          device_restarted=1
+        fi
+      fi
+      if ! agent_ui_simulator_booted; then
+        echo "error: ${device_label} is not booted (and restart/heal failed)" >&2
+        return 1
+      fi
     fi
   fi
 
@@ -477,45 +574,48 @@ agent_ui_ensure_app_up() {
       agent_ui_write_slot_pin
     fi
   else
-    echo "agent-ui: app process up but bridge quiet — waiting…" >&2
-    agent_ui_write_slot_pin
+    # Soft reconnect (Metro URL) before assuming the device is dead.
+    echo "agent-ui: ${device_label} bridge quiet — soft reconnecting dev client…" >&2
+    agent_ui_soft_reconnect_dev_client
   fi
 
-  # Cold launch / reconnect needs a few seconds before the JS bridge mounts.
-  # Fresh pool clones (first install + Metro bundle) need more headroom.
-  local wait_secs=14
-  if agent_ui_is_android; then
-    wait_secs=22
-  elif [[ -n "${AGENT_UI_SLOT:-}" || "${AGENT_UI_POOL_MODE:-0}" == "1" ]]; then
-    wait_secs=24
+  if [[ "$reverse_was_missing" == "1" ]]; then
+    echo "agent-ui: adb reverse was missing — healing packager once…" >&2
+    if agent_ui_heal_packager && agent_ui_bridge_answers; then
+      agent_ui_finish_app_up
+      return $?
+    fi
   fi
-  if agent_ui_wait_for_bridge "$wait_secs"; then
+
+  # Device/app must answer within AGENT_UI_DEVICE_RESPOND_SECS or we restart.
+  if agent_ui_wait_for_bridge "$respond_secs"; then
     agent_ui_finish_app_up
     return $?
   fi
 
-  # Soft reconnect (Metro URL) before force-stop heal — preserves route when possible.
-  echo "agent-ui: ${device_label} bridge quiet — soft reconnecting dev client…" >&2
-  agent_ui_soft_reconnect_dev_client
-  local soft_wait=18
-  if agent_ui_is_android; then
-    soft_wait=24
-    if [[ "$reverse_was_missing" == "1" ]]; then
-      echo "agent-ui: adb reverse was missing — healing packager once…" >&2
-      if agent_ui_heal_packager && agent_ui_bridge_answers; then
+  if (( device_restarted == 0 )); then
+    echo "agent-ui: ${device_label} not responding within ${respond_secs}s — assuming down, restarting…" >&2
+    if agent_ui_restart_device; then
+      device_restarted=1
+      if ! agent_ui_app_installed; then
+        agent_ui_pool_ensure_app_installed || true
+      fi
+      if ! agent_ui_app_installed; then
+        echo "error: ${BUNDLE_ID} is not installed after ${device_label} restart" >&2
+        return 1
+      fi
+      echo "agent-ui: relaunching ${BUNDLE_ID} after ${device_label} restart…" >&2
+      agent_ui_launch_app
+      agent_ui_soft_reconnect_dev_client
+      local post_wait="${AGENT_UI_DEVICE_POST_RESTART_WAIT_SECS:-30}"
+      if agent_ui_is_android; then
+        post_wait="${AGENT_UI_ANDROID_POST_RESTART_WAIT_SECS:-45}"
+      fi
+      if agent_ui_wait_for_bridge "$post_wait"; then
         agent_ui_finish_app_up
         return $?
       fi
     fi
-  fi
-  if agent_ui_wait_for_bridge "$soft_wait"; then
-    agent_ui_finish_app_up
-    return $?
-  fi
-
-  if agent_ui_is_android && agent_ui_app_process_running; then
-    echo "error: ${BUNDLE_ID} bridge not answering on ${device_label} (try android:ensure:start)" >&2
-    return 1
   fi
 
   echo "agent-ui: app bridge not answering — healing packager…" >&2

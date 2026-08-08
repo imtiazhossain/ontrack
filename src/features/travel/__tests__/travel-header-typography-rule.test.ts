@@ -27,6 +27,11 @@ describe('travel section header typography', () => {
     expect(source).not.toMatch(/compactCardTitle:\s*\{[^}]*fontSize/s);
   });
 
+  it('uses the travel editorial face for section titles (match plan hero)', () => {
+    expect(source).toContain('travelEditorialTextStyle');
+    expect(source).toMatch(/title:\s*\{[^}]*\.\.\.travelEditorialTextStyle/s);
+  });
+
   it('uses the shared mock icon→title gap for parent and nested headers', () => {
     expect(source).toContain('TRAVEL_TITLE_ICON_GAP');
     expect(source).toContain(

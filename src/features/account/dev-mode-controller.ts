@@ -191,6 +191,8 @@ export function ensureDevModeSandboxSync(): void {
 /**
  * After persist rehydrate: keep user sandboxes paused; agent leftovers exit so
  * Dev Mode stays off by default when agents forget to turn it off.
+ * Re-apply travel-home when the flag survived but fixtures were wiped (cloud
+ * pull / Fast Refresh) so the toggle and seed data stay in sync.
  */
 export async function settleDevModeAfterRehydrate(): Promise<void> {
   const state = useDevMode.getState();
@@ -200,7 +202,39 @@ export async function settleDevModeAfterRehydrate(): Promise<void> {
     await exitDevMode();
     return;
   }
+  reaffirmUserDevModeSandbox();
+}
+
+/**
+ * Keep a user sandbox paused and restore the auto travel-home seed when missing.
+ * Safe to call from account sync after Fast Refresh (in-memory pause flag may reset).
+ */
+export function reaffirmUserDevModeSandbox(): void {
+  const state = useDevMode.getState();
+  if (!state.enabled || state.source !== 'user') return;
   setCloudSyncPushPaused(true);
+  ensureUserDevModeTravelHomeSeed();
+}
+
+/** Match Developer Hub toggle-on: travel demos load automatically. */
+function ensureUserDevModeTravelHomeSeed(): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const {
+    TRAVEL_HOME_ANTIGUA_TRIP_ID,
+    TRAVEL_HOME_ICELAND_TRIP_ID,
+    TRAVEL_HOME_THIRD_TRIP_ID,
+  } =
+    require('@/features/travel/fixtures/travel-home') as typeof import('@/features/travel/fixtures/travel-home');
+  const plans = useTravel.getState().plans;
+  const hasTravelHome =
+    plans.some((plan) => plan.id === TRAVEL_HOME_ICELAND_TRIP_ID) &&
+    plans.some((plan) => plan.id === TRAVEL_HOME_ANTIGUA_TRIP_ID) &&
+    plans.some((plan) => plan.id === TRAVEL_HOME_THIRD_TRIP_ID);
+  if (hasTravelHome) return;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { seedAgentUiFixture } =
+    require('@/utils/agent-ui/fixtures') as typeof import('@/utils/agent-ui/fixtures');
+  seedAgentUiFixture('travel-home');
 }
 
 /** @deprecated Use settleDevModeAfterRehydrate — kept for call-site clarity. */
