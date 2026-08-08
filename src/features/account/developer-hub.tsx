@@ -38,6 +38,7 @@ import { agentUiNavigate, resolveAgentUiDestination } from '@/utils/agent-ui/rou
 
 import { setDevModeEnabled } from './dev-mode-controller';
 import { DeveloperInsightsPanel } from './developer-insights-panel';
+import { DeveloperReleaseNotesPanel } from './developer-release-notes-panel';
 import { formatBytes, listLocalStorageSizes, type StorageSizeRow } from './developer-storage';
 
 function useOverlayEnabled() {
@@ -137,6 +138,8 @@ export function DeveloperHub() {
           />
         }
       />
+
+      <DeveloperReleaseNotesPanel />
 
       <CollapsibleSection
         title="Navigate"

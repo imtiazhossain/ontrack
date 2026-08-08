@@ -1,6 +1,6 @@
 import { apiCorsHeaders, apiOptionsResponse } from '@/services/http/cors';
 import {
-  DESTINATION_COVER_MAX,
+  DESTINATION_COVER_POOL_MAX,
   DESTINATION_COVER_UA,
   lookupDestinationCoverUrl,
   lookupDestinationCoverUrls,
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   const rawLimit = Number(url.searchParams.get('limit') ?? '1');
   const limit = Number.isFinite(rawLimit)
-    ? Math.max(1, Math.min(DESTINATION_COVER_MAX, Math.floor(rawLimit)))
+    ? Math.max(1, Math.min(DESTINATION_COVER_POOL_MAX, Math.floor(rawLimit)))
     : 1;
 
   if (limit === 1) {

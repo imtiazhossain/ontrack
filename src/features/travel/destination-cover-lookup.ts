@@ -8,7 +8,20 @@ import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 export const DESTINATION_COVER_UA =
   'onTrack/1.0 (travel destination covers; https://ontrack.app)';
 
+/** How many heroes the trip-card carousel shows at once. */
 export const DESTINATION_COVER_MAX = 3;
+/** Larger landmark pool so each open can rotate a different trio. */
+export const DESTINATION_COVER_POOL_MAX = 12;
+
+/**
+ * True when the query already seeks an iconic travel draw (landmark, nature
+ * wonder, famous site) — skip appending another draw suffix.
+ */
+export function hasDestinationLandmarkIntent(query: string): boolean {
+  return /\b(landmark|monument|attraction|architecture|cathedral|temple|church|castle|palace|tower|bridge|waterfall|volcano|arch|skyline|iconic|famous|ruins?|aurora|northern\s+lights|glacier|geyser|lagoon|canyon|beach|mountain|scenic|geothermal|pyramid|colosseum|fuji|machu\s+picchu|must\s+see)\b/i.test(
+    query.trim(),
+  );
+}
 
 /** Hosts the cover-image proxy is allowed to fetch (Wikimedia / Openverse). */
 const DESTINATION_COVER_IMAGE_HOST_SUFFIXES = [
@@ -60,7 +73,28 @@ function rememberUnsplashCoverColor(uri: string | undefined, color: unknown) {
   if (photoId) unsplashCoverColorByUri.set(`id:${photoId}`, nextColor);
 }
 
-/** Skip flags/maps, non-HTTPS assets, and watermarked Unsplash+ previews. */
+/**
+ * Metadata / filename signals that the photo is stock of people (tourists,
+ * portraits, crowds) rather than the destination itself.
+ */
+const DESTINATION_PEOPLE_PHOTO_RE =
+  /\b(people|persons?|tourists?|travellers?|travelers?|selfie|selfies|portrait|portraits|crowd|crowds|couple|couples|family|families|wedding|bride|groom|model|models|hiker|hikers|backpacker|backpackers|swimmer|swimmers|bather|bathers|surfer|surfers|skier|skiers|man|men|woman|women|boy|girl|child|children|kid|kids|human|humans|face|faces|smiling|pose|posing)\b/i;
+
+/** True when title/alt/URL text suggests a people-forward stock photo. */
+export function destinationPhotoSuggestsPeople(
+  ...parts: Array<string | undefined | null>
+): boolean {
+  const haystack = parts
+    .map((part) => (typeof part === 'string' ? part.trim() : ''))
+    .filter(Boolean)
+    // Filenames use _/-; treat them as word breaks for \b matching.
+    .map((part) => part.replace(/[_/-]+/g, ' '))
+    .join(' ');
+  if (!haystack) return false;
+  return DESTINATION_PEOPLE_PHOTO_RE.test(haystack);
+}
+
+/** Skip flags/maps, people stock, non-HTTPS assets, and Unsplash+ watermarks. */
 export function isUsableDestinationPhotoUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed.toLowerCase().startsWith('https://')) return false;
@@ -77,6 +111,7 @@ export function isUsableDestinationPhotoUrl(url: string): boolean {
   ) {
     return false;
   }
+  if (destinationPhotoSuggestsPeople(trimmed)) return false;
   return true;
 }
 
@@ -122,9 +157,27 @@ export function pickDestinationPhotoUrl(
   return undefined;
 }
 
+/** Pick a cover URL only when neither the URL nor metadata suggests people. */
+export function pickPeopleFreeDestinationPhotoUrl(
+  meta: Array<string | undefined | null>,
+  ...candidates: Array<string | undefined | null>
+): string | undefined {
+  if (destinationPhotoSuggestsPeople(...meta, ...candidates)) return undefined;
+  return pickDestinationPhotoUrl(...candidates);
+}
+
+/** Unsplash / Openverse: push landscape, exclude common people tags. */
+function photoSearchQuery(place: string): string {
+  const trimmed = place.trim();
+  const base = hasDestinationLandmarkIntent(trimmed)
+    ? trimmed
+    : `${trimmed} iconic`;
+  return `${base} landscape -people -person -tourist -portrait -selfie`;
+}
+
 function normalizeLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return 1;
-  return Math.max(1, Math.min(DESTINATION_COVER_MAX, Math.floor(limit)));
+  return Math.max(1, Math.min(DESTINATION_COVER_POOL_MAX, Math.floor(limit)));
 }
 
 function pushUniqueUrl(out: string[], url: string | undefined): void {
@@ -136,6 +189,9 @@ function pushUniqueUrl(out: string[], url: string | undefined): void {
 
 type WikiSummary = {
   type?: string;
+  title?: string;
+  description?: string;
+  extract?: string;
   thumbnail?: { source?: string };
   originalimage?: { source?: string };
 };
@@ -165,10 +221,22 @@ async function fetchWikiSummaryCover(
     headers,
   )) as WikiSummary | undefined;
   if (!body || (body.type && body.type !== 'standard')) return undefined;
-  return pickDestinationPhotoUrl(
+  return pickPeopleFreeDestinationPhotoUrl(
+    [body.title, body.description, body.extract],
     body.originalimage?.source,
     body.thumbnail?.source,
   );
+}
+
+/** Prefer iconic travel draws over generic city stock. */
+function commonsLandmarkSearch(place: string): string {
+  const trimmed = place.trim();
+  // Keep the place token first — loose OR queries drift to unrelated places.
+  const base = hasDestinationLandmarkIntent(trimmed)
+    ? trimmed
+    : `${trimmed} iconic`;
+  // CirrusSearch: prefer landscape files, drop obvious people titles.
+  return `${base} -intitle:people -intitle:tourist -intitle:portrait -intitle:selfie`;
 }
 
 async function fetchCommonsSearchCovers(
@@ -179,9 +247,9 @@ async function fetchCommonsSearchCovers(
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
-    gsrsearch: `${place} landscape`,
+    gsrsearch: commonsLandmarkSearch(place),
     gsrnamespace: '6',
-    gsrlimit: String(Math.max(8, limit * 3)),
+    gsrlimit: String(Math.max(12, limit * 4)),
     prop: 'imageinfo',
     iiprop: 'url|mime',
     iiurlwidth: '800',
@@ -197,6 +265,7 @@ async function fetchCommonsSearchCovers(
           pages?: Record<
             string,
             {
+              title?: string;
               imageinfo?: Array<{
                 url?: string;
                 thumburl?: string;
@@ -216,7 +285,14 @@ async function fetchCommonsSearchCovers(
     if (mime && !mime.startsWith('image/jpeg') && !mime.startsWith('image/png')) {
       continue;
     }
-    pushUniqueUrl(out, pickDestinationPhotoUrl(info?.thumburl, info?.url));
+    pushUniqueUrl(
+      out,
+      pickPeopleFreeDestinationPhotoUrl(
+        [page.title, info?.url, info?.thumburl],
+        info?.thumburl,
+        info?.url,
+      ),
+    );
   }
   return out;
 }
@@ -227,19 +303,37 @@ async function fetchOpenverseCovers(
   limit: number,
 ): Promise<string[]> {
   const url = `https://api.openverse.org/v1/images/?${new URLSearchParams({
-    q: place,
-    page_size: String(Math.max(5, limit * 2)),
+    q: photoSearchQuery(place),
+    page_size: String(Math.max(8, limit * 3)),
     category: 'photograph',
     extension: 'jpg,png',
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
-    | { results?: Array<{ thumbnail?: string; url?: string }> }
+    | {
+        results?: Array<{
+          title?: string;
+          thumbnail?: string;
+          url?: string;
+          tags?: Array<string | { name?: string }>;
+        }>;
+      }
     | undefined;
   if (!body) return [];
   const out: string[] = [];
   for (const hit of body.results ?? []) {
     if (out.length >= limit) break;
-    pushUniqueUrl(out, pickDestinationPhotoUrl(hit.url, hit.thumbnail));
+    const tagText = (hit.tags ?? [])
+      .map((tag) => (typeof tag === 'string' ? tag : tag.name))
+      .filter(Boolean)
+      .join(' ');
+    pushUniqueUrl(
+      out,
+      pickPeopleFreeDestinationPhotoUrl(
+        [hit.title, tagText, hit.url, hit.thumbnail],
+        hit.url,
+        hit.thumbnail,
+      ),
+    );
   }
   return out;
 }
@@ -250,8 +344,8 @@ async function fetchUnsplashCovers(
   limit: number,
 ): Promise<string[]> {
   const url = `https://unsplash.com/napi/search/photos?${new URLSearchParams({
-    query: place,
-    per_page: String(Math.max(6, limit * 3)),
+    query: photoSearchQuery(place),
+    per_page: String(Math.max(10, limit * 4)),
   }).toString()}`;
   const body = (await fetchJson(url, headers)) as
     | {
@@ -259,6 +353,9 @@ async function fetchUnsplashCovers(
           plus?: boolean;
           premium?: boolean;
           color?: string;
+          description?: string | null;
+          alt_description?: string | null;
+          tags?: Array<{ title?: string }>;
           urls?: { regular?: string; small?: string };
         }>;
       }
@@ -268,7 +365,15 @@ async function fetchUnsplashCovers(
   for (const hit of body.results ?? []) {
     if (out.length >= limit) break;
     if (hit.plus || hit.premium) continue;
-    const photoUrl = pickDestinationPhotoUrl(hit.urls?.regular, hit.urls?.small);
+    const tagText = (hit.tags ?? [])
+      .map((tag) => tag.title)
+      .filter(Boolean)
+      .join(' ');
+    const photoUrl = pickPeopleFreeDestinationPhotoUrl(
+      [hit.description, hit.alt_description, tagText],
+      hit.urls?.regular,
+      hit.urls?.small,
+    );
     if (!photoUrl) continue;
     rememberUnsplashCoverColor(photoUrl, hit.color);
     pushUniqueUrl(out, photoUrl);

@@ -37,6 +37,12 @@ export const travelHomeTokens = {
     /** Top-of-atmosphere night (status-bar chrome fill) — dark. */
     atmosphereNight: '#000000',
     divider: '#E4EAF2',
+    /** Outlined location chip stroke (mock light-grey bar). */
+    locationChipBorder: '#D7DDE6',
+    locationChipBorderDark: 'rgba(255,255,255,0.18)',
+    /** Duration pill fill — soft grey, not inverted glass. */
+    dayPillSurface: '#EEF1F5',
+    dayPillSurfaceDark: 'rgba(255,255,255,0.12)',
     overlayLight: 'rgba(255,255,255,0.92)',
     shadow: 'rgba(0,0,0,0.12)',
     cardShadow: '0 10px 28px rgba(0,0,0,0.12)',
@@ -67,6 +73,8 @@ export const travelHomeTokens = {
     bodyTop: 24,
     /** Page paper sheet under Your Trips (atmosphere peeks in wedges). */
     sheetTop: 32,
+    /** Full-width location chip under the title. */
+    locationChip: 14,
     button: 16,
     itineraryButton: 12,
     pill: 999,
@@ -88,7 +96,9 @@ export const travelHomeTokens = {
     /** Tight bottom inset — mock white panel is compact, not airy. */
     cardBottom: 12,
     /** Compact title → location gap on the paper body. */
-    titleToLocation: 4,
+    titleToLocation: 8,
+    /** Location chip → footer (dates + View Itinerary). */
+    locationToFooter: 14,
     locationToDivider: 6,
     dividerToMeta: 6,
     avatarOverlap: 12,
@@ -96,13 +106,16 @@ export const travelHomeTokens = {
     editInset: 14,
     headerBottom: 8,
     /**
-     * Pull the frosted title scoop up over the hero. Tall enough for title +
-     * location (+ travelers) without clipping; milk-out continues below into
-     * paper. Keep in sync with `travelHomeImageHeight`.
+     * Pull the frosted title scoop up over the hero. Tall enough for black
+     * title on milk (+ travelers); destination sits on paper below. Keep in
+     * sync with `travelHomeImageHeight`.
      */
-    bodyOverlap: 78,
+    bodyOverlap: 56,
     /** Title band top inset inside the frost scoop. */
     bodyTop: 12,
+    /** Location chip vertical padding. */
+    locationChipPadV: 10,
+    locationChipPadH: 12,
   },
   sizes: {
     touchTargetMin: 44,

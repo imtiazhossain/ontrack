@@ -281,6 +281,7 @@ export const AgentUiIds = {
     tmdb: 'ontrack.profile.tmdb',
     theme: (themeId: string) => `ontrack.profile.theme.${themeId}`,
     addon: (addonId: string) => `ontrack.profile.addon.${addonId}`,
+    version: 'ontrack.profile.version',
     section: {
       account: 'ontrack.profile.section.account',
       appearance: 'ontrack.profile.section.appearance',
@@ -360,6 +361,7 @@ export const AgentUiIds = {
   developer: {
     back: 'ontrack.developer.back',
     section: {
+      appUpdates: 'ontrack.developer.section.appUpdates',
       navigate: 'ontrack.developer.section.navigate',
       insights: 'ontrack.developer.section.insights',
       runtime: 'ontrack.developer.section.runtime',
@@ -370,6 +372,17 @@ export const AgentUiIds = {
     insightsLocal: 'ontrack.developer.insights.local',
     insightsProduct: 'ontrack.developer.insights.product',
     insightsRefresh: 'ontrack.developer.insights.refresh',
+    releaseNotes: 'ontrack.developer.releaseNotes',
+    releaseNotesCurrentVersion: 'ontrack.developer.releaseNotes.currentVersion',
+    releaseNotesTabs: 'ontrack.developer.releaseNotes.tabs',
+    releaseNotesTab: (tab: string) => `ontrack.developer.releaseNotes.tab.${tab}`,
+    releaseNotesList: 'ontrack.developer.releaseNotes.list',
+    releaseNotesDay: (date: string) => `ontrack.developer.releaseNotes.day.${date}`,
+    releaseNotesVersion: (version: string) =>
+      `ontrack.developer.releaseNotes.version.${version}`,
+    releaseNotesDate: 'ontrack.developer.releaseNotes.date',
+    releaseNotesPrev: 'ontrack.developer.releaseNotes.prev',
+    releaseNotesNext: 'ontrack.developer.releaseNotes.next',
     devMode: 'ontrack.developer.devMode',
     designSystem: 'ontrack.developer.designSystem',
     apiUsage: 'ontrack.developer.apiUsage',
@@ -510,6 +523,8 @@ export const AgentUiIds = {
       searchStays: (tripId: string) =>
         `ontrack.travel.list.searchStays.${tripId}`,
       itinerary: (tripId: string) => `ontrack.travel.list.itinerary.${tripId}`,
+      /** Layout anchor — trip-card footer date + weekday range. */
+      dates: (tripId: string) => `ontrack.travel.list.dates.${tripId}`,
       openHub: (tripId: string) => `ontrack.travel.list.openHub.${tripId}`,
       calendar: (tripId: string) => `ontrack.travel.list.calendar.${tripId}`,
       tripWeather: (tripId: string) =>

@@ -11,7 +11,7 @@ import { TravelSkyGround } from '@/features/travel/travel-sky-ground';
 import { resolveTravelSkyGroundKind } from '@/features/travel/travel-sky-ground-kind';
 import { TravelSkyNight } from '@/features/travel/travel-sky-night';
 import { SKY_VIEW_H } from '@/features/travel/travel-sky-plate';
-import { TravelSkyStaticWash } from '@/features/travel/travel-sky-static-wash';
+import { TravelSkyStaticDestination } from '@/features/travel/travel-sky-static-destination';
 import { useTravelSkyQuality } from '@/features/travel/use-travel-sky-quality';
 import { useTiltSkyMotion } from '@/features/travel/use-tilt-sky-motion';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,7 +23,7 @@ import { AgentTestId, AgentUiIds } from '@/utils/agent-ui';
  * stay continuous behind the clock. `headerSkyChromeColor` is the solid underlay.
  *
  * Fidelity follows device capability (and can step down at runtime) from full
- * motion → thinned FX → static SVG plate → static gradient wash.
+ * motion → thinned FX → static SVG plate → destination still (Ken Burns).
  *
  * @param statusBandRatio Fraction of the plate reserved for the status-bar band
  *   (celestial discs stay below the clock / Dynamic Island).
@@ -40,6 +40,7 @@ export function TravelHeaderSkyDecor({
   timezone,
   /** Light/dark page base — sky art eases into this at the horizon. */
   fadeTo,
+  onPlateAverageColor,
 }: {
   statusBandRatio?: number;
   destination?: string;
@@ -50,6 +51,8 @@ export function TravelHeaderSkyDecor({
   weatherCode?: number;
   timezone?: string;
   fadeTo?: string;
+  /** Static-tier still average — hero ink tracks the photo plate. */
+  onPlateAverageColor?: (hex: string | undefined) => void;
 } = {}) {
   const theme = useTheme();
   const dark = theme.name === 'dark';
@@ -86,11 +89,16 @@ export function TravelHeaderSkyDecor({
         importantForAccessibility="no-hide-descendants"
         style={styles.fill}>
         {plan.quality === 'static' ? (
-          <TravelSkyStaticWash
+          <TravelSkyStaticDestination
+            destination={destination}
+            latitude={latitude}
+            timeOfDay={condition.timeOfDay}
+            weatherCode={weatherCode}
             chrome={chrome}
             look={condition.look}
             night={night}
             fadeTo={horizon}
+            onAverageColor={onPlateAverageColor}
           />
         ) : (
           <>

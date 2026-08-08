@@ -1,7 +1,10 @@
 import type { ImageSource } from 'expo-image';
 
 import { fetchPlaceCoverUris } from '@/features/travel/destination-cover';
-import { peekUnsplashCoverColor } from '@/features/travel/destination-cover-lookup';
+import {
+  DESTINATION_COVER_POOL_MAX,
+  peekUnsplashCoverColor,
+} from '@/features/travel/destination-cover-lookup';
 import {
   travelWeatherMood,
   type TravelTimeOfDay,
@@ -106,9 +109,12 @@ export async function resolveTravelHomeAtmosphereImage(
     // wanderlust queries for a specific place plate.
     homeLabel: place ? undefined : options.homeLabel,
   });
+  // Larger pool so iconic draws (aurora, peaks, lagoons) can rotate in —
+  // not just the first 3 weather/street hits.
   const fetchPool =
     options.fetchPool ??
-    ((nextQueries: string[]) => fetchPlaceCoverUris(nextQueries, 3));
+    ((nextQueries: string[]) =>
+      fetchPlaceCoverUris(nextQueries, DESTINATION_COVER_POOL_MAX));
 
   const destinationKey = place ? atmosphereDestinationKey(place) : undefined;
 

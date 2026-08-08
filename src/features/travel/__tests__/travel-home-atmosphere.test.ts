@@ -31,17 +31,29 @@ import { travelHomeAtmosphereScrimHeight } from '../travel-home-atmosphere-scrim
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
 describe('Travel home atmosphere queries', () => {
-  it('builds trip-aware destination queries with time and weather flavor', () => {
+  it('leads trip atmosphere with iconic draws (aurora) before weather stock', () => {
     const queries = travelHomeAtmosphereSearchQueries({
       mode: 'trip',
       destination: 'Reykjavik, Iceland',
       timeOfDay: 'dawn',
       weatherCode: 71,
     });
-    expect(queries[0]).toMatch(/Reykjavik/i);
-    expect(queries[0]).toMatch(/sunrise|dawn|golden hour/i);
-    expect(queries.some((query) => /snow|winter/i.test(query))).toBe(true);
+    expect(queries[0]).toMatch(/aurora|northern lights|Gullfoss|Blue Lagoon/i);
+    expect(queries.some((query) => /aurora|northern lights/i.test(query))).toBe(
+      true,
+    );
+    expect(queries.some((query) => /Gullfoss/i.test(query))).toBe(true);
     expect(queries.at(-1)).toBe('Reykjavik, Iceland');
+  });
+
+  it('boosts aurora queries for Iceland at night', () => {
+    const queries = travelHomeAtmosphereSearchQueries({
+      mode: 'trip',
+      destination: 'Iceland',
+      timeOfDay: 'night',
+      weatherCode: 0,
+    });
+    expect(queries[0]).toMatch(/aurora|northern lights/i);
   });
 
   it('builds home wanderlust queries when planning without a trip', () => {
@@ -52,7 +64,10 @@ describe('Travel home atmosphere queries', () => {
       weatherCode: 61,
     });
     expect(queries[0]).toMatch(/Austin/i);
-    expect(queries.some((query) => /night|starry|city lights/i.test(query))).toBe(
+    expect(queries.some((query) => /iconic|famous attraction/i.test(query))).toBe(
+      true,
+    );
+    expect(queries.some((query) => /night|starry|city lights|skyline/i.test(query))).toBe(
       true,
     );
     expect(queries.some((query) => /rain|wet/i.test(query))).toBe(true);

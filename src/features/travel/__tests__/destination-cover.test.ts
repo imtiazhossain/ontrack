@@ -1,11 +1,14 @@
 import {
     destinationCoverCandidates,
+    destinationPhotoSuggestsPeople,
     enlargeWikimediaThumb,
+    hasDestinationLandmarkIntent,
     isAllowedDestinationCoverImageUrl,
     isDirectClientCoverUrl,
     isUsableDestinationPhotoUrl,
     localTripCoverUri,
     mergeDestinationCoverUrls,
+    pickRotatingHeroUris,
     proxyDestinationCoverImageUrl,
     stayCoverCandidates,
 } from '../destination-cover';
@@ -38,25 +41,66 @@ function plan(partial: Partial<TravelPlan>): TravelPlan {
   };
 }
 
-describe('destinationCoverCandidates', () => {
-  it('prefers the city before the country for comma destinations', () => {
-    expect(
-      destinationCoverCandidates(
-        plan({ title: 'Iceland', destination: 'Reykjavík, Iceland' }),
-      ),
-    ).toEqual(['Reykjavík', 'Reykjavík, Iceland', 'Iceland']);
+describe('hasDestinationLandmarkIntent', () => {
+  it('detects landmark / structure keywords', () => {
+    expect(hasDestinationLandmarkIntent('Iceland landmark')).toBe(true);
+    expect(hasDestinationLandmarkIntent('Santa Catalina arch')).toBe(true);
+    expect(hasDestinationLandmarkIntent('Reykjavík')).toBe(false);
+  });
+});
+
+describe('pickRotatingHeroUris', () => {
+  const pool = [
+    'https://images.unsplash.com/a.jpg',
+    'https://images.unsplash.com/b.jpg',
+    'https://images.unsplash.com/c.jpg',
+    'https://images.unsplash.com/d.jpg',
+    'https://images.unsplash.com/e.jpg',
+    'https://images.unsplash.com/f.jpg',
+  ];
+
+  it('returns different trios as the salt advances', () => {
+    const first = pickRotatingHeroUris(pool, [], 3, 0);
+    const second = pickRotatingHeroUris(pool, [], 3, 3);
+    expect(first).toHaveLength(3);
+    expect(second).toHaveLength(3);
+    expect(first).not.toEqual(second);
   });
 
-  it('falls back to the trip title when destination is empty', () => {
+  it('prefers unseen URIs before wrapping into recent ones', () => {
+    const recent = pool.slice(0, 3);
+    const next = pickRotatingHeroUris(pool, recent, 3, 0);
+    expect(next).toEqual(pool.slice(3, 6));
+  });
+});
+
+describe('destinationCoverCandidates', () => {
+  it('leads with curated iconic draws (aurora, waterfalls) for Iceland', () => {
+    const candidates = destinationCoverCandidates(
+      plan({ title: 'Iceland', destination: 'Reykjavík, Iceland' }),
+    );
+    expect(candidates[0]).toMatch(/northern lights|aurora/i);
+    expect(candidates.some((q) => /Gullfoss/i.test(q))).toBe(true);
+    expect(candidates.some((q) => /Blue Lagoon/i.test(q))).toBe(true);
+    expect(candidates).toContain('Reykjavík');
+    expect(candidates).toContain('Iceland');
+  });
+
+  it('falls back to iconic draw suffixes when destination is unknown', () => {
     expect(destinationCoverCandidates(plan({ title: 'Lisbon', destination: '' }))).toEqual([
+      'Lisbon iconic',
+      'Lisbon famous attraction',
+      'Lisbon scenic landscape',
       'Lisbon',
     ]);
   });
 
-  it('dedupes case-insensitively', () => {
-    expect(
-      destinationCoverCandidates(plan({ title: 'paris', destination: 'Paris' })),
-    ).toEqual(['Paris']);
+  it('keeps curated Paris icons ahead of bare city Wiki titles', () => {
+    const candidates = destinationCoverCandidates(
+      plan({ title: 'Paris trip', destination: 'Paris' }),
+    );
+    expect(candidates[0]).toMatch(/Eiffel/i);
+    expect(candidates).toContain('Paris');
   });
 });
 
@@ -81,6 +125,18 @@ describe('stayCoverCandidates', () => {
       'Portugal',
       'Lisbon, Portugal',
     ]);
+  });
+});
+
+describe('destinationPhotoSuggestsPeople', () => {
+  it('flags tourist / portrait stock metadata', () => {
+    expect(destinationPhotoSuggestsPeople('Tourists at Blue Lagoon')).toBe(true);
+    expect(destinationPhotoSuggestsPeople('couple selfie in Reykjavik')).toBe(
+      true,
+    );
+    expect(
+      destinationPhotoSuggestsPeople('Aurora Borealis over Kirkjufell'),
+    ).toBe(false);
   });
 });
 
@@ -121,6 +177,14 @@ describe('isUsableDestinationPhotoUrl', () => {
         'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1080',
       ),
     ).toBe(true);
+  });
+
+  it('rejects filenames that look like people stock', () => {
+    expect(
+      isUsableDestinationPhotoUrl(
+        'https://upload.wikimedia.org/wikipedia/commons/a/a1/Tourist_portrait_Iceland.jpg',
+      ),
+    ).toBe(false);
   });
 });
 

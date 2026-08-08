@@ -9,7 +9,7 @@ import {
 
 /**
  * Itinerary sky fidelity ladder (alias of the app-wide performance tier).
- * Degrades from full motion → static chrome wash so weak devices stay open.
+ * Degrades from full motion → destination still (Ken Burns) so weak devices stay open.
  */
 export type TravelSkyQuality = PerformanceTier;
 

@@ -27,7 +27,7 @@ describe('resolveTravelSkyCapability', () => {
     ).toBe('minimal');
   });
 
-  it('maps low RAM / old year-class down to static chrome wash', () => {
+  it('maps low RAM / old year-class down to static destination still', () => {
     expect(
       resolveTravelSkyCapability({
         isDevice: true,

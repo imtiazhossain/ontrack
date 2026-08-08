@@ -5,7 +5,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText } from '@/components/primitives';
 import type { CoTravelerAvatarPerson } from '@/features/travel/travel-cotraveler-stack';
 import { travelHomeSoloTripCardShadow } from '@/features/travel/travel-home-atmosphere-ink';
-import { travelHomeFixtureHeroSource } from '@/features/travel/fixtures/travel-home';
 import { TravelHomeDateBlock } from '@/features/travel/travel-home-date-block';
 import { TravelHomeHeroCarousel } from '@/features/travel/travel-home-hero-carousel';
 import {
@@ -67,16 +66,13 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
       layoutWidth - travelHomeTokens.spacing.screenHorizontal * 2,
     ),
   );
-  /** Active remote hero URI — Android scoop frosts this plate. */
-  const [heroFrostUri, setHeroFrostUri] = useState<string | undefined>();
-  useEffect(() => {
-    setHeroFrostUri(undefined);
-  }, [plan.id]);
   const destination = plan.destination.trim();
   const destinationLabel = destination || plan.title;
   const dark = theme.name === 'dark';
-  const ink = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
-  const muted = dark ? theme.textSecondary : travelHomeTokens.colors.inkMuted;
+  /** Black/ink title on the paper-milk veil (both themes). */
+  const titleInk = dark ? theme.textPrimary : travelHomeTokens.colors.ink;
+  /** Destination stays black/ink on the paper join — not on the scrim. */
+  const locationInk = dark ? theme.textSecondary : travelHomeTokens.colors.ink;
   const brand = dark ? theme.accentPrimary : travelHomeTokens.colors.brandBlue;
   const titleSize = Math.max(24, s(travelHomeTokens.sizes.tripTitle));
   const compact = layoutWidth < 360;
@@ -87,19 +83,35 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
    * Visual milk under the title into paper. Keep short — paper paints above
    * this bleed (zIndex) so footer never gets clipped by the scoop.
    */
-  const frostFadeBleed = Math.max(16, s(18));
-  const titleToLocation = Math.max(4, travelHomeTokens.spacing.titleToLocation);
-  const locationToDivider = Math.max(6, travelHomeTokens.spacing.locationToDivider - 2);
+  const frostFadeBleed = Math.max(22, s(24));
+  const titleToLocation = Math.max(6, travelHomeTokens.spacing.titleToLocation);
+  const locationToFooter = Math.max(
+    10,
+    travelHomeTokens.spacing.locationToFooter,
+  );
   const footerPadV = Math.max(10, travelHomeTokens.spacing.cardBottom);
-  const fixtureFrost = __DEV__ ? travelHomeFixtureHeroSource(plan.id) : undefined;
-  const coverFrost =
-    typeof plan.coverUri === 'string' && plan.coverUri.trim()
-      ? { uri: plan.coverUri.trim() }
-      : undefined;
-  const heroFrostSource = heroFrostUri
-    ? { uri: heroFrostUri }
-    : coverFrost ?? fixtureFrost;
+  const locationChipPadV = Math.max(
+    8,
+    s(travelHomeTokens.spacing.locationChipPadV),
+  );
+  const locationChipPadH = Math.max(
+    10,
+    s(travelHomeTokens.spacing.locationChipPadH),
+  );
+  const locationChipBorder = dark
+    ? travelHomeTokens.colors.locationChipBorderDark
+    : travelHomeTokens.colors.locationChipBorder;
   const paper = dark ? theme.backgroundSunken : '#FFFFFF';
+  /** Remount iOS BlurView when the live hero URI arrives / changes. */
+  const [frostBlurKey, setFrostBlurKey] = useState(
+    () =>
+      (typeof plan.coverUri === 'string' && plan.coverUri.trim()) || plan.id,
+  );
+  useEffect(() => {
+    setFrostBlurKey(
+      (typeof plan.coverUri === 'string' && plan.coverUri.trim()) || plan.id,
+    );
+  }, [plan.id, plan.coverUri]);
   const cardShadow = soloAtmosphereShadow
     ? travelHomeSoloTripCardShadow({
         averageColor: atmosphereAverageColor,
@@ -169,13 +181,23 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
     </>
   );
   const locationRow = destination ? (
-    <View style={[styles.locationRow, { gap: 6 }]}>
+    <View
+      style={[
+        styles.locationChip,
+        {
+          gap: 8,
+          paddingVertical: locationChipPadV,
+          paddingHorizontal: locationChipPadH,
+          borderRadius: travelHomeTokens.radius.locationChip,
+          borderColor: locationChipBorder,
+        },
+      ]}>
       <TravelHomeLocationPin size={Math.max(14, s(15))} color={brand} />
       <AppText
         variant="callout"
         numberOfLines={1}
         style={{
-          color: muted,
+          color: locationInk,
           fontFamily: travelHomeFontFamily,
           fontSize: Math.max(14, s(travelHomeTokens.type.location)),
           flexShrink: 1,
@@ -187,7 +209,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
   ) : null;
 
   const titleBlock = (
-    <View style={[styles.titleCluster, { gap: titleToLocation }]}>
+    <View style={styles.titleCluster}>
       <View style={[styles.titleRow, { gap: rs.sm }]}>
         <View style={styles.titleCopy}>
           <Text
@@ -196,12 +218,15 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             numberOfLines={1}
             ellipsizeMode="tail"
             style={{
-              color: ink,
+              color: titleInk,
               fontFamily: travelHomeFontFamily,
               fontSize: titleSize,
               lineHeight: titleSize * 1.1,
               fontWeight: '400',
               letterSpacing: -0.4,
+              textShadowColor: 'rgba(0,0,0,0.35)',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 6,
             }}>
             {plan.title}
           </Text>
@@ -215,8 +240,6 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           />
         ) : null}
       </View>
-      {/* Location lives in frost chrome — paper sits under the milk overlay. */}
-      {locationRow}
     </View>
   );
 
@@ -259,7 +282,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
             width={cardWidth}
             onEdit={() => onEditTrip(plan.id)}
             onActiveImageChange={(uri) => {
-              if (uri) setHeroFrostUri(uri);
+              if (uri) setFrostBlurKey(uri);
               onActiveImageChange?.(plan.id, uri);
             }}
           />
@@ -267,8 +290,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
 
         {/*
           Frost overlays the hero bottom via negative margin — sibling of the
-          clipped hero media so BlurView can sample the live photo. Long
-          fadeBleed milks frost into solid paper (no glass→white rim).
+          clipped hero media so iOS BlurView can sample the live photo. Long
+          fadeBleed milks into solid paper (no glass→white rim).
         */}
         <View
           collapsable={false}
@@ -282,13 +305,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           <TravelHomeTripFrostScoop
             height={bodyOverlap}
             fadeBleed={frostFadeBleed}
-            heroHeight={heroHeight}
-            source={heroFrostSource}
             paperColor={paper}
-            blurKey={
-              heroFrostUri ??
-              (typeof plan.coverUri === 'string' ? plan.coverUri : 'seed')
-            }
+            blurKey={frostBlurKey}
             borderTopLeftRadius={travelHomeTokens.radius.bodyTop}
             borderTopRightRadius={travelHomeTokens.radius.bodyTop}>
             <AgentTestId
@@ -323,7 +341,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           </TravelHomeTripFrostScoop>
         </View>
 
-        {/* Solid paper body — pulled under the frost milk-out for a soft join. */}
+        {/* Solid paper body — destination + footer on paper (black ink). */}
         <View
           style={[
             styles.metaBody,
@@ -332,11 +350,30 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               borderBottomLeftRadius: radius,
               borderBottomRightRadius: radius,
               marginTop: -frostFadeBleed,
-              // Tight under location; metaBody stacks above the frost bleed so
-              // dates/CTA are never covered by the milk overlay.
-              paddingTop: locationToDivider,
+              // Above frost bleed so destination/dates never sit on the scrim.
+              paddingTop: Math.max(4, titleToLocation),
             },
           ]}>
+          {locationRow ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                destination
+                  ? `Open ${plan.title}, ${destination}`
+                  : `Open ${plan.title}`
+              }
+              onPress={openTrip}
+              style={({ pressed }) => [
+                styles.body,
+                {
+                  paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
+                  paddingBottom: locationToFooter,
+                  opacity: pressed ? 0.92 : 1,
+                },
+              ]}>
+              {locationRow}
+            </Pressable>
+          ) : null}
           {compact ? (
             <Pressable
               accessibilityRole="button"
@@ -346,7 +383,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 styles.body,
                 {
                   paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                  paddingBottom: locationToDivider,
+                  paddingBottom: locationToFooter,
                   opacity: pressed ? 0.92 : 1,
                 },
               ]}>
@@ -361,31 +398,25 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
 
           <View
             style={[
-              styles.divider,
-              {
-                marginHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                backgroundColor:
-                  theme.name === 'dark'
-                    ? 'rgba(255,255,255,0.12)'
-                    : travelHomeTokens.colors.divider,
-              },
-            ]}
-          />
-
-          <View
-            style={[
               styles.footer,
               {
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
-                paddingTop: Math.max(8, footerPadV - 2),
+                paddingTop: locationRow || compact ? 0 : Math.max(8, footerPadV - 2),
                 paddingBottom: footerPadV,
-                // Invisible 50/50 split — no divider; gap is the only seam.
+                // Invisible 50/50 split — gap is the only seam (no hairline).
+                // Center (not stretch): date block is taller than the CTA once
+                // weekdays + day pill stack; stretch + metaBody overflow clips
+                // the calendar range line off the top.
                 gap: Math.max(10, rs.sm),
                 flexDirection: compact ? 'column' : 'row',
-                alignItems: 'stretch',
+                alignItems: compact ? 'stretch' : 'center',
               },
             ]}>
-            <TravelHomeDateBlock startDate={plan.startDate} endDate={plan.endDate} />
+            <TravelHomeDateBlock
+              tripId={plan.id}
+              startDate={plan.startDate}
+              endDate={plan.endDate}
+            />
             <Pressable
               ref={itineraryAgent.ref}
               testID={AgentUiIds.travel.list.itinerary(plan.id)}
@@ -401,7 +432,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   height: buttonHeight,
                   borderRadius: travelHomeTokens.radius.itineraryButton,
                   opacity: pressed ? 0.88 : 1,
-                  alignSelf: 'stretch',
+                  alignSelf: compact ? 'stretch' : 'center',
                 },
               ]}>
               <View
@@ -477,15 +508,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
     overflow: 'hidden',
   },
-  locationRow: {
+  locationChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
     minWidth: 0,
-    flexShrink: 1,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderCurve: 'continuous',
   },
   footer: {
     width: '100%',

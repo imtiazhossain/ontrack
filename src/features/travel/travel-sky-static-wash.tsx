@@ -4,8 +4,8 @@ import { StyleSheet } from 'react-native';
 import type { HeaderSkyLook } from '@/features/travel/travel-sky-condition';
 
 /**
- * Lowest-fidelity itinerary sky — a static gradient “image” of the look.
- * Used when the device cannot host the SVG / Reanimated plate.
+ * Gradient underlay for the static-tier destination still (and last-resort
+ * plate when no landscape photo is available yet).
  */
 export function TravelSkyStaticWash({
   chrome,

@@ -103,7 +103,19 @@ describe('travel header sky décor', () => {
   it('drives twinkle and ray shine from device tilt motion', () => {
     expect(sky).toContain('useTiltSkyMotion');
     expect(sky).toContain('useTravelSkyQuality');
-    expect(sky).toContain('TravelSkyStaticWash');
+    expect(sky).toContain('TravelSkyStaticDestination');
+    expect(sky).toContain('onPlateAverageColor');
+    const staticDestination = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-sky-static-destination.tsx'),
+      'utf8',
+    );
+    expect(staticDestination).toContain('resolveTravelHomeAtmosphereImage');
+    expect(staticDestination).toContain('TravelSkyStaticWash');
+    expect(staticDestination).toContain('TravelSkyGround');
+    expect(staticDestination).toContain('Ken Burns');
+    expect(staticDestination).toContain('contentPosition');
+    expect(staticDestination).toContain('topVeil');
+    expect(staticDestination).toContain('bottomFade');
     expect(night).toContain('MotionLayer');
     expect(night).toContain('motion.energy');
     expect(night).toContain('TwinklingStar');
@@ -159,6 +171,10 @@ describe('travel header sky décor', () => {
       join(process.cwd(), 'src/features/travel/travel-header-sky-height.ts'),
       'utf8',
     );
+    const glass = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-glass.tsx'),
+      'utf8',
+    );
     // Single plate from window y=0 — aurora/day washes stay live behind the clock.
     expect(hero).toContain('TravelHeaderSkyDecor');
     expect(hero).toContain('useTravelAtmosphere');
@@ -193,6 +209,22 @@ describe('travel header sky décor', () => {
     // Location ground band (trees / town / city) under celestial art.
     expect(sky).toContain('TravelSkyGround');
     expect(sky).toContain('resolveTravelSkyGroundKind');
+    // Static tier: destination still into status bar, not a bare wash.
+    expect(sky).toContain('TravelSkyStaticDestination');
+    expect(hero).toContain('onPlateAverageColor');
+    expect(hero).toContain('plateAverageColor');
+    // Sky chrome controls: airy frost + ink glyphs (not opaque clear discs).
+    expect(hero).toContain('TravelHeroGlassIconButton');
+    expect(hero).toContain('travelHomeTokens.colors.ink');
+    expect(hero).toContain('circleFabShadow');
+    expect(hero).toMatch(
+      /TravelHeroGlassIconButton[\s\S]*?<TravelHomeGlass[\s\S]*?\bairy\b/,
+    );
+    expect(hero).not.toMatch(
+      /TravelHeroGlassIconButton[\s\S]*?<TravelHomeGlass[\s\S]*?\bclear\b/,
+    );
+    expect(glass).toContain('airy?: boolean');
+    expect(glass).toContain('androidTintLightAiry');
   });
 });
 

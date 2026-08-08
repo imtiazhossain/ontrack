@@ -46,7 +46,7 @@ describe('travel home kit contract', () => {
     expect(stepper).not.toMatch(/if\s*\(\s*pageCount\s*<=\s*1\s*\)\s*return\s*null/);
   });
 
-  it('shows only the date range in the trip-card footer dates slot', () => {
+  it('stacks weekdays + soft day-count pill in the dates slot', () => {
     const dateBlock = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-date-block.tsx'),
       'utf8',
@@ -56,18 +56,32 @@ describe('travel home kit contract', () => {
       'utf8',
     );
     expect(dateBlock).toContain('formatTripDateRangeLabel');
+    expect(dateBlock).toContain('formatTripWeekdayRangeLabel');
+    expect(dateBlock).toContain('tripDayCount');
+    expect(dateBlock).toContain('dayPill');
+    expect(dateBlock).not.toContain('TravelHomeCalendarIcon');
+    expect(dateBlock).toContain('dayPillSurface');
+    expect(dateBlock).not.toContain('metaRule');
+    expect(dateBlock).toContain('travelHomeTokens.radius.itineraryButton');
+    // Content-sized height — stretch-to-CTA clips the calendar range.
+    expect(dateBlock).toContain("alignSelf: 'center'");
+    expect(card).toContain("alignItems: compact ? 'stretch' : 'center'");
     expect(dateBlock).not.toContain('DATES');
-    expect(dateBlock).not.toContain('brandBlueSoft');
-    expect(dateBlock).not.toMatch(/styles\.pill/);
+    // Soft grey duration pill — not inverted glass / brand-blue soft.
     expect(dateBlock).not.toContain('TravelHomeGlass');
+    expect(dateBlock).not.toContain('brandBlueSoft');
+    // Outlined location chip; no hairline divider under the chip.
+    expect(card).toContain('locationChip');
+    expect(card).toContain('locationChipBorder');
+    expect(card).not.toContain('styles.divider');
     // Light View Itinerary = solid ink black (not translucent glass grey).
     expect(card).toContain('travelHomeTokens.colors.ink');
     expect(card).not.toContain('TravelHomeGlass');
   });
 
   it('frosts trip-card scoops with BlurView over the live hero', () => {
-    // Photo→paper blend: light BlurView softener + full-height LinearGradient.
-    // No frosted-glass plate / hairline (those read as a separate band).
+    // Photo→paper: iOS BlurView + dark title scrim + separate paper milk.
+    // No single black→white ramp (muddy shelf); no Android blur Image plate.
     const scoop = readFileSync(
       join(process.cwd(), 'src/features/travel/travel-home-trip-frost-scoop.tsx'),
       'utf8',
@@ -88,16 +102,30 @@ describe('travel home kit contract', () => {
       join(process.cwd(), 'src/features/travel/travel-home-carousel-stepper.tsx'),
       'utf8',
     );
-    expect(scoop).toContain("tint={dark ? 'dark' : 'light'}");
+    expect(scoop).toContain('tint="light"');
     expect(scoop).toContain('<BlurView');
+    expect(scoop).toContain("Platform.OS === 'ios'");
+    expect(card).toContain('titleInk = dark ? theme.textPrimary : travelHomeTokens.colors.ink');
     expect(scoop).toContain('blurKey');
     expect(scoop).toContain('LinearGradient');
     expect(scoop).toContain('fadeBleed');
     expect(scoop).toContain('paperColor');
-    expect(scoop).toContain('blurEndInset');
     expect(scoop).toContain('hexToRgba');
     expect(scoop).toContain('fadeHeight = totalHeight');
+    expect(scoop).toContain('milkHeight');
     expect(scoop).toContain('borderWidth: 0');
+    // Join milk + SVG wedge title veil (high left → taper right); no dark scrim.
+    expect(scoop.match(/<LinearGradient/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
+    expect(scoop).not.toContain('rgba(0,0,0,');
+    expect(scoop).toContain('joinHeight');
+    expect(scoop).toContain('titleMilk');
+    expect(scoop).toContain('veilPath');
+    expect(scoop).toContain('preserveAspectRatio="none"');
+    expect(scoop).toContain("from 'react-native-svg'");
+    // Gradient-led milk-out — no Android expo-image blur plate.
+    expect(scoop).not.toContain("from 'expo-image'");
+    expect(scoop).not.toContain('blurRadius');
+    expect(scoop).not.toContain('heroHeight');
     // Bleed sealed solid under the ramp.
     expect(scoop).toContain('backgroundColor: paperColor');
     // Scoop shell itself must stay overflow-visible for UIVisualEffect.
@@ -108,15 +136,18 @@ describe('travel home kit contract', () => {
     expect(card).toContain('styles.frostBand');
     expect(card).toContain('styles.heroMedia');
     expect(card).toContain('blurKey=');
-    expect(card).toContain('heroFrostSource');
+    expect(card).toContain('frostBlurKey');
+    expect(card).not.toContain('heroFrostSource');
     expect(card).not.toContain('styles.clip');
     expect(card).not.toContain('frost=');
     expect(card).not.toContain('BlurTargetView');
     expect(glass).not.toContain('frost?:');
     expect(glass).not.toContain('TravelHomeGlassFrost');
-    expect(tokens).toMatch(/bodyOverlap:\s*78/);
-    expect(card).toContain('locationRow');
+    expect(tokens).toMatch(/bodyOverlap:\s*56/);
+    expect(card).toContain('locationChip');
     expect(card).toContain('titleCluster');
+    // Title + destination sit on paper milk / paper (black/ink).
+    expect(card).toContain('styles.metaBody');
     // Ticks mount inside the hero carousel (visibleUris) with a dark plate so
     // they read on pale sky without waiting for a swipe.
     expect(stepper).toContain('wrapCollapsed');

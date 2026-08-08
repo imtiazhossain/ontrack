@@ -1,5 +1,13 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import {
+    DESTINATION_ICONIC_DRAW_SUFFIXES,
+    resolveIconicCoverQueries,
+} from '@/features/travel/destination-cover-icons';
 import {
     DESTINATION_COVER_MAX,
+    DESTINATION_COVER_POOL_MAX,
+    hasDestinationLandmarkIntent,
     isAllowedDestinationCoverImageUrl,
     isDirectClientCoverUrl,
     isUsableDestinationPhotoUrl,
@@ -16,6 +24,8 @@ import { fetchWithTimeout } from '@/services/http/fetch-with-timeout';
 const COVER_FETCH_TIMEOUT_MS = 8_000;
 /** Brief negative cache so timeouts/offline blips can retry without hammering. */
 const COVER_MISS_TTL_MS = 60_000;
+const HERO_RECENT_STORAGE_KEY = '@ontrack/travel-destination-hero-recent-v1';
+const HERO_RECENT_LIMIT = 36;
 type CoverCacheEntry =
   | { kind: 'hit'; uri: string }
   | { kind: 'miss'; expiresAt: number };
@@ -29,12 +39,103 @@ const heroInflight = new Map<string, Promise<string[]>>();
 
 export {
     DESTINATION_COVER_MAX,
+    DESTINATION_COVER_POOL_MAX,
+    destinationPhotoSuggestsPeople,
     enlargeWikimediaThumb,
+    hasDestinationLandmarkIntent,
     isAllowedDestinationCoverImageUrl,
     isDirectClientCoverUrl,
     isUsableDestinationPhotoUrl,
     mergeDestinationCoverUrls,
 } from '@/features/travel/destination-cover-lookup';
+
+export type FetchDestinationHeroOptions = {
+  /** Session salt so remounts/focus rotate even when the pool is cached. */
+  salt?: number;
+  /** Injected recent URI history (tests); defaults to AsyncStorage. */
+  recentKeys?: readonly string[];
+  /** Persist shown URIs into recent history (default true). */
+  persistRecent?: boolean;
+};
+
+/**
+ * Pick `count` URIs from a landmark pool, preferring ones not shown recently.
+ * Salt rotates the start so the same destination does not always open on the
+ * same trio.
+ */
+export function pickRotatingHeroUris(
+  pool: readonly string[],
+  recentKeys: readonly string[],
+  count: number,
+  salt = 0,
+): string[] {
+  const want = Math.max(
+    0,
+    Math.min(count, pool.length, DESTINATION_COVER_MAX),
+  );
+  if (want === 0) return [];
+
+  const recent = recentKeys
+    .map((key) => key.trim().toLowerCase())
+    .filter(Boolean);
+  const recentSet = new Set(recent);
+  const fresh = pool.filter((uri) => !recentSet.has(uri.toLowerCase()));
+  const seen = pool
+    .filter((uri) => recentSet.has(uri.toLowerCase()))
+    .sort((a, b) => {
+      // Older history entries (higher index) first when wrapping.
+      return (
+        recent.indexOf(b.toLowerCase()) - recent.indexOf(a.toLowerCase())
+      );
+    });
+  const ordered = fresh.length > 0 ? [...fresh, ...seen] : seen;
+  if (ordered.length === 0) return [];
+
+  const band = fresh.length >= want ? fresh.length : ordered.length;
+  const start = Math.abs(salt) % Math.max(band, 1);
+  const out: string[] = [];
+  for (let i = 0; i < ordered.length && out.length < want; i += 1) {
+    pushUniqueUri(out, ordered[(start + i) % ordered.length]);
+  }
+  return out;
+}
+
+async function loadHeroRecentKeys(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(HERO_RECENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === 'string');
+  } catch {
+    return [];
+  }
+}
+
+async function saveHeroRecentKeys(keys: string[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      HERO_RECENT_STORAGE_KEY,
+      JSON.stringify(keys.slice(0, HERO_RECENT_LIMIT)),
+    );
+  } catch {
+    // Rotation still works in-memory for the session.
+  }
+}
+
+function rememberHeroRecentKeys(
+  previous: readonly string[],
+  shown: readonly string[],
+): string[] {
+  let next = [...previous];
+  for (const uri of [...shown].reverse()) {
+    const trimmed = uri.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    next = [trimmed, ...next.filter((key) => key.toLowerCase() !== lower)];
+  }
+  return next.slice(0, HERO_RECENT_LIMIT);
+}
 
 /**
  * Custom cover, else first photo on a moment stop.
@@ -64,8 +165,9 @@ export async function persistTravelCoverPhoto(
 }
 
 /**
- * Place names to try for a cover, most specific first.
- * "Reykjavík, Iceland" → Reykjavík, full string, Iceland, then trip title.
+ * Place names / iconic draws to try for a cover, most specific first.
+ * Curated “why people go” queries lead (aurora, famous peaks, lagoons…);
+ * generic iconic suffixes fill gaps; bare place names stay for Wiki titles.
  */
 export function destinationCoverCandidates(plan: TravelPlan): string[] {
   const out: string[] = [];
@@ -77,22 +179,38 @@ export function destinationCoverCandidates(plan: TravelPlan): string[] {
     }
     out.push(next);
   };
+  /** Iconic travel-draw queries, then the bare place for Wiki titles. */
+  const addPlace = (value: string | undefined) => {
+    const next = value?.trim();
+    if (!next) return;
+    if (!hasDestinationLandmarkIntent(next)) {
+      for (const suffix of DESTINATION_ICONIC_DRAW_SUFFIXES) {
+        add(`${next} ${suffix}`);
+      }
+    }
+    add(next);
+  };
 
   const destination = plan.destination.trim();
+  const title = plan.title.trim();
+  for (const iconic of resolveIconicCoverQueries(destination, title)) {
+    add(iconic);
+  }
+
   if (destination) {
     const parts = destination
       .split(',')
       .map((part) => part.trim())
       .filter(Boolean);
     if (parts.length > 1) {
-      add(parts[0]);
-      add(destination);
-      for (const part of parts.slice(1)) add(part);
+      addPlace(parts[0]);
+      addPlace(destination);
+      for (const part of parts.slice(1)) addPlace(part);
     } else {
-      add(destination);
+      addPlace(destination);
     }
   }
-  add(plan.title.trim());
+  addPlace(title);
   return out;
 }
 
@@ -204,7 +322,7 @@ async function resolveRemoteCovers(
   place: string,
   limit: number,
 ): Promise<string[]> {
-  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, limit));
+  const capped = Math.max(1, Math.min(DESTINATION_COVER_POOL_MAX, limit));
   const apiUrl = coverApiUrl(place, capped);
   if (apiUrl) {
     try {
@@ -296,13 +414,16 @@ export async function fetchPlaceCoverUri(
  */
 export async function fetchPlaceCoverUris(
   candidates: string[],
-  limit: number = DESTINATION_COVER_MAX,
+  limit: number = DESTINATION_COVER_POOL_MAX,
 ): Promise<string[]> {
   const places = candidates.map((c) => c.trim()).filter((c) => c.length >= 2);
-  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, Math.floor(limit)));
+  const capped = Math.max(
+    1,
+    Math.min(DESTINATION_COVER_POOL_MAX, Math.floor(limit)),
+  );
   if (!places.length) return [];
 
-  const key = `place-pool-v1|${capped}|${places.join('|').toLowerCase()}`;
+  const key = `place-pool-v4|${capped}|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
   if (cached?.kind === 'hit') {
     return orderHeroUrisForClient(cached.uris).map(toClientDisplayCoverUri);
@@ -358,59 +479,44 @@ export async function fetchDestinationCoverUri(
 }
 
 /**
- * Up to 3 hero images for a trip card carousel.
- * Local custom/moment cover stays first when present; remote fills the rest.
+ * Build / cache a large landmark photo pool for a destination (not the
+ * carousel trio — callers rotate a subset via `pickRotatingHeroUris`).
  */
-export async function fetchDestinationHeroUris(
-  plan: TravelPlan,
-  limit: number = DESTINATION_COVER_MAX,
+async function resolveDestinationHeroPool(
+  places: string[],
 ): Promise<string[]> {
-  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, limit));
-  const local = localTripCoverUri(plan);
-  const out: string[] = [];
-  pushUniqueUri(out, local);
-  if (out.length >= capped) return out.map(toClientDisplayCoverUri);
-
-  const places = destinationCoverCandidates(plan)
-    .map((c) => c.trim())
-    .filter((c) => c.length >= 2);
-  if (!places.length) return out.map(toClientDisplayCoverUri);
-
-  const key = `hero-v6|${places.join('|').toLowerCase()}`;
+  const key = `hero-pool-v10|${places.join('|').toLowerCase()}`;
   const cached = heroCache.get(key);
-  if (cached?.kind === 'hit') {
-    for (const uri of cached.uris) {
-      pushUniqueUri(out, uri);
-      if (out.length >= capped) break;
-    }
-    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
-  }
+  if (cached?.kind === 'hit') return cached.uris;
   if (cached?.kind === 'miss') {
-    if (cached.expiresAt > Date.now()) {
-      return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
-    }
+    if (cached.expiresAt > Date.now()) return [];
     heroCache.delete(key);
   }
 
   const pending = heroInflight.get(key);
-  if (pending) {
-    const remote = await pending;
-    for (const uri of remote) {
-      pushUniqueUri(out, uri);
-      if (out.length >= capped) break;
-    }
-    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
-  }
+  if (pending) return pending;
 
   const request = (async () => {
     try {
       const collected: string[] = [];
+      // Pass 1 — one photo per query for landmark variety.
       for (const place of places) {
-        if (collected.length >= capped) break;
-        const next = await resolveRemoteCovers(place, capped - collected.length);
-        for (const uri of next) {
-          pushUniqueUri(collected, uri);
-          if (collected.length >= capped) break;
+        if (collected.length >= DESTINATION_COVER_POOL_MAX) break;
+        const next = await resolveRemoteCovers(place, 1);
+        for (const uri of next) pushUniqueUri(collected, uri);
+      }
+      // Pass 2 — deepen the pool so later opens can rotate.
+      if (collected.length < DESTINATION_COVER_POOL_MAX) {
+        for (const place of places) {
+          if (collected.length >= DESTINATION_COVER_POOL_MAX) break;
+          const next = await resolveRemoteCovers(
+            place,
+            DESTINATION_COVER_POOL_MAX - collected.length,
+          );
+          for (const uri of next) {
+            pushUniqueUri(collected, uri);
+            if (collected.length >= DESTINATION_COVER_POOL_MAX) break;
+          }
         }
       }
       if (collected.length > 0) {
@@ -430,10 +536,49 @@ export async function fetchDestinationHeroUris(
   })();
 
   heroInflight.set(key, request);
-  const remote = await request;
-  for (const uri of remote) {
+  return request;
+}
+
+/**
+ * Up to 3 hero images for a trip card carousel.
+ * Local custom/moment cover stays first when present; remotes rotate from a
+ * larger landmark pool so revisits do not always show the same three.
+ */
+export async function fetchDestinationHeroUris(
+  plan: TravelPlan,
+  limit: number = DESTINATION_COVER_MAX,
+  options?: FetchDestinationHeroOptions,
+): Promise<string[]> {
+  const capped = Math.max(1, Math.min(DESTINATION_COVER_MAX, limit));
+  const local = localTripCoverUri(plan);
+  const out: string[] = [];
+  pushUniqueUri(out, local);
+  if (out.length >= capped) return out.map(toClientDisplayCoverUri);
+
+  const places = destinationCoverCandidates(plan)
+    .map((c) => c.trim())
+    .filter((c) => c.length >= 2);
+  if (!places.length) return out.map(toClientDisplayCoverUri);
+
+  const pool = await resolveDestinationHeroPool(places);
+  if (pool.length === 0) {
+    return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
+  }
+
+  const recentKeys =
+    options?.recentKeys ?? (await loadHeroRecentKeys());
+  const salt = options?.salt ?? Date.now();
+  const remoteSlots = capped - out.length;
+  const picked = pickRotatingHeroUris(pool, recentKeys, remoteSlots, salt);
+  for (const uri of picked) {
     pushUniqueUri(out, uri);
     if (out.length >= capped) break;
   }
+
+  if (options?.persistRecent !== false && picked.length > 0) {
+    const nextRecent = rememberHeroRecentKeys(recentKeys, picked);
+    void saveHeroRecentKeys(nextRecent);
+  }
+
   return orderHeroUrisForClient(out).map(toClientDisplayCoverUri);
 }

@@ -414,6 +414,7 @@ Demo fixture: `vision-mindset` / `vision-sample-forest` via `vision-board-demo` 
 | `ontrack.profile.section.legal`                     | Legal section anchor                |
 | `ontrack.profile.section.dangerZone`                | Danger Zone (reset / delete)        |
 | `ontrack.profile.section.disclaimers`               | Disclaimers footer section anchor   |
+| `ontrack.profile.version`                           | App version footer label            |
 | `ontrack.profile.theme.system` / `.light` / `.dark` | Theme segment                       |
 | `ontrack.profile.homeLocation`                      | Home location                       |
 | `ontrack.profile.agents`                            | Manage Agents                       |
@@ -462,6 +463,7 @@ Trip launcher home. Utility actions (calendar, flights/stays, weather, currency,
 | `ontrack.travel.list.openHub.<tripId>`           | Open trip (plan detail) from the card body                |
 | `ontrack.travel.list.editTrip.<tripId>`          | Edit trip details (hero control)                          |
 | `ontrack.travel.list.itinerary.<tripId>`         | View Itinerary → plan detail                              |
+| `ontrack.travel.list.dates.<tripId>`             | Layout anchor — trip-card date range + weekdays           |
 | `ontrack.travel.list.coTravelers.<tripId>`       | Open Co-Travelers from avatar stack / plan tools          |
 | `ontrack.travel.list.cover.<tripId>`             | Expand a trip cover photo (legacy)                        |
 | `ontrack.travel.list.collapse.<tripId>`          | Legacy collapse control (unused on launcher cards)        |
@@ -595,6 +597,7 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | ID | Control |
 |----|---------|
 | `ontrack.developer.back` | Back to profile |
+| `ontrack.developer.section.appUpdates` | Expand/collapse App Updates (top of hub) |
 | `ontrack.developer.section.navigate` | Expand/collapse Navigate |
 | `ontrack.developer.section.insights` | Expand/collapse Product insights |
 | `ontrack.developer.section.runtime` | Expand/collapse Runtime |
@@ -604,6 +607,17 @@ Deep link example: `ontrack://design-system` / Expo route `/design-system`
 | `ontrack.developer.insights.local` | This-device usage card |
 | `ontrack.developer.insights.product` | All-users usage card |
 | `ontrack.developer.insights.refresh` | Refresh insights (header action) |
+| `ontrack.developer.releaseNotes` | App Updates body (Release Notes / Changelog) |
+| `ontrack.developer.releaseNotes.currentVersion` | Current Version: X.Y.Z label |
+| `ontrack.developer.releaseNotes.tabs` | Release Notes / Changelog segmented control |
+| `ontrack.developer.releaseNotes.tab.releaseNotes` | Release Notes tab |
+| `ontrack.developer.releaseNotes.tab.changelog` | Changelog tab |
+| `ontrack.developer.releaseNotes.date` | Current ship-day date (MM/DD/YYYY) between arrows |
+| `ontrack.developer.releaseNotes.prev` | Older ship day |
+| `ontrack.developer.releaseNotes.next` | Newer ship day |
+| `ontrack.developer.releaseNotes.list` | Versions for the selected day (latest on top) |
+| `ontrack.developer.releaseNotes.day.<YYYY-MM-DD>` | Card for the selected ship day |
+| `ontrack.developer.releaseNotes.version.<semver>` | Notes block for one version |
 | `ontrack.developer.devMode` | Toggle Dev Mode sandbox |
 | `ontrack.developer.designSystem` | Open Design System |
 | `ontrack.developer.apiUsage` | Open Integrations |
