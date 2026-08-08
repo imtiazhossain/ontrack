@@ -52,6 +52,7 @@ describe('glass plate contract', () => {
   it('keeps Home location sheet and Add Event assistant on glass atmosphere', () => {
     const home = read('src/features/daily-tracking/home-location-sheet.tsx');
     const activity = read('src/app/activity-form.tsx');
+    const layout = read('src/app/_layout.tsx');
     const scaffold = read('src/components/primitives/sheet-scaffold.tsx');
     expect(home).toContain('SheetScaffold');
     expect(home).toContain("surface=\"glass\"");
@@ -60,8 +61,20 @@ describe('glass plate contract', () => {
     expect(home).not.toContain('presentationStyle="pageSheet"');
     expect(home).not.toContain('backgroundColor: theme.backgroundPrimary');
     expect(scaffold).toContain('ScreenAtmosphere');
+    const sections = read('src/app/activity-form-sections.tsx');
     expect(activity).toContain('GlassPlate');
+    expect(activity).toContain('ScreenAtmosphere');
+    expect(activity).toContain('GlassPrimaryAction');
+    expect(activity).toContain('glassFieldBackground');
+    expect(activity).toContain('glassFieldBorder');
     expect(activity).not.toContain('backgroundColor: theme.backgroundSunken');
+    expect(activity).not.toContain('backgroundColor: theme.accentFaint');
+    expect(sections).toContain('GlassPlate');
+    expect(sections).toContain('airy');
+    expect(sections).toContain('fieldBorderColor');
+    expect(layout).toMatch(
+      /name="activity-form"[\s\S]*?backgroundColor: 'transparent'/,
+    );
   });
 
   it('ships shared field and atmosphere tokens with visible wash chroma', () => {

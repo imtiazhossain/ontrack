@@ -265,6 +265,7 @@ Deep link example: `ontrack://travel` / Expo route `/(tabs)/travel`
 | `ontrack.activityForm.analyzePhoto`     | Re-run meal photo analysis             |
 | `ontrack.activityForm.removePhoto`      | Remove photo                           |
 | `ontrack.activityForm.save`             | Save the event                         |
+| `ontrack.activityForm.back`             | Close / back (header)                  |
 | `ontrack.activityForm.cancel`           | Cancel                                 |
 | `ontrack.activityForm.delete`           | Delete the event                       |
 | `ontrack.activityForm.choice.<group>.<value>` | Editor choice chips (meal type, workout type, …) |

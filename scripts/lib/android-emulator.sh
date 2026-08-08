@@ -52,15 +52,79 @@ android_emu_pool_mode() {
   esac
 }
 
+android_emu_is_agent_avd_name() {
+  [[ "${1:-}" =~ ^onTrack_Agent_[0-9]+$ ]]
+}
+
+# Keys copied from Galaxy_S26 (or ONTRACK_ANDROID_AVD_TEMPLATE) onto agent AVDs.
+# Includes GPU — avdmanager's pixel_9_pro_xl defaults hw.gpu.enabled=no.
+android_emu_agent_template_keys() {
+  printf '%s\n' \
+    hw.lcd.width hw.lcd.height hw.lcd.density \
+    hw.keyboard hw.keyboard.charmap hw.keyboard.lid \
+    hw.ramSize \
+    hw.gpu.enabled hw.gpu.mode
+}
+
+# Sync display/keyboard/RAM/GPU from template → target config.ini.
+android_emu_sync_avd_config_from_template() {
+  local conf="$1" tmpl="$2"
+  [[ -f "$conf" && -f "$tmpl" ]] || return 0
+  python3 - "$conf" "$tmpl" <<'PY'
+import re, sys
+from pathlib import Path
+conf, tmpl = Path(sys.argv[1]), Path(sys.argv[2])
+text = conf.read_text(encoding="utf-8")
+src = tmpl.read_text(encoding="utf-8")
+keys = (
+    "hw.lcd.width", "hw.lcd.height", "hw.lcd.density",
+    "hw.keyboard", "hw.keyboard.charmap", "hw.keyboard.lid",
+    "hw.ramSize",
+    "hw.gpu.enabled", "hw.gpu.mode",
+)
+changed = False
+for key in keys:
+    m = re.search(rf"(?m)^{re.escape(key)}\s*=\s*(.*)$", src)
+    if not m:
+        continue
+    val = m.group(1).strip()
+    if re.search(rf"(?m)^{re.escape(key)}\s*=", text):
+        new, n = re.subn(
+            rf"(?m)^{re.escape(key)}\s*=\s*.*$", f"{key}={val}", text, count=1
+        )
+        if n and new != text:
+            text = new
+            changed = True
+    else:
+        text = text.rstrip() + f"\n{key}={val}\n"
+        changed = True
+# Force GPU on even when the template is missing those keys.
+if not re.search(r"(?m)^hw\.gpu\.enabled\s*=", text):
+    text = text.rstrip() + "\nhw.gpu.enabled=yes\n"
+    changed = True
+elif re.search(r"(?m)^hw\.gpu\.enabled\s*=\s*no\s*$", text):
+    text = re.sub(
+        r"(?m)^hw\.gpu\.enabled\s*=\s*.*$", "hw.gpu.enabled=yes", text, count=1
+    )
+    changed = True
+if not re.search(r"(?m)^hw\.gpu\.mode\s*=", text):
+    text = text.rstrip() + "\nhw.gpu.mode=auto\n"
+    changed = True
+if changed:
+    conf.write_text(text, encoding="utf-8")
+    print(f"Synced AVD hardware from template → {conf}", file=sys.stderr)
+PY
+}
+
 # Create onTrack_Agent_N AVDs (Galaxy_S26-class) when missing.
 android_emu_ensure_agent_avd() {
   local name template="${ONTRACK_ANDROID_AVD_TEMPLATE:-Galaxy_S26}"
   name="$(android_emu_preferred_name)"
   if android_emu_avd_exists; then
-    android_emu_ensure_hw_keyboard
+    android_emu_ensure_avd_runtime_config
     return 0
   fi
-  if [[ ! "$name" =~ ^onTrack_Agent_[0-9]+$ ]]; then
+  if ! android_emu_is_agent_avd_name "$name"; then
     echo "error: no AVD named '${name}' (create it or set ONTRACK_ANDROID_AVD)" >&2
     return 1
   fi
@@ -115,7 +179,7 @@ for old, new in (
 conf.write_text(text, encoding="utf-8")
 print(f"Cloned AVD config {template} → {name}", file=sys.stderr)
 PY
-    android_emu_ensure_hw_keyboard
+    android_emu_ensure_avd_runtime_config
     return 0
   fi
 
@@ -126,35 +190,12 @@ PY
     echo "error: avdmanager failed to create '${name}'" >&2
     return 1
   }
-  # Match Galaxy_S26 display metrics when template config is available.
+  # Match Galaxy_S26 display + GPU when template config is available.
   local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
   local conf="${home}/${name}.avd/config.ini"
   local tmpl="${home}/${template}.avd/config.ini"
-  if [[ -f "$conf" && -f "$tmpl" ]]; then
-    python3 - "$conf" "$tmpl" <<'PY'
-import re, sys
-from pathlib import Path
-conf, tmpl = Path(sys.argv[1]), Path(sys.argv[2])
-text = conf.read_text(encoding="utf-8")
-src = tmpl.read_text(encoding="utf-8")
-keys = (
-    "hw.lcd.width", "hw.lcd.height", "hw.lcd.density",
-    "hw.keyboard", "hw.keyboard.charmap", "hw.keyboard.lid",
-    "hw.ramSize",
-)
-for key in keys:
-    m = re.search(rf"(?m)^{re.escape(key)}\s*=\s*(.*)$", src)
-    if not m:
-        continue
-    val = m.group(1).strip()
-    if re.search(rf"(?m)^{re.escape(key)}\s*=", text):
-        text = re.sub(rf"(?m)^{re.escape(key)}\s*=\s*.*$", f"{key}={val}", text, count=1)
-    else:
-        text = text.rstrip() + f"\n{key}={val}\n"
-conf.write_text(text, encoding="utf-8")
-PY
-  fi
-  android_emu_ensure_hw_keyboard
+  android_emu_sync_avd_config_from_template "$conf" "$tmpl"
+  android_emu_ensure_avd_runtime_config
   return 0
 }
 
@@ -224,6 +265,8 @@ android_emu_preferred_serial() {
 }
 
 # Shut down a specific AVD by name (pool agent cleanup). Leaves other AVDs alone.
+# Fast kill (no 20s snapshot save) — mid-save kills corrupt default_boot and wedge
+# the next agent verify for minutes.
 android_emu_shutdown_named() {
   local name="${1:-}" serial adb_bin
   [[ -n "$name" ]] || return 0
@@ -233,10 +276,22 @@ android_emu_shutdown_named() {
     ONTRACK_ANDROID_AVD="$name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
   )"
   if [[ -z "$serial" ]]; then
+    android_emu_clear_stale_locks "$name"
     return 0
   fi
   echo "Shutting down agent emulator: ${name} (${serial})" >&2
-  "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+  ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
+    "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+  # Brief wait so qemu releases multiinstance.lock before the next boot.
+  local deadline=$((SECONDS + 15))
+  while (( SECONDS < deadline )); do
+    serial="$(
+      ONTRACK_ANDROID_AVD="$name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+    )"
+    [[ -z "$serial" ]] && break
+    sleep 1
+  done
+  android_emu_clear_stale_locks "$name"
 }
 
 android_emu_avd_exists() {
@@ -245,6 +300,22 @@ android_emu_avd_exists() {
   emu_bin="$(android_emu_sdk_bin emulator)"
   [[ -n "$emu_bin" ]] || return 1
   "$emu_bin" -list-avds 2>/dev/null | grep -qx "$name"
+}
+
+# True when config.ini points at an installed system image.
+# Fresh avdmanager AVDs are config-only until first boot — that is OK.
+android_emu_avd_is_complete() {
+  local name="${1:-$(android_emu_preferred_name)}"
+  local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+  local sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+  local conf="${home}/${name}.avd/config.ini"
+  local sysdir
+  [[ -f "$conf" ]] || return 1
+  sysdir="$(
+    awk -F= '/^image\.sysdir\.1[[:space:]]*=/{gsub(/^[ \t]+|[ \t]+$/,"",$2); print $2; exit}' "$conf"
+  )"
+  [[ -n "$sysdir" ]] || return 1
+  [[ -d "${sdk_root}/${sysdir}" || -d "${sdk_root}/${sysdir%/}" ]]
 }
 
 # Path to the preferred AVD config.ini (empty if missing).
@@ -293,6 +364,75 @@ PY
   fi
 }
 
+# Heal keyboard + GPU (and agent template parity) before every boot.
+# Existing onTrack_Agent_* AVDs were created with hw.gpu.enabled=no.
+android_emu_ensure_avd_runtime_config() {
+  local name template="${ONTRACK_ANDROID_AVD_TEMPLATE:-Galaxy_S26}"
+  local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+  local conf tmpl
+  name="$(android_emu_preferred_name)"
+  conf="$(android_emu_avd_config_ini "$name" || true)"
+  [[ -n "$conf" && -f "$conf" ]] || return 0
+  android_emu_ensure_hw_keyboard
+  if android_emu_is_agent_avd_name "$name"; then
+    tmpl="${home}/${template}.avd/config.ini"
+    android_emu_sync_avd_config_from_template "$conf" "$tmpl"
+  else
+    # Non-agent: still force GPU on when explicitly disabled.
+    if grep -qE '^hw\.gpu\.enabled[[:space:]]*=[[:space:]]*no' "$conf"; then
+      python3 - "$conf" <<'PY'
+import re, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = re.sub(r"(?m)^hw\.gpu\.enabled\s*=\s*.*$", "hw.gpu.enabled=yes", text, count=1)
+path.write_text(text, encoding="utf-8")
+print(f"Patched hw.gpu.enabled=yes in {path}", file=sys.stderr)
+PY
+    fi
+  fi
+}
+
+# Drop leftover qemu locks when the AVD is not running (blocks next boot).
+android_emu_clear_stale_locks() {
+  local name="${1:-$(android_emu_preferred_name)}"
+  local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+  local avd_dir="${home}/${name}.avd"
+  [[ -d "$avd_dir" ]] || return 0
+  # Still on adb → locks are live.
+  if [[ -n "$(
+    ONTRACK_ANDROID_AVD="$name" ONTRACK_ANDROID_SERIAL= android_emu_preferred_serial || true
+  )" ]]; then
+    return 0
+  fi
+  # qemu process still holding the AVD → leave locks alone.
+  if pgrep -lf "qemu-system.*-avd[[:space:]]+${name}|emulator.*-avd[[:space:]]+${name}" >/dev/null 2>&1; then
+    return 0
+  fi
+  local lock removed=0
+  for lock in \
+    "${avd_dir}/hardware-qemu.ini.lock" \
+    "${avd_dir}/multiinstance.lock" \
+    "${avd_dir}/snapshot.lock.lock"; do
+    if [[ -e "$lock" ]]; then
+      rm -f "$lock" 2>/dev/null || true
+      removed=1
+    fi
+  done
+  (( removed )) && echo "Cleared stale emulator locks for ${name}" >&2
+  return 0
+}
+
+# Remove default_boot after a wedged snapshot load so the next attempt is cold.
+android_emu_discard_default_snapshot() {
+  local name="${1:-$(android_emu_preferred_name)}"
+  local home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+  local snap="${home}/${name}.avd/snapshots/default_boot"
+  [[ -d "$snap" ]] || return 0
+  echo "Discarding wedged snapshot default_boot for ${name}" >&2
+  rm -rf "$snap" 2>/dev/null || true
+}
+
 # Set clipboard text on the preferred emulator (Custom Tabs / WebViews may still
 # need a long-press Paste — Chrome often ignores automated paste).
 android_emu_set_clipboard() {
@@ -310,28 +450,63 @@ android_emu_set_clipboard() {
     }
 }
 
-# Shut down every running emulator except keep_serial (so adb default device is unique).
-# No-op in agent pool mode — other slots / headed AVDs must stay up.
+# Shut down peer emulators so adb + the android agent-ui bridge stay unambiguous.
+# - Pool mode: kill non-agent AVDs (Galaxy/IdeaHome). Leaving Galaxy up lets its
+#   JS bridge answer route probes while onTrack_Agent_N has no app → route=?.
+# - Non-pool: kill other non-agent emulators; never touch onTrack_Agent_* slots.
 android_emu_shutdown_others() {
-  local keep_serial="${1:-}" adb_bin serial
-  if android_emu_pool_mode; then
-    return 0
-  fi
+  local keep_serial="${1:-}" adb_bin serial avd
   adb_bin="$(android_emu_sdk_bin adb)"
   [[ -n "$adb_bin" ]] || return 0
   while IFS= read -r serial; do
     [[ -z "$serial" || "$serial" == "$keep_serial" ]] && continue
-    echo "Shutting down other emulator: ${serial}"
-    "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+    avd="$("$adb_bin" -s "$serial" emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)"
+    avd="$(printf '%s\n' "$avd" | awk 'NF && $0!="OK"{print; exit}')"
+    if android_emu_is_agent_avd_name "$avd"; then
+      # Other pool slots must stay up for parallel agents.
+      echo "Leaving agent emulator up: ${serial} (${avd})" >&2
+      continue
+    fi
+    if [[ -z "$avd" ]]; then
+      # `emu avd name` flaps during boot — never guess-kill in pool mode
+      # (was murdering onTrack_Agent_2 as "unknown" mid verify-both).
+      if android_emu_pool_mode; then
+        echo "Leaving unidentified emulator up (pool): ${serial}" >&2
+        continue
+      fi
+    fi
+    if android_emu_pool_mode; then
+      echo "Shutting down non-agent emulator (pool): ${serial} (${avd})" >&2
+    else
+      echo "Shutting down other emulator: ${serial}"
+    fi
+    ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
+      "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
   done < <("$adb_bin" devices 2>/dev/null | awk '/^emulator-[0-9]+[[:space:]]+device/{print $1}')
 }
 
+# Wait for sys.boot_completed. SECONDS_BUDGET overrides the default (120).
+# Fail-fast when the serial disappears / goes offline (killed mid-wait).
 android_emu_wait_boot() {
-  local serial="$1" deadline=$((SECONDS + 120)) adb_bin boot
+  local serial="$1"
+  local budget="${2:-120}"
+  local deadline=$((SECONDS + budget)) adb_bin boot state offline_hits=0
   adb_bin="$(android_emu_sdk_bin adb)"
-  [[ -n "$adb_bin" ]] || return 1
+  [[ -n "$adb_bin" && -n "$serial" ]] || return 1
   "$adb_bin" -s "$serial" wait-for-device >/dev/null 2>&1 || true
   while (( SECONDS < deadline )); do
+    state="$("$adb_bin" -s "$serial" get-state 2>/dev/null | tr -d '\r')"
+    if [[ "$state" != "device" ]]; then
+      offline_hits=$((offline_hits + 1))
+      # Brief grace for adb flaps right after attach.
+      if (( offline_hits >= 3 )); then
+        echo "warn: emulator ${serial} went offline before boot_completed" >&2
+        return 1
+      fi
+      sleep 1
+      continue
+    fi
+    offline_hits=0
     boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
     if [[ "$boot" == "1" ]]; then
       # Soft keyboard still available when a hardware keyboard is attached.
@@ -341,6 +516,35 @@ android_emu_wait_boot() {
     sleep 1
   done
   return 1
+}
+
+# True when the preferred AVD is on adb AND finished booting (sys.boot_completed=1).
+# `adb get-state=device` alone is not enough — mid-boot guests look "device" while
+# pm/shell/app launch still fail and agent-ui returns route=?.
+android_emu_is_ready() {
+  local serial boot adb_bin
+  serial="$(android_emu_preferred_serial || true)"
+  [[ -n "$serial" ]] || return 1
+  adb_bin="$(android_emu_sdk_bin adb)"
+  [[ -n "$adb_bin" ]] || return 1
+  "$adb_bin" -s "$serial" get-state >/dev/null 2>&1 || return 1
+  boot="$("$adb_bin" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  [[ "$boot" == "1" ]]
+}
+
+# Pin serial + adb reverse when already ready; otherwise boot the preferred AVD
+# and wait for sys.boot_completed (via ensure_preferred_android_emulator).
+android_emu_ensure_ready() {
+  local serial
+  if android_emu_is_ready; then
+    serial="$(android_emu_preferred_serial || true)"
+    export ANDROID_SERIAL="$serial"
+    export ONTRACK_ANDROID_SERIAL="$serial"
+    android_emu_ensure_adb_reverse >/dev/null 2>&1 || true
+    return 0
+  fi
+  ensure_preferred_android_emulator || return 1
+  android_emu_is_ready
 }
 
 # Forward emulator loopback → host so advertise-127 Metro / agent-ui work.
@@ -381,10 +585,124 @@ android_emu_ensure_adb_reverse() {
   return 0
 }
 
+android_emu_app_package() {
+  printf '%s' "${BUNDLE_ID:-com.imtihoss.ontracknow}"
+}
+
+# Headed handoff only (or ONTRACK_ANDROID_ENSURE_APP_SURFACE=1).
+# Escape: ONTRACK_ANDROID_SKIP_APP_SURFACE=1.
+android_emu_want_app_surface() {
+  case "${ONTRACK_ANDROID_SKIP_APP_SURFACE:-0}" in
+    1|true|TRUE|yes|YES) return 1 ;;
+  esac
+  case "${ONTRACK_ANDROID_ENSURE_APP_SURFACE:-0}" in
+    1|true|TRUE|yes|YES) return 0 ;;
+  esac
+  android_emu_want_window
+}
+
+android_emu_app_installed() {
+  local pkg
+  pkg="$(android_emu_app_package)"
+  android_emu_adb shell pm path "$pkg" 2>/dev/null | grep -q "package:"
+}
+
+android_emu_relaunch_app() {
+  local pkg
+  pkg="$(android_emu_app_package)"
+  android_emu_adb shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  sleep 1
+  android_emu_adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 \
+    >/dev/null 2>&1 \
+    || android_emu_adb shell am start -a android.intent.action.MAIN \
+      -c android.intent.category.LAUNCHER -n "${pkg}/.MainActivity" \
+      >/dev/null 2>&1 \
+    || true
+}
+
+# Print near-white pixel % from a live screencap (requires Pillow).
+android_emu_screen_near_white_pct() {
+  local helper="${_ONTRACK_ANDROID_LIB_DIR}/android_emu_surface.py"
+  [[ -f "$helper" ]] || return 1
+  android_emu_adb exec-out screencap -p 2>/dev/null \
+    | python3 "$helper" pct 2>/dev/null
+}
+
+# Headed handoff: ensure onTrack is launched and the SurfaceView is painted.
+# Arg 1: force_relaunch=1 after headless→window / cold window restart.
+# Blank white while Metro/JS look fine is a known post-restart failure mode.
+android_emu_ensure_app_surface() {
+  local force_relaunch="${1:-0}"
+  local pkg threshold wait_budget pct healed=0 deadline
+
+  android_emu_want_app_surface || return 0
+  if ! android_emu_app_installed; then
+    return 0
+  fi
+
+  pkg="$(android_emu_app_package)"
+  threshold="${ONTRACK_ANDROID_BLANK_WHITE_PCT:-85}"
+  wait_budget="${ONTRACK_ANDROID_SURFACE_WAIT_SECS:-25}"
+
+  if [[ "$force_relaunch" == "1" ]]; then
+    echo "Relaunching ${pkg} after emulator window restart (blank SurfaceView heal)…"
+    android_emu_relaunch_app
+  elif ! android_emu_adb shell pidof -s "$pkg" >/dev/null 2>&1; then
+    echo "Launching ${pkg} for headed handoff…"
+    android_emu_adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 \
+      >/dev/null 2>&1 || true
+  fi
+
+  deadline=$((SECONDS + wait_budget))
+  pct=""
+  while (( SECONDS < deadline )); do
+    pct="$(android_emu_screen_near_white_pct || true)"
+    if [[ -z "$pct" ]]; then
+      sleep 2
+      continue
+    fi
+    if awk -v p="$pct" -v t="$threshold" 'BEGIN { exit !(p + 0 < t + 0) }'; then
+      echo "App surface painted (${pct}% near-white < ${threshold}%)"
+      return 0
+    fi
+    if (( healed == 0 )); then
+      echo "warn: blank/white SurfaceView (${pct}% near-white) — relaunching ${pkg}…" >&2
+      android_emu_relaunch_app
+      healed=1
+      sleep 4
+      continue
+    fi
+    sleep 2
+  done
+
+  echo "error: ${pkg} surface still blank/white after heal (${pct:-?}% near-white ≥ ${threshold}%)" >&2
+  return 1
+}
+
+# Pin serial, reverse ports, soft IME, headed app-surface heal, then announce ready.
+# $1=serial $2=avd_name $3=want_window(0|1) $4=window_restarted(0|1)
+android_emu_mark_ready() {
+  local serial="$1" name="$2" want_window="${3:-0}" window_restarted="${4:-0}"
+  [[ -n "$serial" ]] || return 1
+  export ANDROID_SERIAL="$serial"
+  export ONTRACK_ANDROID_SERIAL="$serial"
+  android_emu_ensure_adb_reverse || true
+  if (( want_window )); then
+    android_emu_ensure_soft_ime "$serial"
+    # Headless→window (and blank SurfaceView) must not hand off a white screen.
+    if ! android_emu_ensure_app_surface "$window_restarted"; then
+      return 1
+    fi
+  fi
+  echo "Emulator ready: ${name} (${serial})$((( want_window )) && echo '' || echo ' (headless)')"
+  return 0
+}
+
 # Boot the preferred AVD (default: Galaxy_S26). Headless unless WINDOW=1.
 # Shutdown other emulators so `adb` / installs target one device.
 ensure_preferred_android_emulator() {
   local name serial emu_bin adb_bin log args=()
+  local window_restarted=0
   name="$(android_emu_preferred_name)"
   emu_bin="$(android_emu_sdk_bin emulator)"
   adb_bin="$(android_emu_sdk_bin adb)"
@@ -394,7 +712,7 @@ ensure_preferred_android_emulator() {
     return 1
   fi
   if ! android_emu_avd_exists; then
-    if android_emu_pool_mode || [[ "$name" =~ ^onTrack_Agent_[0-9]+$ ]]; then
+    if android_emu_pool_mode || android_emu_is_agent_avd_name "$name"; then
       android_emu_ensure_agent_avd || return 1
     else
       echo "error: no AVD named '${name}' (create it or set ONTRACK_ANDROID_AVD)" >&2
@@ -402,8 +720,14 @@ ensure_preferred_android_emulator() {
       return 1
     fi
   fi
+  if ! android_emu_avd_is_complete "$name"; then
+    echo "error: AVD '${name}' is missing its system image (image.sysdir.1)" >&2
+    echo "hint: sdkmanager \"system-images;android-36;google_apis;arm64-v8a\"" >&2
+    return 1
+  fi
 
-  android_emu_ensure_hw_keyboard
+  android_emu_ensure_avd_runtime_config
+  android_emu_clear_stale_locks "$name"
 
   serial="$(android_emu_preferred_serial || true)"
   android_emu_shutdown_others "${serial:-}"
@@ -412,11 +736,20 @@ ensure_preferred_android_emulator() {
   if android_emu_want_window; then
     want_window=1
   fi
+  # Agent pool boots: never write a snapshot on exit (lease kill used to corrupt
+  # default_boot mid-save). Still load an existing healthy snapshot when present.
+  local agent_no_snapshot_save=0
+  if android_emu_is_agent_avd_name "$name"; then
+    agent_no_snapshot_save=1
+  fi
 
   # `--window` must restart a headless instance — reusing it leaves no GUI.
+  # App often comes back on a blank SurfaceView after this path — heal below.
   if [[ -n "$serial" ]] && (( want_window )) && android_emu_is_headless; then
     echo "Restarting ${name} with window (was headless)…"
-    "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+    window_restarted=1
+    ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
+      "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
     local kill_deadline=$((SECONDS + 30))
     while (( SECONDS < kill_deadline )); do
       serial="$(android_emu_preferred_serial || true)"
@@ -424,43 +757,49 @@ ensure_preferred_android_emulator() {
       sleep 1
     done
     serial=""
+    android_emu_clear_stale_locks "$name"
   fi
 
   if [[ -n "$serial" ]]; then
-    if android_emu_wait_boot "$serial"; then
-      export ANDROID_SERIAL="$serial"
-      export ONTRACK_ANDROID_SERIAL="$serial"
-      android_emu_ensure_adb_reverse || true
-      if (( want_window )); then
-        android_emu_ensure_soft_ime "$serial"
-      fi
-      echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
+    if android_emu_wait_boot "$serial" 120; then
+      android_emu_mark_ready "$serial" "$name" "$want_window" "$window_restarted" || return 1
       return 0
     fi
   fi
 
   log="${ROOT:-.}/.cursor/android-emulator.log"
   mkdir -p "$(dirname "$log")" 2>/dev/null || true
-  if (( want_window )); then
-    echo "Booting preferred emulator (window): ${name}"
-  else
-    echo "Booting preferred emulator (headless): ${name}"
-  fi
 
-  # Detach into a new session so Cursor aborting an agent shell does not
-  # SIGTERM the emulator. Plain `nohup … &` stays in the agent process group
-  # and dies with the terminal (same failure mode as Metro before start_new_session).
-  EMU_BIN="$emu_bin" EMU_LOG="$log" EMU_AVD="$name" EMU_WINDOW="$want_window" \
-    HOME="$HOME" USER="${USER:-}" TMPDIR="${TMPDIR:-/tmp}" ANDROID_HOME="${ANDROID_HOME}" \
-    PATH="$PATH" \
-    python3 - <<'PY'
+  # Launch helper — optional -no-snapshot-load after a wedged snapshot boot.
+  android_emu_detach_launch() {
+    local no_snap="${1:-0}" mode="headless"
+    (( want_window )) && mode="window"
+    if (( no_snap )); then
+      echo "Booting preferred emulator (${mode}, no snapshot): ${name}"
+    else
+      echo "Booting preferred emulator (${mode}): ${name}"
+    fi
+    # Detach into a new session so Cursor aborting an agent shell does not
+    # SIGTERM the emulator. Plain `nohup … &` stays in the agent process group
+    # and dies with the terminal (same failure mode as Metro before start_new_session).
+    EMU_BIN="$emu_bin" EMU_LOG="$log" EMU_AVD="$name" EMU_WINDOW="$want_window" \
+      EMU_NO_SNAPSHOT="$no_snap" EMU_NO_SNAPSHOT_SAVE="$agent_no_snapshot_save" \
+      HOME="$HOME" USER="${USER:-}" TMPDIR="${TMPDIR:-/tmp}" ANDROID_HOME="${ANDROID_HOME}" \
+      PATH="$PATH" \
+      python3 - <<'PY'
 import os, subprocess, sys
 
 emu = os.environ["EMU_BIN"]
 log_path = os.environ["EMU_LOG"]
 avd = os.environ["EMU_AVD"]
 window = os.environ.get("EMU_WINDOW", "0") == "1"
+no_snap = os.environ.get("EMU_NO_SNAPSHOT", "0") == "1"
+no_save = os.environ.get("EMU_NO_SNAPSHOT_SAVE", "0") == "1"
 args = [emu, "-avd", avd, "-netdelay", "none", "-netspeed", "full"]
+if no_snap:
+    args += ["-no-snapshot-load"]
+if no_save:
+    args += ["-no-snapshot-save"]
 if not window:
     args += ["-no-window", "-no-audio", "-no-boot-anim"]
 env = {
@@ -471,6 +810,8 @@ env = {
     "ANDROID_HOME": os.environ.get("ANDROID_HOME", ""),
     "ANDROID_SDK_ROOT": os.environ.get("ANDROID_HOME", ""),
     "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+    # Fast kill if something still issues emu kill during boot.
+    "ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL": "0",
 }
 with open(log_path, "ab", buffering=0) as logf:
     subprocess.Popen(
@@ -483,34 +824,65 @@ with open(log_path, "ab", buffering=0) as logf:
     )
 print("Emulator detached (new session); logs →", log_path, file=sys.stderr)
 PY
+  }
 
-  # Wait until this AVD appears on adb.
-  local deadline=$((SECONDS + 90))
-  serial=""
-  while (( SECONDS < deadline )); do
-    serial="$(android_emu_preferred_serial || true)"
-    if [[ -n "$serial" ]]; then
-      break
+  android_emu_wait_for_serial() {
+    # Agent clones often need longer than the first qemu attach.
+    local deadline=$((SECONDS + 90))
+    serial=""
+    while (( SECONDS < deadline )); do
+      serial="$(android_emu_preferred_serial || true)"
+      if [[ -n "$serial" ]]; then
+        return 0
+      fi
+      sleep 1
+    done
+    return 1
+  }
+
+  local attempt no_snap=0 boot_budget=40
+  for attempt in 1 2; do
+    (( attempt == 2 )) && no_snap=1
+    # Snapshot boots either come up fast or hang — fail over quickly.
+    # Cold boots (attempt 2) need a longer boot_completed wait.
+    if (( no_snap )); then
+      boot_budget=180
+      # Cold boot after wedged snapshot often leaves a blank React surface when headed.
+      (( want_window )) && window_restarted=1
+    else
+      boot_budget=40
     fi
-    sleep 1
+    android_emu_clear_stale_locks "$name"
+    android_emu_detach_launch "$no_snap"
+    if ! android_emu_wait_for_serial; then
+      echo "error: timed out waiting for AVD ${name} on adb (log: ${log})" >&2
+      (( attempt == 1 )) || return 1
+      android_emu_discard_default_snapshot "$name"
+      android_emu_clear_stale_locks "$name"
+      continue
+    fi
+
+    android_emu_shutdown_others "$serial"
+    if android_emu_wait_boot "$serial" "$boot_budget"; then
+      android_emu_mark_ready "$serial" "$name" "$want_window" "$window_restarted" || return 1
+      return 0
+    fi
+
+    echo "warn: ${name} (${serial}) stuck before boot_completed — retrying without snapshot" >&2
+    ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=0 \
+      "$adb_bin" -s "$serial" emu kill >/dev/null 2>&1 || true
+    local kill_deadline=$((SECONDS + 20))
+    while (( SECONDS < kill_deadline )); do
+      serial="$(android_emu_preferred_serial || true)"
+      [[ -z "$serial" ]] && break
+      sleep 1
+    done
+    serial=""
+    android_emu_discard_default_snapshot "$name"
+    android_emu_clear_stale_locks "$name"
+    (( attempt == 1 )) || break
   done
-  if [[ -z "$serial" ]]; then
-    echo "error: timed out waiting for AVD ${name} on adb (log: ${log})" >&2
-    return 1
-  fi
 
-  android_emu_shutdown_others "$serial"
-  if ! android_emu_wait_boot "$serial"; then
-    echo "error: timed out booting ${name} (${serial})" >&2
-    return 1
-  fi
-
-  export ANDROID_SERIAL="$serial"
-  export ONTRACK_ANDROID_SERIAL="$serial"
-  android_emu_ensure_adb_reverse || true
-  if (( want_window )); then
-    android_emu_ensure_soft_ime "$serial"
-  fi
-  echo "Emulator ready: ${name} (${serial})$(android_emu_want_window && echo '' || echo ' (headless)')"
-  return 0
+  echo "error: timed out booting ${name} (log: ${log})" >&2
+  return 1
 }

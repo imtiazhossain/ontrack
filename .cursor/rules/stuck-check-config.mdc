@@ -31,13 +31,14 @@ A device / bridge / boot / wait **timeout is not “try again”** — treat it 
 ## Agent-ui triage
 
 1. Sticky pins — `AGENT_UI_PLATFORM`, `AGENT_UI_DEVICE`, serials/sim overrides.
-2. Agent device pool wait (`waiting for agent device slot` / slots busy) — up to 5 dedicated headless devices; wait for a free slot (`AGENT_UI_SKIP_LEASE=1` escape only).
+2. Agent device pool wait (`waiting for agent device slot` / slots busy) — up to 5 dedicated headless devices; already-booted agent sims/AVDs count as busy (claim a cold slot); wait if full (`AGENT_UI_SKIP_LEASE=1` escape only).
 3. `route` with pin: iOS ~402×874, Android ~384×832. Width mismatch → fix env/device.
 4. Pin Android ops; unset/`ios` before iOS. Prefer `agent-ui-verify-both.sh` + named `--flow`.
-5. Android after reconnect often `route=/` — `verify` without `--flow`/`--open` fails fast; always land.
+5. Android after reconnect often `route=/` — `verify` auto-lands (goto/`--flow`) + wait-route + one cold retry; `verify-both` sets `AGENT_UI_ANDROID_FORCE_LAND` when on `/`. `route=?` → emu/app not ready (`boot_completed`); do not treat allow_fail route timeouts as up.
 6. iOS covered by Apple Account / system sheet / “Open in onTrack?” / location / Expo developer-menu intro → scheme pre-approval (`ios_sim_approve_url_schemes` on boot) + `./scripts/agent-ui-ios-alerts.sh ensure` (Open-in → Open; location → **Allow While Using App**; dev menu → **Continue**; auto from `ensure_app_up` / reconnect). Do not grind verify under it.
 7. Headless is the default — do **not** open Simulator.app / `ensure-android-emulator.sh --window` unless the user asked for headed. Assert/`--color` work without a GUI.
 8. Metro `:8081/status`, daemon `:8191/health`; Android `adb reverse` for 8081/8191.
 9. Do **not** force-stop / `--force-reconnect` for glyph/orientation checks — edit source, Fast Refresh, assert.
+10. “Running Dual-platform verify…” looks hung for minutes → check for `| tail`/`| head` on `verify-both` (buffers until exit) or a cold pool boot after mass `emu kill`. Drop the pipe; do not kill warm devices before verify.
 
 Details: [`.cursor/skills/agent-ui/SKILL.md`](../skills/agent-ui/SKILL.md).

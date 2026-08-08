@@ -157,19 +157,30 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
         2,
     ),
   );
-  const labelSize = Math.max(13, s(travelHomeTokens.type.button));
+  // Android serif metrics run wide — keep the CTA label readable without "...".
+  const labelSize = Math.max(
+    Platform.OS === 'android' ? 12 : 13,
+    s(travelHomeTokens.type.button) - (Platform.OS === 'android' ? 1 : 0),
+  );
   // Both themes: frosted sage glass + white ink.
   const itineraryFg = '#FFFFFF';
   const itineraryPadH = Math.max(
-    12,
-    s(travelHomeTokens.sizes.itineraryHorizontalPadding),
+    Platform.OS === 'android' ? 10 : 12,
+    s(travelHomeTokens.sizes.itineraryHorizontalPadding) -
+      (Platform.OS === 'android' ? 2 : 0),
   );
-  const itineraryIconSize = Math.max(16, s(travelHomeTokens.sizes.itineraryIcon));
+  const itineraryIconSize = Math.max(
+    Platform.OS === 'android' ? 15 : 16,
+    s(travelHomeTokens.sizes.itineraryIcon) - (Platform.OS === 'android' ? 3 : 0),
+  );
+  const itineraryGap = Platform.OS === 'android' ? 5 : 7;
+  /** CTA takes a bit more than dates so “View Itinerary” fits on ~384 Android. */
+  const itineraryFlex = compact ? undefined : Platform.OS === 'android' ? 1.35 : 1;
   const itineraryContent = (
     <>
       <TravelHomeRouteIcon size={itineraryIconSize} color={itineraryFg} />
-      <Text
-        allowFontScaling
+      <AppText
+        variant="callout"
         maxFontSizeMultiplier={1.05}
         numberOfLines={1}
         style={{
@@ -178,11 +189,10 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
           lineHeight: labelSize * 1.1,
           fontWeight: '400',
           fontFamily: travelHomeFontFamily,
-          flexShrink: 1,
-          minWidth: 0,
+          flexShrink: 0,
         }}>
         View Itinerary
-      </Text>
+      </AppText>
     </>
   );
   const avatarSize = Math.max(34, s(travelHomeTokens.sizes.avatar));
@@ -428,7 +438,8 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                 paddingHorizontal: travelHomeTokens.spacing.cardHorizontal,
                 paddingTop: destination || compact ? 0 : Math.max(8, footerPadV - 2),
                 paddingBottom: footerPadV,
-                // Invisible 50/50 split — gap is the only seam (no hairline).
+                // Dates + CTA flex peers (Android CTA slightly wider so the
+                // full “View Itinerary” label fits serif metrics).
                 // Center (not stretch): date block is taller than the CTA once
                 // weekdays + day pill stack; stretch + metaBody overflow clips
                 // the calendar range line off the top.
@@ -453,7 +464,10 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
               style={({ pressed }) => [
                 styles.itineraryHit,
                 {
-                  flex: compact ? undefined : 1,
+                  flex: itineraryFlex,
+                  // Android: never shrink below the full label width.
+                  flexShrink: Platform.OS === 'android' ? 0 : 1,
+                  minWidth: Platform.OS === 'android' ? undefined : 0,
                   height: buttonHeight,
                   borderRadius: travelHomeTokens.radius.itineraryButton,
                   opacity: pressed ? 0.88 : 1,
@@ -467,6 +481,7 @@ export const TravelHomeTripCard = memo(function TravelHomeTripCard({
                   {
                     flex: 1,
                     height: buttonHeight,
+                    gap: itineraryGap,
                     paddingHorizontal: itineraryPadH,
                     borderRadius: travelHomeTokens.radius.itineraryButton,
                     boxShadow: dark
@@ -542,8 +557,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   itineraryHit: {
-    flexShrink: 1,
-    minWidth: 0,
     overflow: 'hidden',
     borderCurve: 'continuous',
   },
@@ -551,9 +564,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
     width: '100%',
-    minWidth: 0,
     borderCurve: 'continuous',
   },
 });

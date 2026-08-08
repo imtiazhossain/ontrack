@@ -101,6 +101,15 @@ describe('canonical design-system contract', () => {
     expect(scaffold).toContain("surface?: 'solid' | 'glass'");
     expect(scaffold).toContain("surface = 'glass'");
     expect(scaffold).toContain('<BlurView');
+    // Android edge-to-edge: Modal must draw under system bars or the plate floats.
+    expect(scaffold).toContain('statusBarTranslucent');
+    expect(scaffold).toContain('navigationBarTranslucent');
+    // Safe-area pad on footer/body — not sheet chrome — so glass paints flush.
+    expect(scaffold).toContain('bottomPad');
+    expect(scaffold).toContain('paddingBottom: bottomPad');
+    expect(scaffold).not.toMatch(
+      /styles\.sheet[\s\S]*paddingBottom:\s*Math\.max\(insets\.bottom/,
+    );
   });
 
   it('exports shared glass plate and primary action', () => {

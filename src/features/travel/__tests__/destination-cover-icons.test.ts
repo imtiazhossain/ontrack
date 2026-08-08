@@ -16,4 +16,11 @@ describe('resolveIconicCoverQueries', () => {
     expect(queries.some((q) => /Ponte 25 de Abril|Belém/i.test(q))).toBe(true);
     expect(resolveIconicCoverQueries('Porto, Portugal', '')).toEqual([]);
   });
+
+  it('returns a multi-landmark Guatemala pool', () => {
+    const queries = resolveIconicCoverQueries('Guatemala', 'Guatemala boys trip');
+    expect(queries.length).toBeGreaterThanOrEqual(6);
+    expect(queries.some((q) => /Atitlan|Atitlán/i.test(q))).toBe(true);
+    expect(queries.some((q) => /Tikal/i.test(q))).toBe(true);
+  });
 });

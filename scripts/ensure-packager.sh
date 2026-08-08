@@ -267,10 +267,8 @@ node_version_label() {
 
 simulator_booted() {
   if [[ "$PACKAGER_TARGET" == "android" ]]; then
-    local serial
-    serial="$(android_emu_preferred_serial || true)"
-    [[ -n "$serial" ]] || return 1
-    ONTRACK_ANDROID_SERIAL="$serial" android_emu_adb get-state >/dev/null 2>&1
+    # Prefer sys.boot_completed over bare adb get-state (mid-boot false ready).
+    android_emu_is_ready
     return $?
   fi
   if [[ -n "${ONTRACK_IOS_SIMULATOR_UDID:-}" ]]; then
@@ -792,20 +790,31 @@ reconnect_dev_client() {
 
   # Cold starts (after terminate, e.g. the Fast Refresh heal) take 20s+.
   # Android first paint after reconnect is slower — give more headroom.
+  # Pool agent AVDs are often cold (no snapshot) and need a full JS bundle.
   local extra=30
   if [[ "$PACKAGER_TARGET" == "android" ]]; then
     extra=45
+    if [[ "${AGENT_UI_POOL_MODE:-0}" == "1" ]] \
+      || [[ "${ONTRACK_ANDROID_AVD:-}" =~ ^onTrack_Agent_[0-9]+$ ]]; then
+      extra=90
+    fi
   fi
   local deadline=$((SECONDS + WAIT_SECS + extra))
   local alert_ticks=0
+  local refire_every=8
+  if [[ "$PACKAGER_TARGET" == "android" ]]; then
+    refire_every=4
+  fi
   while (( SECONDS < deadline )); do
     if probe_connected; then
       echo "Dev client connected (agent-ui dump ok)."
       return 0
     fi
     # Re-fire the Metro URL periodically — DevLauncher sometimes drops the first.
-    if (( alert_ticks > 0 && alert_ticks % 8 == 0 )); then
+    if (( alert_ticks > 0 && alert_ticks % refire_every == 0 )); then
       if [[ "$PACKAGER_TARGET" == "android" ]]; then
+        # Keep reverse alive — emu restart / peer kills can drop it.
+        android_emu_ensure_adb_reverse >/dev/null 2>&1 || true
         android_emu_adb shell am start -a android.intent.action.VIEW -d "$url" \
           >/dev/null 2>&1 || true
       else

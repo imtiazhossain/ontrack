@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import type { TravelTimeOfDay } from '@/features/travel/travel-atmosphere-model';
+import { matchCuratedAtmosphereForPlace } from '@/features/travel/travel-home-atmosphere-catalog';
 import {
   headerSkyChromeColor,
   resolveHeaderSkyCondition,
@@ -78,6 +79,13 @@ export function TravelHeaderSkyDecor({
   });
   const horizon = fadeTo ?? chrome;
   const groundKind = resolveTravelSkyGroundKind(destination, latitude);
+  // Labeled curated places (Antigua, Iceland, Lisbon, …) always get the
+  // sky+ground still — procedural SVG reads as an empty wash on warm Android
+  // day chromes, and the trip card already shows the same plate.
+  const preferDestinationStill =
+    plan.quality === 'static' ||
+    (destination.trim().length > 0 &&
+      matchCuratedAtmosphereForPlace(destination).length > 0);
 
   return (
     <AgentTestId
@@ -88,7 +96,7 @@ export function TravelHeaderSkyDecor({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.fill}>
-        {plan.quality === 'static' ? (
+        {preferDestinationStill ? (
           <TravelSkyStaticDestination
             destination={destination}
             dateKey={dateKey}

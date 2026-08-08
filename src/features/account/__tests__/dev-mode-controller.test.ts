@@ -3,6 +3,7 @@ import {
     enterDevMode,
     exitAgentDevModeIfNeeded,
     exitDevMode,
+    reaffirmUserDevModeSandbox,
     settleDevModeAfterRehydrate,
 } from '@/features/account/dev-mode-controller';
 import {
@@ -308,7 +309,7 @@ describe('dev-mode-controller', () => {
     expect(useDevMode.getState().source).toBe('user');
   });
 
-  it('settleDevModeAfterRehydrate exits agent leftovers and keeps user sandboxes', async () => {
+  it('settleDevModeAfterRehydrate exits agent and user sandboxes on cold start', async () => {
     ensureDevModeSandboxSync();
     await settleDevModeAfterRehydrate();
     expect(useDevMode.getState().enabled).toBe(false);
@@ -316,17 +317,17 @@ describe('dev-mode-controller', () => {
 
     await enterDevMode('user');
     await settleDevModeAfterRehydrate();
-    expect(useDevMode.getState().enabled).toBe(true);
-    expect(useDevMode.getState().source).toBe('user');
-    expect(isCloudSyncPushPaused()).toBe(true);
+    expect(useDevMode.getState().enabled).toBe(false);
+    expect(useDevMode.getState().source).toBeNull();
+    expect(isCloudSyncPushPaused()).toBe(false);
   });
 
-  it('settleDevModeAfterRehydrate re-seeds travel-home when fixtures are missing', async () => {
+  it('reaffirmUserDevModeSandbox re-seeds travel-home when fixtures are missing', async () => {
     await enterDevMode('user');
     useTravel.getState().replacePlans([]);
     expect(useTravel.getState().plans).toHaveLength(0);
 
-    await settleDevModeAfterRehydrate();
+    reaffirmUserDevModeSandbox();
     expect(useDevMode.getState().enabled).toBe(true);
     expect(
       useTravel.getState().plans.some((plan) => plan.id === 'trip-travel-home-iceland'),

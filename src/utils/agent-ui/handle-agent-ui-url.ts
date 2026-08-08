@@ -39,10 +39,18 @@ import {
 } from './route';
 import { scrollAgentUiTargetIntoView } from './scroll-into-view';
 
+function isWelcomeRoute(route: string): boolean {
+  return route === '/welcome' || route.startsWith('/welcome?');
+}
+
+function isOnboardingRoute(route: string): boolean {
+  return route === '/onboarding' || route.startsWith('/onboarding?');
+}
+
 /** Fresh pool clones land on /welcome — continue as guest before seed/flow. */
 async function ensurePastWelcomeGate(): Promise<boolean> {
   const route = getAgentUiRoute() || '';
-  if (route !== '/welcome' && !route.startsWith('/welcome?')) {
+  if (!isWelcomeRoute(route)) {
     return true;
   }
   const guestId = AgentUiIds.auth.guest;
@@ -50,7 +58,7 @@ async function ensurePastWelcomeGate(): Promise<boolean> {
   let tapped = false;
   while (Date.now() < deadline) {
     const current = getAgentUiRoute() || '';
-    if (current && current !== '/welcome' && !current.startsWith('/welcome?')) {
+    if (current && !isWelcomeRoute(current)) {
       return true;
     }
     if (!tapped && getAgentUiTarget(guestId)) {
@@ -60,11 +68,40 @@ async function ensurePastWelcomeGate(): Promise<boolean> {
     await sleep(50);
   }
   const finalRoute = getAgentUiRoute() || '';
-  return Boolean(
-    finalRoute &&
-      finalRoute !== '/welcome' &&
-      !finalRoute.startsWith('/welcome?'),
-  );
+  return Boolean(finalRoute && !isWelcomeRoute(finalRoute));
+}
+
+/**
+ * Fresh Android agent AVDs often open /onboarding after guest continue.
+ * Tap Skip so seed/flow can reach Travel (and other tabs).
+ */
+async function ensurePastOnboardingGate(): Promise<boolean> {
+  const route = getAgentUiRoute() || '';
+  if (!isOnboardingRoute(route)) {
+    return true;
+  }
+  const skipId = AgentUiIds.onboarding.skip;
+  const deadline = Date.now() + (Platform.OS === 'android' ? 12000 : 8000);
+  let tapped = false;
+  while (Date.now() < deadline) {
+    const current = getAgentUiRoute() || '';
+    if (current && !isOnboardingRoute(current)) {
+      return true;
+    }
+    if (!tapped && getAgentUiTarget(skipId)) {
+      if (!tapAgentUiTarget(skipId)) return false;
+      tapped = true;
+    }
+    await sleep(50);
+  }
+  const finalRoute = getAgentUiRoute() || '';
+  return Boolean(finalRoute && !isOnboardingRoute(finalRoute));
+}
+
+/** Welcome guest + onboarding skip — required before seed/flow on cold devices. */
+async function ensurePastLaunchGates(): Promise<boolean> {
+  if (!(await ensurePastWelcomeGate())) return false;
+  return ensurePastOnboardingGate();
 }
 
 export type AgentUiOp =
@@ -273,13 +310,13 @@ export async function handleAgentUiRequest(
       }
       return false;
     }
-    if (!(await ensurePastWelcomeGate())) {
+    if (!(await ensurePastLaunchGates())) {
       if (emitStatus) {
         await writeAgentUiStatus({
           op: 'flow',
           id: flowName,
           ok: false,
-          detail: 'Stuck on /welcome (guest continue failed)',
+          detail: 'Stuck on /welcome or /onboarding (launch gates failed)',
           route: getAgentUiRoute(),
         });
       }
@@ -364,12 +401,12 @@ export async function handleAgentUiRequest(
 
   if (op === 'seed') {
     const seedName = to ?? id;
-    if (!(await ensurePastWelcomeGate())) {
+    if (!(await ensurePastLaunchGates())) {
       if (emitStatus) {
         await writeAgentUiStatus({
           op: 'seed',
           ok: false,
-          detail: 'Stuck on /welcome (guest continue failed)',
+          detail: 'Stuck on /welcome or /onboarding (launch gates failed)',
           route: getAgentUiRoute(),
         });
       }

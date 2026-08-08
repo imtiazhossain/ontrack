@@ -72,6 +72,27 @@ describe('pickRotatingHeroUris', () => {
     const next = pickRotatingHeroUris(pool, recent, 3, 0);
     expect(next).toEqual(pool.slice(3, 6));
   });
+
+  it('never skips remaining unseen plates when salt is large', () => {
+    const recent = pool.slice(0, 4);
+    const next = pickRotatingHeroUris(pool, recent, 3, 99);
+    // salt 99 % 2 → lead with pool[5], then pool[4], then oldest recent.
+    expect(next.slice(0, 2)).toEqual([pool[5], pool[4]]);
+    expect(new Set(next).size).toBe(3);
+  });
+
+  it('keeps an Unsplash plate from always leading when salt rotates', () => {
+    const mixed = [
+      'https://upload.wikimedia.org/wikipedia/commons/a.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/b.jpg',
+      'https://images.unsplash.com/guatemala.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/c.jpg',
+    ];
+    const first = pickRotatingHeroUris(mixed, [], 3, 0);
+    const second = pickRotatingHeroUris(mixed, [], 3, 2);
+    expect(first[0]).not.toBe(second[0]);
+    expect(second[0]).toBe(mixed[2]);
+  });
 });
 
 describe('destinationCoverCandidates', () => {
@@ -84,6 +105,17 @@ describe('destinationCoverCandidates', () => {
     expect(candidates.some((q) => /Blue Lagoon/i.test(q))).toBe(true);
     expect(candidates).toContain('Reykjavík');
     expect(candidates).toContain('Iceland');
+  });
+
+  it('spreads Guatemala across multiple landmarks (not one lake plate)', () => {
+    const candidates = destinationCoverCandidates(
+      plan({ title: 'Guatemala boys trip', destination: 'Guatemala' }),
+    );
+    expect(candidates.some((q) => /Atitlan|Atitlán/i.test(q))).toBe(true);
+    expect(candidates.some((q) => /Tikal/i.test(q))).toBe(true);
+    expect(candidates.some((q) => /Santa Catalina|Volcan de Agua|Acatenango/i.test(q))).toBe(
+      true,
+    );
   });
 
   it('falls back to iconic draw suffixes when destination is unknown', () => {

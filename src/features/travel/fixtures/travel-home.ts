@@ -72,7 +72,8 @@ export const travelHomeFixture: TravelHomeFixture = {
         { id: 'm4', name: 'Sam Quinn' },
         { id: 'm5', name: 'Riley Chen' },
       ],
-      imageQuery: 'Antigua Guatemala Santa Catalina Arch Volcan de Agua',
+      imageQuery:
+        'Antigua Guatemala Santa Catalina Arch Lake Atitlan Tikal Acatenango',
     },
   ],
 };

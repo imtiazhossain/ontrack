@@ -44,6 +44,21 @@ describe('travel home kit contract', () => {
     expect(source).toContain('peekUnsplashCoverColor');
   });
 
+  it('keeps scenic underlay until a remote hero actually paints', () => {
+    // URI presence alone hid the fixture on Android while proxies were loading
+    // → brandBlueSoft empty cards.
+    const source = readFileSync(
+      join(process.cwd(), 'src/features/travel/travel-home-hero-carousel.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('hasPaintedRemote');
+    expect(source).toContain('paintedRemoteUri');
+    expect(source).toContain('onLoad');
+    expect(source).toContain('scenicUnderlay');
+    expect(source).toContain('opacity: hasPaintedRemote ? 0 : 1');
+    expect(source).not.toContain('opacity: fixtureSource && !hasRemoteHeroes ? 1 : 0');
+  });
+
   it('keeps the trip-card stepper shell always mounted (Fabric crash guard)', () => {
     // Conditionally returning null from the stepper SIGABRTs when remounting
     // near hero / frost BlurView siblings — collapse via height/opacity instead.
@@ -91,6 +106,11 @@ describe('travel home kit contract', () => {
     // View Itinerary = frosted sage glass (both themes); not solid ink/brand.
     expect(card).toContain('TravelHomeGlass');
     expect(card).toContain('accent="green"');
+    // Android serif needs a wider CTA + no flex-shrink below the full label.
+    expect(card).toContain("Platform.OS === 'android' ? 1.35 : 1");
+    expect(card).toContain("flexShrink: Platform.OS === 'android' ? 0 : 1");
+    expect(card).toContain('View Itinerary');
+    expect(card).toMatch(/flexShrink:\s*0/);
   });
 
   it('frosts trip-card scoops with BlurView over the live hero', () => {

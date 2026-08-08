@@ -237,7 +237,16 @@ function RootNavigator({ hydrated }: { hydrated: boolean }) {
         <Stack.Screen name="todo-collaborators" />
         <Stack.Screen name="todo-invites" />
         <Stack.Screen name="invite/travel" />
-        <Stack.Screen name="activity-form" options={{ presentation: 'modal' }} />
+        <Stack.Screen
+          name="activity-form"
+          options={{
+            presentation: 'modal',
+            // In-content back (activity-form) — transparent native header
+            // sat under the full-bleed ScrollView and ate real taps.
+            headerShown: false,
+            contentStyle: { backgroundColor: 'transparent', paddingTop: 0 },
+          }}
+        />
         <Stack.Screen
           name="detail/gym-active/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}

@@ -10,6 +10,13 @@
 #   ONTRACK_ANDROID_AVD=Galaxy_S26
 #   ONTRACK_ANDROID_EMULATOR_WINDOW=1   # show emulator GUI (default: headless)
 #   ONTRACK_ANDROID_SERIAL=emulator-5554
+#   ONTRACK_ANDROID_ENSURE_APP_SURFACE=1  # force paint check even when headless
+#   ONTRACK_ANDROID_SKIP_APP_SURFACE=1    # skip headed blank-SurfaceView heal
+#   ONTRACK_ANDROID_BLANK_WHITE_PCT=85    # near-white %% threshold for blank detect
+#   ONTRACK_ANDROID_SURFACE_WAIT_SECS=25
+#
+# Headed (--window): before "Emulator ready", launches/relaunches the app after a
+# headless→window restart and fails handoff if the SurfaceView stays blank/white.
 
 set -euo pipefail
 
@@ -23,7 +30,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --window) ONTRACK_ANDROID_EMULATOR_WINDOW=1 ;;
     -h|--help)
-      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)

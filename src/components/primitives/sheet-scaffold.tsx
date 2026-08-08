@@ -138,6 +138,9 @@ export function SheetScaffold({
     minHeight == null ? undefined : Math.min(Math.max(0, minHeight), sheetMaxHeight);
   const glass = surface === 'glass';
   const dark = theme.name === 'dark';
+  // Safe-area pad lives on the footer/body — never on the sheet chrome — so the
+  // glass/solid plate paints flush to the physical bottom (Android especially).
+  const bottomPad = Math.max(insets.bottom, spacing.md);
 
   useEffect(() => {
     if (!visible) {
@@ -161,6 +164,8 @@ export function SheetScaffold({
       animationType="none"
       onRequestClose={close}
       presentationStyle="overFullScreen"
+      statusBarTranslucent
+      navigationBarTranslucent
       transparent
       visible>
       <View accessibilityViewIsModal style={styles.modalRoot}>
@@ -230,7 +235,6 @@ export function SheetScaffold({
                 maxHeight: sheetMaxHeight,
                 minHeight: sheetMinHeight,
                 height: lockHeight ? lockedHeight : undefined,
-                paddingBottom: Math.max(insets.bottom, spacing.md),
                 paddingHorizontal: layout.screenPadding,
               },
             ]}>
@@ -304,12 +308,19 @@ export function SheetScaffold({
               style={styles.scroll}
               contentContainerStyle={[
                 styles.content,
-                { gap: spacing.lg, paddingBottom: footer ? spacing.md : spacing.xl },
+                {
+                  gap: spacing.lg,
+                  paddingBottom: footer ? spacing.md : bottomPad,
+                },
                 contentContainerStyle,
               ]}>
               {children}
             </ScrollView>
-            {footer ? <View style={{ paddingTop: spacing.md }}>{footer}</View> : null}
+            {footer ? (
+              <View style={{ paddingTop: spacing.md, paddingBottom: bottomPad }}>
+                {footer}
+              </View>
+            ) : null}
           </Animated.View>
         </KeyboardAvoidingView>
         <AppPromptHost embedded />
@@ -327,10 +338,17 @@ const styles = StyleSheet.create({
   dismissLayer: { zIndex: 0 },
   avoid: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
-    alignSelf: 'center',
+    // Absolute bottom pin — flex-end alone can leave a gap on Android when the
+    // dialog window / nav-bar insets disagree with Yoga.
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },

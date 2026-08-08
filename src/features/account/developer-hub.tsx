@@ -174,7 +174,7 @@ export function DeveloperHub() {
             detail={
               devModeEnabled
                 ? 'On: live data is snapshotted and cloud sync is paused. Travel demos load automatically; other Demo seeds below stay local too. Everything seeded here is removed when you turn this off (real trips you create or edit are kept).'
-                : 'Off by default. Turn on to sandbox your account — loads travel demos and shows Demo seeds. Agents also use this while seeding, then turn it off again.'
+                : 'Off by default (also clears on app restart). Turn on to sandbox your account — loads travel demos and shows Demo seeds. Agents also use this while seeding, then turn it off again.'
             }
             detailNumberOfLines={5}
             value={devModeEnabled}
